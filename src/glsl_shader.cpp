@@ -47,7 +47,7 @@ void GLSLShader::LoadFromFile(GLenum shaderType, const std::string& filename) {
 }
 
 void GLSLShader::CreateAndLinkProgram() {
-    GLuint program_ = glCreateProgram();
+    program_ = glCreateProgram();
     for (int i = 0; i < shaders_.size(); i++)
         glAttachShader(program_, shaders_[i]);
 

@@ -25,6 +25,4 @@ GLuint LoadTexture(string path);
 
 SDL_Window* InitAndWindow(string title, int ox, int oy, int w, int h);
 
-GLuint LoadShaders(string vertex_file_path, string fragment_file_path);
-
 #endif  // SRC_INCLUDE_UTILS_H_

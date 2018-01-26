@@ -13,17 +13,15 @@ int main(int arc, char** argv) {
 
     // set up the particle system
     Camera camera = Camera(vec3(0, 0, 5), vec3(0, 0, -1), vec3(0, 1, 0));
-    // GLSLShader shader;
-    // shader.LoadFromFile(GL_VERTEX_SHADER,   "shaders/plain_shader.vert");
-    // shader.LoadFromFile(GL_FRAGMENT_SHADER, "shaders/plain_shader.frag");
-    // shader.CreateAndLinkProgram();
-    // shader.Enable();
-    // shader.AddAttribute("pos");
-    // shader.AddUniform("model");
-    // shader.AddUniform("view");
-    // shader.AddUniform("proj");
-    GLuint shader = LoadShaders("shaders/plain_shader.vert", "shaders/plain_shader.frag");
-    glUseProgram(shader);
+    GLSLShader shader;
+    shader.LoadFromFile(GL_VERTEX_SHADER,   "shaders/plain_shader.vert");
+    shader.LoadFromFile(GL_FRAGMENT_SHADER, "shaders/plain_shader.frag");
+    shader.CreateAndLinkProgram();
+    shader.Enable();
+    shader.AddAttribute("pos");
+    shader.AddUniform("model");
+    shader.AddUniform("view");
+    shader.AddUniform("proj");
     static const GLfloat quad_verts[] = {
         -.5, .5, 0,
         -.5, -.5, 0,
@@ -32,7 +30,6 @@ int main(int arc, char** argv) {
         .5, .5, 0,
         -.5, .5, 0,
     };
-    /*
     GLuint vao;
     GLuint vbo;
     glGenVertexArrays(1, &vao);
@@ -43,19 +40,6 @@ int main(int arc, char** argv) {
     glEnableVertexAttribArray(shader["pos"]);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glVertexAttribPointer(shader["pos"], 3, GL_FLOAT, GL_FALSE, 0, 0);
-    */
-    GLuint vao;
-    GLuint vbo;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quad_verts), quad_verts, GL_STATIC_DRAW);
-    GLint posAttrib = glGetAttribLocation(shader, "pos");
-    glEnableVertexAttribArray(posAttrib);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
 
     bool quit = false;
     SDL_Event event;
@@ -120,27 +104,16 @@ int main(int arc, char** argv) {
         float dt = currTime - prevTime;
         camera.Update(dt);
 
-        // Draw particle system
-        mat4 VP = camera.VP();
-        vec3 cr = camera.Right();
-        vec3 cu = camera.Up();
-        vec3 cd = camera.Dir();
-
         // shader.Enable();
         glClearColor(1, 1, 1, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         mat4 model(1);
-        // mat4 v = lookAt(vec3(0, 0, 5), vec3(0, 0, -1), vec3(0, 1, 0));
-        // mat4 p = perspective(radians(45.0f), 4.0f/3.0f, .1f, 100.0f);
         mat4 v = camera.View();
         mat4 p = camera.Proj();
-        // glUniform4fv(shader["model"], 1, value_ptr(model));
-        // glUniform4fv(shader["view"], 1, value_ptr(v));
-        // glUniform4fv(shader["proj"], 1, value_ptr(p));
-        glUniformMatrix4fv(glGetUniformLocation(shader, "model"), 1, GL_FALSE, value_ptr(model));
-        glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1,  GL_FALSE, value_ptr(v));
-        glUniformMatrix4fv(glGetUniformLocation(shader, "proj"), 1,  GL_FALSE, value_ptr(p));
+        glUniformMatrix4fv(shader["model"], 1, GL_FALSE, value_ptr(model));
+        glUniformMatrix4fv(shader["view"], 1,  GL_FALSE, value_ptr(v));
+        glUniformMatrix4fv(shader["proj"], 1,  GL_FALSE, value_ptr(p));
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
 

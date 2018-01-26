@@ -21,6 +21,9 @@ class GLSLShader {
         GLuint operator[] (const std::string& name);
         void DeleteShaderProgram();
 
+        GLuint GetProgram() { return program_; }
+        void SetProgram(GLuint p) { program_ = p; }
+
     protected:
         GLuint program_;
         std::vector<GLuint> shaders_;
