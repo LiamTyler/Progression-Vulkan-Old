@@ -1,7 +1,6 @@
 #include "include/utils.h"
-#define STB_IMAGE_IMPLEMENTATION
-#include "include/stb_image.h"
 
+/*
 GLuint LoadTexture(string path) {
     int w, h, comp;
     unsigned char* image;
@@ -22,6 +21,7 @@ GLuint LoadTexture(string path) {
 
     return tex;
 }
+*/
 
 SDL_Window* InitAndWindow(string title, int ox, int oy, int w, int h) {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {

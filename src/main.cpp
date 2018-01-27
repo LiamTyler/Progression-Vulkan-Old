@@ -1,6 +1,7 @@
 #include "include/utils.h"
 #include "include/camera.h"
 #include "include/glsl_shader.h"
+#include "include/image.h"
 
 using namespace std;
 

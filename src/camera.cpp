@@ -11,7 +11,7 @@ Camera::Camera(vec3 pos, vec3 dir, vec3 up, float sLinear, float sAngular) {
     pos_ = pos;
     initialDir_ = dir;
     initialUp_ = up;
-    initialRight_ = glm::cross(initialDir_, initialUp_);
+    initialRight_ = cross(initialDir_, initialUp_);
     currDir_ = initialDir_;
     currUp_ = initialUp_;
     currRight_ = initialRight_;

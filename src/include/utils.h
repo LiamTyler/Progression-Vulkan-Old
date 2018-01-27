@@ -4,14 +4,13 @@
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
-#include <glm/glm.hpp>
-#include <glm/ext.hpp>
+#include "glm/glm.hpp"
+#include "glm/ext.hpp"
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <vector>
-#include "include/stb_image.h"
 
 using namespace glm;
 using namespace std;
@@ -21,7 +20,7 @@ inline ostream& operator <<(ostream& out, const vec3& v) {
     return out;
 }
 
-GLuint LoadTexture(string path);
+// GLuint LoadTexture(string path);
 
 SDL_Window* InitAndWindow(string title, int ox, int oy, int w, int h);
 
