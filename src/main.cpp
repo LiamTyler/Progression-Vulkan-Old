@@ -2,6 +2,7 @@
 #include "include/camera.h"
 #include "include/glsl_shader.h"
 #include "include/image.h"
+#include "include/fps_counter.h"
 
 using namespace std;
 
@@ -44,11 +45,9 @@ int main(int arc, char** argv) {
 
     bool quit = false;
     SDL_Event event;
-    float currTime = 0;
-    float prevTime = 0;
-    float fpsTime = 0;
-    unsigned int frameCounter = 0;
     SDL_SetRelativeMouseMode(SDL_TRUE);
+    FPSCounter fpsC;
+    fpsC.Start();
     while (!quit) {
         // Process all input events
         while (SDL_PollEvent(&event)) {
@@ -101,8 +100,9 @@ int main(int arc, char** argv) {
             }
         }
 
-        currTime = SDL_GetTicks() / 1000.0f;
-        float dt = currTime - prevTime;
+        float t = SDL_GetTicks() / 1000.0f;
+        fpsC.StartFrame(t);
+        float dt = fpsC.GetDT();
         camera.Update(dt);
 
         // shader.Enable();
@@ -118,14 +118,7 @@ int main(int arc, char** argv) {
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
-        // swap windows and update time
-        prevTime = currTime;
-        ++frameCounter;
-        if (currTime > fpsTime + 1) {
-            cout << "FPS: " << frameCounter << endl;
-            frameCounter = 0;
-            fpsTime = currTime;
-        }
+        fpsC.EndFrame();
 
         SDL_GL_SwapWindow(window);
     }
