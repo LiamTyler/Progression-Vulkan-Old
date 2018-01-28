@@ -3,6 +3,7 @@
 #include "include/glsl_shader.h"
 #include "include/image.h"
 #include "include/fps_counter.h"
+#include "include/mesh.h"
 
 using namespace std;
 
@@ -24,6 +25,7 @@ int main(int arc, char** argv) {
     shader.AddUniform("model");
     shader.AddUniform("view");
     shader.AddUniform("proj");
+    /*
     static const GLfloat quad_verts[] = {
         -.5, .5, 0,
         -.5, -.5, 0,
@@ -42,12 +44,31 @@ int main(int arc, char** argv) {
     glEnableVertexAttribArray(shader["pos"]);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glVertexAttribPointer(shader["pos"], 3, GL_FLOAT, GL_FALSE, 0, 0);
+    */
+    Mesh mesh("key.obj");
+    GLuint vao;
+    GLuint vbo[3];
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+    glGenBuffers(3, vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+    glBufferData(GL_ARRAY_BUFFER, mesh.numVertices * sizeof(vec3), mesh.vertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(shader["pos"]);
+    glVertexAttribPointer(shader["pos"], 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+    glBufferData(GL_ARRAY_BUFFER, mesh.numVertices * sizeof(vec3), mesh.normals, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(shader["norm"]);
+    glVertexAttribPointer(shader["norm"], 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[2]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.numTriangles * sizeof(ivec3),
+            mesh.indices, GL_STATIC_DRAW);
+
 
     bool quit = false;
     SDL_Event event;
     SDL_SetRelativeMouseMode(SDL_TRUE);
     FPSCounter fpsC;
-    fpsC.Start();
+    fpsC.Init();
     while (!quit) {
         // Process all input events
         while (SDL_PollEvent(&event)) {
@@ -116,7 +137,8 @@ int main(int arc, char** argv) {
         glUniformMatrix4fv(shader["view"], 1,  GL_FALSE, value_ptr(v));
         glUniformMatrix4fv(shader["proj"], 1,  GL_FALSE, value_ptr(p));
 
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        // glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawElements(GL_TRIANGLES, mesh.numTriangles*3, GL_UNSIGNED_INT, 0);
 
         fpsC.EndFrame();
 
