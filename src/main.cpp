@@ -45,7 +45,7 @@ int main(int arc, char** argv) {
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glVertexAttribPointer(shader["pos"], 3, GL_FLOAT, GL_FALSE, 0, 0);
     */
-    Mesh mesh("key.obj");
+    Mesh mesh("models/key.obj");
     GLuint vao;
     GLuint vbo[3];
     glGenVertexArrays(1, &vao);
