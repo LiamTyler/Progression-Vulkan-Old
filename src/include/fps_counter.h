@@ -1,5 +1,4 @@
-#ifndef SRC_INCLUDE_FPS_COUNTER_H_
-#define SRC_INCLUDE_FPS_COUNTER_H_
+#pragma once
 
 class FPSCounter {
     public:
@@ -8,13 +7,14 @@ class FPSCounter {
         void Init();
         void StartFrame(float dt);
         void EndFrame();
+
         float GetDT() { return time_ - prevTime_; }
+        void Display(bool b) { display_ = b; }
 
     protected:
+        bool display_;
         float time_;
         float prevTime_;
         float fpsTime_;
         unsigned int frameCounter_;
 };
-
-#endif  // SRC_INCLUDE_FPS_COUNTER_H_

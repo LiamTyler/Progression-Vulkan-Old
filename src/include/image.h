@@ -1,11 +1,6 @@
-#ifndef SRC_INCLUDE_IMAGE_H_
-#define SRC_INCLUDE_IMAGE_H_
+#pragma once
 
-#include <string>
-#include "glm/glm.hpp"
-
-using glm::vec4;
-using glm::vec3;
+#include "include/utils.h"
 
 enum class Sampling : unsigned int {
     NEAREST_NEIGHBOR,
@@ -26,8 +21,8 @@ class Image {
 
         int Width() { return width_; }
         int Height() { return height_; }
-        vec4 GetPixel(int r, int c) { return pixels_[r*width_ + c]; }
-        void SetPixel(int r, int c, vec4 p) { pixels_[r*width_ + c] = p; }
+        glm::vec4 GetPixel(int r, int c) { return pixels_[r*width_ + c]; }
+        void SetPixel(int r, int c, glm::vec4 p) { pixels_[r*width_ + c] = p; }
 
         // Image processing features
         
@@ -52,9 +47,9 @@ class Image {
         void OrdereredDither(int nbits) {}
         void FloydSteinbergDither(int nbits) {}
 
-        static vec4 ClampPixel(vec4 p);
+        static glm::vec4 ClampPixel(glm::vec4 p);
         static float ClampFloat(float f);
-        static float Luminance(vec4 p);
+        static float Luminance(glm::vec4 p);
 
     protected:
         // vec4 Sample(float u, float v) {}
@@ -63,5 +58,3 @@ class Image {
         int height_;
         glm::vec4* pixels_;
 };
-
-#endif  // SRC_INCLUDE_IMAGE_H_

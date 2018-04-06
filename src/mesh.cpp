@@ -1,4 +1,3 @@
-#include <iostream>
 #include "include/mesh.h"
 
 Mesh::Mesh() {
@@ -36,26 +35,26 @@ void Mesh::LoadMesh(const std::string& fname) {
     }
     objl::Mesh m = Loader.LoadedMeshes[0];
     numVertices = m.Vertices.size();
-    vertices = new vec3[numVertices];
-    normals  = new vec3[numVertices];
+    vertices = new glm::vec3[numVertices];
+    normals  = new glm::vec3[numVertices];
     for (int i = 0; i < numVertices; i++) {
         float x,y,z;
         x = m.Vertices[i].Position.X;
         y = m.Vertices[i].Position.Y;
         z = m.Vertices[i].Position.Z;
-        vertices[i] = vec3(x, y, z);
+        vertices[i] = glm::vec3(x, y, z);
         x = m.Vertices[i].Normal.X;
         y = m.Vertices[i].Normal.Y;
         z = m.Vertices[i].Normal.Z;
-        normals[i] = vec3(x, y, z);
+        normals[i] = glm::vec3(x, y, z);
     }
     numTriangles = m.Indices.size() / 3;
-    indices = new ivec3[numTriangles];
+    indices = new glm::ivec3[numTriangles];
     int tri = 0;
     for (int i = 0; i < m.Indices.size();) {
         unsigned int x = m.Indices[i++];
         unsigned int y = m.Indices[i++];
         unsigned int z = m.Indices[i++];
-        indices[tri++] = ivec3(x, y, z);
+        indices[tri++] = glm::ivec3(x, y, z);
     }
 }

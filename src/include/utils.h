@@ -1,27 +1,21 @@
-#ifndef SRC_INCLUDE_UTILS_H_
-#define SRC_INCLUDE_UTILS_H_
+#pragma once
 
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 #include "glm/glm.hpp"
 #include "glm/ext.hpp"
-#include <cstdlib>
-#include <iostream>
-#include <fstream>
 #include <string>
+#include <iostream>
 #include <vector>
+#include <cstdlib>
+#include <fstream>
+#include <cassert>
 
-using namespace glm;
-using namespace std;
-
-inline ostream& operator <<(ostream& out, const vec3& v) {
-    out << v.x << " " << v.y << " " << v.z;
-    return out;
+inline std::ostream& operator <<(std::ostream& out, const glm::vec3& v) {
+    return out << v.x << " " << v.y << " " << v.z;
 }
 
-// GLuint LoadTexture(string path);
-
-SDL_Window* InitAndWindow(string title, int ox, int oy, int w, int h);
-
-#endif  // SRC_INCLUDE_UTILS_H_
+inline std::ostream& operator <<(std::ostream& out, const glm::vec4& v) {
+    return out << v.x << " " << v.y << " " << v.z << " " << v.w;
+}

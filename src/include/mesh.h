@@ -1,11 +1,7 @@
-#ifndef SRC_INCLUDE_MESH_H_
-#define SRC_INCLUDE_MESH_H_
+#pragma once
 
+#include "include/utils.h"
 #include "include/OBJ_Loader.h"
-#include "glm/glm.hpp"
-
-using glm::vec3;
-using glm::ivec3;
 
 class Mesh {
     public:
@@ -21,5 +17,3 @@ class Mesh {
         glm::vec3* normals;
         glm::ivec3* indices;
 };
-
-#endif  // SRC_INCLUDE_MESH_H_

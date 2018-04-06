@@ -18,9 +18,9 @@ Image::Image(int w, int h) {
     sampling_method_ = Sampling::NEAREST_NEIGHBOR;
     width_ = w;
     height_ = h;
-    pixels_ = new vec4[w*h];
+    pixels_ = new glm::vec4[w*h];
     for (int i = 0; i < w*h; i++)
-        pixels_[i] = vec4(0,0,0,0);
+        pixels_[i] = glm::vec4(0,0,0,0);
 }
 
 Image::Image(const std::string fname) {
@@ -31,7 +31,7 @@ Image::Image(const std::string fname) {
 Image::Image(const Image& src) {
     width_ = src.width_;
     height_ = src.height_;
-    pixels_ = new vec4[width_*height_];
+    pixels_ = new glm::vec4[width_*height_];
     for (int i = 0; i < width_*height_; i++)
         pixels_[i] = src.pixels_[i];
 }
@@ -47,7 +47,7 @@ void Image::LoadImage(const std::string& fname) {
     if (raw == NULL) {
         std::cout << "Failed to load : " << fname << std::endl;
     } else {
-        pixels_ = new vec4[width_*height_];
+        pixels_ = new glm::vec4[width_*height_];
         int I = 0;
         for (int r = 0; r < height_; r++) {
             for (int c = 0; c < width_; c++) {
@@ -55,7 +55,7 @@ void Image::LoadImage(const std::string& fname) {
                 float gg = raw[I++] / 255.0f;
                 float bb = raw[I++] / 255.0f;
                 float aa = raw[I++] / 255.0f;
-                SetPixel(r, c, vec4(rr, gg, bb, aa));
+                SetPixel(r, c, glm::vec4(rr, gg, bb, aa));
             }
         }
     }
@@ -66,7 +66,7 @@ void Image::SaveImage(const std::string& fname) {
     int b = 0;
     for (int r = 0; r < height_; r++) {
         for (int c = 0; c < width_; c++) {
-            vec4 p = GetPixel(r,c);
+            glm::vec4 p = GetPixel(r,c);
             p = ClampPixel(p);
             out[b++] = (unsigned char) 255*p.r;
             out[b++] = (unsigned char) 255*p.g;
@@ -107,11 +107,11 @@ void Image::AddNoise(float factor) {
     float rMaxInv = 1.0f / RAND_MAX;
     for (int r = 0; r < height_; ++r) {
         for (int c = 0; c < width_; ++c) {
-            vec4 p = GetPixel(r, c);
+            glm::vec4 p = GetPixel(r, c);
             float rr = rand() * rMaxInv;
             float rg = rand() * rMaxInv;
             float rb = rand() * rMaxInv;
-            vec4 newP = vec4(
+            glm::vec4 newP = glm::vec4(
                     (1 - factor) * p.r + factor * rr,
                     (1 - factor) * p.g + factor * rg,
                     (1 - factor) * p.b + factor * rb,
@@ -124,11 +124,11 @@ void Image::AddNoise(float factor) {
 void Image::Brighten(float factor) {
     for (int r = 0; r < height_; ++r) {
         for (int c = 0; c < width_; ++c) {
-            vec4 p = GetPixel(r, c);
+            glm::vec4 p = GetPixel(r, c);
             float nr = p.r*factor;
             float ng = p.g*factor;
             float nb = p.b*factor;
-            SetPixel(r, c, vec4(nr, ng, nb, p.a));
+            SetPixel(r, c, glm::vec4(nr, ng, nb, p.a));
         }
     }
 }
@@ -136,11 +136,11 @@ void Image::Brighten(float factor) {
 void Image::Contrast(float factor) {
     for (int r = 0; r < height_; ++r) {
         for (int c = 0; c < width_; ++c) {
-            vec4 p = GetPixel(r, c);
+            glm::vec4 p = GetPixel(r, c);
             float nr = .5 + factor*(p.r - .5);
             float ng = .5 + factor*(p.g - .5);
             float nb = .5 + factor*(p.b - .5);
-            SetPixel(r, c, vec4(nr, ng, nb, p.a));
+            SetPixel(r, c, glm::vec4(nr, ng, nb, p.a));
         }
     }
 }
@@ -148,18 +148,18 @@ void Image::Contrast(float factor) {
 void Image::Saturate(float factor) {
     for (int r = 0; r < height_; ++r) {
         for (int c = 0; c < width_; ++c) {
-            vec4 p = GetPixel(r, c);
+            glm::vec4 p = GetPixel(r, c);
             float L = Luminance(p);
             float nr = (1 - factor) * L + factor * p.r;
             float ng = (1 - factor) * L + factor * p.g;
             float nb = (1 - factor) * L + factor * p.b;
-            SetPixel(r, c, vec4(nr, ng, nb, p.a));
+            SetPixel(r, c, glm::vec4(nr, ng, nb, p.a));
         }
     }
 }
 
-vec4 Image::ClampPixel(vec4 p) {
-    return vec4(
+glm::vec4 Image::ClampPixel(glm::vec4 p) {
+    return glm::vec4(
             ClampFloat(p.r),
             ClampFloat(p.g),
             ClampFloat(p.b),
@@ -170,6 +170,6 @@ float Image::ClampFloat(float f) {
     return std::fmax(0.0f, std::fmin(1.0f, f));
 }
 
-float Image::Luminance(vec4 p) {
+float Image::Luminance(glm::vec4 p) {
     return .2126f * p.r + .7152f * p.g + .0722f * p.b;
 }
