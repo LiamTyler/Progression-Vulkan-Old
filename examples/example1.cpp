@@ -102,7 +102,7 @@ int main(int arc, char** argv) {
         glUniformMatrix4fv(shader["projectionMatrix"], 1,  GL_FALSE, glm::value_ptr(P));
 
         // light
-        DirectionalLight dl(glm::vec3(0, 0, 1));
+        DirectionalLight dl(glm::vec3(0, -1, -1));
         glUniform3fv(shader["Ia"], 1, glm::value_ptr(dl.Ia));
         glUniform3fv(shader["Id"], 1, glm::value_ptr(dl.Id));
         glUniform3fv(shader["Is"], 1, glm::value_ptr(dl.Is));
