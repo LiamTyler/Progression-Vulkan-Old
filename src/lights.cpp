@@ -18,12 +18,12 @@ DirectionalLight::DirectionalLight() {
 }
 
 DirectionalLight::DirectionalLight(glm::vec3 dir) {
-    direction = dir;
+    direction = glm::normalize(dir);
 }
 
 DirectionalLight::DirectionalLight(glm::vec3 dir,
         glm::vec3 a, glm::vec3 d, glm::vec3 s) : Light(a, d, s) {
-    direction = dir;
+    direction = glm::normalize(dir);
 }
 
 PointLight::PointLight() {

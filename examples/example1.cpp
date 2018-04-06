@@ -7,6 +7,7 @@
 #include "include/window.h"
 #include "include/user_camera.h"
 #include "include/lights.h"
+#include "include/material.h"
 
 using namespace std;
 
@@ -21,6 +22,15 @@ int main(int arc, char** argv) {
             "Phong Shader",
             "shaders/regular_phong.vert",
             "shaders/regular_phong.frag");
+
+    DirectionalLight light(glm::vec3(0, -1, -1));
+
+    Material keyMat = Material(
+        glm::vec3(1, .4, .4),
+        glm::vec3(1, .4, .4),
+        glm::vec3(.6, .6, .6),
+        50);
+
     Mesh mesh("models/key.obj");
     GLuint vao;
     GLuint vbo[3];
@@ -102,11 +112,10 @@ int main(int arc, char** argv) {
         glUniformMatrix4fv(shader["projectionMatrix"], 1,  GL_FALSE, glm::value_ptr(P));
 
         // light
-        DirectionalLight dl(glm::vec3(0, -1, -1));
-        glUniform3fv(shader["Ia"], 1, glm::value_ptr(dl.Ia));
-        glUniform3fv(shader["Id"], 1, glm::value_ptr(dl.Id));
-        glUniform3fv(shader["Is"], 1, glm::value_ptr(dl.Is));
-        glm::vec3 lEye = glm::vec3(V * glm::vec4(dl.direction, 0));
+        glUniform3fv(shader["Ia"], 1, glm::value_ptr(light.Ia));
+        glUniform3fv(shader["Id"], 1, glm::value_ptr(light.Id));
+        glUniform3fv(shader["Is"], 1, glm::value_ptr(light.Is));
+        glm::vec3 lEye = glm::vec3(V * glm::vec4(light.direction, 0));
         glUniform3fv(shader["lightInEyeSpace"], 1, glm::value_ptr(lEye));
 
 		// draw model
@@ -117,14 +126,10 @@ int main(int arc, char** argv) {
 		glUniformMatrix4fv(shader["normalMatrix"], 1, GL_FALSE, value_ptr(normalMatrix));
 
         // hard code material for now
-        glm::vec3 ka(1, .4, .4);
-        glm::vec3 kd(1, .4, .4);
-        glm::vec3 ks(.6, .6, .6);
-        float spec = 50;
-		glUniform3fv(shader["ka"], 1, value_ptr(ka));
-		glUniform3fv(shader["kd"], 1, value_ptr(kd));
-		glUniform3fv(shader["ks"], 1, value_ptr(ks));
-		glUniform1f(shader["specular"], spec);
+		glUniform3fv(shader["ka"], 1, value_ptr(keyMat.ka));
+		glUniform3fv(shader["kd"], 1, value_ptr(keyMat.kd));
+		glUniform3fv(shader["ks"], 1, value_ptr(keyMat.ks));
+		glUniform1f(shader["specular"], keyMat.specular);
 
         glDrawElements(GL_TRIANGLES, mesh.numTriangles*3, GL_UNSIGNED_INT, 0);
 
