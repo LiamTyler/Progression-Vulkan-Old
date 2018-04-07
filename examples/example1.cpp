@@ -1,13 +1,4 @@
-#include "include/utils.h"
-#include "include/camera.h"
-#include "include/shader.h"
-#include "include/image.h"
-#include "include/fps_counter.h"
-#include "include/mesh.h"
-#include "include/window.h"
-#include "include/user_camera.h"
-#include "include/lights.h"
-#include "include/material.h"
+#include "starter.h"
 
 using namespace std;
 

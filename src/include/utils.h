@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <cassert>
+#include <unordered_map>
 
 inline std::ostream& operator <<(std::ostream& out, const glm::vec3& v) {
     return out << v.x << " " << v.y << " " << v.z;
