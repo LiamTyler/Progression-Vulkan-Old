@@ -36,17 +36,18 @@ all: $(LIBPATH) examples $(header)
 clean:
 	@rm -rf $(BUILDDIR)
 	@rm -f $(EXAMPLEDIR)/*.o
+	@rm -f $(header)
 
 $(header): $(OBJS)
-	$(file > $(header)) $(foreach line, $(header_files), $(file >> $(header), #include "$(line)"))
+	@$(file > $(header)) $(foreach line, $(header_files), $(file >> $(header), #include "$(line)"))
 
-lib: $(LIBPATH)
+lib: $(LIBPATH) $(header)
 
 examples: $(addprefix $(EXAMPLE_BUILD_DIR)/, $(EXAMPLE_EXES))
 
 $(LIBPATH): $(OBJS) | $(BINDIR)
-	rm -f $(LIBPATH)
-	ar -csq $(LIBPATH) $(OBJDIR)/*.o
+	@rm -f $(LIBPATH)
+	@ar -csq $(LIBPATH) $(OBJDIR)/*.o
 
 ifneq "$MAKECMDGOALS" "clean"
 -include $(addprefix $(OBJDIR)/,$(OBJECTS_CXX:.o=.d))
@@ -55,11 +56,11 @@ endif
 $(OBJS): | $(OBJDIR)
 
 $(BINDIR) $(OBJDIR) $(EXAMPLE_BUILD_DIR):
-	mkdir -p $@
+	@mkdir -p $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	@$(call make-depend-cxx,$<,$@,$(subst .o,.d,$@))
-	$(CXX) $(CXXFLAGS) $(CXXLIBS) -c -o $@ $<
+	@$(CXX) $(CXXFLAGS) $(CXXLIBS) -c -o $@ $<
 
 $(EXAMPLE_BUILD_DIR)/%: $(EXAMPLE_SRC_DIR)/*.cpp $(LIBPATH) $(header) | $(EXAMPLE_BUILD_DIR)
-	$(CXX) $< $(LIBLINK) $(CXXFLAGS) $(CXXLIBS) -o $@
+	@$(CXX) $< $(LIBLINK) $(CXXFLAGS) $(CXXLIBS) -o $@
