@@ -113,13 +113,13 @@ int main(int arc, char** argv) {
         glm::mat4 model(1);
 		glm::mat4 MV = V * model;
 		glm::mat4 normalMatrix = glm::transpose(glm::inverse(MV));
-		glUniformMatrix4fv(shader["modelViewMatrix"], 1, GL_FALSE, value_ptr(MV));
-		glUniformMatrix4fv(shader["normalMatrix"], 1, GL_FALSE, value_ptr(normalMatrix));
+		glUniformMatrix4fv(shader["modelViewMatrix"], 1, GL_FALSE, glm::value_ptr(MV));
+		glUniformMatrix4fv(shader["normalMatrix"], 1, GL_FALSE, glm::value_ptr(normalMatrix));
 
         // hard code material for now
-		glUniform3fv(shader["ka"], 1, value_ptr(keyMat.ka));
-		glUniform3fv(shader["kd"], 1, value_ptr(keyMat.kd));
-		glUniform3fv(shader["ks"], 1, value_ptr(keyMat.ks));
+		glUniform3fv(shader["ka"], 1, glm::value_ptr(keyMat.ka));
+		glUniform3fv(shader["kd"], 1, glm::value_ptr(keyMat.kd));
+		glUniform3fv(shader["ks"], 1, glm::value_ptr(keyMat.ks));
 		glUniform1f(shader["specular"], keyMat.specular);
 
         glDrawElements(GL_TRIANGLES, mesh.numTriangles*3, GL_UNSIGNED_INT, 0);

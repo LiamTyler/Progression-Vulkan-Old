@@ -18,7 +18,7 @@ class Shader {
         void Disable();
         void AddAttribute(const std::string& attribute);
         void AddUniform(const std::string& uniform);
-        GLuint operator[] (const std::string& name);
+        GLuint operator[] (const std::string& name) const;
         void DeleteShaderProgram();
 
         GLuint GetProgram() { return program_; }

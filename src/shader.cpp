@@ -154,10 +154,10 @@ void Shader::AddUniform(const std::string& uniform) {
     uniformList_[uniform] = glGetUniformLocation(program_, uniform.c_str());
 }
 
-GLuint Shader::operator[] (const std::string& name) {
+GLuint Shader::operator[] (const std::string& name) const {
     assert(uniformList_.find(name) != uniformList_.end() ||
                 attributeList_.find(name) != attributeList_.end());
-    std::unordered_map<std::string, GLuint>::iterator it = uniformList_.find(name);
+    std::unordered_map<std::string, GLuint>::const_iterator it = uniformList_.find(name);
     if (it != uniformList_.end())
         return it->second;
     it = attributeList_.find(name);

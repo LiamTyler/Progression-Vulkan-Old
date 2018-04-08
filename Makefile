@@ -35,7 +35,6 @@ all: $(LIBPATH) examples $(header)
 
 clean:
 	@rm -rf $(BUILDDIR)
-	@rm -f $(EXAMPLEDIR)/*.o
 	@rm -f $(header)
 
 $(header): $(OBJS)
@@ -60,7 +59,7 @@ $(BINDIR) $(OBJDIR) $(EXAMPLE_BUILD_DIR):
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	@$(call make-depend-cxx,$<,$@,$(subst .o,.d,$@))
-	@$(CXX) $(CXXFLAGS) $(CXXLIBS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(CXXLIBS) -c -o $@ $<
 
 $(EXAMPLE_BUILD_DIR)/%: $(EXAMPLE_SRC_DIR)/*.cpp $(LIBPATH) $(header) | $(EXAMPLE_BUILD_DIR)
-	@$(CXX) $< $(LIBLINK) $(CXXFLAGS) $(CXXLIBS) -o $@
+	$(CXX) $< $(LIBLINK) $(CXXFLAGS) $(CXXLIBS) -o $@
