@@ -19,6 +19,7 @@ Window::~Window() {
 }
 
 void Window::Init() {
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
     sdlWindow_ = SDL_CreateWindow(
             title_.c_str(),
             SDL_WINDOWPOS_UNDEFINED,
