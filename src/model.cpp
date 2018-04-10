@@ -1,4 +1,5 @@
 #include "include/model.h"
+#include <algorithm>
 
 Model::Model() : Model("")
 {
@@ -19,15 +20,23 @@ bool Model::Load() {
         std::cout << "Failed to open/load model: " << filename_ << std::endl;
         return false;
     }
+    std::cout << "Loaded materials: " << Loader.LoadedMaterials.size() << std::endl;
     for (auto& m : Loader.LoadedMeshes) {
+        bool use_mat = true;
+        if (m.MeshMaterial.name == "" || m.MeshMaterial.name == "None")
+            use_mat = false;
+
         Mesh* mesh = new Mesh;
-        mesh->Load(m);
+        mesh->Load(m, use_mat);
         meshes_.push_back(mesh);
     }
     return true;
 }
 
 void Model::Free() {
+    for (auto& mat : materials_) {
+        delete mat;
+    }
     for (auto& mesh : meshes_) {
         mesh->Free();
         delete mesh;

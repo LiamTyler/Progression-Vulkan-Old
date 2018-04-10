@@ -14,21 +14,19 @@ int main(int arc, char** argv) {
             "shaders/regular_phong.vert",
             "shaders/regular_phong.frag");
 
-    DirectionalLight light(glm::vec3(0, -1, -1));
+    DirectionalLight light(
+            glm::vec3(0, -1, -1),
+            glm::vec3(0.0, 0.0, 0.0),
+            glm::vec3(0.7, 0.7, 0.7),
+            glm::vec3(1.0, 1.0, 1.0));
 
-    Material keyMat = Material(
-        glm::vec3(1, .4, .4),
-        glm::vec3(1, .4, .4),
-        glm::vec3(.6, .6, .6),
-        50);
-
-    
-    Model model("models/cubes2.obj");
+    Model model("models/piano2.obj");
+    // Model model("models/cube.obj");
+    // Model model("models/test.obj");
     model.Load();
 
-    GameObject saxophone;
-    saxophone.AddComponent<ModelRenderer>(new ModelRenderer(&shader, &model));
-
+    GameObject gameObj;
+    gameObj.AddComponent<ModelRenderer>(new ModelRenderer(&shader, &model));
 
     window.SetRelativeMouse(true);
     bool quit = false;
@@ -82,6 +80,7 @@ int main(int arc, char** argv) {
 
         float dt = window.GetDT();
         camera.Update(dt);
+        gameObj.Update(dt);
 
         shader.Enable();
         glClearColor(1, 1, 1, 1);
@@ -98,21 +97,7 @@ int main(int arc, char** argv) {
         glm::vec3 lEye = glm::vec3(V * glm::vec4(light.direction, 0));
         glUniform3fv(shader["lightInEyeSpace"], 1, glm::value_ptr(lEye));
 
-		// draw model
-        glm::mat4 modelM(1);
-        // model = glm::scale(modelM, glm::vec3(100, 100, 100));
-		glm::mat4 MV = V * modelM;
-		glm::mat4 normalMatrix = glm::transpose(glm::inverse(MV));
-		glUniformMatrix4fv(shader["modelViewMatrix"], 1, GL_FALSE, glm::value_ptr(MV));
-		glUniformMatrix4fv(shader["normalMatrix"], 1, GL_FALSE, glm::value_ptr(normalMatrix));
-
-        // hard code material for now
-		glUniform3fv(shader["ka"], 1, glm::value_ptr(keyMat.ka));
-		glUniform3fv(shader["kd"], 1, glm::value_ptr(keyMat.kd));
-		glUniform3fv(shader["ks"], 1, glm::value_ptr(keyMat.ks));
-		glUniform1f(shader["specular"], keyMat.specular);
-
-        saxophone.GetComponent<ModelRenderer>()->Render(camera);
+        gameObj.GetComponent<ModelRenderer>()->Render(camera);
 
         window.EndFrame();
     }

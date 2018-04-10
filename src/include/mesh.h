@@ -2,6 +2,7 @@
 
 #include "include/utils.h"
 #include "include/OBJ_Loader.h"
+#include "include/material.h"
 
 class Mesh {
     public:
@@ -10,10 +11,13 @@ class Mesh {
 
         ~Mesh();
 
-        void Load(const std::string& filename);
-        void Load(const objl::Mesh& mesh);
         void Free();
+        void Load(const std::string& filename);
+        // loading from Model class
+        void Load(const objl::Mesh& mesh, bool use_mat);
+        bool HasTextureCoords() { return texCoords != nullptr; }
 
+        Material* material;
         unsigned int numVertices;
         unsigned int numTriangles;
         glm::vec3* vertices;

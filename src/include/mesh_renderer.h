@@ -22,4 +22,5 @@ class MeshRenderer : public Component {
 		Mesh* mesh_;
 		GLuint vao_;
 		std::vector<GLuint> vbos_;
+		bool textured_;
 };

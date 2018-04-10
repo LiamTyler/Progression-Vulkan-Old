@@ -155,8 +155,9 @@ void Shader::AddUniform(const std::string& uniform) {
 }
 
 GLuint Shader::operator[] (const std::string& name) const {
-    assert(uniformList_.find(name) != uniformList_.end() ||
-                attributeList_.find(name) != attributeList_.end());
+    // std::cout << name << std::endl;
+    // assert(uniformList_.find(name) != uniformList_.end() ||
+    //             attributeList_.find(name) != attributeList_.end());
     std::unordered_map<std::string, GLuint>::const_iterator it = uniformList_.find(name);
     if (it != uniformList_.end())
         return it->second;
