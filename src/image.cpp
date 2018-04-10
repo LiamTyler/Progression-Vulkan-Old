@@ -41,11 +41,12 @@ Image::~Image() {
         delete [] pixels_;
 }
 
-void Image::LoadImage(const std::string& fname) {
+bool Image::LoadImage(const std::string& fname) {
     int nC;
     unsigned char *raw = stbi_load(fname.c_str(), &width_, &height_, &nC, 4);
     if (raw == NULL) {
         std::cout << "Failed to load : " << fname << std::endl;
+        return false;
     } else {
         pixels_ = new glm::vec4[width_*height_];
         int I = 0;
@@ -59,6 +60,7 @@ void Image::LoadImage(const std::string& fname) {
             }
         }
     }
+    return true;
 }
 
 void Image::SaveImage(const std::string& fname) {

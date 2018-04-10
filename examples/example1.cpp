@@ -22,7 +22,7 @@ int main(int arc, char** argv) {
         glm::vec3(.6, .6, .6),
         50);
 
-    Mesh mesh("models/key.obj");
+    Mesh mesh("models/cubes2.obj");
     GLuint vao;
     GLuint vbo[3];
     glGenVertexArrays(1, &vao);
@@ -111,6 +111,7 @@ int main(int arc, char** argv) {
 
 		// draw model
         glm::mat4 model(1);
+        model = glm::scale(model, glm::vec3(100, 100, 100));
 		glm::mat4 MV = V * model;
 		glm::mat4 normalMatrix = glm::transpose(glm::inverse(MV));
 		glUniformMatrix4fv(shader["modelViewMatrix"], 1, GL_FALSE, glm::value_ptr(MV));

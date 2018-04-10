@@ -61,5 +61,5 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	@$(call make-depend-cxx,$<,$@,$(subst .o,.d,$@))
 	$(CXX) $(CXXFLAGS) $(CXXLIBS) -c -o $@ $<
 
-$(EXAMPLE_BUILD_DIR)/%: $(EXAMPLE_SRC_DIR)/*.cpp $(LIBPATH) $(header) | $(EXAMPLE_BUILD_DIR)
+$(EXAMPLE_BUILD_DIR)/%: $(EXAMPLE_SRC_DIR)/%.cpp $(LIBPATH) $(header) | $(EXAMPLE_BUILD_DIR)
 	$(CXX) $< $(LIBLINK) $(CXXFLAGS) $(CXXLIBS) -o $@

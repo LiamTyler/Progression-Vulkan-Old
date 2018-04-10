@@ -1,13 +1,11 @@
 #include "include/game_object.h"
 
-GameObject::GameObject() : GameObject(Transform(), nullptr, nullptr)
+GameObject::GameObject() : GameObject(Transform())
 {
 }
 
-GameObject::GameObject(const Transform& t, Mesh* m, Material* mat) {
+GameObject::GameObject(const Transform& t) {
     transform = t;
-	mesh = m;
-	material = mat;
 }
 
 GameObject::~GameObject() {

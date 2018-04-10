@@ -12,7 +12,7 @@
 class GameObject {
     public:
         GameObject();
-        GameObject(const Transform& t, Mesh* mesh, Material* m);
+        GameObject(const Transform& t);
 		~GameObject();
 
         void Update(float dt);
@@ -27,8 +27,6 @@ class GameObject {
         ComponentType* GetComponent();
         
         Transform transform;
-		Mesh* mesh;
-		Material* material;
 
     protected:
         std::unordered_map<std::type_index, Component*> component_list_;

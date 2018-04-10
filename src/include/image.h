@@ -16,13 +16,14 @@ class Image {
         Image(const Image& src);
         ~Image();
 
-        void LoadImage(const std::string& filename);
+        bool LoadImage(const std::string& filename);
         void SaveImage(const std::string& filename);
 
         int Width() { return width_; }
         int Height() { return height_; }
         glm::vec4 GetPixel(int r, int c) { return pixels_[r*width_ + c]; }
         void SetPixel(int r, int c, glm::vec4 p) { pixels_[r*width_ + c] = p; }
+        glm::vec4* GetData() { return pixels_; }
 
         // Image processing features
         
