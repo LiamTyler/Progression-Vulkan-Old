@@ -98,8 +98,9 @@ void Mesh::Load(const objl::Mesh& mesh, bool use_mat) {
 
         std::string diffuse_map = mat.map_Kd;
         if (diffuse_map != "") {
-            diffuse_map = "./models" + diffuse_map;
             material->diffuseTex = new Texture(diffuse_map);
+        } else {
+            material->diffuseTex = nullptr;
         }
     } else {
         material = new Material;

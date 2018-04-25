@@ -35,7 +35,7 @@ bool Shader::AttachShaderFromString(GLenum shaderType, const std::string& source
 
     glGetShaderiv(newShader, GL_COMPILE_STATUS, &Result);
     glGetShaderiv(newShader, GL_INFO_LOG_LENGTH, &InfoLogLength);
-    if ( InfoLogLength > 0 ){
+    if ( !Result ){
         std::vector<char> ErrorMessage(InfoLogLength+1);
         glGetShaderInfoLog(newShader, InfoLogLength, NULL, &ErrorMessage[0]);
         printf("Error while loading shader:\n%s\n\n", &ErrorMessage[0]);
@@ -70,7 +70,7 @@ bool Shader::CreateAndLinkProgram() {
     int InfoLogLength;
     glGetProgramiv(program_, GL_LINK_STATUS, &Result);
     glGetProgramiv(program_, GL_INFO_LOG_LENGTH, &InfoLogLength);
-    if ( InfoLogLength > 0 ){
+    if ( !Result ){
         std::vector<char> ErrorMessage(InfoLogLength + 1);
         glGetProgramInfoLog(program_, InfoLogLength, NULL, &ErrorMessage[0]);
         printf("Error while compiling and linking program:\n%s\n\n", &ErrorMessage[0]);
