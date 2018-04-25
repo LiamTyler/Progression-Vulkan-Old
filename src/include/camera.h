@@ -26,8 +26,9 @@ class Camera {
         glm::vec3 GetUpDir() const;
         glm::vec3 GetRightDir() const;
 
-    protected:
 		Transform transform;
+
+    protected:
         void UpdateProjectionMatrix();
         float FOV;
         float aspectRatio;
