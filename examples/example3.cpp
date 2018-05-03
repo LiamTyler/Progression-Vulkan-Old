@@ -34,11 +34,7 @@ int main(int arc, char** argv) {
         "textures/skybox/back.jpg"
     };
 
-    Skybox skybox("shaders/skybox.vert", "shaders/skybox.frag");
-    if (!skybox.Load(faces)) {
-        cout << "Failed to load skybox" << endl;
-        return 1;
-    }
+    Background background(glm::vec4(1,1,1,1), faces);
 
     GameObject gameObj;
     gameObj.AddComponent<ModelRenderer>(new ModelRenderer(&phongShader, &model));
@@ -97,10 +93,7 @@ int main(int arc, char** argv) {
         camera.Update(dt);
         gameObj.Update(dt);
 
-        glClearColor(1, 1, 1, 1);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        skybox.Render(camera);
+        background.ClearAndRender(camera);
 
         phongShader.Enable();
         glm::mat4 P = camera.GetP();
