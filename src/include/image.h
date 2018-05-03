@@ -40,7 +40,7 @@ class Image {
         void Sharpen(int n) {}
         void EdgeDetect() {}
         // Image* Scale(float sx, float sy) {}
-        // Image* Crop(int x, int y, int w, int h) {}
+        Image* Crop(int r, int c, int w, int h);
         // Image* Rotate(float angle) {}
         void ExtractChannel(int channel) {}
         void Quantize(int nbits) {}

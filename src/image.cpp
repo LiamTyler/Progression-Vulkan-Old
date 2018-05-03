@@ -160,6 +160,16 @@ void Image::Saturate(float factor) {
     }
 }
 
+Image* Image::Crop(int r, int c, int w, int h) {
+    Image* subImage = new Image(w, h);
+    for (int rr = 0; rr < h; rr++) {
+        for (int cc = 0; cc < w; cc++) {
+            subImage->SetPixel(rr, cc, GetPixel(r + rr, c + cc));
+        }
+    }
+    return subImage;
+}
+
 glm::vec4 Image::ClampPixel(glm::vec4 p) {
     return glm::vec4(
             ClampFloat(p.r),
