@@ -25,6 +25,7 @@ int main(int arc, char** argv) {
     // Model model("models/test.obj");
     model.Load();
 
+    /*
     vector<string> faces = {
         "textures/skybox/right.jpg",
         "textures/skybox/left.jpg",
@@ -32,6 +33,15 @@ int main(int arc, char** argv) {
         "textures/skybox/bottom.jpg",
         "textures/skybox/front.jpg",
         "textures/skybox/back.jpg"
+    };
+    */
+    vector<string> faces = {
+        "/home/liam/Downloads/field-skyboxes/Meadow/posx.jpg",
+        "/home/liam/Downloads/field-skyboxes/Meadow/negx.jpg",
+        "/home/liam/Downloads/field-skyboxes/Meadow/posy.jpg",
+        "/home/liam/Downloads/field-skyboxes/Meadow/negy.jpg",
+        "/home/liam/Downloads/field-skyboxes/Meadow/posz.jpg",
+        "/home/liam/Downloads/field-skyboxes/Meadow/negz.jpg"
     };
 
     Background background(glm::vec4(1,1,1,1), faces);
