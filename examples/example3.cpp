@@ -36,12 +36,12 @@ int main(int arc, char** argv) {
     };
     */
     vector<string> faces = {
-        "/home/liam/Downloads/field-skyboxes/Meadow/posx.jpg",
-        "/home/liam/Downloads/field-skyboxes/Meadow/negx.jpg",
-        "/home/liam/Downloads/field-skyboxes/Meadow/posy.jpg",
-        "/home/liam/Downloads/field-skyboxes/Meadow/negy.jpg",
-        "/home/liam/Downloads/field-skyboxes/Meadow/posz.jpg",
-        "/home/liam/Downloads/field-skyboxes/Meadow/negz.jpg"
+        "textures/skybox/meadow/posx.jpg",
+        "textures/skybox/meadow/negx.jpg",
+        "textures/skybox/meadow/posy.jpg",
+        "textures/skybox/meadow/negy.jpg",
+        "textures/skybox/meadow/posz.jpg",
+        "textures/skybox/meadow/negz.jpg"
     };
 
     Background background(glm::vec4(1,1,1,1), faces);
