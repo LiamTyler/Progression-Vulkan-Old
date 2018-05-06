@@ -7,6 +7,7 @@ UserCamera::UserCamera(Transform t) : UserCamera(t, 3, 0.005) {}
 UserCamera::UserCamera(Transform t, float ms, float ts) : Camera(t) {
     moveSpeed = ms;
     turnSpeed = ts;
+    velocity = glm::vec3(0);
 }
 
 void UserCamera::Update(float dt) {
