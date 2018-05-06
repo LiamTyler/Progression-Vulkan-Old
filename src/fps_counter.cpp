@@ -6,6 +6,7 @@ FPSCounter::FPSCounter() {
     frameCounter_ = 0;
     fpsTime_ = 0;
     display_ = true;
+    prevTime_ = 0;
 }
 
 FPSCounter::~FPSCounter() {}
