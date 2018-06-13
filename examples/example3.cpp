@@ -11,8 +11,8 @@ int main(int arc, char** argv) {
                 glm::vec3(0, 1, 0)));
     Shader phongShader(
             "Phong Shader",
-            "shaders/regular_phong.vert",
-            "shaders/regular_phong.frag");
+            "../../shaders/regular_phong.vert",
+            "../../shaders/regular_phong.frag");
 
     DirectionalLight light(
             glm::vec3(0, -1, -1),
@@ -20,7 +20,7 @@ int main(int arc, char** argv) {
             glm::vec3(0.7, 0.7, 0.7),
             glm::vec3(1.0, 1.0, 1.0));
 
-    Model model("models/piano2.obj");
+    Model model("../../models/piano2.obj");
     // Model model("models/cube.obj");
     // Model model("models/test.obj");
     model.Load();
@@ -36,12 +36,12 @@ int main(int arc, char** argv) {
     };
     */
     vector<string> faces = {
-        "textures/skybox/meadow/posx.jpg",
-        "textures/skybox/meadow/negx.jpg",
-        "textures/skybox/meadow/posy.jpg",
-        "textures/skybox/meadow/negy.jpg",
-        "textures/skybox/meadow/posz.jpg",
-        "textures/skybox/meadow/negz.jpg"
+        "../../textures/skybox/meadow/posx.jpg",
+        "../../textures/skybox/meadow/negx.jpg",
+        "../../textures/skybox/meadow/posy.jpg",
+        "../../textures/skybox/meadow/negy.jpg",
+        "../../textures/skybox/meadow/posz.jpg",
+        "../../textures/skybox/meadow/negz.jpg"
     };
 
     Background background(glm::vec4(1,1,1,1), faces);

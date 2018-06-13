@@ -11,8 +11,8 @@ int main(int arc, char** argv) {
                 glm::vec3(0, 1, 0)));
     Shader shader(
             "Phong Shader",
-            "shaders/regular_phong.vert",
-            "shaders/regular_phong.frag");
+            "../../shaders/regular_phong.vert",
+            "../../shaders/regular_phong.frag");
 
     DirectionalLight light(glm::vec3(0, -1, -1));
 
@@ -22,7 +22,7 @@ int main(int arc, char** argv) {
         glm::vec3(.6, .6, .6),
         50);
 
-    Mesh mesh("models/cubes2.obj");
+    Mesh mesh("../../models/cubes2.obj");
     GLuint vao;
     GLuint vbo[3];
     glGenVertexArrays(1, &vao);
