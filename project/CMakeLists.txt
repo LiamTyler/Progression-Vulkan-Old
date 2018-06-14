@@ -72,8 +72,6 @@ if (WIN32)
     set_target_properties(
         ${OGL_STARTER_LIB}
         PROPERTIES
-        #OUTPUT_NAME_RELEASE ${OGL_STARTER_LIB}
-        #OUTPUT_NAME_DEBUG ${OGL_STARTER_DEBUG_LIB}
         DEBUG_POSTFIX _debug
         )
 
@@ -88,14 +86,17 @@ if (WIN32)
         set(fileOut "${fileOut}#include \"${f}\"\n")
     ENDFOREACH(f)
 
-    if (EXISTS ${CMAKE_BINARY_DIR}/starter.h)
-        file(READ ${CMAKE_BINARY_DIR}/starter.h fileIn)
+    set(STARTERH ${CMAKE_BINARY_DIR}/include/starter.h)
+    message("Starter.h at: ${STARTERH}")
+
+    if (EXISTS ${STARTERH}) 
+        file(READ ${STARTERH} fileIn)
         if (NOT ${fileIn} STREQUAL ${fileOut})
             message("rebuilding starter.h")
-            file(WRITE ${CMAKE_BINARY_DIR}/starter.h ${fileOut})
+            file(WRITE ${STARTERH} ${fileOut})
         endif()
     else()
-        file(WRITE ${CMAKE_BINARY_DIR}/starter.h ${fileOut})
+        file(WRITE ${STARTERH} ${fileOut})
     endif()
 
 endif()
