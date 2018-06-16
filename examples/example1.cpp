@@ -3,12 +3,17 @@
 using namespace std;
 
 int main(int arc, char** argv) {
-    Window window("Starter Project", 800, 600);
+    Window window("OpenGL_Starter Example 1", 800, 600);
 
     UserCamera camera = UserCamera(Transform(
                 glm::vec3(0, 0, 5),
                 glm::vec3(0, 0, -1),
                 glm::vec3(0, 1, 0)));
+	
+	/*Camera camera(Transform(
+		glm::vec3(0, 0, 5),
+		glm::vec3(0, 0, -1),
+		glm::vec3(0, 1, 0)));*/
     Shader shader(
             "Phong Shader",
             "../../shaders/regular_phong.vert",
@@ -22,11 +27,12 @@ int main(int arc, char** argv) {
         glm::vec3(.6, .6, .6),
         50);
 
-    Mesh mesh("../../models/cubes2.obj");
-    GLuint vao;
-    GLuint vbo[3];
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
+    Mesh mesh("../../models/cube.obj");
+
+	GLuint vao;
+	GLuint vbo[3];
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
     glGenBuffers(3, vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
     glBufferData(GL_ARRAY_BUFFER, mesh.numVertices * sizeof(glm::vec3), mesh.vertices, GL_STATIC_DRAW);
@@ -37,9 +43,11 @@ int main(int arc, char** argv) {
     glBufferData(GL_ARRAY_BUFFER, mesh.numVertices * sizeof(glm::vec3), mesh.normals, GL_STATIC_DRAW);
     glEnableVertexAttribArray(shader["normal"]);
     glVertexAttribPointer(shader["normal"], 3, GL_FLOAT, GL_FALSE, 0, 0);
+
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[2]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.numTriangles * sizeof(glm::ivec3),
         mesh.indices, GL_STATIC_DRAW);
+	
 
     window.SetRelativeMouse(true);
     bool quit = false;
@@ -51,6 +59,7 @@ int main(int arc, char** argv) {
                 quit = true;
             } else if (event.type == SDL_KEYDOWN && event.key.repeat == 0) {
                 switch (event.key.keysym.sym) {
+					
                     case SDLK_w:
                         camera.velocity.z = 1;
                         break;
@@ -63,6 +72,7 @@ int main(int arc, char** argv) {
                     case SDLK_d:
                         camera.velocity.x = 1;
                         break;
+					
                     case SDLK_ESCAPE:
                         quit = true;
                         break;
@@ -110,20 +120,21 @@ int main(int arc, char** argv) {
         glUniform3fv(shader["lightInEyeSpace"], 1, glm::value_ptr(lEye));
 
 		// draw model
-        glm::mat4 model(1);
-        model = glm::scale(model, glm::vec3(100, 100, 100));
+		Transform t;
+        glm::mat4& model = t.GetModelMatrix();
 		glm::mat4 MV = V * model;
 		glm::mat4 normalMatrix = glm::transpose(glm::inverse(MV));
 		glUniformMatrix4fv(shader["modelViewMatrix"], 1, GL_FALSE, glm::value_ptr(MV));
 		glUniformMatrix4fv(shader["normalMatrix"], 1, GL_FALSE, glm::value_ptr(normalMatrix));
 
         // hard code material for now
+		glUniform1i(shader["textured"], false);
 		glUniform3fv(shader["ka"], 1, glm::value_ptr(keyMat.ka));
 		glUniform3fv(shader["kd"], 1, glm::value_ptr(keyMat.kd));
 		glUniform3fv(shader["ks"], 1, glm::value_ptr(keyMat.ks));
 		glUniform1f(shader["specular"], keyMat.specular);
 
-        glDrawElements(GL_TRIANGLES, mesh.numTriangles*3, GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, mesh.numTriangles*3, GL_UNSIGNED_INT, 0);
 
         window.EndFrame();
     }

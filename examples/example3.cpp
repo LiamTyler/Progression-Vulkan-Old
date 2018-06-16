@@ -21,30 +21,22 @@ int main(int arc, char** argv) {
             glm::vec3(1.0, 1.0, 1.0));
 
     Model model("../../models/piano2.obj");
-    // Model model("models/cube.obj");
-    // Model model("models/test.obj");
     model.Load();
 
-    /*
+    
     vector<string> faces = {
-        "textures/skybox/right.jpg",
-        "textures/skybox/left.jpg",
-        "textures/skybox/top.jpg",
-        "textures/skybox/bottom.jpg",
-        "textures/skybox/front.jpg",
-        "textures/skybox/back.jpg"
+        "../../textures/skybox/water/right.jpg",
+        "../../textures/skybox/water/left.jpg",
+        "../../textures/skybox/water/top.jpg",
+        "../../textures/skybox/water/bottom.jpg",
+        "../../textures/skybox/water/front.jpg",
+        "../../textures/skybox/water/back.jpg"
     };
-    */
-    vector<string> faces = {
-        "../../textures/skybox/meadow/posx.jpg",
-        "../../textures/skybox/meadow/negx.jpg",
-        "../../textures/skybox/meadow/posy.jpg",
-        "../../textures/skybox/meadow/negy.jpg",
-        "../../textures/skybox/meadow/posz.jpg",
-        "../../textures/skybox/meadow/negz.jpg"
-    };
+    
+	Skybox skybox("../../shaders/skybox.vert", "../../shaders/skybox.frag");
+	skybox.Load(faces);
 
-    Background background(glm::vec4(1,1,1,1), faces);
+    Background background(glm::vec4(1,1,1,1), &skybox);
 
     GameObject gameObj;
     gameObj.AddComponent<ModelRenderer>(new ModelRenderer(&phongShader, &model));
@@ -109,6 +101,7 @@ int main(int arc, char** argv) {
         glm::mat4 P = camera.GetP();
         glm::mat4 V = camera.GetV();
         glUniformMatrix4fv(phongShader["projectionMatrix"], 1,  GL_FALSE, glm::value_ptr(P));
+
         glUniform3fv(phongShader["Ia"], 1, glm::value_ptr(light.Ia));
         glUniform3fv(phongShader["Id"], 1, glm::value_ptr(light.Id));
         glUniform3fv(phongShader["Is"], 1, glm::value_ptr(light.Is));

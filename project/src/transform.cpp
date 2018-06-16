@@ -1,23 +1,10 @@
 #include "include/transform.h"
 
-Transform::Transform() : Transform(
-        glm::vec3(0, 0, 0),
-        glm::vec3(0, 0, 0),
-        glm::vec3(1, 1, 1))
+Transform::Transform(const glm::vec3& pos, const glm::vec3& rot, const glm::vec3& sc) :
+	position(pos),
+	rotation(rot),
+	scale(sc)
 {
-}
-
-Transform::Transform(const glm::vec3& pos) : Transform(
-        pos,
-        glm::vec3(0, 0, 0),
-        glm::vec3(1, 1, 1))
-{
-}
-
-Transform::Transform(const glm::vec3& pos, const glm::vec3& rot, const glm::vec3& sc) {
-    position = pos;
-    rotation = rot;
-    scale = sc;
 }
 
 glm::mat4 Transform::GetModelMatrix() {

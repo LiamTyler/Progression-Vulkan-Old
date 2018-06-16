@@ -1,39 +1,30 @@
 #include "include/lights.h"
 
-Light::Light() : Light(
-    glm::vec3(0.3, 0.3, 0.3),
-    glm::vec3(0.7, 0.7, 0.7),
-    glm::vec3(1.0, 1.0, 1.0))
+Light::Light(const glm::vec3& a, const glm::vec3& d, const glm::vec3& s) :
+	Ia(a),
+	Id(d),
+	Is(s)
 {
 }
 
-Light::Light(glm::vec3 a, glm::vec3 d, glm::vec3 s) {
-    Ia = a;
-    Id = d;
-    Is = s;
+DirectionalLight::DirectionalLight(const glm::vec3& dir) :
+	direction(dir)
+{
 }
 
-DirectionalLight::DirectionalLight() {
-    direction = glm::vec3(0, 0, -1);
+DirectionalLight::DirectionalLight(const glm::vec3& dir, const glm::vec3& a, const glm::vec3& d, const glm::vec3& s) :
+	Light(a, d, s),
+	direction(glm::normalize(dir))
+{
 }
 
-DirectionalLight::DirectionalLight(glm::vec3 dir) {
-    direction = glm::normalize(dir);
+PointLight::PointLight(const glm::vec3& pos) :
+	position(pos)
+{
 }
 
-DirectionalLight::DirectionalLight(glm::vec3 dir,
-        glm::vec3 a, glm::vec3 d, glm::vec3 s) : Light(a, d, s) {
-    direction = glm::normalize(dir);
-}
-
-PointLight::PointLight() {
-    position = glm::vec3(0, 0, -1);
-}
-
-PointLight::PointLight(glm::vec3 pos) {
-    position = pos;
-}
-
-PointLight::PointLight(glm::vec3 pos, glm::vec3 a, glm::vec3 d, glm::vec3 s) : Light(a, d, s) {
-    position = pos;
+PointLight::PointLight(const glm::vec3& pos, const glm::vec3& a, const glm::vec3& d, const glm::vec3& s) :
+	Light(a, d, s),
+	position(pos)
+{
 }

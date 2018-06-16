@@ -4,9 +4,10 @@
 
 class Transform {
     public:
-        Transform();
-        Transform(const glm::vec3& pos);
-        Transform(const glm::vec3& pos, const glm::vec3& rot, const glm::vec3& scale);
+        Transform(
+			const glm::vec3& pos   = glm::vec3(0),
+			const glm::vec3& rot   = glm::vec3(0),
+			const glm::vec3& scale = glm::vec3(1));
 
         glm::mat4 GetModelMatrix();
 

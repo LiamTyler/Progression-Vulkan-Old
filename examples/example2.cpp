@@ -3,7 +3,7 @@
 using namespace std;
 
 int main(int arc, char** argv) {
-    Window window("Starter Project", 800, 600);
+    Window window("OpenGL_Starter Example 2", 800, 600);
 
     UserCamera camera = UserCamera(Transform(
                 glm::vec3(0, 0, 5),
@@ -11,8 +11,8 @@ int main(int arc, char** argv) {
                 glm::vec3(0, 1, 0)));
     Shader shader(
             "Phong Shader",
-            "shaders/regular_phong.vert",
-            "shaders/regular_phong.frag");
+            "../../shaders/regular_phong.vert",
+            "../../shaders/regular_phong.frag");
 
     DirectionalLight light(
             glm::vec3(0, -1, -1),
@@ -20,7 +20,7 @@ int main(int arc, char** argv) {
             glm::vec3(0.7, 0.7, 0.7),
             glm::vec3(1.0, 1.0, 1.0));
 
-    Model model("models/piano2.obj");
+    Model model("../../models/piano2.obj");
     // Model model("models/cube.obj");
     // Model model("models/test.obj");
     model.Load();

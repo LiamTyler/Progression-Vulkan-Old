@@ -1,72 +1,63 @@
 #include "include/camera.h"
 
-Camera::Camera() : Camera(Transform()) {
-}
-
-Camera::Camera(const glm::vec3& pos) : Camera(Transform(pos)) {
-}
-
-Camera::Camera(Transform t) :
-    Camera(t, glm::radians(45.0f), 4.0f/3.0f, .1f, 100.0f ) {
-}
-
-Camera::Camera(Transform t, float fov, float a, float np, float fp) {
-    transform = t;
-    FOV = fov;
-    aspectRatio = a;
-    nearPlane = np;
-    farPlane = fp;
-    UpdateOrientationVectors();
-    UpdateProjectionMatrix();
-    UpdateViewMatrix();
+Camera::Camera(const Transform& t, float fov, float a, float np, float fp) :
+	transform(t),
+	fieldOfView_(fov),
+	aspectRatio_(a),
+	nearPlane_(np),
+	farPlane_(fp)
+{
+	UpdateOrientationVectors();
+	UpdateProjectionMatrix();
+	UpdateViewMatrix();
 }
 
 void Camera::UpdateOrientationVectors() {
     glm::mat4 rot(1);
     rot = glm::rotate(rot, transform.rotation.y, glm::vec3(0, 1, 0));
     rot = glm::rotate(rot, transform.rotation.x, glm::vec3(1, 0, 0));
-    currDir = glm::vec3(rot * glm::vec4(0, 0, -1, 0));
-    currUp = glm::vec3(rot * glm::vec4(0, 1, 0, 0));
-    currRight = glm::cross(currDir, currUp);
+    currDir_ = glm::vec3(rot * glm::vec4(0, 0, -1, 0));
+    currUp_ = glm::vec3(rot * glm::vec4(0, 1, 0, 0));
+    currRight_ = glm::cross(currDir_, currUp_);
 }
 
 void Camera::UpdateViewMatrix() {
-    viewMatrix = glm::lookAt(
+    viewMatrix_ = glm::lookAt(
             transform.position,
-            transform.position + currDir,
-            currUp);
+            transform.position + currDir_,
+            currUp_);
 }
 
 void Camera::UpdateProjectionMatrix() {
-    projectionMatrix = glm::perspective(FOV, aspectRatio, nearPlane, farPlane);
+    projectionMatrix_ = glm::perspective(fieldOfView_, aspectRatio_, nearPlane_, farPlane_);
 }
 
-glm::mat4 Camera::GetV() const { return viewMatrix; }
-glm::mat4 Camera::GetP() const { return projectionMatrix; }
-float Camera::GetFOV() const { return FOV; }
-float Camera::GetAspectRatio() const { return aspectRatio; }
-float Camera::GetNearPlane() const { return nearPlane; }
-float Camera::GetFarPlane() const { return farPlane; }
-glm::vec3 Camera::GetForwardDir() const { return currDir; }
-glm::vec3 Camera::GetUpDir() const { return currUp; }
-glm::vec3 Camera::GetRightDir() const { return currRight; }
+glm::mat4 Camera::GetV() const { return viewMatrix_; }
+glm::mat4 Camera::GetP() const { return projectionMatrix_; }
+float Camera::GetFOV() const { return fieldOfView_; }
+float Camera::GetAspectRatio() const { return aspectRatio_; }
+float Camera::GetNearPlane() const { return nearPlane_; }
+float Camera::GetFarPlane() const { return farPlane_; }
+glm::vec3 Camera::GetForwardDir() const { return currDir_; }
+glm::vec3 Camera::GetUpDir() const { return currUp_; }
+glm::vec3 Camera::GetRightDir() const { return currRight_; }
 
 void Camera::SetFOV(float f) {
-    FOV = f;
+    fieldOfView_ = f;
     UpdateProjectionMatrix();
 }
 
 void Camera::SetAspectRatio(float a) {
-    aspectRatio = a;
+    aspectRatio_ = a;
     UpdateProjectionMatrix();
 }
 
 void Camera::SetNearPlane(float p) {
-    nearPlane = p;
+    nearPlane_ = p;
     UpdateProjectionMatrix();
 }
 
 void Camera::SetFarPlane(float p) {
-    farPlane = p;
+    farPlane_ = p;
     UpdateProjectionMatrix();
 }

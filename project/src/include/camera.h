@@ -5,38 +5,42 @@
 
 class Camera {
     public:
-        Camera();
-        Camera(const glm::vec3& pos);
-        Camera(Transform t);
-        Camera(Transform t, float fov, float a, float np, float fp);
+        Camera(
+			const Transform& t = Transform(),
+			float fov = glm::radians(45.0f),
+			float a = 4.0f / 3.0f,
+			float np = .1f,
+			float fp = 100.0f);
 
-        glm::mat4 GetV() const;
-        glm::mat4 GetP() const;
         float GetFOV() const;
         float GetAspectRatio() const;
         float GetNearPlane() const;
         float GetFarPlane() const;
+		glm::mat4 GetV() const;
+		glm::mat4 GetP() const;
+		glm::vec3 GetForwardDir() const;
+		glm::vec3 GetUpDir() const;
+		glm::vec3 GetRightDir() const;
+
         void SetFOV(float f);
         void SetAspectRatio(float a);
         void SetNearPlane(float p);
         void SetFarPlane(float p);
         void UpdateOrientationVectors();
         void UpdateViewMatrix();
-        glm::vec3 GetForwardDir() const;
-        glm::vec3 GetUpDir() const;
-        glm::vec3 GetRightDir() const;
+
 
 		Transform transform;
 
     protected:
         void UpdateProjectionMatrix();
-        float FOV;
-        float aspectRatio;
-        float nearPlane;
-        float farPlane;
-        glm::mat4 viewMatrix;
-        glm::mat4 projectionMatrix;
-        glm::vec3 currDir;
-        glm::vec3 currUp;
-        glm::vec3 currRight;
+        float fieldOfView_;
+        float aspectRatio_;
+        float nearPlane_;
+        float farPlane_;
+        glm::mat4 viewMatrix_;
+        glm::mat4 projectionMatrix_;
+        glm::vec3 currDir_;
+        glm::vec3 currUp_;
+        glm::vec3 currRight_;
 };

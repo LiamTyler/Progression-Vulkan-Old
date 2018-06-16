@@ -5,10 +5,7 @@
 
 class Background {
     public:
-        Background();
-        Background(glm::vec4 c);
-        Background(glm::vec4 c, std::vector<std::string> faces);
-        Background(glm::vec4 c, Skybox* sb);
+        Background(const glm::vec4& c = glm::vec4(1), Skybox* sb = nullptr);
 
         void ClearAndRender(const Camera& camera);
 
