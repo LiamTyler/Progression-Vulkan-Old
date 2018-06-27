@@ -2,20 +2,32 @@
 
 #include "include/utils.h"
 
+class Image;
+
 class Texture {
     public:
-        Texture();
-        Texture(const std::string& fname);
-        Texture(const std::string& fname, bool mip_mapped);
+		Texture();
+        Texture(const std::string& fname, bool mip_mapped = false);
+		Texture(const Image& image, bool mip_mapped = false);
+		~Texture();
 
-        std::string GetName() { return filename_; }
-        bool IsMipMapped() { return mip_mapped_; }
-        GLuint GetHandle() { return gpu_handle_; }
+		bool Load(const std::string& fname, bool mip_mapped = false);
+		bool Load(const Image& image, bool mip_mapped = false);
+		void Free();
+
+        std::string GetName() const { return filename_; }
+        GLuint GetHandle() const { return gpu_handle_; }
+		int GetWidth() const { return width_; }
+		int GetHeight() const { return height_; }
+		bool IsMipMapped() const { return mip_mapped_; }
+		bool IsLoaded() const { return gpu_handle_ != -1; }
 
     protected:
-        GLuint LoadTexture();
+		void LoadImpl(const Image& image);
 
         std::string filename_;
         GLuint gpu_handle_;
+		int width_;
+		int height_;
         bool mip_mapped_;
 };

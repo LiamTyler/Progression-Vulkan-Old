@@ -1,26 +1,56 @@
 #include "include/texture.h"
 #include "include/image.h"
 
-Texture::Texture() : Texture("") {}
-
-Texture::Texture(const std::string& fname) : Texture(fname, false) {}
-
-Texture::Texture(const std::string& fname, bool mip_mapped) {
-    filename_ = fname;
-    mip_mapped_ = mip_mapped;
-    gpu_handle_ = LoadTexture();
+Texture::Texture() {
+	filename_ = "";
+	mip_mapped_ = false;
+	gpu_handle_ = -1;
+	width_ = 0;
+	height_ = 0;
 }
 
-GLuint Texture::LoadTexture() {
-    Image image;
-    if (!image.LoadImage(filename_)) {
-        std::cerr << "Failed to load tex: " << filename_ << std::endl;
-        return -1;
-    }
+Texture::Texture(const std::string& fname, bool mip_mapped) {
+	Load(fname, mip_mapped);
+}
 
-    GLuint tex;
-    glGenTextures(1, &tex);
-    glBindTexture(GL_TEXTURE_2D, tex);
+Texture::Texture(const Image& image, bool mip_mapped) {
+	Load(image, mip_mapped);
+}
+
+Texture::~Texture() {
+	Free();
+}
+
+bool Texture::Load(const std::string& fname, bool mip_mapped) {
+	filename_ = fname;
+	mip_mapped_ = mip_mapped;
+	Image image;
+	if (!image.LoadImage(filename_))
+		return false;
+	LoadImpl(image);
+	return true;
+}
+
+bool Texture::Load(const Image& image, bool mip_mapped) {
+	filename_ = "";
+	mip_mapped_ = mip_mapped;
+	LoadImpl(image);
+	return true;
+}
+
+void Texture::Free() {
+	if (gpu_handle_ == -1) {
+		glDeleteTextures(1, &gpu_handle_);
+		filename_ = "";
+		mip_mapped_ = true;
+	}
+}
+
+void Texture::LoadImpl(const Image& image) {
+	width_ = image.Width();
+	height_ = image.Height();
+    glGenTextures(1, &gpu_handle_);
+    glBindTexture(GL_TEXTURE_2D, gpu_handle_);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.Width(), image.Height(), 0, GL_RGBA,
             GL_FLOAT, image.GetData());
     if (mip_mapped_) {
@@ -31,6 +61,4 @@ GLuint Texture::LoadTexture() {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    return tex;
 }

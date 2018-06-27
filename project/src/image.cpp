@@ -52,10 +52,10 @@ bool Image::LoadImage(const std::string& fname) {
         int I = 0;
         for (int r = 0; r < height_; r++) {
             for (int c = 0; c < width_; c++) {
-                float rr = raw[I++] / 255.0f;
-                float gg = raw[I++] / 255.0f;
-                float bb = raw[I++] / 255.0f;
-                float aa = raw[I++] / 255.0f;
+                float rr = static_cast<float>(raw[I++]) / 255.0f;
+                float gg = static_cast<float>(raw[I++]) / 255.0f;
+                float bb = static_cast<float>(raw[I++]) / 255.0f;
+                float aa = static_cast<float>(raw[I++]) / 255.0f;
                 SetPixel(r, c, glm::vec4(rr, gg, bb, aa));
             }
         }
@@ -70,10 +70,10 @@ void Image::SaveImage(const std::string& fname) {
         for (int c = 0; c < width_; c++) {
             glm::vec4 p = GetPixel(r,c);
             p = ClampPixel(p);
-            out[b++] = (unsigned char) 255*p.r;
-            out[b++] = (unsigned char) 255*p.g;
-            out[b++] = (unsigned char) 255*p.b;
-            out[b++] = (unsigned char) 255*p.a;
+			out[b++] = static_cast<unsigned char>(255 * p.r);
+			out[b++] = static_cast<unsigned char>(255 * p.g);
+			out[b++] = static_cast<unsigned char>(255 * p.b);
+			out[b++] = static_cast<unsigned char>(255 * p.a);
         }
     }
 

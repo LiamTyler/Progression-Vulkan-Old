@@ -22,6 +22,7 @@ class Shader {
 
         GLuint GetProgram() { return program_; }
         std::string ID() { return id_; }
+		bool IsLoaded() { return loaded_; }
 
     protected:
         std::string id_;
@@ -29,4 +30,5 @@ class Shader {
         std::vector<GLuint> shaders_;
         std::unordered_map<std::string, GLuint> attributeList_;
         std::unordered_map<std::string, GLuint> uniformList_;
+		bool loaded_;
 };

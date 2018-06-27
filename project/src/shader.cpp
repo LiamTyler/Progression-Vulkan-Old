@@ -4,13 +4,15 @@ Shader::Shader() : Shader("") {}
 
 Shader::Shader(const std::string& name) {
     id_ = name;
-    program_ = 0;
+    program_ = -1;
+	loaded_ = false;
 }
 
 Shader::Shader(const std::string& name, const std::string& vertex_file,
         const std::string& frag_file) {
     id_ = name;
     program_ = 0;
+	loaded_ = false;
     AttachShaderFromFile(GL_VERTEX_SHADER, vertex_file);
     AttachShaderFromFile(GL_FRAGMENT_SHADER, frag_file);
     CreateAndLinkProgram();
@@ -80,6 +82,7 @@ bool Shader::CreateAndLinkProgram() {
         glDeleteShader(shaders_[i]);
     }
     shaders_.clear();
+	loaded_ = true;
     return true;
 }
 
