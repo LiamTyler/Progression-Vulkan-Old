@@ -1,16 +1,19 @@
 #pragma once
 
-#include "include/utils.h"
-#include "include/component.h"
-#include "include/game_object.h"
-#include "include/mesh.h"
-#include "include/shader.h"
-#include "include/camera.h"
+#include <vector>
 
-class MeshRenderer : public Component {
+#include "include/utils.h"
+#include "include/shader.h"
+#include "include/mesh.h"
+#include "include/camera.h"
+#include "include/component.h"
+
+namespace Progression {
+
+	class MeshRenderer : public Component {
 	public:
 		MeshRenderer(Shader* sh, Mesh* m);
-		~MeshRenderer();
+		~MeshRenderer() = default;
 
 		void Start();
 		void Update(float dt);
@@ -23,4 +26,6 @@ class MeshRenderer : public Component {
 		GLuint vao_;
 		std::vector<GLuint> vbos_;
 		bool textured_;
-};
+	};
+
+} // namespace Progression

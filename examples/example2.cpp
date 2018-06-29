@@ -1,6 +1,7 @@
-#include "starter.h"
+#include "progression.h"
 
 using namespace std;
+using namespace PG; // PG is a shortcut for Progression defined in progression.h
 
 int main(int arc, char** argv) {
     Window window("OpenGL_Starter Example 2", 800, 600);

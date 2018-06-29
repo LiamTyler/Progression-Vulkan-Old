@@ -2,15 +2,9 @@
 
 #pragma once
 
-// Vector - STD Vector/Array Library
 #include <vector>
-
-// String - STD String Library
 #include <string>
-
-// fStream - STD File I/O Library
 #include <fstream>
-
 #include <cmath>
 
 // Print progress to console while loading (large models)
@@ -20,6 +14,7 @@
 //
 // Description: The namespace that holds eveyrthing that
 //	is needed and used for the OBJ Model Loader
+
 namespace objl
 {
 	// Structure: Vector2

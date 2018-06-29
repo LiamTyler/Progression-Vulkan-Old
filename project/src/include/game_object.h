@@ -1,56 +1,50 @@
 #pragma once
 
-#include "include/utils.h"
-#include "include/transform.h"
-#include "include/component.h"
-#include "include/mesh.h"
-#include "include/material.h"
-
 #include <typeindex>
 #include <typeinfo>
+#include <unordered_map>
 
-class GameObject {
-    public:
-        GameObject();
-        GameObject(const Transform& t);
+#include "include/transform.h"
+#include "include/component.h"
+
+namespace Progression {
+
+	class GameObject {
+	public:
+		GameObject();
+		GameObject(const Transform& t);
 		~GameObject();
 
-        void Update(float dt);
+		void Update(float dt);
 
-        template<typename ComponentType>
-        void AddComponent(Component* c);
+		template<typename ComponentType>
+		void AddComponent(Component* c) {
+			assert(component_list_.find(typeid(ComponentType)) == component_list_.end());
+			c->gameObject = this;
+			c->Start();
+			component_list_[typeid(ComponentType)] = c;
+		}
 
-        template<typename ComponentType>
-        void RemoveComponent();
+		template<typename ComponentType>
+		void RemoveComponent() {
+			assert(component_list_.find(typeid(ComponentType)) != component_list_.end());
+			Component* c = component_list_[typeid(ComponentType)];
+			c->Stop();
+			delete c;
+			component_list_.erase(typeid(ComponentType));
+		}
 
-        template<typename ComponentType>
-        ComponentType* GetComponent();
-        
-        Transform transform;
+		template<typename ComponentType>
+		ComponentType* GetComponent() {
+			assert(component_list_.find(typeid(ComponentType)) != component_list_.end());
+			return (ComponentType*)component_list_[typeid(ComponentType)];
+		}
 
-    protected:
-        std::unordered_map<std::type_index, Component*> component_list_;
-};
+		Transform transform;
 
-template<typename ComponentType>
-ComponentType* GameObject::GetComponent() {
-    assert(component_list_.find(typeid(ComponentType)) != component_list_.end());
-    return (ComponentType*) component_list_[typeid(ComponentType)];
-}
+	protected:
+		std::unordered_map<std::type_index, Component*> component_list_;
+	};
 
-template<typename ComponentType>
-void GameObject::AddComponent(Component* c) {
-    assert(component_list_.find(typeid(ComponentType)) == component_list_.end());
-    c->gameObject = this;
-    c->Start();
-    component_list_[typeid(ComponentType)] = c;
-}
+} // namespace Progression
 
-template<typename ComponentType>
-void GameObject::RemoveComponent() {
-    assert(component_list_.find(typeid(ComponentType)) != component_list_.end());
-    Component* c = component_list_[typeid(ComponentType)];
-    c->Stop();
-    delete c;
-    component_list_.erase(typeid(ComponentType));
-}

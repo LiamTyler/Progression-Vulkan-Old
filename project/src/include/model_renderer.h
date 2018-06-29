@@ -1,10 +1,14 @@
 #pragma once
 
-#include "include/utils.h"
-#include "include/mesh_renderer.h"
-#include "include/model.h"
+#include <vector>
 
-class ModelRenderer : public Component {
+#include "include/component.h"
+#include "include/model.h"
+#include "include/mesh_renderer.h"
+
+namespace Progression {
+
+	class ModelRenderer : public Component {
 	public:
 		ModelRenderer(Shader* sh, Model* m);
 		~ModelRenderer();
@@ -15,7 +19,9 @@ class ModelRenderer : public Component {
 		void Render(const Camera& camera);
 
 	protected:
-		Shader* shader_;
-        Model* model_;
-        std::vector<MeshRenderer*> mesh_renderers_;
-};
+		Shader * shader_;
+		Model* model_;
+		std::vector<MeshRenderer*> mesh_renderers_;
+	};
+
+} // namespace Progression

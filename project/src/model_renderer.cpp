@@ -1,34 +1,41 @@
 #include "include/model_renderer.h"
 
-ModelRenderer::ModelRenderer(Shader* sh, Model* m) {
-    shader_ = sh;
-    model_ = m;
-}
+#include "include/mesh_renderer.h"
+#include "include/model.h"
 
-ModelRenderer::~ModelRenderer() {
-}
+namespace Progression {
 
-void ModelRenderer::Start() {
-    for (auto& mesh : model_->GetMeshes()) {
-        MeshRenderer* rc = new MeshRenderer(shader_, mesh);
-        rc->gameObject = this->gameObject;
-        rc->Start();
-        mesh_renderers_.push_back(rc);
-    }
-}
+	ModelRenderer::ModelRenderer(Shader* sh, Model* m) {
+		shader_ = sh;
+		model_ = m;
+	}
 
-void ModelRenderer::Update(float dt) {
-}
+	ModelRenderer::~ModelRenderer() {
+	}
 
-void ModelRenderer::Stop() {
-    for (auto& mr : mesh_renderers_) {
-        mr->Stop();
-        delete mr;
-    }
-}
+	void ModelRenderer::Start() {
+		for (auto& mesh : model_->GetMeshes()) {
+			MeshRenderer* rc = new MeshRenderer(shader_, mesh);
+			rc->gameObject = this->gameObject;
+			rc->Start();
+			mesh_renderers_.push_back(rc);
+		}
+	}
 
-void ModelRenderer::Render(const Camera& camera) {
-    for (auto& rc : mesh_renderers_) {
-        rc->Render(camera);
-    }
-}
+	void ModelRenderer::Update(float dt) {
+	}
+
+	void ModelRenderer::Stop() {
+		for (auto& mr : mesh_renderers_) {
+			mr->Stop();
+			delete mr;
+		}
+	}
+
+	void ModelRenderer::Render(const Camera& camera) {
+		for (auto& rc : mesh_renderers_) {
+			rc->Render(camera);
+		}
+	}
+
+} // namespace Progression

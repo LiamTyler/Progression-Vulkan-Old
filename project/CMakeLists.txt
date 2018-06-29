@@ -8,7 +8,6 @@ set(
     SRCS
     src/background.cpp
     src/camera.cpp
-    src/fps_counter.cpp
     src/game_object.cpp
     src/image.cpp
     src/lights.cpp
@@ -32,7 +31,6 @@ set (
     src/include/background.h
     src/include/camera.h
     src/include/component.h
-    src/include/fps_counter.h
     src/include/game_object.h
     src/include/image.h
     src/include/lights.h

@@ -2,17 +2,22 @@
 
 #include "include/utils.h"
 #include "include/skybox.h"
+#include "include/camera.h"
 
-class Background {
-    public:
-        Background(const glm::vec4& c = glm::vec4(1), Skybox* sb = nullptr);
+namespace Progression {
 
-        void ClearAndRender(const Camera& camera);
+	class Background {
+	public:
+		Background(const glm::vec4& c = glm::vec4(1), Skybox* sb = nullptr);
 
-        glm::vec4 GetColor() { return color_; }
-        void SetColor(const glm::vec4& c) { color_ = c; }
+		void ClearAndRender(const Camera& camera);
 
-    private:
-        glm::vec4 color_;
-        Skybox* skybox_;
-};
+		glm::vec4 GetColor() { return color_; }
+		void SetColor(const glm::vec4& c) { color_ = c; }
+
+	private:
+		glm::vec4 color_;
+		Skybox* skybox_;
+	};
+
+} // namespace Progression

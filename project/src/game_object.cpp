@@ -1,21 +1,25 @@
 #include "include/game_object.h"
 
-GameObject::GameObject() : GameObject(Transform())
-{
-}
+namespace Progression {
 
-GameObject::GameObject(const Transform& t) {
-    transform = t;
-}
+	GameObject::GameObject() : GameObject(Transform())
+	{
+	}
 
-GameObject::~GameObject() {
-    for (auto& c : component_list_) {
-        c.second->Stop();
-        delete c.second;
-    }
-}
+	GameObject::GameObject(const Transform& t) {
+		transform = t;
+	}
 
-void GameObject::Update(float dt) {
-    for (auto& c : component_list_)
-        c.second->Update(dt);
-}
+	GameObject::~GameObject() {
+		for (auto& c : component_list_) {
+			c.second->Stop();
+			delete c.second;
+		}
+	}
+
+	void GameObject::Update(float dt) {
+		for (auto& c : component_list_)
+			c.second->Update(dt);
+	}
+
+} // namespace Progression

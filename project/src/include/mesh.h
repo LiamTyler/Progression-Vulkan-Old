@@ -4,24 +4,28 @@
 #include "include/OBJ_Loader.h"
 #include "include/material.h"
 
-class Mesh {
-    public:
-        Mesh();
-        Mesh(const std::string& filename);
+namespace Progression {
 
-        ~Mesh();
+	class Mesh {
+	public:
+		Mesh();
+		Mesh(const std::string& filename);
 
-        void Free();
-        void Load(const std::string& filename);
-        // loading from Model class
-        void Load(const objl::Mesh& mesh, bool use_mat);
-        bool HasTextureCoords() { return texCoords != nullptr; }
+		~Mesh();
 
-        Material* material;
-        unsigned int numVertices;
-        unsigned int numTriangles;
-        glm::vec3* vertices;
-        glm::vec3* normals;
-        glm::vec2* texCoords;
-        glm::ivec3* indices;
-};
+		void Free();
+		void Load(const std::string& filename);
+		// loading from Model class
+		void Load(const objl::Mesh& mesh, bool use_mat);
+		bool HasTextureCoords() { return texCoords != nullptr; }
+
+		Material* material;
+		unsigned int numVertices;
+		unsigned int numTriangles;
+		glm::vec3* vertices;
+		glm::vec3* normals;
+		glm::vec2* texCoords;
+		glm::ivec3* indices;
+	};
+
+} // namespace Progression

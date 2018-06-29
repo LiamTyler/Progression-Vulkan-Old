@@ -3,6 +3,7 @@
 #include "src/include/background.h"
 #include "src/include/camera.h"
 #include "src/include/component.h"
+#include "src/include/fps_counter.h"
 #include "src/include/game_object.h"
 #include "src/include/image.h"
 #include "src/include/lights.h"
@@ -21,5 +22,3 @@
 #include "src/include/user_camera.h"
 #include "src/include/utils.h"
 #include "src/include/window.h"
-
-namespace PG = Progression;
