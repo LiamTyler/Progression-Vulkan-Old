@@ -4,9 +4,20 @@ project(Progression)
 
 option(BUILD_EXAMPLES "Build the example programs" OFF)
 
+if (MSVC)
+    set(CPP_VERSION "/std:c++17")
+else()
+    set(CPP_VERSION "-std=c++17")
+endif()
+
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CPP_VERSION} -g")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_RELEASE} ${CPP_VERSION} -O3")
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-set(PROGRESSION_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+if (NOT PROGRESSION_DIR)
+    set(PROGRESSION_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+endif()
 
 if (WIN32)
     message(STATUS "Starting build for Windows system...")
