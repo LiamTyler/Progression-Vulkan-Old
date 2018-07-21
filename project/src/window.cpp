@@ -31,18 +31,22 @@ namespace Progression {
 			SDL_WINDOW_OPENGL);
 
 		if (sdlWindow_ == NULL) {
-			std::cerr << "Failed to create an SDL2 window" << std::endl;
+			std::cout << "Failed to create an SDL2 window" << std::endl;
 			exit(EXIT_FAILURE);
 		}
 		glContext_ = SDL_GL_CreateContext(sdlWindow_);
 		if (glContext_ == NULL) {
-			std::cerr << "Failed to create an opengl context" << std::endl;
+			std::cout << "Failed to create an opengl context" << std::endl;
 			exit(EXIT_FAILURE);
 		}
 
-		glewExperimental = GL_TRUE;
+		/*glewExperimental = GL_TRUE;
 		if (glewInit() != GLEW_OK) {
 			std::cerr << "Failed to init GLEW" << std::endl;
+			exit(EXIT_FAILURE);
+		}*/
+		if (!gladLoadGLLoader(SDL_GL_GetProcAddress)) {
+			std::cout << "Failed to gladLoadGLLoader" << std::endl;
 			exit(EXIT_FAILURE);
 		}
 		

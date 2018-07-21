@@ -1,12 +1,8 @@
 #pragma once
 
-#ifdef _WIN32
-    #define GLEW_STATIC
-    #include <GL\glew.h>
-    #include <GL\glu.h>
-    #include <SDL.h>
-    #include <SDL_opengl.h>
-#endif
+#include "glad/glad.h"
+#include <SDL.h>
+#include <SDL_opengl.h>
 
 #include "glm/glm.hpp"
 #include "glm/ext.hpp"

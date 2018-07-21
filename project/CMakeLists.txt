@@ -50,8 +50,12 @@ set (
     src/include/utils.h
     src/include/window.h
     )
+	
+set(GLAD_SRC
+	${PROGRESSION_DIR}/ext/glad/src/glad.c
+	)
 
-add_library(progression STATIC ${SRCS} ${HEADERS})
+add_library(progression STATIC ${SRCS} ${HEADERS} ${GLAD_SRC})
 
 set_target_properties(
     progression

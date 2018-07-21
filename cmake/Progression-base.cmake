@@ -1,7 +1,3 @@
-if(NOT GLEW_DIR)
-    set(GLEW_DIR C:/GLEW)
-endif()
-
 if (NOT SDL2_DIR)
     set(SDL2_DIR C:/SDL2)
 endif()
@@ -13,16 +9,6 @@ endif()
 # Find OpenGL
 find_package(OpenGL REQUIRED)
 
-# Find GLEW
-find_library(GLEW_LIBRARY
-    NAMES glew32s
-    HINTS ${GLEW_DIR}/lib/Release/x64
-    )
-if (NOT GLEW_LIBRARY)
-    message(FATAL_ERROR "Could not find the GLEW Library. Exiting")
-endif()
-
-set(GLEW_INCLUDE_DIR ${GLEW_DIR}/include)
 
 # Find SDL2
 find_library(SDL2_LIBRARY
@@ -44,17 +30,16 @@ endif()
 set(SDL2_INCLUDE_DIR ${SDL2_DIR}/include)
 
 set(PROGRESSION_INCLUDE_DIRS
-    ${GLEW_INCLUDE_DIR}
     ${SDL2_INCLUDE_DIR}
-    ${PROGRESSION_DIR}/ext/
-    ${PROGRESSION_DIR}/include/
-    ${PROGRESSION_DIR}/project/
+    ${PROGRESSION_DIR}/ext
+    ${PROGRESSION_DIR}/include
+    ${PROGRESSION_DIR}/project
     ${PROGRESSION_DIR}/project/src
+	${PROGRESSION_DIR}/ext/glad/include
     )
 
 set(PROGRESSION_LIBS
     ${OPENGL_LIBRARIES}
-    ${GLEW_LIBRARY}
     ${SDL2_LIBRARY}
     ${SDL2_LIBRARY_MAIN}
     )
