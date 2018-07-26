@@ -110,6 +110,8 @@ int main(int arc, char** argv) {
             camera.velocity.x = 0;
         }*/
 
+        camera.Rotate(glm::vec3(Input::GetMouseChange(), 0));
+
         float dt = window.GetDT();
         // std::cout << "dt = " << dt << ", time = " << glfwGetTime() << std::endl;
         camera.Update(dt);

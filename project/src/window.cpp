@@ -61,6 +61,7 @@ namespace Progression {
 
         // setup the callbacks
         glfwSetKeyCallback(window_, Input::key_callback);
+        glfwSetCursorPosCallback(window_, Input::cursor_position_callback);
 
 
 		glEnable(GL_DEPTH_TEST);
