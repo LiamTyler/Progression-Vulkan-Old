@@ -1,80 +1,84 @@
 #include "include/window.h"
+#include "include/input.h"
+
+static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
+}
 
 namespace Progression {
 
-	Window::Window(const std::string& title, int w, int h) :
+	Window::Window(const std::string& title, int w, int h, bool vsync) :
 		title_(title),
-		width_(w),
-		height_(h),
-		fpsCounter_()
+        screenWidth_(w),
+        screenHeight_(h),
+		fpsCounter_(),
+        window_(nullptr),
+        vsync_(vsync)
 	{
 		Init();
 	}
 
 	Window::~Window() {
-		SDL_GL_DeleteContext(glContext_);
-		SDL_DestroyWindow(sdlWindow_);
+        if (window_)
+            glfwDestroyWindow(window_);
+        glfwTerminate();
 	}
 
 	void Window::Init() {
-		SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
+        if (!glfwInit()) {
+            std::cout << "Could not initialize GLFW" << std::endl;
+            exit(EXIT_FAILURE);
+        }
 
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-		sdlWindow_ = SDL_CreateWindow(
-			title_.c_str(),
-			SDL_WINDOWPOS_UNDEFINED,
-			SDL_WINDOWPOS_UNDEFINED,
-			width_,
-			height_,
-			SDL_WINDOW_OPENGL);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        window_ = glfwCreateWindow(screenWidth_, screenHeight_, title_.c_str(), NULL, NULL);
+        if (!window_) {
+            std::cout << "Window or context creation failed" << std::endl;
+            glfwTerminate();
+            exit(EXIT_FAILURE);
+        }
 
-		if (sdlWindow_ == NULL) {
-			std::cout << "Failed to create an SDL2 window" << std::endl;
-			exit(EXIT_FAILURE);
-		}
-		glContext_ = SDL_GL_CreateContext(sdlWindow_);
-		if (glContext_ == NULL) {
-			std::cout << "Failed to create an opengl context" << std::endl;
-			exit(EXIT_FAILURE);
-		}
+        glfwMakeContextCurrent(window_);
 
-		/*glewExperimental = GL_TRUE;
-		if (glewInit() != GLEW_OK) {
-			std::cerr << "Failed to init GLEW" << std::endl;
-			exit(EXIT_FAILURE);
-		}*/
-		if (!gladLoadGLLoader(SDL_GL_GetProcAddress)) {
-			std::cout << "Failed to gladLoadGLLoader" << std::endl;
-			exit(EXIT_FAILURE);
-		}
+        if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
+            std::cout << "Failed to gladLoadGLLoader" << std::endl;
+            glfwTerminate();
+            exit(EXIT_FAILURE);
+        }
 		
 		std::cout << "Vendor: " << glGetString(GL_VENDOR) << std::endl;
 		std::cout << "Renderer: " << glGetString(GL_RENDERER) << std::endl;
 		std::cout << "Version: " << glGetString(GL_VERSION) << std::endl;
 
-		/*
-		if (SDL_GL_SetSwapInterval(1) < 0)
-			std::cerr << "Failed to set vsync" << std::endl;
-		*/
+        if (vsync_) {
+            glfwSwapInterval(1);
+        }
+
+        glfwGetFramebufferSize(window_, &viewportWidth_, &viewportHeight_);
+        glViewport(0, 0, viewportWidth_, viewportHeight_);
+
+        // setup the callbacks
+        glfwSetKeyCallback(window_, Input::key_callback);
+
 
 		glEnable(GL_DEPTH_TEST);
 	}
 
 	void Window::SwapWindow() {
-		SDL_GL_SwapWindow(sdlWindow_);
+        glfwSwapBuffers(window_);
 	}
 
 	void Window::SetRelativeMouse(bool b) {
-		if (b)
-			SDL_SetRelativeMouseMode(SDL_TRUE);
-		else
-			SDL_SetRelativeMouseMode(SDL_FALSE);
+        if (b)
+            glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        else
+            glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	}
 
 	float Window::GetTotalRuntime() const {
-		return SDL_GetTicks() / 1000.0f;
+        return glfwGetTime();
 	}
 
 	float Window::GetDT() const {

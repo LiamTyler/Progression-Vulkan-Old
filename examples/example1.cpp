@@ -3,6 +3,8 @@
 using namespace std;
 using namespace PG; // PG is a shortcut for Progression defined in progression.h
 
+
+
 int main(int arc, char** argv) {
     Window window("OpenGL_Starter Example 1", 800, 600);
 
@@ -50,39 +52,14 @@ int main(int arc, char** argv) {
         mesh.indices, GL_STATIC_DRAW);
 	
 
-    window.SetRelativeMouse(true);
+    //window.SetRelativeMouse(true);
     bool quit = false;
+    /*
     SDL_Event event;
     while (!quit) {
         window.StartFrame();
         while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                quit = true;
-            } else if (event.type == SDL_KEYDOWN && event.key.repeat == 0) {
-                switch (event.key.keysym.sym) {
-					
-                    case SDLK_w:
-                        camera.velocity.z = 1;
-                        break;
-                    case SDLK_s:
-                        camera.velocity.z = -1;
-                        break;
-                    case SDLK_a:
-                        camera.velocity.x = -1;
-                        break;
-                    case SDLK_d:
-                        camera.velocity.x = 1;
-                        break;
-					
-                    case SDLK_ESCAPE:
-                        quit = true;
-                        break;
-                    case SDLK_p:
-                        break;
-                    case SDLK_SPACE:
-                        break;
-                }
-            } else if (event.type == SDL_KEYUP) {
+            else if (event.type == SDL_KEYUP) {
                 switch (event.key.keysym.sym) {
                     case SDLK_w:
                     case SDLK_s:
@@ -101,8 +78,40 @@ int main(int arc, char** argv) {
                 camera.Rotate(glm::vec3(dy, dx, 0));
             }
         }
+        */
+
+    while (!glfwWindowShouldClose(window.getWindow())) {
+        window.StartFrame();
+
+        if (Input::GetKeyDown(PG_K_W)) {
+            std::cout << "w down" << std::endl;
+            camera.velocity.z = 1;
+        } else if (Input::GetKeyDown(PG_K_S)) {
+            std::cout << "s down" << std::endl;
+            camera.velocity.z = -1;
+        } /*else if (Input::GetKeyDown(PG_K_D)) {
+            camera.velocity.x = 1;
+        } else if (Input::GetKeyDown(PG_K_A)) {
+            camera.velocity.x = -1;
+        }*/
+
+        if (Input::GetKeyUp(PG_K_W)) {
+            std::cout << "w released" << std::endl;
+            camera.velocity.z = 0;
+        }
+        else if (Input::GetKeyUp(PG_K_S)) {
+            std::cout << "s released" << std::endl;
+            camera.velocity.z = 0;
+        }
+        /*else if (Input::GetKeyUp(PG_K_D)) {
+            camera.velocity.x = 0;
+        }
+        else if (Input::GetKeyUp(PG_K_A)) {
+            camera.velocity.x = 0;
+        }*/
 
         float dt = window.GetDT();
+        // std::cout << "dt = " << dt << ", time = " << glfwGetTime() << std::endl;
         camera.Update(dt);
 
         shader.Enable();
@@ -138,6 +147,7 @@ int main(int arc, char** argv) {
 		glDrawElements(GL_TRIANGLES, mesh.numTriangles*3, GL_UNSIGNED_INT, 0);
 
         window.EndFrame();
+        Input::PollEvents();
     }
 
     return 0;

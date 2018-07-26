@@ -24,6 +24,7 @@ set(
     src/user_camera.cpp
     src/utils.cpp
     src/window.cpp
+    src/input.cpp
     )
 
 set (
@@ -49,6 +50,8 @@ set (
     src/include/user_camera.h
     src/include/utils.h
     src/include/window.h
+    src/include/input.h
+    src/include/input_types.h
     )
 	
 set(GLAD_SRC

@@ -21,5 +21,6 @@
 #include "src/include/user_camera.h"
 #include "src/include/utils.h"
 #include "src/include/window.h"
+#include "src/include/input.h"
 
 namespace PG = Progression;

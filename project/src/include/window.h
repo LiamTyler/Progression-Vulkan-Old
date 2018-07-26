@@ -11,7 +11,8 @@ namespace Progression {
 			FPSCounter() : display_(true), time_(0), prevTime_(0), fpsTime_(0), frameCounter_(0) {}
 			~FPSCounter() = default;
 
-			void StartFrame(float dt) { time_ = dt; }
+			void StartFrame(float t) { time_ = t; }
+
 			void EndFrame() {
 				prevTime_ = time_;
 				++frameCounter_;
@@ -35,7 +36,7 @@ namespace Progression {
 		};
 
 	public:
-		Window(const std::string& title = "Untitled", int w = 640, int h = 480);
+		Window(const std::string& title = "Untitled", int w = 640, int h = 480, bool vsync = true);
 		~Window();
 		void Init();
 		void SwapWindow();
@@ -46,19 +47,20 @@ namespace Progression {
 
 		void SetRelativeMouse(bool b);
 
-		SDL_Window* GetWindow() const { return sdlWindow_; }
-		SDL_GLContext GetContext() const { return glContext_; }
-		void ShowFPS(bool b) { fpsCounter_.Display(b); }
+        GLFWwindow* getWindow() const { return window_; }
+		void showFPS(bool b) { fpsCounter_.Display(b); }
+        int getViewportWidth() const { return viewportWidth_; }
+        int getViewportHeight() const { return viewportHeight_; }
 
 	protected:
 		std::string title_;
-		int width_;
-		int height_;
-		FPSCounter fpsCounter_;
-
-		// SDL specifics
-		SDL_Window* sdlWindow_;
-		SDL_GLContext glContext_;
+		int screenWidth_;
+		int screenHeight_;
+        int viewportWidth_;
+        int viewportHeight_;
+        FPSCounter fpsCounter_;
+        GLFWwindow* window_;
+        bool vsync_;
 	};
 
 } // namespace Progression
