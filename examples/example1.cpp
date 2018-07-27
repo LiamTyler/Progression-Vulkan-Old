@@ -69,7 +69,7 @@ int main(int arc, char** argv) {
             camera.velocity.x = 1;
         } else if (Input::GetKeyDown(PG_K_A)) {
             camera.velocity.x = -1;
-        } else if (Input::GetKeyDown(PG_K_ESCAPE)) {
+        } else if (Input::GetKeyDown(PG_K_ESC)) {
             glfwSetWindowShouldClose(window.getWindow(), true);
         }
 
@@ -87,6 +87,20 @@ int main(int arc, char** argv) {
         else if (Input::GetKeyUp(PG_K_A)) {
             camera.velocity.x = 0;
         }
+
+        if (Input::GetMouseButtonDown(PG_MB_LEFT)) {
+            std::cout << "pressed left button" << std::endl;
+        } else if (Input::GetMouseButtonDown(PG_MB_RIGHT)) {
+            std::cout << "pressed right button" << std::endl;
+        } else if (Input::GetMouseButtonUp(PG_MB_RIGHT)) {
+            std::cout << "released right button" << std::endl;
+        } else if (Input::GetMouseButtonUp(PG_MB_LEFT)) {
+            std::cout << "released left button" << std::endl;
+        }
+
+        glm::ivec2 scroll = Input::GetScrollChange();
+        if (scroll != glm::ivec2(0))
+            std::cout << "scroll amount: " << scroll.x << " " << scroll.y << std::endl;
 
         glm::ivec2 dMouse = -Input::GetMouseChange();
         camera.Rotate(glm::vec3(dMouse.y, dMouse.x, 0));
