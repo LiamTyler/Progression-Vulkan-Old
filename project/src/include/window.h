@@ -47,7 +47,7 @@ namespace Progression {
 
 		void SetRelativeMouse(bool b);
 
-        GLFWwindow* getWindow() const { return window_; }
+        GLFWwindow* getHandle() const { return window_; }
 		void showFPS(bool b) { fpsCounter_.Display(b); }
         int getViewportWidth() const { return viewportWidth_; }
         int getViewportHeight() const { return viewportHeight_; }

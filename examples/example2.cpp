@@ -1,95 +1,129 @@
 #include "progression.h"
+#include "nanogui/nanogui.h"
+#include <Eigen/Dense>
 
 using namespace std;
 using namespace PG; // PG is a shortcut for Progression defined in progression.h
 
+enum test_enum {
+    Item1 = 0,
+    Item2,
+    Item3
+};
+
+bool bvar = true;
+int ivar = 12345678;
+double dvar = 3.1415926;
+float fvar = (float)dvar;
+std::string strval = "A string";
+test_enum enumval = Item2;
+nanogui::Color colval(0.5f, 0.5f, 0.7f, 1.f);
+
+nanogui::Screen *screen = nullptr;
+
 int main(int arc, char** argv) {
     Window window("OpenGL_Starter Example 2", 800, 600);
 
-    UserCamera camera = UserCamera(Transform(
-                glm::vec3(0, 0, 5),
-                glm::vec3(0, 0, -1),
-                glm::vec3(0, 1, 0)));
-    Shader shader(
-            "Phong Shader",
-            "../../shaders/regular_phong.vert",
-            "../../shaders/regular_phong.frag");
+    // Create a nanogui screen and pass the glfw pointer to initialize
+    screen = new nanogui::Screen;
+    screen->initialize(window.getHandle(), true);
 
-    DirectionalLight light(
-            glm::vec3(0, -1, -1),
-            glm::vec3(0.0, 0.0, 0.0),
-            glm::vec3(0.7, 0.7, 0.7),
-            glm::vec3(1.0, 1.0, 1.0));
+    int width, height;
+    glfwGetFramebufferSize(window.getHandle(), &width, &height);
+    glViewport(0, 0, width, height);
+    glfwSwapInterval(0);
+    glfwSwapBuffers(window.getHandle());
 
-    Model model("../../models/piano2.obj");
-    // Model model("models/cube.obj");
-    // Model model("models/test.obj");
-    model.Load();
+    // Create nanogui gui
+    bool enabled = true;
+    nanogui::FormHelper *gui = new nanogui::FormHelper(screen);
+    nanogui::Window* nanoguiWindow = gui->addWindow(Eigen::Vector2i(10, 10), "Form helper example");
+    gui->addGroup("Basic types");
+    gui->addVariable("bool", bvar)->setTooltip("Test tooltip.");
+    gui->addVariable("string", strval);
 
-    GameObject gameObj;
-    gameObj.AddComponent<ModelRenderer>(new ModelRenderer(&shader, &model));
+    gui->addGroup("Validating fields");
+    gui->addVariable("int", ivar)->setSpinnable(true);
+    gui->addVariable("float", fvar)->setTooltip("Test.");
+    gui->addVariable("double", dvar)->setSpinnable(true);
 
-    window.SetRelativeMouse(true);
-    bool quit = false;
-    while (!quit) {
-        window.StartFrame();
+    gui->addGroup("Complex types");
+    gui->addVariable("Enumeration", enumval, enabled)->setItems({ "Item 1", "Item 2", "Item 3" });
+    gui->addVariable("Color", colval)
+        ->setFinalCallback([](const nanogui::Color &c) {
+        std::cout << "ColorPicker Final Callback: ["
+            << c.r() << ", "
+            << c.g() << ", "
+            << c.b() << ", "
+            << c.w() << "]" << std::endl;
+    });
 
-        if (Input::GetKeyDown(PG_K_W)) {
-            camera.velocity.z = 1;
-        }
-        else if (Input::GetKeyDown(PG_K_S)) {
-            camera.velocity.z = -1;
-        }
-        else if (Input::GetKeyDown(PG_K_D)) {
-            camera.velocity.x = 1;
-        }
-        else if (Input::GetKeyDown(PG_K_A)) {
-            camera.velocity.x = -1;
-        }
-        else if (Input::GetKeyDown(PG_K_ESC)) {
-            quit = true;
-        }
+    gui->addGroup("Other widgets");
+    gui->addButton("A button", []() { std::cout << "Button pressed." << std::endl; })->setTooltip("Testing a much longer tooltip, that will wrap around to new lines multiple times.");;
 
-        if (Input::GetKeyUp(PG_K_W)) {
-            camera.velocity.z = 0;
-        }
-        else if (Input::GetKeyUp(PG_K_S)) {
-            camera.velocity.z = 0;
-        }
-        else if (Input::GetKeyUp(PG_K_D)) {
-            camera.velocity.x = 0;
-        }
-        else if (Input::GetKeyUp(PG_K_A)) {
-            camera.velocity.x = 0;
-        }
+    screen->setVisible(true);
+    screen->performLayout();
+    nanoguiWindow->center();
 
-        glm::ivec2 dMouse = -Input::GetMouseChange();
-        camera.Rotate(glm::vec3(dMouse.y, dMouse.x, 0));
-
-        float dt = window.GetDT();
-        camera.Update(dt);
-        gameObj.Update(dt);
-
-        shader.Enable();
-        glClearColor(1, 1, 1, 1);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        glm::mat4 V = camera.GetV();
-        glm::mat4 P = camera.GetP();
-        glUniformMatrix4fv(shader["projectionMatrix"], 1,  GL_FALSE, glm::value_ptr(P));
-
-        // light
-        glUniform3fv(shader["Ia"], 1, glm::value_ptr(light.Ia));
-        glUniform3fv(shader["Id"], 1, glm::value_ptr(light.Id));
-        glUniform3fv(shader["Is"], 1, glm::value_ptr(light.Is));
-        glm::vec3 lEye = glm::vec3(V * glm::vec4(light.direction, 0));
-        glUniform3fv(shader["lightInEyeSpace"], 1, glm::value_ptr(lEye));
-
-        gameObj.GetComponent<ModelRenderer>()->Render(camera);
-
-        window.EndFrame();
-        Input::PollEvents();
+    glfwSetCursorPosCallback(window.getHandle(),
+        [](GLFWwindow *, double x, double y) {
+        screen->cursorPosCallbackEvent(x, y);
     }
+    );
+
+    glfwSetMouseButtonCallback(window.getHandle(),
+        [](GLFWwindow *, int button, int action, int modifiers) {
+        screen->mouseButtonCallbackEvent(button, action, modifiers);
+    }
+    );
+
+    glfwSetKeyCallback(window.getHandle(),
+        [](GLFWwindow *, int key, int scancode, int action, int mods) {
+        screen->keyCallbackEvent(key, scancode, action, mods);
+    }
+    );
+
+    glfwSetCharCallback(window.getHandle(),
+        [](GLFWwindow *, unsigned int codepoint) {
+        screen->charCallbackEvent(codepoint);
+    }
+    );
+
+    glfwSetDropCallback(window.getHandle(),
+        [](GLFWwindow *, int count, const char **filenames) {
+        screen->dropCallbackEvent(count, filenames);
+    }
+    );
+
+    glfwSetScrollCallback(window.getHandle(),
+        [](GLFWwindow *, double x, double y) {
+        screen->scrollCallbackEvent(x, y);
+    }
+    );
+
+    glfwSetFramebufferSizeCallback(window.getHandle(),
+        [](GLFWwindow *, int width, int height) {
+        screen->resizeCallbackEvent(width, height);
+    }
+    );
+
+    // Game loop
+    while (!glfwWindowShouldClose(window.getHandle())) {
+        // Check if any events have been activated (key pressed, mouse moved etc.) and call corresponding response functions
+        glfwPollEvents();
+
+        glClearColor(0.2f, 0.25f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        // Draw nanogui
+        screen->drawContents();
+        screen->drawWidgets();
+
+        glfwSwapBuffers(window.getHandle());
+    }
+
+    // Terminate GLFW, clearing any resources allocated by GLFW.
+    glfwTerminate();
 
     return 0;
 }

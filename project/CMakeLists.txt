@@ -54,11 +54,8 @@ set (
     src/include/input_types.h
     )
 	
-set(GLAD_SRC
-	${PROGRESSION_DIR}/ext/glad/src/glad.c
-	)
 
-add_library(progression STATIC ${SRCS} ${HEADERS} ${GLAD_SRC})
+add_library(progression STATIC ${SRCS} ${HEADERS}) #${GLAD_SRC})
 
 set_target_properties(
     progression
