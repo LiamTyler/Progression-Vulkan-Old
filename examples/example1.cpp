@@ -52,11 +52,9 @@ int main(int arc, char** argv) {
         mesh.indices, GL_STATIC_DRAW);
 	
 
-    Input::Init(window.getWindow());
     window.SetRelativeMouse(true);
     bool quit = false;
-
-    while (!glfwWindowShouldClose(window.getWindow())) {
+    while (!quit) {
         window.StartFrame();
 
         if (Input::GetKeyDown(PG_K_W)) {
@@ -70,7 +68,7 @@ int main(int arc, char** argv) {
         } else if (Input::GetKeyDown(PG_K_A)) {
             camera.velocity.x = -1;
         } else if (Input::GetKeyDown(PG_K_ESC)) {
-            glfwSetWindowShouldClose(window.getWindow(), true);
+            quit = true;
         }
 
         if (Input::GetKeyUp(PG_K_W)) {
@@ -106,7 +104,6 @@ int main(int arc, char** argv) {
         camera.Rotate(glm::vec3(dMouse.y, dMouse.x, 0));
 
         float dt = window.GetDT();
-        // std::cout << "dt = " << dt << ", time = " << glfwGetTime() << std::endl;
         camera.Update(dt);
 
         shader.Enable();

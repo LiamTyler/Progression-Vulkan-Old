@@ -44,53 +44,40 @@ int main(int arc, char** argv) {
 
     window.SetRelativeMouse(true);
     bool quit = false;
-    SDL_Event event;
     while (!quit) {
         window.StartFrame();
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                quit = true;
-            } else if (event.type == SDL_KEYDOWN && event.key.repeat == 0) {
-                switch (event.key.keysym.sym) {
-                    case SDLK_w:
-                        camera.velocity.z = 1;
-                        break;
-                    case SDLK_s:
-                        camera.velocity.z = -1;
-                        break;
-                    case SDLK_a:
-                        camera.velocity.x = -1;
-                        break;
-                    case SDLK_d:
-                        camera.velocity.x = 1;
-                        break;
-                    case SDLK_ESCAPE:
-                        quit = true;
-                        break;
-                    case SDLK_p:
-                        break;
-                    case SDLK_SPACE:
-                        break;
-                }
-            } else if (event.type == SDL_KEYUP) {
-                switch (event.key.keysym.sym) {
-                    case SDLK_w:
-                    case SDLK_s:
-                        camera.velocity.z = 0;
-                        break;
-                    case SDLK_a:
-                    case SDLK_d:
-                        camera.velocity.x = 0;
-                        break;
-                    case SDLK_SPACE:
-                        break;
-                }
-            } else if (event.type == SDL_MOUSEMOTION) {
-                float dx = -event.motion.xrel;
-                float dy = -event.motion.yrel;
-                camera.Rotate(glm::vec3(dy, dx, 0));
-            }
+
+        if (Input::GetKeyDown(PG_K_W)) {
+            camera.velocity.z = 1;
         }
+        else if (Input::GetKeyDown(PG_K_S)) {
+            camera.velocity.z = -1;
+        }
+        else if (Input::GetKeyDown(PG_K_D)) {
+            camera.velocity.x = 1;
+        }
+        else if (Input::GetKeyDown(PG_K_A)) {
+            camera.velocity.x = -1;
+        }
+        else if (Input::GetKeyDown(PG_K_ESC)) {
+            quit = true;
+        }
+
+        if (Input::GetKeyUp(PG_K_W)) {
+            camera.velocity.z = 0;
+        }
+        else if (Input::GetKeyUp(PG_K_S)) {
+            camera.velocity.z = 0;
+        }
+        else if (Input::GetKeyUp(PG_K_D)) {
+            camera.velocity.x = 0;
+        }
+        else if (Input::GetKeyUp(PG_K_A)) {
+            camera.velocity.x = 0;
+        }
+
+        glm::ivec2 dMouse = -Input::GetMouseChange();
+        camera.Rotate(glm::vec3(dMouse.y, dMouse.x, 0));
 
         float dt = window.GetDT();
         camera.Update(dt);
@@ -112,6 +99,7 @@ int main(int arc, char** argv) {
         gameObj.GetComponent<ModelRenderer>()->Render(camera);
 
         window.EndFrame();
+        Input::PollEvents();
     }
 
     return 0;

@@ -60,6 +60,7 @@ namespace Progression {
         glViewport(0, 0, viewportWidth_, viewportHeight_);
 
         // setup the callbacks
+        Input::Init(window_);
         glfwSetKeyCallback(window_, Input::key_callback);
         glfwSetCursorPosCallback(window_, Input::cursor_position_callback);
         glfwSetMouseButtonCallback(window_, Input::mouse_button_callback);
