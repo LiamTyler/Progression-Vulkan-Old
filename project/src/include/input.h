@@ -9,6 +9,8 @@ namespace Progression {
         Input(const Input&) = delete;
         Input& operator=(const Input&) = delete;
 
+        static void Init(GLFWwindow* window);
+
         static void PollEvents();
 
         static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -16,8 +18,8 @@ namespace Progression {
 
         static bool GetKeyDown(Key k);
         static bool GetKeyUp(Key k);
-        static glm::vec2 GetMousePosition();
-        static glm::vec2 GetMouseChange();
+        static glm::ivec2 GetMousePosition();
+        static glm::ivec2 GetMouseChange();
 
 
     private:
@@ -25,8 +27,8 @@ namespace Progression {
 
         static bool keysDown_[GLFW_KEY_LAST + 1];
         static bool keysUp_[GLFW_KEY_LAST + 1];
-        static glm::vec2 lastCursorPos_;
-        static glm::vec2 currentCursorPos_;
+        static glm::ivec2 lastCursorPos_;
+        static glm::ivec2 currentCursorPos_;
     };
 
 } // namespace Progression

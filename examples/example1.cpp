@@ -6,7 +6,7 @@ using namespace PG; // PG is a shortcut for Progression defined in progression.h
 
 
 int main(int arc, char** argv) {
-    Window window("OpenGL_Starter Example 1", 800, 600);
+    Window window("OpenGL_Starter Example 1", 800, 600, false);
 
     UserCamera camera = UserCamera(Transform(
                 glm::vec3(0, 0, 5),
@@ -52,33 +52,9 @@ int main(int arc, char** argv) {
         mesh.indices, GL_STATIC_DRAW);
 	
 
-    //window.SetRelativeMouse(true);
+    Input::Init(window.getWindow());
+    window.SetRelativeMouse(true);
     bool quit = false;
-    /*
-    SDL_Event event;
-    while (!quit) {
-        window.StartFrame();
-        while (SDL_PollEvent(&event)) {
-            else if (event.type == SDL_KEYUP) {
-                switch (event.key.keysym.sym) {
-                    case SDLK_w:
-                    case SDLK_s:
-                        camera.velocity.z = 0;
-                        break;
-                    case SDLK_a:
-                    case SDLK_d:
-                        camera.velocity.x = 0;
-                        break;
-                    case SDLK_SPACE:
-                        break;
-                }
-            } else if (event.type == SDL_MOUSEMOTION) {
-                float dx = -event.motion.xrel;
-                float dy = -event.motion.yrel;
-                camera.Rotate(glm::vec3(dy, dx, 0));
-            }
-        }
-        */
 
     while (!glfwWindowShouldClose(window.getWindow())) {
         window.StartFrame();
@@ -89,11 +65,13 @@ int main(int arc, char** argv) {
         } else if (Input::GetKeyDown(PG_K_S)) {
             std::cout << "s down" << std::endl;
             camera.velocity.z = -1;
-        } /*else if (Input::GetKeyDown(PG_K_D)) {
+        } else if (Input::GetKeyDown(PG_K_D)) {
             camera.velocity.x = 1;
         } else if (Input::GetKeyDown(PG_K_A)) {
             camera.velocity.x = -1;
-        }*/
+        } else if (Input::GetKeyDown(PG_K_ESCAPE)) {
+            glfwSetWindowShouldClose(window.getWindow(), true);
+        }
 
         if (Input::GetKeyUp(PG_K_W)) {
             std::cout << "w released" << std::endl;
@@ -103,14 +81,15 @@ int main(int arc, char** argv) {
             std::cout << "s released" << std::endl;
             camera.velocity.z = 0;
         }
-        /*else if (Input::GetKeyUp(PG_K_D)) {
+        else if (Input::GetKeyUp(PG_K_D)) {
             camera.velocity.x = 0;
         }
         else if (Input::GetKeyUp(PG_K_A)) {
             camera.velocity.x = 0;
-        }*/
+        }
 
-        camera.Rotate(glm::vec3(Input::GetMouseChange(), 0));
+        glm::ivec2 dMouse = -Input::GetMouseChange();
+        camera.Rotate(glm::vec3(dMouse.y, dMouse.x, 0));
 
         float dt = window.GetDT();
         // std::cout << "dt = " << dt << ", time = " << glfwGetTime() << std::endl;

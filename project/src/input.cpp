@@ -4,12 +4,20 @@ namespace Progression {
 
     bool Input::keysDown_[] = { 0 };
     bool Input::keysUp_[] = { 0 };
-    glm::vec2 lastCursorPos_ = glm::vec2(0);
-    glm::vec2 currentCursorPos_ = glm::vec2(0);
+    glm::ivec2 Input::lastCursorPos_ = glm::ivec2(0);
+    glm::ivec2 Input::currentCursorPos_ = glm::ivec2(0);
+
+    void Input::Init(GLFWwindow* window) {
+        double x, y;
+        glfwGetCursorPos(window, &x, &y);
+        currentCursorPos_ = glm::ivec2(x, y);
+        lastCursorPos_ = currentCursorPos_;
+    }
 
     void Input::PollEvents() {
         memset(keysDown_, false, sizeof(keysDown_));
         memset(keysUp_, false, sizeof(keysUp_));
+        lastCursorPos_ = currentCursorPos_;
         glfwPollEvents();
     }
 
@@ -25,8 +33,7 @@ namespace Progression {
 
     void Input::cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
         std::cout << "in cursor_callback: " << xpos << " " << ypos << std::endl;
-        lastCursorPos_ = currentCursorPos_;
-        currentCursorPos_ = glm::vec2(xpos, ypos);
+        currentCursorPos_ = glm::ivec2(xpos, ypos);
     }
 
     bool Input::GetKeyDown(Key k) {
@@ -37,11 +44,11 @@ namespace Progression {
         return keysUp_[k];
     }
 
-    glm::vec2 Input::GetMousePosition() {
+    glm::ivec2 Input::GetMousePosition() {
         return currentCursorPos_;
     }
 
-    glm::vec2 Input::GetMouseChange() {
+    glm::ivec2 Input::GetMouseChange() {
         return currentCursorPos_ - lastCursorPos_;
     }
 
