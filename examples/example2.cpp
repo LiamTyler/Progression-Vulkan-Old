@@ -21,18 +21,30 @@ nanogui::Color colval(0.5f, 0.5f, 0.7f, 1.f);
 
 nanogui::Screen *screen = nullptr;
 
+int SW = 800;
+int SH = 600;
+
 int main(int arc, char** argv) {
-    Window window("OpenGL_Starter Example 2", 800, 600);
+    Window window("OpenGL_Starter Example 2", SW, SH);
+
+    UserCamera camera = UserCamera(Transform(
+        glm::vec3(0, 0, 5),
+        glm::vec3(0, 0, -1),
+        glm::vec3(0, 1, 0)));
+    Shader phongShader(
+        "Phong Shader",
+        "../../shaders/regular_phong.vert",
+        "../../shaders/regular_phong.frag");
+
+    DirectionalLight light(
+        glm::vec3(0, -1, -1),
+        glm::vec3(0.0, 0.0, 0.0),
+        glm::vec3(0.7, 0.7, 0.7),
+        glm::vec3(1.0, 1.0, 1.0));
 
     // Create a nanogui screen and pass the glfw pointer to initialize
     screen = new nanogui::Screen;
     screen->initialize(window.getHandle(), true);
-
-    int width, height;
-    glfwGetFramebufferSize(window.getHandle(), &width, &height);
-    glViewport(0, 0, width, height);
-    glfwSwapInterval(0);
-    glfwSwapBuffers(window.getHandle());
 
     // Create nanogui gui
     bool enabled = true;
@@ -59,11 +71,12 @@ int main(int arc, char** argv) {
     });
 
     gui->addGroup("Other widgets");
-    gui->addButton("A button", []() { std::cout << "Button pressed." << std::endl; })->setTooltip("Testing a much longer tooltip, that will wrap around to new lines multiple times.");;
+    gui->addButton("A button", []() { std::cout << "Button pressed." << std::endl; })->setTooltip("Testing a much longer tooltip, that will wrap around to new lines multiple times.");
+    nanoguiWindow->setPosition(Eigen::Vector2i(0, 0));
 
     screen->setVisible(true);
     screen->performLayout();
-    nanoguiWindow->center();
+    // nanoguiWindow->center();
 
     glfwSetCursorPosCallback(window.getHandle(),
         [](GLFWwindow *, double x, double y) {
@@ -107,17 +120,53 @@ int main(int arc, char** argv) {
     }
     );
 
+    Model model("../../models/piano2.obj");
+    model.Load();
+
+    Background background(glm::vec4(.2, .2, .2, 1), nullptr);
+
+    GameObject gameObj;
+    gameObj.AddComponent<ModelRenderer>(new ModelRenderer(&phongShader, &model));
+
     // Game loop
     while (!glfwWindowShouldClose(window.getHandle())) {
         // Check if any events have been activated (key pressed, mouse moved etc.) and call corresponding response functions
         glfwPollEvents();
 
-        glClearColor(0.2f, 0.25f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glEnable(GL_SCISSOR_TEST);
+        glViewport(0, 0, 200, SH);
+        glScissor(0, 0, 200, SH);
 
         // Draw nanogui
+        glClearColor(0.2f, 0.25f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
         screen->drawContents();
         screen->drawWidgets();
+        
+        glViewport(200, 0, SW - 200, SH);
+        glScissor(200, 0, SW - 200, SH);
+
+        float dt = window.GetDT();
+        camera.Update(dt);
+        gameObj.Update(dt);
+
+        background.ClearAndRender(camera);
+
+        phongShader.Enable();
+        glm::mat4 P = camera.GetP();
+        glm::mat4 V = camera.GetV();
+        glUniformMatrix4fv(phongShader["projectionMatrix"], 1, GL_FALSE, glm::value_ptr(P));
+
+        glUniform3fv(phongShader["Ia"], 1, glm::value_ptr(light.Ia));
+        glUniform3fv(phongShader["Id"], 1, glm::value_ptr(light.Id));
+        glUniform3fv(phongShader["Is"], 1, glm::value_ptr(light.Is));
+        glm::vec3 lEye = glm::vec3(V * glm::vec4(light.direction, 0));
+        glUniform3fv(phongShader["lightInEyeSpace"], 1, glm::value_ptr(lEye));
+
+        gameObj.GetComponent<ModelRenderer>()->Render(camera);
+        glDisable(GL_SCISSOR_TEST);
+
+
 
         glfwSwapBuffers(window.getHandle());
     }
