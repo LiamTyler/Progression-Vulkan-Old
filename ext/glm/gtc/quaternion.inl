@@ -4,13 +4,18 @@
 #include "../trigonometric.hpp"
 #include "../geometric.hpp"
 #include "../exponential.hpp"
-#include "../detail/compute_vector_relational.hpp"
 #include "epsilon.hpp"
 #include <limits>
 
 namespace glm{
 namespace detail
 {
+	template <typename T>
+	struct genTypeTrait<tquat<T> >
+	{
+		static const genTypeEnum GENTYPE = GENTYPE_QUAT;
+	};
+
 	template<typename T, qualifier Q, bool Aligned>
 	struct compute_dot<tquat<T, Q>, T, Aligned>
 	{
@@ -70,14 +75,14 @@ namespace detail
 	// -- Component accesses --
 
 	template<typename T, qualifier Q>
-	GLM_FUNC_QUALIFIER T & tquat<T, Q>::operator[](typename tquat<T, Q>::length_type i)
+	GLM_FUNC_QUALIFIER GLM_CONSTEXPR T & tquat<T, Q>::operator[](typename tquat<T, Q>::length_type i)
 	{
 		assert(i >= 0 && i < this->length());
 		return (&x)[i];
 	}
 
 	template<typename T, qualifier Q>
-	GLM_FUNC_QUALIFIER T const& tquat<T, Q>::operator[](typename tquat<T, Q>::length_type i) const
+	GLM_FUNC_QUALIFIER GLM_CONSTEXPR T const& tquat<T, Q>::operator[](typename tquat<T, Q>::length_type i) const
 	{
 		assert(i >= 0 && i < this->length());
 		return (&x)[i];
@@ -85,21 +90,19 @@ namespace detail
 
 	// -- Implicit basic constructors --
 
-#	if !GLM_HAS_DEFAULTED_FUNCTIONS || defined(GLM_FORCE_CTOR_INIT)
+#	if GLM_CONFIG_DEFAULTED_FUNCTIONS == GLM_DISABLE
 		template<typename T, qualifier Q>
 		GLM_FUNC_QUALIFIER GLM_CONSTEXPR tquat<T, Q>::tquat()
-#			ifdef GLM_FORCE_CTOR_INIT
+#			if GLM_CONFIG_DEFAULTED_FUNCTIONS != GLM_DISABLE
 			: x(0), y(0), z(0), w(1)
 #			endif
 		{}
-#	endif
 
-#	if !GLM_HAS_DEFAULTED_FUNCTIONS
 		template<typename T, qualifier Q>
 		GLM_FUNC_QUALIFIER GLM_CONSTEXPR tquat<T, Q>::tquat(tquat<T, Q> const& q)
 			: x(q.x), y(q.y), z(q.z), w(q.w)
 		{}
-#	endif//!GLM_HAS_DEFAULTED_FUNCTIONS
+#	endif
 
 	template<typename T, qualifier Q>
 	template<qualifier P>
@@ -224,7 +227,7 @@ namespace detail
 
 	// -- Unary arithmetic operators --
 
-#	if !GLM_HAS_DEFAULTED_FUNCTIONS
+#	if GLM_CONFIG_DEFAULTED_FUNCTIONS == GLM_DISABLE
 		template<typename T, qualifier Q>
 		GLM_FUNC_QUALIFIER tquat<T, Q> & tquat<T, Q>::operator=(tquat<T, Q> const& q)
 		{
@@ -234,7 +237,7 @@ namespace detail
 			this->z = q.z;
 			return *this;
 		}
-#	endif//!GLM_HAS_DEFAULTED_FUNCTIONS
+#	endif
 
 	template<typename T, qualifier Q>
 	template<typename U>
@@ -374,15 +377,15 @@ namespace detail
 	// -- Boolean operators --
 
 	template<typename T, qualifier Q>
-	GLM_FUNC_QUALIFIER bool operator==(tquat<T, Q> const& q1, tquat<T, Q> const& q2)
+	GLM_FUNC_QUALIFIER GLM_CONSTEXPR bool operator==(tquat<T, Q> const& q1, tquat<T, Q> const& q2)
 	{
-		return all(epsilonEqual(q1, q2, epsilon<T>()));
+		return q1.x == q2.x && q1.y == q2.y && q1.z == q2.z && q1.w == q2.w;
 	}
 
 	template<typename T, qualifier Q>
-	GLM_FUNC_QUALIFIER bool operator!=(tquat<T, Q> const& q1, tquat<T, Q> const& q2)
+	GLM_FUNC_QUALIFIER GLM_CONSTEXPR bool operator!=(tquat<T, Q> const& q1, tquat<T, Q> const& q2)
 	{
-		return any(epsilonNotEqual(q1, q2, epsilon<T>()));
+		return q1.x != q2.x || q1.y != q2.y || q1.z != q2.z || q1.w != q2.w;
 	}
 
 	// -- Operations --
@@ -600,13 +603,13 @@ namespace detail
 	GLM_FUNC_QUALIFIER T pitch(tquat<T, Q> const& q)
 	{
 		//return T(atan(T(2) * (q.y * q.z + q.w * q.x), q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z));
-		const T y = static_cast<T>(2) * (q.y * q.z + q.w * q.x);
-		const T x = q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z;
+		T const y = static_cast<T>(2) * (q.y * q.z + q.w * q.x);
+		T const x = q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z;
 
-		if(detail::compute_equal<T>::call(y, static_cast<T>(0)) && detail::compute_equal<T>::call(x, static_cast<T>(0))) //avoid atan2(0,0) - handle singularity - Matiis
-			return static_cast<T>(static_cast<T>(2) * atan(q.x,q.w));
+		if(all(equal(vec<2, T, Q>(x, y), vec<2, T, Q>(0), epsilon<T>()))) //avoid atan2(0,0) - handle singularity - Matiis
+			return static_cast<T>(static_cast<T>(2) * atan(q.x, q.w));
 
-		return static_cast<T>(atan(y,x));
+		return static_cast<T>(atan(y, x));
 	}
 
 	template<typename T, qualifier Q>
@@ -772,8 +775,15 @@ namespace detail
 	{
 		vec<4, bool, Q> Result;
 		for(length_t i = 0; i < x.length(); ++i)
-			Result[i] = detail::compute_equal<T>::call(x[i], y[i]);
+			Result[i] = detail::compute_equal<T, std::numeric_limits<T>::is_iec559>::call(x[i], y[i]);
 		return Result;
+	}
+
+	template<typename T, qualifier Q>
+	GLM_FUNC_QUALIFIER vec<4, bool, Q> equal(tquat<T, Q> const& x, tquat<T, Q> const& y, T epsilon)
+	{
+		vec<4, T, Q> v(x.x - y.x, x.y - y.y, x.z - y.z, x.w - y.w);
+		return lessThan(abs(v), vec<4, T, Q>(epsilon));
 	}
 
 	template<typename T, qualifier Q>
@@ -781,8 +791,15 @@ namespace detail
 	{
 		vec<4, bool, Q> Result;
 		for(length_t i = 0; i < x.length(); ++i)
-			Result[i] = !detail::compute_equal<T>::call(x[i], y[i]);
+			Result[i] = !detail::compute_equal<T, std::numeric_limits<T>::is_iec559>::call(x[i], y[i]);
 		return Result;
+	}
+
+	template<typename T, qualifier Q>
+	GLM_FUNC_QUALIFIER vec<4, bool, Q> notEqual(tquat<T, Q> const& x, tquat<T, Q> const& y, T epsilon)
+	{
+		vec<4, T, Q> v(x.x - y.x, x.y - y.y, x.z - y.z, x.w - y.w);
+		return greaterThanEqual(abs(v), vec<4, T, Q>(epsilon));
 	}
 
 	template<typename T, qualifier Q>
@@ -802,7 +819,7 @@ namespace detail
 	}
 }//namespace glm
 
-#if GLM_ARCH != GLM_ARCH_PURE && GLM_HAS_ALIGNED_TYPE
+#if GLM_CONFIG_SIMD == GLM_ENABLE
 #	include "quaternion_simd.inl"
 #endif
 

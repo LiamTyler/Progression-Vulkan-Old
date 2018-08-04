@@ -18,9 +18,11 @@
 #include "../mat4x4.hpp"
 #include "../vec3.hpp"
 #include "../vec4.hpp"
+#include "../ext/vector_relational.hpp"
 #include "../gtc/constants.hpp"
+#include "../gtc/matrix_transform.hpp"
 
-#if GLM_MESSAGES == GLM_MESSAGES_ENABLED && !defined(GLM_EXT_INCLUDED)
+#if GLM_MESSAGES == GLM_ENABLE && !defined(GLM_EXT_INCLUDED)
 #	pragma message("GLM: GLM_GTC_quaternion extension included")
 #endif
 
@@ -39,29 +41,11 @@ namespace glm
 
 		// -- Data --
 
-#		if GLM_HAS_ALIGNED_TYPE
-#			if GLM_COMPILER & GLM_COMPILER_GCC
-#				pragma GCC diagnostic push
-#				pragma GCC diagnostic ignored "-Wpedantic"
-#			endif
-#			if GLM_COMPILER & GLM_COMPILER_CLANG
-#				pragma clang diagnostic push
-#				pragma clang diagnostic ignored "-Wgnu-anonymous-struct"
-#				pragma clang diagnostic ignored "-Wnested-anon-types"
-#			endif
-
+#		if GLM_LANG & GLM_LANG_CXXMS_FLAG
 			union
 			{
 				struct { T x, y, z, w;};
-				typename detail::storage<T, sizeof(T) * 4, detail::is_aligned<Q>::value>::type data;
 			};
-
-#			if GLM_COMPILER & GLM_COMPILER_CLANG
-#				pragma clang diagnostic pop
-#			endif
-#			if GLM_COMPILER & GLM_COMPILER_GCC
-#				pragma GCC diagnostic pop
-#			endif
 #		else
 			T x, y, z, w;
 #		endif
@@ -72,12 +56,12 @@ namespace glm
 		/// Return the count of components of a quaternion
 		GLM_FUNC_DECL static GLM_CONSTEXPR length_type length(){return 4;}
 
-		GLM_FUNC_DECL T & operator[](length_type i);
-		GLM_FUNC_DECL T const& operator[](length_type i) const;
+		GLM_FUNC_DECL GLM_CONSTEXPR T & operator[](length_type i);
+		GLM_FUNC_DECL GLM_CONSTEXPR T const& operator[](length_type i) const;
 
 		// -- Implicit basic constructors --
 
-		GLM_FUNC_DECL GLM_CONSTEXPR tquat() GLM_DEFAULT_CTOR;
+		GLM_FUNC_DECL GLM_CONSTEXPR tquat() GLM_DEFAULT;
 		GLM_FUNC_DECL GLM_CONSTEXPR tquat(tquat<T, Q> const& q) GLM_DEFAULT;
 		template<qualifier P>
 		GLM_FUNC_DECL GLM_CONSTEXPR tquat(tquat<T, P> const& q);
@@ -172,10 +156,14 @@ namespace glm
 	// -- Boolean operators --
 
 	template<typename T, qualifier Q>
-	GLM_FUNC_DECL bool operator==(tquat<T, Q> const& q1, tquat<T, Q> const& q2);
+	GLM_FUNC_DECL GLM_CONSTEXPR bool operator==(tquat<T, Q> const& q1, tquat<T, Q> const& q2);
 
 	template<typename T, qualifier Q>
-	GLM_FUNC_DECL bool operator!=(tquat<T, Q> const& q1, tquat<T, Q> const& q2);
+	GLM_FUNC_DECL GLM_CONSTEXPR bool operator!=(tquat<T, Q> const& q1, tquat<T, Q> const& q2);
+
+	/// Builds an identity quaternion.
+	template<typename genType>
+	GLM_FUNC_DECL GLM_CONSTEXPR genType identity();
 
 	/// Returns the length of the quaternion.
 	///
@@ -315,7 +303,7 @@ namespace glm
 	template<typename T, qualifier Q>
 	GLM_FUNC_DECL mat<4, 4, T, Q> mat4_cast(tquat<T, Q> const& x);
 
-	/// Converts a 3 * 3 matrix to a quaternion.
+	/// Converts a pure rotation 3 * 3 matrix to a quaternion.
 	///
 	/// @tparam T Floating-point scalar types.
 	///
@@ -323,7 +311,7 @@ namespace glm
 	template<typename T, qualifier Q>
 	GLM_FUNC_DECL tquat<T, Q> quat_cast(mat<3, 3, T, Q> const& x);
 
-	/// Converts a 4 * 4 matrix to a quaternion.
+	/// Converts a pure rotation 4 * 4 matrix to a quaternion.
 	///
 	/// @tparam T Floating-point scalar types.
 	///
@@ -397,6 +385,14 @@ namespace glm
 	template<typename T, qualifier Q>
 	GLM_FUNC_DECL vec<4, bool, Q> equal(tquat<T, Q> const& x, tquat<T, Q> const& y);
 
+	/// Returns the component-wise comparison of |x - y| < epsilon.
+	///
+	/// @tparam T Floating-point scalar types.
+	///
+	/// @see gtc_quaternion
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL vec<4, bool, Q> equal(tquat<T, Q> const& x, tquat<T, Q> const& y, T epsilon);
+
 	/// Returns the component-wise comparison of result x != y.
 	///
 	/// @tparam T Floating-point scalar types.
@@ -404,6 +400,15 @@ namespace glm
 	/// @see gtc_quaternion
 	template<typename T, qualifier Q>
 	GLM_FUNC_DECL vec<4, bool, Q> notEqual(tquat<T, Q> const& x, tquat<T, Q> const& y);
+
+	/// Returns the component-wise comparison of |x - y| >= epsilon.
+	///
+	/// @tparam T Floating-point scalar types.
+	///
+	/// @see gtc_quaternion
+	template<typename T, qualifier Q>
+	GLM_FUNC_DECL vec<4, bool, Q> notEqual(tquat<T, Q> const& x, tquat<T, Q> const& y, T epsilon);
+
 
 	/// Returns true if x holds a NaN (not a number)
 	/// representation in the underlying implementation's set of

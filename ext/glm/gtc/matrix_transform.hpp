@@ -27,7 +27,7 @@
 #include "../vec4.hpp"
 #include "../gtc/constants.hpp"
 
-#if GLM_MESSAGES == GLM_MESSAGES_ENABLED && !defined(GLM_EXT_INCLUDED)
+#if GLM_MESSAGES == GLM_ENABLE && !defined(GLM_EXT_INCLUDED)
 #	pragma message("GLM: GLM_GTC_matrix_transform extension included")
 #endif
 
@@ -35,6 +35,10 @@ namespace glm
 {
 	/// @addtogroup gtc_matrix_transform
 	/// @{
+
+	/// Builds an identity matrix.
+	template<typename genType>
+	GLM_FUNC_DECL GLM_CONSTEXPR genType identity();
 
 	/// Builds a translation 4 * 4 matrix created from a vector of 3 components.
 	///
