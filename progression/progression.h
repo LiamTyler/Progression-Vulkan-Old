@@ -23,4 +23,7 @@
 #include "src/include/window.h"
 #include "src/include/input.h"
 
+#include "core/time.h"
+#include "utils/config.h"
+
 namespace PG = Progression;

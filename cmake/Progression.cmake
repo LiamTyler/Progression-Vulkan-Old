@@ -11,6 +11,6 @@ endif()
 set(PROGRESSION_LIBS
     ${PROGRESSION_LIBS}
     progression
-    )
+)
 
 link_directories(${PROGRESSION_LIB_DIR})

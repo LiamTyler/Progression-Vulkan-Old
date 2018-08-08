@@ -1,146 +1,87 @@
 #include "progression.h"
+#include <iostream>
 
-using namespace std;
-using namespace PG; // PG is a shortcut for Progression defined in progression.h
+using namespace nanogui;
+using namespace Progression;
 
+enum test_enum {
+    Item1 = 0,
+    Item2,
+    Item3
+};
 
+bool bvar = true;
+int ivar = 12345678;
+double dvar = 3.1415926;
+float fvar = (float)dvar;
+std::string strval = "A string";
+test_enum enumval = Item2;
+Color colval(0.5f, 0.5f, 0.7f, 1.f);
 
-int main(int arc, char** argv) {
-    Window window("OpenGL_Starter Example 1", 800, 600, false);
+Screen *screen = nullptr;
 
-    UserCamera camera = UserCamera(Transform(
-                glm::vec3(0, 0, 5),
-                glm::vec3(0, 0, -1),
-                glm::vec3(0, 1, 0)));
-	
-	/*Camera camera(Transform(
-		glm::vec3(0, 0, 5),
-		glm::vec3(0, 0, -1),
-		glm::vec3(0, 1, 0)));*/
-    Shader shader(
-            "Phong Shader",
-            "../../shaders/regular_phong.vert",
-            "../../shaders/regular_phong.frag");
+int main(int /* argc */, char ** /* argv */) {
 
-    DirectionalLight light(glm::vec3(0, -1, -1));
+    auto& conf = PG::config::Config("C:/Users/Tyler/Documents/Progression/configs/test.yaml");
 
-    Material keyMat = Material(
-        glm::vec3(1, .4, .4),
-        glm::vec3(1, .4, .4),
-        glm::vec3(.6, .6, .6),
-        50);
+    PG::Window::Init(conf);
+    PG::Time::Init();
+    Input::Init();
 
-    Mesh mesh("../../models/cube.obj");
+    // Create nanogui gui
+    auto screen = PG::Window::getUIScreen();
+    bool enabled = true;
+    FormHelper *gui = new FormHelper(screen);
+    ref<nanogui::Window> nanoguiWindow = gui->addWindow(Eigen::Vector2i(10, 10), "Form helper example");
+    gui->addGroup("Basic types");
+    gui->addVariable("bool", bvar)->setTooltip("Test tooltip.");
+    gui->addVariable("string", strval);
 
-	GLuint vao;
-	GLuint vbo[3];
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
-    glGenBuffers(3, vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-    glBufferData(GL_ARRAY_BUFFER, mesh.numVertices * sizeof(glm::vec3), mesh.vertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(shader["vertex"]);
-    glVertexAttribPointer(shader["vertex"], 3, GL_FLOAT, GL_FALSE, 0, 0);
+    gui->addGroup("Validating fields");
+    gui->addVariable("int", ivar)->setSpinnable(true);
+    gui->addVariable("float", fvar)->setTooltip("Test.");
+    gui->addVariable("double", dvar)->setSpinnable(true);
 
-    glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-    glBufferData(GL_ARRAY_BUFFER, mesh.numVertices * sizeof(glm::vec3), mesh.normals, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(shader["normal"]);
-    glVertexAttribPointer(shader["normal"], 3, GL_FLOAT, GL_FALSE, 0, 0);
+    gui->addGroup("Complex types");
+    gui->addVariable("Enumeration", enumval, enabled)->setItems({ "Item 1", "Item 2", "Item 3" });
+    gui->addVariable("Color", colval)
+        ->setFinalCallback([](const Color &c) {
+        std::cout << "ColorPicker Final Callback: ["
+            << c.r() << ", "
+            << c.g() << ", "
+            << c.b() << ", "
+            << c.w() << "]" << std::endl;
+    });
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[2]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.numTriangles * sizeof(glm::ivec3),
-        mesh.indices, GL_STATIC_DRAW);
-	
+    gui->addGroup("Other widgets");
+    gui->addButton("A button", []() { std::cout << "Button pressed." << std::endl; })->setTooltip("Testing a much longer tooltip, that will wrap around to new lines multiple times.");;
 
-    window.SetRelativeMouse(true);
-    bool quit = false;
-    while (!quit) {
-        window.StartFrame();
+    screen->setVisible(true);
+    screen->performLayout();
+    nanoguiWindow->center();
 
-        if (Input::GetKeyDown(PG_K_W)) {
-            std::cout << "w down" << std::endl;
-            camera.velocity.z = 1;
-        } else if (Input::GetKeyDown(PG_K_S)) {
-            std::cout << "s down" << std::endl;
-            camera.velocity.z = -1;
-        } else if (Input::GetKeyDown(PG_K_D)) {
-            camera.velocity.x = 1;
-        } else if (Input::GetKeyDown(PG_K_A)) {
-            camera.velocity.x = -1;
-        } else if (Input::GetKeyDown(PG_K_ESC)) {
-            quit = true;
-        }
+    // Game loop
+    while (!glfwWindowShouldClose(PG::Window::getGLFWHandle())) {
+        // Check if any events have been activated (key pressed, mouse moved etc.) and call corresponding response functions
+        PG::Window::StartFrame();
+        PG::Input::PollEvents();
 
-        if (Input::GetKeyUp(PG_K_W)) {
-            std::cout << "w released" << std::endl;
-            camera.velocity.z = 0;
-        }
-        else if (Input::GetKeyUp(PG_K_S)) {
-            std::cout << "s released" << std::endl;
-            camera.velocity.z = 0;
-        }
-        else if (Input::GetKeyUp(PG_K_D)) {
-            camera.velocity.x = 0;
-        }
-        else if (Input::GetKeyUp(PG_K_A)) {
-            camera.velocity.x = 0;
-        }
+        glClearColor(0.2f, 0.25f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
 
-        if (Input::GetMouseButtonDown(PG_MB_LEFT)) {
-            std::cout << "pressed left button" << std::endl;
-        } else if (Input::GetMouseButtonDown(PG_MB_RIGHT)) {
-            std::cout << "pressed right button" << std::endl;
-        } else if (Input::GetMouseButtonUp(PG_MB_RIGHT)) {
-            std::cout << "released right button" << std::endl;
-        } else if (Input::GetMouseButtonUp(PG_MB_LEFT)) {
-            std::cout << "released left button" << std::endl;
-        }
+        // Draw nanogui
+        screen->drawContents();
+        screen->drawWidgets();
 
-        glm::ivec2 scroll = Input::GetScrollChange();
-        if (scroll != glm::ivec2(0))
-            std::cout << "scroll amount: " << scroll.x << " " << scroll.y << std::endl;
-
-        glm::ivec2 dMouse = -Input::GetMouseChange();
-        camera.Rotate(glm::vec3(dMouse.y, dMouse.x, 0));
-
-        float dt = window.GetDT();
-        camera.Update(dt);
-
-        shader.Enable();
-        glClearColor(1, 1, 1, 1);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        glm::mat4 V = camera.GetV();
-        glm::mat4 P = camera.GetP();
-        glUniformMatrix4fv(shader["projectionMatrix"], 1,  GL_FALSE, glm::value_ptr(P));
-
-        // light
-        glUniform3fv(shader["Ia"], 1, glm::value_ptr(light.Ia));
-        glUniform3fv(shader["Id"], 1, glm::value_ptr(light.Id));
-        glUniform3fv(shader["Is"], 1, glm::value_ptr(light.Is));
-        glm::vec3 lEye = glm::vec3(V * glm::vec4(light.direction, 0));
-        glUniform3fv(shader["lightInEyeSpace"], 1, glm::value_ptr(lEye));
-
-		// draw model
-		Transform t;
-        glm::mat4& model = t.GetModelMatrix();
-		glm::mat4 MV = V * model;
-		glm::mat4 normalMatrix = glm::transpose(glm::inverse(MV));
-		glUniformMatrix4fv(shader["modelViewMatrix"], 1, GL_FALSE, glm::value_ptr(MV));
-		glUniformMatrix4fv(shader["normalMatrix"], 1, GL_FALSE, glm::value_ptr(normalMatrix));
-
-        // hard code material for now
-		glUniform1i(shader["textured"], false);
-		glUniform3fv(shader["ka"], 1, glm::value_ptr(keyMat.ka));
-		glUniform3fv(shader["kd"], 1, glm::value_ptr(keyMat.kd));
-		glUniform3fv(shader["ks"], 1, glm::value_ptr(keyMat.ks));
-		glUniform1f(shader["specular"], keyMat.specular);
-
-		glDrawElements(GL_TRIANGLES, mesh.numTriangles*3, GL_UNSIGNED_INT, 0);
-
-        window.EndFrame();
-        Input::PollEvents();
+        PG::Window::EndFrame();
     }
+
+    Input::Free();
+    std::cout << "after input free" << std::endl;
+    Time::Free();
+    std::cout << "after time free" << std::endl;
+    PG::Window::Free();
+    std::cout << "after window free" << std::endl;
 
     return 0;
 }

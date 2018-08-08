@@ -1,5 +1,3 @@
-cmake_minimum_required (VERSION 3.0)
-
 include(Progression)
 
 add_executable(example1 example1.cpp)

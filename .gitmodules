@@ -1,3 +1,6 @@
-[submodule "ext/glfw"]
-	path = ext/glfw
-	url = https://github.com/glfw/glfw.git
+[submodule "ext/nanogui"]
+	path = ext/nanogui
+	url = https://github.com/LiamTyler/nanogui.git
+[submodule "ext/yaml-cpp"]
+	path = ext/yaml-cpp
+	url = https://github.com/jbeder/yaml-cpp.git

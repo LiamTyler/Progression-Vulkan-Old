@@ -6,11 +6,11 @@ namespace Progression {
 
     class Input {
     public:
-        Input(const Input&) = delete;
-        Input& operator=(const Input&) = delete;
+        Input() = delete;
+        ~Input() = delete;
 
-        static void Init(GLFWwindow* window);
-
+        static void Init();
+        static void Free() { glfwPollEvents(); }
         static void PollEvents();
 
         static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -25,9 +25,7 @@ namespace Progression {
         static glm::ivec2 GetMouseChange();
         static glm::ivec2 GetScrollChange();
 
-
     private:
-        Input() {}
 
         static bool keysDown_[GLFW_KEY_LAST + 1];
         static bool keysUp_[GLFW_KEY_LAST + 1];

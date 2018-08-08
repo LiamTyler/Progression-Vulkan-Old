@@ -4,11 +4,11 @@ project(Progression)
 
 option(BUILD_EXAMPLES "Build the example programs" OFF)
 
+set(CMAKE_CXX_STANDARD 17)
 if (MSVC)
-    set(CPP_VERSION "/std:c++17")
-else()
-    set(CPP_VERSION "-std=c++17")
+    add_compile_options("/std:c++17")
 endif()
+
 
 #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CPP_VERSION} -g")
 #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_RELEASE} ${CPP_VERSION} -O3")
@@ -26,25 +26,11 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_BINARY_DIR}/lib)
 
-# Compile GLFW
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL " " FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL " " FORCE)
-set(GLFW_BUILD_DOCS OFF CACHE BOOL " " FORCE)
-set(GLFW_BUILD_INSTALL OFF CACHE BOOL " " FORCE)
-set(GLFW_INSTALL OFF CACHE BOOL " " FORCE)
-set(GLFW_USE_CHDIR OFF CACHE BOOL " " FORCE)
-add_subdirectory(ext/glfw)
-
-set(GLFW_LIB glfw)
-set(GLFW_INCLUDES ${CMAKE_SOURCE_DIR}/ext/glfw/include)
-
-set(GLAD_ROOT_DIR ${CMAKE_SOURCE_DIR}/ext/glad)
-set(GLAD_INCLUDE_DIR ${GLAD_ROOT_DIR}/include)
-set(GLAD_SOURCES ${GLAD_ROOT_DIR}/src/glad.c)
-set(GLAD_INCLUDES
-    ${GLAD_INCLUDE_DIR}/glad/glad.h
-    ${GLAD_INCLUDE_DIR}/KHR/khrplatform.h
-)
+# for the config manager
+set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "disable yaml-cpp tests build")
+set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "disable yaml-cpp tools build")
+set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "disable yaml-cpp contrib build")
+add_subdirectory(ext/yaml-cpp EXCLUDE_FROM_ALL)
 
 # Disable building extras we won't need (pure C++ project)
 set(NANOGUI_BUILD_EXAMPLE OFF CACHE BOOL " " FORCE)
@@ -58,7 +44,7 @@ include_directories(${NANOGUI_EXTRA_INCS})
 
 # For reliability of parallel build, make the NanoGUI targets dependencies
 
-add_subdirectory(project/)
+add_subdirectory(progression/)
 
 #set_property(progression glfw nanogui PROPERTY FOLDER "dependencies")
 

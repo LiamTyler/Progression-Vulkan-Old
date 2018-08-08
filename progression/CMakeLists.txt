@@ -25,6 +25,10 @@ set(
     src/utils.cpp
     src/window.cpp
     src/input.cpp
+
+    core/time.cpp
+
+    utils/config.cpp
     )
 
 set (
@@ -52,10 +56,16 @@ set (
     src/include/window.h
     src/include/input.h
     src/include/input_types.h
+
+    core/time.h
+
+    utils/config.h
+
+    progression.h
     )
 	
 
-add_library(progression STATIC ${SRCS} ${HEADERS}) #${GLAD_SRC})
+add_library(progression STATIC ${SRCS} ${HEADERS})
 
 set_target_properties(
     progression

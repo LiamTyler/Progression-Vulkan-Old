@@ -1,4 +1,5 @@
 #include "include/input.h"
+#include "include/window.h"
 
 namespace Progression {
 
@@ -10,11 +11,54 @@ namespace Progression {
     glm::ivec2 Input::currentCursorPos_ = glm::ivec2(0);
     glm::ivec2 Input::scrollOffset_ = glm::ivec2(0);
 
-    void Input::Init(GLFWwindow* window) {
+    void Input::Init() {
+        GLFWwindow* window = Window::getGLFWHandle();
         double x, y;
         glfwGetCursorPos(window, &x, &y);
         currentCursorPos_ = glm::ivec2(x, y);
         lastCursorPos_ = currentCursorPos_;
+
+        glfwSetCursorPosCallback(window,
+            [](GLFWwindow *, double x, double y) {
+            Window::getUIScreen()->cursorPosCallbackEvent(x, y);
+        }
+        );
+
+        glfwSetMouseButtonCallback(window,
+            [](GLFWwindow *, int button, int action, int modifiers) {
+            Window::getUIScreen()->mouseButtonCallbackEvent(button, action, modifiers);
+        }
+        );
+
+        glfwSetKeyCallback(window,
+            [](GLFWwindow *, int key, int scancode, int action, int mods) {
+            Window::getUIScreen()->keyCallbackEvent(key, scancode, action, mods);
+        }
+        );
+
+        glfwSetCharCallback(window,
+            [](GLFWwindow *, unsigned int codepoint) {
+            Window::getUIScreen()->charCallbackEvent(codepoint);
+        }
+        );
+
+        glfwSetDropCallback(window,
+            [](GLFWwindow *, int count, const char **filenames) {
+            Window::getUIScreen()->dropCallbackEvent(count, filenames);
+        }
+        );
+
+        glfwSetScrollCallback(window,
+            [](GLFWwindow *, double x, double y) {
+            Window::getUIScreen()->scrollCallbackEvent(x, y);
+        }
+        );
+
+        glfwSetFramebufferSizeCallback(window,
+            [](GLFWwindow *, int width, int height) {
+            Window::getUIScreen()->resizeCallbackEvent(width, height);
+        }
+        );
     }
 
     void Input::PollEvents() {
