@@ -6,60 +6,48 @@ include(Progression-base)
 
 set(
     SRCS
-    src/background.cpp
-    src/camera.cpp
-    src/game_object.cpp
-    src/image.cpp
-    src/lights.cpp
-    src/material.cpp
-    src/mesh.cpp
-    src/mesh_renderer.cpp
-    src/model.cpp
-    src/model_renderer.cpp
-    src/OBJ_Loader.cpp
-    src/shader.cpp
-    src/skybox.cpp
-    src/texture.cpp
-    src/transform.cpp
-    src/user_camera.cpp
-    src/utils.cpp
-    src/window.cpp
-    src/input.cpp
-
+    core/camera.cpp
+    core/common.cpp
+    core/config.cpp
+    core/game_object.cpp
+    core/image.cpp
+    core/input.cpp
     core/time.cpp
+    core/transform.cpp
+    core/window.cpp
+    
+    graphics/material.cpp
+    graphics/mesh.cpp
+    graphics/shader.cpp
 
-    utils/config.cpp
+    components/user_camera_component.cpp
+
+    ${CMAKE_SOURCE_DIR}/ext/tinyobjloader/tiny_obj_loader.cc
     )
 
-set (
+set(
     HEADERS
-    src/include/background.h
-    src/include/camera.h
-    src/include/component.h
-    src/include/game_object.h
-    src/include/image.h
-    src/include/lights.h
-    src/include/material.h
-    src/include/mesh.h
-    src/include/mesh_renderer.h
-    src/include/model.h
-    src/include/model_renderer.h
-    src/include/OBJ_Loader.h
-    src/include/shader.h
-    src/include/skybox.h
-    src/include/stb_image.h
-    src/include/stb_image_write.h
-    src/include/texture.h
-    src/include/transform.h
-    src/include/user_camera.h
-    src/include/utils.h
-    src/include/window.h
-    src/include/input.h
-    src/include/input_types.h
-
+    core/camera.h
+    core/common.h
+    core/component.h
+    core/config.h
+    core/game_object.h
+    core/image.h
+    core/input.h
+    core/input_types.h
     core/time.h
+    core/transform.h
+    core/window.h
+    
+    graphics/material.h
+    graphics/mesh.h
+    graphics/shader.h
 
-    utils/config.h
+    components/user_camera_component.h
+    
+    ${CMAKE_SOURCE_DIR}/ext/tinyobjloader/tiny_obj_loader.h
+    ${CMAKE_SOURCE_DIR}/ext/stb_image/stb_image.h
+    ${CMAKE_SOURCE_DIR}/ext/stb_image/stb_image_write.h
 
     progression.h
     )

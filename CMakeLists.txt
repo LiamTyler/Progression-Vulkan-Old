@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.8)
 
 project(Progression)
 
-option(BUILD_EXAMPLES "Build the example programs" OFF)
+option(PROGRESSION_BUILD_EXAMPLES "Build the example programs" ON)
 
 set(CMAKE_CXX_STANDARD 17)
 if (MSVC)

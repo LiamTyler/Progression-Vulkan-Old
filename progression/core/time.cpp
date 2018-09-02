@@ -1,5 +1,5 @@
-#include "include/utils.h"
 #include "core/time.h"
+#include "core/common.h"
 
 namespace Progression {
 
@@ -11,14 +11,19 @@ namespace Progression {
     unsigned int Time::_mTotalFrameCount = 0;
     bool Time::_mDisplay = false;
 
-    void Time::Init(bool fps) {
+    void Time::Init(const config::Config& config) {
         glfwSetTime(0);
         _mFrameTime = 0;
         _mDeltaTime = 0;
         _mFPSTime = 0;
         _mCurrentFrameCount = 0;
         _mTotalFrameCount = 0;
-        _mDisplay = fps;
+        _mDisplay = true;
+        auto& timeConf = config["time"];
+        if (timeConf) {
+            if (timeConf["displayFPS"])
+                _mDisplay = timeConf["displayFPS"].as<bool>();
+        }
     }
 
     float Time::frameTime() { return _mFrameTime; }
