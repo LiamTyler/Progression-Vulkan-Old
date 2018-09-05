@@ -1,6 +1,8 @@
 build/
 *.swp
 a.out
+resources/models/
+resources/textures/
 
 # Prerequisites
 *.d

@@ -63,6 +63,8 @@ namespace Progression {
             Window::getUIScreen()->resizeCallbackEvent(width, height);
         }
         );
+
+        PollEvents();
     }
 
     void Input::PollEvents() {
@@ -99,8 +101,7 @@ namespace Progression {
         }
     }
 
-    void Input::scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
-    {
+    void Input::scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
         scrollOffset_ += glm::ivec2(xoffset, yoffset);
     }
 

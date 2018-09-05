@@ -10,7 +10,7 @@ namespace Progression {
         UserCameraComponent(Camera* camera, float ms = 3, float ts = .002, float maxAngle = 85);
         virtual ~UserCameraComponent() = default;
         virtual void Start();
-        virtual void Update(float dt);
+        virtual void Update();
         virtual void Stop();
 
         glm::vec3 velocity;

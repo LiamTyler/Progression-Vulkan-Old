@@ -9,42 +9,62 @@
 
 namespace Progression {
 
-	Image::Image() {
-		width_ = 0;
-		height_ = 0;
-		pixels_ = nullptr;
+	Image::Image() :
+		width_(0),
+		height_(0),
+		pixels_(nullptr)
+    {
 	}
 
-	Image::Image(int w, int h) {
-		width_ = w;
-		height_ = h;
-		pixels_ = new glm::vec4[w*h];
-		for (int i = 0; i < w*h; i++)
-			pixels_[i] = glm::vec4(0, 0, 0, 0);
+	Image::Image(int w, int h) :
+		width_(w),
+		height_(h),
+        pixels_(new glm::vec4[w*h]{ glm::vec4(0) })
+    {
 	}
 
 	Image::Image(const std::string fname) {
 		LoadImage(fname);
 	}
 
+    Image::~Image() {
+        if (pixels_)
+            delete[] pixels_;
+    }
+
 	Image::Image(const Image& src) {
-		if (pixels_ == nullptr || width_ != src.width_ || height_ != src.height_) {
-			width_ = src.width_;
-			height_ = src.height_;
-			if (pixels_)
-				delete[] pixels_;
-
-			pixels_ = new glm::vec4[width_*height_];
-		}
-		
-		for (int i = 0; i < width_*height_; i++)
-			pixels_[i] = src.pixels_[i];
+        *this = src;
 	}
 
-	Image::~Image() {
-		if (pixels_)
-			delete[] pixels_;
-	}
+    Image& Image::operator=(const Image& image) {
+        if (pixels_)
+            delete[] pixels_;
+
+        if (!image.pixels_) {
+            pixels_ = nullptr;
+            width_ = 0;
+            height_ = 0;
+        } else {
+            width_ = image.width_;
+            height_ = image.height_;
+            pixels_ = new glm::vec4[width_ * height_];
+            memcpy(pixels_, image.pixels_, width_ * height_ * sizeof(glm::vec4));
+        }
+
+        return *this;
+    }
+
+    Image::Image(Image&& src) {
+        *this = std::move(src);
+    }
+
+    Image& Image::operator=(Image&& src) {
+        width_ = src.width_;
+        height_ = src.height_;
+        pixels_ = src.pixels_;
+        src.pixels_ = nullptr;
+        return *this;
+    }
 
 	bool Image::LoadImage(const std::string& fname) {
 		int nC;

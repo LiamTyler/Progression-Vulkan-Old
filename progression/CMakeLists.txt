@@ -15,10 +15,19 @@ set(
     core/time.cpp
     core/transform.cpp
     core/window.cpp
+    core/scene.cpp
+    core/resource_manager.cpp
     
     graphics/material.cpp
     graphics/mesh.cpp
+    graphics/model.cpp
     graphics/shader.cpp
+    graphics/render_component.cpp
+    graphics/render_system.cpp
+    graphics/render_subsystem.cpp
+    graphics/model_render_subsystem.cpp
+    graphics/model_render_component.cpp
+    graphics/mesh_renderer.cpp
 
     components/user_camera_component.cpp
 
@@ -38,10 +47,19 @@ set(
     core/time.h
     core/transform.h
     core/window.h
+    core/scene.h
+    core/resource_manager.h
     
     graphics/material.h
     graphics/mesh.h
+    graphics/model.h
     graphics/shader.h
+    graphics/render_component.h
+    graphics/render_system.h
+    graphics/render_subsystem.h
+    graphics/model_render_subsystem.h
+    graphics/model_render_component.h
+    graphics/mesh_renderer.h
 
     components/user_camera_component.h
     
@@ -50,7 +68,7 @@ set(
     ${CMAKE_SOURCE_DIR}/ext/stb_image/stb_image_write.h
 
     progression.h
-    )
+)
 	
 
 add_library(progression STATIC ${SRCS} ${HEADERS})
@@ -59,7 +77,7 @@ set_target_properties(
     progression
     PROPERTIES
     DEBUG_POSTFIX _debug
-    )
+)
 
 # link in the static libs
 target_link_libraries(progression ${PROGRESSION_LIBS})

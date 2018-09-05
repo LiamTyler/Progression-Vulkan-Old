@@ -37,7 +37,7 @@ namespace Progression {
             delete[] indices_;
     }
 
-    void Mesh::UploadToGPU(bool freeOnUpload) {
+    void Mesh::UploadToGPU(bool nullTheBuffers, bool freeMemory) {
         glBindBuffer(GL_ARRAY_BUFFER, vbos_[vboName::VERTEX]);
         glBufferData(GL_ARRAY_BUFFER, numVertices_ * sizeof(glm::vec3), vertices_, GL_STATIC_DRAW);
 
@@ -50,14 +50,17 @@ namespace Progression {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos_[vboName::INDEX]);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * numTriangles_ * sizeof(unsigned int), indices_, GL_STATIC_DRAW);
 
-        if (freeOnUpload) {
+        if (freeMemory) {
             delete[] vertices_;
-            vertices_ = nullptr;
             delete[] normals_;
-            normals_ = nullptr;
             delete[] uvs_;
-            uvs_ = nullptr;
             delete[] indices_;
+        }
+
+        if (nullTheBuffers) {
+            vertices_ = nullptr;
+            normals_ = nullptr;
+            uvs_ = nullptr;
             indices_ = nullptr;
         }
     }

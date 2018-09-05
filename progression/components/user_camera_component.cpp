@@ -1,5 +1,6 @@
 #include "components/user_camera_component.h"
 #include "core/input.h"
+#include "core/time.h"
 
 namespace Progression {
 
@@ -16,32 +17,27 @@ namespace Progression {
 
     }
 
-    void UserCameraComponent::Update(float dt) {
+    void UserCameraComponent::Update() {
+        float dt = Time::deltaTime();
         Camera& camera = *(Camera*)gameObject;
 
         if (Input::GetKeyDown(PG_K_W)) {
             velocity.z = 1;
         }
-        else if (Input::GetKeyDown(PG_K_S)) {
+        if (Input::GetKeyDown(PG_K_S)) {
             velocity.z = -1;
         }
-        else if (Input::GetKeyDown(PG_K_D)) {
+        if (Input::GetKeyDown(PG_K_D)) {
             velocity.x = 1;
         }
-        else if (Input::GetKeyDown(PG_K_A)) {
+        if (Input::GetKeyDown(PG_K_A)) {
             velocity.x = -1;
         }
 
-        if (Input::GetKeyUp(PG_K_W)) {
+        if (Input::GetKeyUp(PG_K_W) || Input::GetKeyUp(PG_K_S)) {
             velocity.z = 0;
         }
-        else if (Input::GetKeyUp(PG_K_S)) {
-            velocity.z = 0;
-        }
-        else if (Input::GetKeyUp(PG_K_D)) {
-            velocity.x = 0;
-        }
-        else if (Input::GetKeyUp(PG_K_A)) {
+        if (Input::GetKeyUp(PG_K_D) || Input::GetKeyUp(PG_K_A)) {
             velocity.x = 0;
         }
 

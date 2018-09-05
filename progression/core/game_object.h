@@ -15,7 +15,7 @@ namespace Progression {
 		GameObject(const Transform& t);
 		~GameObject();
 
-		void Update(float dt);
+		void Update();
 
 		template<typename ComponentType>
 		void AddComponent(Component* c) {

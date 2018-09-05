@@ -11,10 +11,18 @@
 #include "core/time.h"
 #include "core/transform.h"
 #include "core/window.h"
+#include "core/resource_manager.h"
 
 #include "graphics/material.h"
 #include "graphics/mesh.h"
+#include "graphics/mesh_renderer.h"
+#include "graphics/model.h"
 #include "graphics/shader.h"
+#include "graphics/render_system.h"
+#include "graphics/render_subsystem.h"
+#include "graphics/render_component.h"
+#include "graphics/model_render_component.h"
+#include "graphics/model_render_subsystem.h"
 
 #include "components/user_camera_component.h"
 

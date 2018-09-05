@@ -2,12 +2,14 @@
 
 namespace Progression {
 
-	GameObject::GameObject() : GameObject(Transform())
+	GameObject::GameObject() :
+        transform()
 	{
 	}
 
-	GameObject::GameObject(const Transform& t) {
-		transform = t;
+	GameObject::GameObject(const Transform& t) :
+        transform(t)
+    {
 	}
 
 	GameObject::~GameObject() {
@@ -17,9 +19,9 @@ namespace Progression {
 		}
 	}
 
-	void GameObject::Update(float dt) {
+	void GameObject::Update() {
 		for (auto& c : component_list_)
-			c.second->Update(dt);
+			c.second->Update();
 	}
 
 } // namespace Progression

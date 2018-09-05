@@ -22,14 +22,14 @@ namespace Progression {
     public:
         Mesh();
         Mesh(int numVerts, int numTris, glm::vec3* verts, glm::vec3* norms, glm::vec2* uvs, unsigned int* indices);
-        ~Mesh();
+        virtual ~Mesh();
 
         Mesh(const Mesh& mesh) = delete;
         Mesh& operator=(const Mesh& mesh) = delete;
         Mesh(const Mesh&& mesh) = delete;
-        Mesh&& operator=(const Mesh&& mesh) = delete;
+        Mesh& operator=(const Mesh&& mesh) = delete;
 
-        void UploadToGPU(bool freeOnUpload = true);
+        void UploadToGPU(bool nullTheBuffers = true, bool freeMemory = true);
 
         unsigned int getNumVertices() const { return numVertices_; }
         unsigned int getNumTriangles() const { return numTriangles_; }
