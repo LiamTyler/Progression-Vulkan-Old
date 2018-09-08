@@ -12,28 +12,44 @@ uniform float specular;
 uniform bool textured;
 uniform sampler2D diffuseTex;
 
-uniform vec3 lightColor;
-
-uniform vec3 lightInEyeSpace;
+uniform vec3 lights[200];
+uniform int numDirectionalLights;
+uniform int numPointLights;
 
 out vec4 finalColor;
 
 void main() {
     vec3 n = normalize(normalInEyeSpace);
-    vec3 l = normalize(-lightInEyeSpace);
     vec3 e = normalize(-vertexInEyeSpace);
-    vec3 h = normalize(l + e);
-
-    vec3 diffuseColor = vec3(1, 1, 1);
+    vec3 diffuseColor = kd;
     if (textured) {
-        diffuseColor = texture(diffuseTex, vec2(texCoord.x, 1 - texCoord.y)).xyz;
+        diffuseColor *= texture(diffuseTex, vec2(texCoord.x, 1 - texCoord.y)).xyz;
     }
 
     vec3 outColor = vec3(0, 0, 0);
-    // outColor += lightColor * ka;
-    outColor += lightColor * kd * diffuseColor * max(0.0, dot(l, n));
-    outColor += lightColor * ks * pow(max(dot(h, n), 0.0), specular);
+    
+    for (int i = 0; i < numDirectionalLights; ++i) {
+        vec3 lightDir   = lights[2 * i + 0];
+        vec3 lightColor = lights[2 * i + 1];
+        vec3 l = normalize(-lightDir);
+        vec3 h = normalize(l + e);
+        // outColor += lightColor * ka;
+        outColor += lightColor * diffuseColor * max(0.0, dot(l, n));
+        outColor += lightColor * ks * pow(max(dot(h, n), 0.0), specular);        
+    }
+    
+    for (int i = 0; i < numPointLights; ++i) {
+        vec3 lightPos   = lights[2 * (numDirectionalLights + i) + 0];
+        vec3 lightColor = lights[2 * (numDirectionalLights + i) + 1];
 
+        vec3 l = normalize(lightPos - vertexInEyeSpace);
+        vec3 h = normalize(l + e);
+        float attenuation = 1.0 / pow(length(lightPos - vertexInEyeSpace), 2.0);
+        // outColor += lightColor * ka;
+        outColor += attenuation * lightColor * diffuseColor * max(0.0, dot(l, n));
+        outColor += attenuation * lightColor * ks * pow(max(dot(h, n), 0.0), specular);        
+    }
+    
     finalColor.rgb = outColor;
     finalColor.a   = 1.0;
 }

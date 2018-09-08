@@ -1,7 +1,14 @@
 #include "graphics/render_system.h"
 #include "graphics/render_subsystem.h"
+#include "core/scene.h"
+#include "core/camera.h"
 
 namespace Progression {
+
+    std::unordered_map<std::type_index, RenderSubSystem*> RenderSystem::subSystems_ = {};
+    std::vector<glm::vec3> RenderSystem::lightBuffer_ = {};
+    unsigned int RenderSystem::numDirectionalLights_ = 0;
+    unsigned int RenderSystem::numPointLights_ = 0;
 
     void RenderSystem::Init(const config::Config& config) {
 
@@ -12,8 +19,63 @@ namespace Progression {
             delete subsys.second;
     }
 
-    void RenderSystem::Render(Scene* scene) {
+    void RenderSystem::Render(Scene* scene, Camera* camera) {
+        if (!camera) {
+            camera = scene->GetCamera(0);
+        }
+
+        // update light buffer
+        numPointLights_ = scene->GetNumPointLights();
+        numDirectionalLights_ = scene->GetNumDirectionalLights();
+        lightBuffer_.clear();
+        lightBuffer_.resize(2 * (numDirectionalLights_ + numPointLights_));
+
+        glm::mat4 V = camera->GetV();
+        const auto& dirLights = scene->GetDirectionalLights();
+        for (int i = 0; i < numDirectionalLights_; ++i) {
+            glm::vec3 dir(0, 0, -1);
+            glm::mat4 rot(1);
+            rot = glm::rotate(rot, dirLights[i]->transform.rotation.z, glm::vec3(0, 0, 1));
+            rot = glm::rotate(rot, dirLights[i]->transform.rotation.y, glm::vec3(0, 1, 0));
+            rot = glm::rotate(rot, dirLights[i]->transform.rotation.x, glm::vec3(1, 0, 0));
+            lightBuffer_[2 * i + 0] = glm::vec3(V * rot * glm::vec4(dir, 0));
+            lightBuffer_[2 * i + 1] = dirLights[i]->intensity * dirLights[i]->color;
+        }
         
+        const auto& pointLights = scene->GetPointLights();
+        for (int i = 0; i < numPointLights_; ++i) {
+            lightBuffer_[numDirectionalLights_ + 2 * i + 0] = glm::vec3(V * glm::vec4(pointLights[i]->transform.position, 1));
+            lightBuffer_[numDirectionalLights_ + 2 * i + 1] = pointLights[i]->intensity * pointLights[i]->color;
+        }
+        
+        const auto& bgColor = scene->GetBackgroundColor();
+        glClearColor(bgColor.r, bgColor.g, bgColor.b, bgColor.a);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
+
     }
+
+     void RenderSystem::UploadLights(Shader& shader) {
+         glUniform1i(shader["numDirectionalLights"], numDirectionalLights_);
+         glUniform1i(shader["numPointLights"], numPointLights_);
+         if (numDirectionalLights_ + numPointLights_ > 0) {
+             glUniform3fv(shader["lights"], 2 * (numDirectionalLights_ + numPointLights_), &lightBuffer_[0].x);
+         }
+     }
+
+     void RenderSystem::UploadCameraProjection(Shader& shader, Camera& camera) {
+         glUniformMatrix4fv(shader["projectionMatrix"], 1, GL_FALSE, glm::value_ptr(camera.GetP()));
+     }
+
+     void RenderSystem::UploadMaterial(Shader& shader, Material& material) {
+         glUniform3fv(shader["ka"], 1, glm::value_ptr(material.ambient));
+         glUniform3fv(shader["kd"], 1, glm::value_ptr(material.diffuse));
+         glUniform3fv(shader["ks"], 1, glm::value_ptr(material.specular));
+         glUniform1f(shader["specular"], material.shininess);
+         glUniform1i(shader["textured"], false);
+         //glActiveTexture(GL_TEXTURE0);
+         //glBindTexture(GL_TEXTURE_2D, modelTex.GetHandle());
+         //glUniform1i(phongShader["diffuseTex"], 0);
+     }
 
 } // namespace Progression

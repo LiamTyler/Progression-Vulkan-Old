@@ -12,6 +12,7 @@
 #include "core/transform.h"
 #include "core/window.h"
 #include "core/resource_manager.h"
+#include "core/scene.h"
 
 #include "graphics/material.h"
 #include "graphics/mesh.h"
@@ -24,6 +25,30 @@
 #include "graphics/model_render_component.h"
 #include "graphics/model_render_subsystem.h"
 
+#include "types/lights.h"
+
 #include "components/user_camera_component.h"
 
 namespace PG = Progression;
+
+namespace Progression {
+
+    bool EngineShutdown = false;
+
+    inline void EngineInitialize(const config::Config& conf) {
+        Window::Init(conf);
+        Time::Init(conf);
+        Input::Init(conf);
+        ResourceManager::Init(conf);
+        RenderSystem::Init(conf);
+    }
+
+    inline void EngineQuit() {
+        RenderSystem::Free();
+        ResourceManager::Free();
+        Input::Free();
+        Time::Free();
+        Window::Free();
+    }
+
+} // namespace Progression

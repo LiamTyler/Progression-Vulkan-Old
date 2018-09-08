@@ -17,6 +17,8 @@ set(
     core/window.cpp
     core/scene.cpp
     core/resource_manager.cpp
+
+    types/lights.cpp
     
     graphics/material.cpp
     graphics/mesh.cpp
@@ -50,6 +52,8 @@ set(
     core/scene.h
     core/resource_manager.h
     
+    types/lights.h
+
     graphics/material.h
     graphics/mesh.h
     graphics/model.h

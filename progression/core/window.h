@@ -19,10 +19,6 @@ namespace Progression {
         static GLFWwindow* getGLFWHandle() { return _mWindow; }
         static nanogui::Screen* getUIScreen() { return _mUIScreen; }
         static glm::ivec2 getWindowSize() { return _mWindowSize; }
-        static bool shouldClose() { return _mShouldClose; }
-        static void setShouldClose(bool b) { _mShouldClose = b; }
-        static glm::vec4 getBackgroundColor();
-        static void setBackgroundColor(const glm::vec4& c);
 
 	protected:
         static GLFWwindow* _mWindow;
@@ -30,7 +26,6 @@ namespace Progression {
 
 		static std::string _mTitle;
         static glm::ivec2 _mWindowSize;
-        static bool _mShouldClose;
 	};
 
 } // namespace Progression

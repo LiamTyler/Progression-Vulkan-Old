@@ -134,7 +134,7 @@ namespace Progression {
 			glGetActiveUniform(program_, (GLuint)i, uniformBufSize,
 				&length, &size, &type, uniformName);
 			std::string sName(uniformName);
-			// std::cout << "uniform: " << i << " = " << sName << std::endl;
+			//std::cout << "uniform: " << i << " = " << sName << std::endl;
 			// uniformList_[sName] = i;
 			AddUniform(sName);
 		}
@@ -173,15 +173,13 @@ namespace Progression {
 		uniformList_[uniform] = glGetUniformLocation(program_, uniform.c_str());
 	}
 
-	GLuint Shader::operator[] (const std::string& name) const {
-		/* std::cout << name << std::endl;
-		assert(uniformList_.find(name) != uniformList_.end() ||
-			attributeList_.find(name) != attributeList_.end());
-		*/
+	GLuint Shader::operator[] (const std::string& name) const {		
 		std::unordered_map<std::string, GLuint>::const_iterator it = uniformList_.find(name);
+        assert(it != uniformList_.end());
 		if (it != uniformList_.end())
 			return it->second;
 		it = attributeList_.find(name);
+        assert(it != attributeList_.end());
 		if (it != attributeList_.end())
 			return it->second;
 

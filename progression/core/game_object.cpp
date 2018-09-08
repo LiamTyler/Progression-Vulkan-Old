@@ -2,11 +2,6 @@
 
 namespace Progression {
 
-	GameObject::GameObject() :
-        transform()
-	{
-	}
-
 	GameObject::GameObject(const Transform& t) :
         transform(t)
     {

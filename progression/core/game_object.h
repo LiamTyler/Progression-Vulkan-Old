@@ -11,8 +11,7 @@ namespace Progression {
 
 	class GameObject {
 	public:
-		GameObject();
-		GameObject(const Transform& t);
+		GameObject(const Transform& t = Transform());
 		~GameObject();
 
 		void Update();

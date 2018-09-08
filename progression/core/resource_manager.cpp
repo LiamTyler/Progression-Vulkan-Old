@@ -56,6 +56,7 @@ namespace Progression {
         // load defaults
         materials_["default"] = Material();
         shaders_["default-mesh"] = Shader(rootResourceDir_ + "shaders/regular_phong.vert", rootResourceDir_ + "shaders/regular_phong.frag");
+        shaders_["default-mesh"].AddUniform("lights");
     }
 
     // TODO: implement

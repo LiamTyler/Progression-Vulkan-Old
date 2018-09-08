@@ -8,7 +8,6 @@ namespace Progression {
 
     std::string Window::_mTitle = "";
     glm::ivec2 Window::_mWindowSize = { 0, 0 };
-    bool Window::_mShouldClose = false;
 
 	void Window::Free() {
         if (_mUIScreen)
@@ -95,6 +94,14 @@ namespace Progression {
 
         _mUIScreen = new nanogui::Screen;
         _mUIScreen->initialize(_mWindow, false);
+
+
+        int fbW, fbH, wW, wH;
+        glfwGetFramebufferSize(_mWindow, &fbW, &fbH);
+        glfwGetWindowSize(_mWindow, &wW, &wH);
+
+        glViewport(0, 0, fbW, fbH);
+        // glBindSampler(0, 0);
 	}
 
 	void Window::SwapWindow() {
@@ -109,14 +116,5 @@ namespace Progression {
         Time::EndFrame();
 		SwapWindow();
 	}
-
-    glm::vec4 Window::getBackgroundColor() {
-        const auto& c = _mUIScreen->background();
-        return glm::vec4(c[0], c[1], c[2], c[3]);
-    }
-
-    void Window::setBackgroundColor(const glm::vec4& c) {
-        _mUIScreen->setBackground({ c.r, c.g, c.b, c.a });
-    }
 
 } // namespace Progression
