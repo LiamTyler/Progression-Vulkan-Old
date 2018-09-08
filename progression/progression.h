@@ -16,14 +16,14 @@
 
 #include "graphics/material.h"
 #include "graphics/mesh.h"
-#include "graphics/mesh_renderer.h"
 #include "graphics/model.h"
 #include "graphics/shader.h"
 #include "graphics/render_system.h"
 #include "graphics/render_subsystem.h"
 #include "graphics/render_component.h"
 #include "graphics/model_render_component.h"
-#include "graphics/model_render_subsystem.h"
+#include "graphics/mesh_render_subsystem.h"
+#include "graphics/mesh_render_component.h"
 
 #include "types/lights.h"
 

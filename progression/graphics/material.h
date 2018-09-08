@@ -1,18 +1,24 @@
 #pragma once
 
 #include "core/common.h"
+#include "graphics/shader.h"
 
 namespace Progression {
 
     class Material {
     public:
-        Material();
-        Material(const glm::vec3& a, const glm::vec3& d, const glm::vec3& s, float ns);
+        Material(
+            const glm::vec3& a = glm::vec3(0),
+            const glm::vec3& d = glm::vec3(0),
+            const glm::vec3& s = glm::vec3(0),
+            float ns = 0,
+            Shader* shader = nullptr);
 
         glm::vec3 ambient;
         glm::vec3 diffuse;
         glm::vec3 specular;
         float shininess;
+        Shader* shader;
     };
 
 } // namespace Progression

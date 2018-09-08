@@ -24,6 +24,16 @@ namespace Progression {
         return false;
     }
 
+    void Scene::Update() {
+        for (const auto& obj : gameObjects_)
+            obj->Update();
+        for (const auto& l : directionalLights_)
+            l->Update();
+        for (const auto& l : pointLights_)
+            l->Update();
+        for (const auto& c : cameras_)
+            c->Update();
+    }
 
     void Scene::AddGameObject(GameObject* o) {
         gameObjects_.push_back(o);

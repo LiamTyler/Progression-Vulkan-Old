@@ -1,6 +1,4 @@
 #include "progression.h"
-// #include "primary_canvas.h"
-
 
 using namespace Progression;
 
@@ -23,8 +21,8 @@ int main(int argc, char* argv[]) {
 
     Camera camera = Camera(Transform(
         glm::vec3(0, 0, 5),
-        glm::vec3(0, 0, -1),
-        glm::vec3(0, 1, 0)));
+        glm::vec3(0, 0, 0),
+        glm::vec3(1)));
     camera.AddComponent<UserCameraComponent>(new UserCameraComponent(&camera));
 
     //Light directionalLight(Light::Type::DIRECTIONAL);
@@ -38,41 +36,24 @@ int main(int argc, char* argv[]) {
 
     scene.AddCamera(&camera);
     
-    Shader& phongShader = *ResourceManager::GetShader("default-mesh");
+    // Shader& phongShader = *ResourceManager::GetShader("default-mesh");
     Model* model = ResourceManager::LoadModel("models/single_cube_red_mat.obj");
-    // Model* model = ResourceManager::LoadModel("models/cube2.obj");
     if (!model) {
         std::cout << "no model" << std::endl;
         exit(EXIT_FAILURE);
     }
-    
-    std::cout << "num meshes: " << model->meshMaterialPairs.size() << std::endl;
-    
-    Mesh* mesh = model->meshMaterialPairs[0].first;
-    Material* mat = model->meshMaterialPairs[0].second;
 
-    GLuint modelVAO;
-    glGenVertexArrays(1, &modelVAO);
-    glBindVertexArray(modelVAO);
-    GLuint* vbos_ = mesh->getBuffers();
-    
-    glBindBuffer(GL_ARRAY_BUFFER, vbos_[0]);
-    glEnableVertexAttribArray(phongShader["vertex"]);
-    glVertexAttribPointer(phongShader["vertex"], 3, GL_FLOAT, GL_FALSE, 0, 0);
+    GameObject* gameObj = new GameObject(
+        Transform(
+            glm::vec3(0),
+            glm::vec3(0),
+            glm::vec3(1)
+        ));
 
-    glBindBuffer(GL_ARRAY_BUFFER, vbos_[1]);
-    glEnableVertexAttribArray(phongShader["normal"]);
-    glVertexAttribPointer(phongShader["normal"], 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vbos_[2]);
-    glEnableVertexAttribArray(phongShader["inTexCoord"]);
-    glVertexAttribPointer(phongShader["inTexCoord"], 2, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos_[3]);
-    
+    gameObj->AddComponent<ModelRenderer>(new ModelRenderer(gameObj, model));
 
     // Note:: After changing the input mode, should poll for events again
-    glfwSetInputMode(Window::getGLFWHandle(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    Window::SetRelativeMouse(true);
     PG::Input::PollEvents();
 
     // Game loop
@@ -83,24 +64,8 @@ int main(int argc, char* argv[]) {
         if (PG::Input::GetKeyDown(PG::PG_K_ESC))
             PG::EngineShutdown = true;
 
-        camera.Update();
-
+        scene.Update();
         RenderSystem::Render(&scene);
-
-        phongShader.Enable();
-        glBindVertexArray(modelVAO);
-
-
-        RenderSystem::UploadCameraProjection(phongShader, camera);
-        RenderSystem::UploadLights(phongShader);
-        RenderSystem::UploadMaterial(phongShader, *mat);
-
-        glm::mat4 modelMatrix(1);
-        glm::mat4 MV = camera.GetV() * modelMatrix;
-        glm::mat4 normalMatrix = glm::transpose(glm::inverse(MV));
-        glUniformMatrix4fv(phongShader["modelViewMatrix"], 1, GL_FALSE, glm::value_ptr(MV));
-        glUniformMatrix4fv(phongShader["normalMatrix"], 1, GL_FALSE, glm::value_ptr(normalMatrix));
-        glDrawElements(GL_TRIANGLES, mesh->getNumTriangles() * 3, GL_UNSIGNED_INT, 0);
 
         PG::Window::EndFrame();
     }

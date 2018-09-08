@@ -54,9 +54,10 @@ namespace Progression {
         }
 
         // load defaults
-        materials_["default"] = Material();
         shaders_["default-mesh"] = Shader(rootResourceDir_ + "shaders/regular_phong.vert", rootResourceDir_ + "shaders/regular_phong.frag");
         shaders_["default-mesh"].AddUniform("lights");
+        materials_["default"] = Material();
+        materials_["default"].shader = &shaders_["default-mesh"];
     }
 
     // TODO: implement
@@ -94,7 +95,7 @@ namespace Progression {
                 glm::vec3 diffuse(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
                 glm::vec3 specular(mat.specular[0], mat.specular[1], mat.specular[2]);
                 float shinyness = mat.shininess;
-                currentMaterial = new Material(ambient, diffuse, specular, shinyness);
+                currentMaterial = new Material(ambient, diffuse, specular, shinyness, &shaders_["default-mesh"]);
             }
 
             std::vector<glm::vec3> verts;
@@ -133,6 +134,7 @@ namespace Progression {
 
             //TODO: remove duplicate vertices from each mesh
 
+            // create mesh and upload to GPU
             if (verts.size()) {
                 Mesh* currentMesh = new Mesh(verts.size(), verts.size() / 3, &verts[0], &normals[0], &uvs[0], &indices[0]);
                 currentMesh->UploadToGPU(true, false);

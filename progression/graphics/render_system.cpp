@@ -2,6 +2,7 @@
 #include "graphics/render_subsystem.h"
 #include "core/scene.h"
 #include "core/camera.h"
+#include "graphics/mesh_render_subsystem.h"
 
 namespace Progression {
 
@@ -11,7 +12,8 @@ namespace Progression {
     unsigned int RenderSystem::numPointLights_ = 0;
 
     void RenderSystem::Init(const config::Config& config) {
-
+        // auto load the mesh renderer subsystem
+        subSystems_[typeid(MeshRenderSubSystem)] = new MeshRenderSubSystem;
     }
 
     void RenderSystem::Free() {
@@ -53,6 +55,8 @@ namespace Progression {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
 
+        for (const auto& subsys : subSystems_)
+            subsys.second->Render(scene, *camera);
     }
 
      void RenderSystem::UploadLights(Shader& shader) {

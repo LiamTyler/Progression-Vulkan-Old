@@ -27,9 +27,9 @@ set(
     graphics/render_component.cpp
     graphics/render_system.cpp
     graphics/render_subsystem.cpp
-    graphics/model_render_subsystem.cpp
+    graphics/mesh_render_subsystem.cpp
+    graphics/mesh_render_component.cpp
     graphics/model_render_component.cpp
-    graphics/mesh_renderer.cpp
 
     components/user_camera_component.cpp
 
@@ -61,9 +61,9 @@ set(
     graphics/render_component.h
     graphics/render_system.h
     graphics/render_subsystem.h
-    graphics/model_render_subsystem.h
+    graphics/mesh_render_subsystem.h
+    graphics/mesh_render_component.h
     graphics/model_render_component.h
-    graphics/mesh_renderer.h
 
     components/user_camera_component.h
     

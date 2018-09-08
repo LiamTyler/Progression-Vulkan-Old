@@ -117,4 +117,12 @@ namespace Progression {
 		SwapWindow();
 	}
 
+    void Window::SetRelativeMouse(bool b) {
+        if (b) {
+            glfwSetInputMode(_mWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        } else {
+            glfwSetInputMode(_mWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
+    }
+
 } // namespace Progression

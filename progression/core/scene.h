@@ -14,6 +14,8 @@ namespace Progression {
         bool Load(const std::string& filename);
         bool Save(const std::string& filename);
 
+        void Update();
+
         void AddGameObject(GameObject* o);
         void RemoveGameObject(GameObject* o);
 

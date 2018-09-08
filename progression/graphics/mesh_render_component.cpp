@@ -1,9 +1,12 @@
-#include "graphics/mesh_renderer.h"
+#include "graphics/mesh_render_component.h"
 
 namespace Progression {
 
-    MeshRenderer::MeshRenderer(GameObject* go, bool active) :
-        RenderComponent(go, active)
+    MeshRenderer::MeshRenderer(GameObject* go, Mesh* _mesh, Material* mat, bool active) :
+        RenderComponent(go, active),
+        mesh(_mesh),
+        material(mat),
+        vao(-1)
     {
     }
 

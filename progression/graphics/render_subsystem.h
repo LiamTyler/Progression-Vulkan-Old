@@ -15,7 +15,7 @@ namespace Progression {
         virtual void AddRenderComponent(RenderComponent* rc) = 0;
         virtual void RemoveRenderComponent(RenderComponent* rc) = 0;
 
-        virtual void Render(Scene* scene) = 0;
+        virtual void Render(Scene* scene, Camera& camera) = 0;
 
     };
 

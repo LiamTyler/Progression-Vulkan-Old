@@ -8,7 +8,7 @@ namespace Progression {
 
     class MeshRenderer : public RenderComponent {
     public:
-        MeshRenderer(GameObject* go, bool active = true);
+        MeshRenderer(GameObject* go, Mesh* mesh = nullptr, Material* mat = nullptr, bool active = true);
         virtual ~MeshRenderer();
         virtual void Start();
         virtual void Update();
@@ -16,5 +16,6 @@ namespace Progression {
 
         Mesh* mesh;
         Material* material;
+        GLuint vao;
     };
 } // namespace Progression
