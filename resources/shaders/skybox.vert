@@ -9,4 +9,5 @@ out vec3 TexCoords;
 void main() {
     TexCoords = vertex;
     gl_Position = VP * vec4(vertex, 1.0);
+    gl_Position.z = gl_Position.w - 0.000001;
 }

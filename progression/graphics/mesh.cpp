@@ -26,7 +26,8 @@ namespace Progression {
     }
 
     Mesh::~Mesh() {
-        glDeleteBuffers(vboName::TOTAL_VBOS, vbos_);
+        if (vbos_[0] != -1)
+            glDeleteBuffers(vboName::TOTAL_VBOS, vbos_);
         if (vertices_)
             delete[] vertices_;
         if (normals_)
@@ -35,6 +36,32 @@ namespace Progression {
             delete[] uvs_;
         if (indices_)
             delete[] indices_;
+    }
+
+    Mesh::Mesh(Mesh&& mesh) {
+        *this = std::move(mesh);
+    }
+
+    Mesh& Mesh::operator=(Mesh&& mesh) {
+        numVertices_ = mesh.numVertices_;
+        numTriangles_ = mesh.numTriangles_;
+        vertices_ = mesh.vertices_;
+        normals_ = mesh.normals_;
+        uvs_ = mesh.uvs_;
+        indices_ = mesh.indices_;
+        mesh.numVertices_ = 0;
+        mesh.numTriangles_ = 0;
+        mesh.vertices_ = nullptr;
+        mesh.normals_ = nullptr;
+        mesh.uvs_ = nullptr;
+        mesh.indices_ = nullptr;
+
+        for (int i = 0; i < vboName::TOTAL_VBOS; ++i) {
+            vbos_[i] = mesh.vbos_[i];
+            mesh.vbos_[i] = -1;
+        }
+
+        return *this;
     }
 
     void Mesh::UploadToGPU(bool nullTheBuffers, bool freeMemory) {

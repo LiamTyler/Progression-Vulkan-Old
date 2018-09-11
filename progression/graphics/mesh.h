@@ -7,7 +7,7 @@ namespace Progression {
     /**
     * TODO:
     *   - handle updating buffers
-    *   - moving / copying
+    *   - handle copying
     */
     class Mesh {
 
@@ -26,8 +26,8 @@ namespace Progression {
 
         Mesh(const Mesh& mesh) = delete;
         Mesh& operator=(const Mesh& mesh) = delete;
-        Mesh(const Mesh&& mesh) = delete;
-        Mesh& operator=(const Mesh&& mesh) = delete;
+        Mesh(Mesh&& mesh);
+        Mesh& operator=(Mesh&& mesh);
 
         void UploadToGPU(bool nullTheBuffers = true, bool freeMemory = true);
 

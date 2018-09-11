@@ -134,7 +134,7 @@ namespace Progression {
 			glGetActiveUniform(program_, (GLuint)i, uniformBufSize,
 				&length, &size, &type, uniformName);
 			std::string sName(uniformName);
-			//std::cout << "uniform: " << i << " = " << sName << std::endl;
+			std::cout << "uniform: " << i << " = " << sName << std::endl;
 			// uniformList_[sName] = i;
 			AddUniform(sName);
 		}

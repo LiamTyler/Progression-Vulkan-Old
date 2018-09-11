@@ -32,6 +32,7 @@ namespace Progression {
                 return (T*) subSystems_[typeid(T)];
         }
 
+        static void UpdateLights(Scene* scene, Camera* camera);
         static void UploadLights(Shader& shader);
         static void UploadCameraProjection(Shader& shader, Camera& camera);
         static void UploadMaterial(Shader& shader, Material& material);

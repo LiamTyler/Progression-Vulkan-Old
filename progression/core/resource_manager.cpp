@@ -56,8 +56,10 @@ namespace Progression {
         // load defaults
         shaders_["default-mesh"] = Shader(rootResourceDir_ + "shaders/regular_phong.vert", rootResourceDir_ + "shaders/regular_phong.frag");
         shaders_["default-mesh"].AddUniform("lights");
+        shaders_["skybox"] = Shader(rootResourceDir_ + "shaders/skybox.vert", rootResourceDir_ + "shaders/skybox.frag");
         materials_["default"] = Material();
         materials_["default"].shader = &shaders_["default-mesh"];
+        models_["plane"] = std::move(*LoadModel("models/plane.obj"));
     }
 
     // TODO: implement
@@ -95,7 +97,7 @@ namespace Progression {
                 glm::vec3 diffuse(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
                 glm::vec3 specular(mat.specular[0], mat.specular[1], mat.specular[2]);
                 float shinyness = mat.shininess;
-                currentMaterial = new Material(ambient, diffuse, specular, shinyness, &shaders_["default-mesh"]);
+                currentMaterial = new Material(ambient, diffuse, specular, shinyness, nullptr, &shaders_["default-mesh"]);
             }
 
             std::vector<glm::vec3> verts;

@@ -24,8 +24,10 @@
 #include "graphics/model_render_component.h"
 #include "graphics/mesh_render_subsystem.h"
 #include "graphics/mesh_render_component.h"
+#include "graphics/skybox.h"
 
 #include "types/lights.h"
+#include "types/texture.h"
 
 #include "components/user_camera_component.h"
 

@@ -19,6 +19,7 @@ set(
     core/resource_manager.cpp
 
     types/lights.cpp
+    types/texture.cpp
     
     graphics/material.cpp
     graphics/mesh.cpp
@@ -30,6 +31,7 @@ set(
     graphics/mesh_render_subsystem.cpp
     graphics/mesh_render_component.cpp
     graphics/model_render_component.cpp
+    graphics/skybox.cpp
 
     components/user_camera_component.cpp
 
@@ -53,6 +55,7 @@ set(
     core/resource_manager.h
     
     types/lights.h
+    types/texture.h
 
     graphics/material.h
     graphics/mesh.h
@@ -64,6 +67,7 @@ set(
     graphics/mesh_render_subsystem.h
     graphics/mesh_render_component.h
     graphics/model_render_component.h
+    graphics/skybox.h
 
     components/user_camera_component.h
     
