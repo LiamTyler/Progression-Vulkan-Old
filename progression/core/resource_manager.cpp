@@ -150,4 +150,21 @@ namespace Progression {
         return &models_[filename];
     }
 
+    // TODO: Freeing skybox
+    Skybox* ResourceManager::LoadSkybox(const std::vector<std::string>& textures) {
+        assert(textures.size() == 6);
+        std::vector<std::string> fullTexturePaths; 
+        for (const auto& tex : textures)
+            fullTexturePaths.push_back(rootResourceDir_ + "skybox/" + tex);
+        Skybox* skybox = new Skybox(
+            fullTexturePaths[0],
+            fullTexturePaths[1],
+            fullTexturePaths[2],
+            fullTexturePaths[3],
+            fullTexturePaths[4],
+            fullTexturePaths[5]
+         );
+        return skybox;
+    }
+
 } // namespace Progression

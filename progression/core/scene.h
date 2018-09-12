@@ -3,6 +3,7 @@
 #include "core/game_object.h"
 #include "types/lights.h"
 #include "core/camera.h"
+#include "graphics/skybox.h"
 
 namespace Progression {
 
@@ -24,7 +25,10 @@ namespace Progression {
 
         void AddCamera(Camera* camera, bool setMain = false);
         void RemoveCamera(Camera* camera);
-        Camera* GetCamera(int index) { return cameras_[index]; }
+        Camera* GetCamera(int index = 0) { return cameras_[index]; }
+
+        Skybox* getSkybox() const { return skybox_; }
+        void setSkybox(Skybox* skybox) { skybox_ = skybox; }
 
         void GenerateVisibilityList();
 
@@ -38,15 +42,15 @@ namespace Progression {
 
     protected:
         unsigned int maxGameObjects_;
-        std::vector<GameObject*> gameObjects_;
-        
         unsigned int maxLights_;
+
+        std::vector<GameObject*> gameObjects_;
         std::vector<Light*> directionalLights_;
         std::vector<Light*> pointLights_;
-
         std::vector<Camera*> cameras_;
 
         glm::vec4 backgroundColor_;
+        Skybox* skybox_;
     };
 
 } // namespace Progression

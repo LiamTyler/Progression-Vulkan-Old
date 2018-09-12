@@ -32,6 +32,7 @@ set(
     graphics/mesh_render_component.cpp
     graphics/model_render_component.cpp
     graphics/skybox.cpp
+    graphics/graphics_api.cpp
 
     components/user_camera_component.cpp
 
@@ -68,6 +69,7 @@ set(
     graphics/mesh_render_component.h
     graphics/model_render_component.h
     graphics/skybox.h
+    graphics/graphics_api.h
 
     components/user_camera_component.h
     

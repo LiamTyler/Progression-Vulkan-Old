@@ -13,17 +13,13 @@ public:
     }
 
     ~LightBallComponent() = default;
+    void Start() {}
+    void Stop() {}
 
-    void Start() {
-    }
-    
     void Update() {
         gameObject->transform = ball->transform;
     }
 
-    void Stop() {
-
-    }
 
     GameObject* ball;
 };
@@ -37,23 +33,18 @@ public:
     }
 
     ~BounceComponent() = default;
-
-    void Start() {
-    }
+    void Start() {}
+    void Stop() {}
 
     void Update() {
-        float dt = 1.0f / 60.0f;
+        float dt = 1.0f / 30.0f;
         //float dt = Time::deltaTime();
         velocity.y += -9.81f * dt;
         gameObject->transform.position += velocity * dt;
         if (gameObject->transform.position.y < gameObject->transform.scale.x) {
             gameObject->transform.position.y = gameObject->transform.scale.x;
-            velocity.y *= -.95;
+            velocity.y *= -.97;
         }
-    }
-
-    void Stop() {
-
     }
 
     glm::vec3 velocity;
@@ -63,11 +54,7 @@ public:
 int main(int argc, char* argv[]) {
     srand(time(NULL));
 
-    if (argc < 2) {
-        std::cout << "Please pass in the path of the root directory as the first argument" << std::endl;
-        return 0;
-    }
-    rootDirectory = argv[1];
+    rootDirectory = "C:/Users/Tyler/Documents/Progression/";
 
     auto& conf = PG::config::Config(rootDirectory + "configs/default.yaml");
 
@@ -149,17 +136,10 @@ int main(int argc, char* argv[]) {
     }
     
 
-    GameObject* planeObj = new GameObject(Transform(glm::vec3(0, 0, 0), glm::vec3(0), glm::vec3(50)));
+    GameObject* planeObj = new GameObject(Transform(glm::vec3(0, 0, 0), glm::vec3(0), glm::vec3(25)));
     planeObj->AddComponent<ModelRenderer>(new ModelRenderer(planeObj, planeModel));
     
-    Skybox skybox(
-        rootDirectory + "resources/textures/skybox/water/right.jpg",
-        rootDirectory + "resources/textures/skybox/water/left.jpg",
-        rootDirectory + "resources/textures/skybox/water/top.jpg",
-        rootDirectory + "resources/textures/skybox/water/bottom.jpg",
-        rootDirectory + "resources/textures/skybox/water/front.jpg",
-        rootDirectory + "resources/textures/skybox/water/back.jpg"
-    );
+    Skybox* skybox = ResourceManager::LoadSkybox({ "water/right.jpg", "water/left.jpg", "water/top.jpg", "water/bottom.jpg", "water/front.jpg", "water/back.jpg" });
 
     Light directionalLight(Light::Type::DIRECTIONAL);
     directionalLight.transform.rotation = glm::vec3(-glm::radians(35.0f), glm::radians(220.0f), 0);
@@ -178,47 +158,19 @@ int main(int argc, char* argv[]) {
     glBindBuffer(GL_ARRAY_BUFFER, lightVolumeVBOs[0]);
     glEnableVertexAttribArray(lightVolumeShader["vertex"]);
     glVertexAttribPointer(lightVolumeShader["vertex"], 3, GL_FLOAT, GL_FALSE, 0, 0);
-
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, lightVolumeVBOs[3]);
 
 
-
-    unsigned int gBuffer;
-    glGenFramebuffers(1, &gBuffer);
-    glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
-    unsigned int gPosition, gNormal, gDiffuse, gSpecularExp;
-
-    // - position color buffer 
-    glGenTextures(1, &gPosition);
-    glBindTexture(GL_TEXTURE_2D, gPosition);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, Window::getWindowSize().x, Window::getWindowSize().y, 0, GL_RGB, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    GLuint gBuffer = graphics::CreateFrameBuffer();
+    GLuint gPosition = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, graphics::TextureFormat::RGB_32F);
+    GLuint gNormal = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, graphics::TextureFormat::RGB_32F);
+    GLuint gDiffuse = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, graphics::TextureFormat::RGB_CLAMPED);
+    GLuint gSpecularExp = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, graphics::TextureFormat::RGBA_32F);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
-
-    // - normal color buffer
-    glGenTextures(1, &gNormal);
-    glBindTexture(GL_TEXTURE_2D, gNormal);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, Window::getWindowSize().x, Window::getWindowSize().y, 0, GL_RGB, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
-
-    // - diffuse color buffer
-    glGenTextures(1, &gDiffuse);
-    glBindTexture(GL_TEXTURE_2D, gDiffuse);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Window::getWindowSize().x, Window::getWindowSize().y, 0, GL_RGB, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gDiffuse, 0);
-
-    // - specular color + specular exp buffer
-    glGenTextures(1, &gSpecularExp);
-    glBindTexture(GL_TEXTURE_2D, gSpecularExp);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, Window::getWindowSize().x, Window::getWindowSize().y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gSpecularExp, 0);
+
 
 
     // - tell OpenGL which color attachments we'll use (of this framebuffer) for rendering 
@@ -291,11 +243,9 @@ int main(int argc, char* argv[]) {
         lightVolumeShader.Enable();
 
         // Turn on additive blending and disable depth writing
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_ONE, GL_ONE);
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
-        glDepthMask(GL_FALSE);
+        graphics::ToggleBlending(true);
+        graphics::ToggleCulling(true);
+        graphics::ToggleDepthBufferWriting(false);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, gPosition);
@@ -317,9 +267,9 @@ int main(int argc, char* argv[]) {
         for (const auto& light : pointLights) {
 
             // calculate light volume model matrix
-            float cutOffIntensity = 0.07;
+            float cutOffIntensity = 0.05;
             float lightRadius = std::sqrtf(light->intensity / cutOffIntensity);
-            //lightRadius = 4;
+            lightRadius = 4;
             glm::mat4 lightModelMatrix(1);
             lightModelMatrix = glm::translate(lightModelMatrix, light->transform.position);
             lightModelMatrix = glm::scale(lightModelMatrix, glm::vec3(lightRadius));
@@ -336,11 +286,11 @@ int main(int argc, char* argv[]) {
             glDrawElements(GL_TRIANGLES, ballModel->meshMaterialPairs[0].first->getNumTriangles() * 3, GL_UNSIGNED_INT, 0);
         }
 
-        glDisable(GL_BLEND);
-        glDisable(GL_CULL_FACE);
-        glDepthMask(GL_TRUE);
+        graphics::ToggleBlending(false);
+        graphics::ToggleCulling(false);
+        graphics::ToggleDepthBufferWriting(true);
         
-        skybox.Render(camera);
+        skybox->Render(camera);
 
         //gameObj->transform.position.y += 3;
         //RenderSystem::Render(&scene);

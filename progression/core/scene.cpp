@@ -5,7 +5,8 @@ namespace Progression {
     Scene::Scene(unsigned int maxObjects, unsigned int maxLights) :
         maxGameObjects_(maxObjects),
         maxLights_(maxLights),
-        backgroundColor_(glm::vec4(.3, .3, .3, 1))
+        backgroundColor_(glm::vec4(.3, .3, .3, 1)),
+        skybox_(nullptr)
     {
     }
 

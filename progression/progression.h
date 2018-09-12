@@ -25,6 +25,7 @@
 #include "graphics/mesh_render_subsystem.h"
 #include "graphics/mesh_render_component.h"
 #include "graphics/skybox.h"
+#include "graphics/graphics_api.h"
 
 #include "types/lights.h"
 #include "types/texture.h"

@@ -5,6 +5,7 @@
 #include "graphics/model.h"
 #include "graphics/material.h"
 #include "graphics/shader.h"
+#include "graphics/skybox.h"
 #include <unordered_set>
 
 namespace Progression {
@@ -42,6 +43,8 @@ namespace Progression {
             else
                 return nullptr;
         }
+
+        static Skybox* LoadSkybox(const std::vector<std::string>& textures);
 
     private:
         // full models containing meshes, their materials, and a the renderers
