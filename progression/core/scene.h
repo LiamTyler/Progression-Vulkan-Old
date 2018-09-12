@@ -8,7 +8,7 @@ namespace Progression {
 
     class Scene {
     public:
-        Scene(unsigned int maxObjects = 1000000, unsigned int maxLights = 100);
+        Scene(unsigned int maxObjects = 1000000, unsigned int maxLights = 400);
         ~Scene();
 
         bool Load(const std::string& filename);

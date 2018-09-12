@@ -31,7 +31,7 @@ namespace Progression {
         
         const auto& bgColor = scene->GetBackgroundColor();
         glClearColor(bgColor.r, bgColor.g, bgColor.b, bgColor.a);
-        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
 
         for (const auto& subsys : subSystems_)
@@ -58,8 +58,8 @@ namespace Progression {
 
         const auto& pointLights = scene->GetPointLights();
         for (int i = 0; i < numPointLights_; ++i) {
-            lightBuffer_[numDirectionalLights_ + 2 * i + 0] = glm::vec3(V * glm::vec4(pointLights[i]->transform.position, 1));
-            lightBuffer_[numDirectionalLights_ + 2 * i + 1] = pointLights[i]->intensity * pointLights[i]->color;
+            lightBuffer_[2 * (numDirectionalLights_ + i) + 0] = glm::vec3(V * glm::vec4(pointLights[i]->transform.position, 1));
+            lightBuffer_[2 * (numDirectionalLights_ + i) + 1] = pointLights[i]->intensity * pointLights[i]->color;
         }
     }
 

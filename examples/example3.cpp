@@ -4,8 +4,64 @@ using namespace Progression;
 
 std::string rootDirectory;
 
+class LightBallComponent : public Component {
+public:
+    LightBallComponent(GameObject* obj, GameObject* _ball) :
+        Component(obj),
+        ball(_ball)
+    {
+    }
+
+    ~LightBallComponent() = default;
+
+    void Start() {
+    }
+    
+    void Update() {
+        gameObject->transform = ball->transform;
+    }
+
+    void Stop() {
+
+    }
+
+    GameObject* ball;
+};
+
+class BounceComponent : public Component {
+public:
+    BounceComponent(GameObject* obj, const glm::vec3 startVel = glm::vec3(0, 0, 0)) :
+        Component(obj),
+        velocity(startVel)
+    {
+    }
+
+    ~BounceComponent() = default;
+
+    void Start() {
+    }
+
+    void Update() {
+        float dt = 1.0f / 60.0f;
+        //float dt = Time::deltaTime();
+        velocity.y += -9.81f * dt;
+        gameObject->transform.position += velocity * dt;
+        if (gameObject->transform.position.y < gameObject->transform.scale.x) {
+            gameObject->transform.position.y = gameObject->transform.scale.x;
+            velocity.y *= -.95;
+        }
+    }
+
+    void Stop() {
+
+    }
+
+    glm::vec3 velocity;
+};
+
 // argv[1] = path of the root directory
 int main(int argc, char* argv[]) {
+    srand(time(NULL));
 
     if (argc < 2) {
         std::cout << "Please pass in the path of the root directory as the first argument" << std::endl;
@@ -21,6 +77,8 @@ int main(int argc, char* argv[]) {
     std::cout << "\ndeferred combine:\n" << std::endl;
     Shader combineShader = Shader(rootDirectory + "resources/shaders/deferred_combine.vert", rootDirectory + "resources/shaders/deferred_combine.frag");
     combineShader.AddUniform("lights");
+    Shader lightVolumeShader = Shader(rootDirectory + "resources/shaders/lightVolume.vert", rootDirectory + "resources/shaders/lightVolume.frag");
+
 
     float quadVerts[] = {
         -1, 1,
@@ -44,16 +102,10 @@ int main(int argc, char* argv[]) {
     Scene scene;
 
     Camera camera = Camera(Transform(
-        glm::vec3(0, 0, 5),
-        glm::vec3(0, 0, 0),
+        glm::vec3(-20, 15, -25),
+        glm::vec3(glm::radians(-20.0f), glm::radians(-135.0f), 0),
         glm::vec3(1)));
     camera.AddComponent<UserCameraComponent>(new UserCameraComponent(&camera));
-
-    Light directionalLight(Light::Type::DIRECTIONAL);
-    directionalLight.transform.rotation = glm::vec3(-glm::radians(35.0f), glm::radians(30.0f), 0);
-
-    //PG::Light pointLight1(PG::Light::Type::POINT, glm::vec3(0, 0, 5), glm::vec3(1), 10);
-    //scene.AddLight(&pointLight1);
 
     Material* metalMaterial = new Material(
         glm::vec3(0),
@@ -73,16 +125,31 @@ int main(int argc, char* argv[]) {
         ResourceManager::GetShader("default-mesh")
     );
 
-    Model* ballModel = ResourceManager::LoadModel("models/cube.obj");
+    Model* ballModel = ResourceManager::LoadModel("models/UVSphere.obj");
     ballModel->meshMaterialPairs[0].second = metalMaterial;
 
     Model* planeModel = ResourceManager::LoadModel("models/plane.obj");
     planeModel->meshMaterialPairs[0].second = metalMaterial2;
 
-    GameObject* ballObj = new GameObject(Transform(glm::vec3(0, 0, -2), glm::vec3(0), glm::vec3(1)));
-    ballObj->AddComponent<ModelRenderer>(new ModelRenderer(ballObj, ballModel));
+    for (int x = 0; x < 20; x++) {
+        for (int z = 0; z < 20; z++) {
+            float randHeight = 3 + 2 * (rand() / static_cast<float>(RAND_MAX));
+            glm::vec3 pos = glm::vec3(-20 + 2 * x, randHeight, -20 + 2 * z);
+            GameObject* ballObj = new GameObject(Transform(pos, glm::vec3(0), glm::vec3(.5)));
+            ballObj->AddComponent<ModelRenderer>(new ModelRenderer(ballObj, ballModel));
+            ballObj->AddComponent<BounceComponent>(new BounceComponent(ballObj));
 
-    GameObject* planeObj = new GameObject(Transform(glm::vec3(0, -5, 0), glm::vec3(0), glm::vec3(50)));
+            glm::vec3 randColor = glm::vec3((rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)));
+            PG::Light* pl = new Light(PG::Light::Type::POINT, pos, randColor, 2);
+            pl->AddComponent<LightBallComponent>(new LightBallComponent(pl, ballObj));
+
+            scene.AddGameObject(ballObj);
+            scene.AddLight(pl);
+        }
+    }
+    
+
+    GameObject* planeObj = new GameObject(Transform(glm::vec3(0, 0, 0), glm::vec3(0), glm::vec3(50)));
     planeObj->AddComponent<ModelRenderer>(new ModelRenderer(planeObj, planeModel));
     
     Skybox skybox(
@@ -93,11 +160,27 @@ int main(int argc, char* argv[]) {
         rootDirectory + "resources/textures/skybox/water/front.jpg",
         rootDirectory + "resources/textures/skybox/water/back.jpg"
     );
+
+    Light directionalLight(Light::Type::DIRECTIONAL);
+    directionalLight.transform.rotation = glm::vec3(-glm::radians(35.0f), glm::radians(220.0f), 0);
     
     scene.AddCamera(&camera);
     scene.AddLight(&directionalLight);
-    scene.AddGameObject(ballObj);
+    // scene.AddLight(&pointLight1);
+    // scene.AddGameObject(ballObj);
     scene.AddGameObject(planeObj);
+
+    GLuint lightVolumeVAO;
+    glGenVertexArrays(1, &lightVolumeVAO);
+    glBindVertexArray(lightVolumeVAO);
+    GLuint* lightVolumeVBOs = ballModel->meshMaterialPairs[0].first->getBuffers();
+
+    glBindBuffer(GL_ARRAY_BUFFER, lightVolumeVBOs[0]);
+    glEnableVertexAttribArray(lightVolumeShader["vertex"]);
+    glVertexAttribPointer(lightVolumeShader["vertex"], 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, lightVolumeVBOs[3]);
+
 
 
     unsigned int gBuffer;
@@ -170,19 +253,19 @@ int main(int argc, char* argv[]) {
 
         RenderSystem::UpdateLights(&scene, &camera);
 
-        
         glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
 
         const auto& bgColor = scene.GetBackgroundColor();
         // glClearColor(bgColor.r, bgColor.g, bgColor.b, bgColor.a);
         glClearColor(0, 0, 0, 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        //skybox.Render(camera);
 
         deferredShader.Enable();
 
         RenderSystem::UploadCameraProjection(deferredShader, camera);
 
+        const auto& gameObjects = scene.GetGameObjects();
+        // std::cout << gameObjects.size() << std::endl;
         for (const auto& obj : scene.GetGameObjects()) {
             glm::mat4 M = obj->transform.GetModelMatrix();
             glm::mat4 MV = camera.GetV() * M;
@@ -199,12 +282,20 @@ int main(int argc, char* argv[]) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-        combineShader.Enable();
+        // blit the deferred depth buffer to the main screen
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glBlitFramebuffer(0, 0, Window::getWindowSize().x, Window::getWindowSize().y, 0, 0, Window::getWindowSize().x, Window::getWindowSize().y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        RenderSystem::UploadLights(combineShader);
+        lightVolumeShader.Enable();
 
-        glBindVertexArray(quadVAO);
-
+        // Turn on additive blending and disable depth writing
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE, GL_ONE);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+        glDepthMask(GL_FALSE);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, gPosition);
@@ -214,24 +305,47 @@ int main(int argc, char* argv[]) {
         glBindTexture(GL_TEXTURE_2D, gDiffuse);
         glActiveTexture(GL_TEXTURE3);
         glBindTexture(GL_TEXTURE_2D, gSpecularExp);
-        glUniform1i(combineShader["gPosition"], 0);
-        glUniform1i(combineShader["gNormal"], 1);
-        glUniform1i(combineShader["gDiffuse"], 2);
-        glUniform1i(combineShader["gSpecularExp"], 3);
+        glUniform1i(lightVolumeShader["gPosition"], 0);
+        glUniform1i(lightVolumeShader["gNormal"], 1);
+        glUniform1i(lightVolumeShader["gDiffuse"], 2);
+        glUniform1i(lightVolumeShader["gSpecularExp"], 3);
 
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glUniform2fv(lightVolumeShader["screenSize"], 1, glm::value_ptr(glm::vec2(Window::getWindowSize().x, Window::getWindowSize().y)));
 
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-        glBlitFramebuffer(0, 0, Window::getWindowSize().x, Window::getWindowSize().y, 0, 0, Window::getWindowSize().x, Window::getWindowSize().y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glBindVertexArray(lightVolumeVAO);
+        const auto& pointLights = scene.GetPointLights();
+        for (const auto& light : pointLights) {
+
+            // calculate light volume model matrix
+            float cutOffIntensity = 0.07;
+            float lightRadius = std::sqrtf(light->intensity / cutOffIntensity);
+            //lightRadius = 4;
+            glm::mat4 lightModelMatrix(1);
+            lightModelMatrix = glm::translate(lightModelMatrix, light->transform.position);
+            lightModelMatrix = glm::scale(lightModelMatrix, glm::vec3(lightRadius));
+
+            // calculate MVP
+            glm::mat4 MVP = camera.GetP() * camera.GetV() * lightModelMatrix;
+
+            // upload data to GPU
+            glUniformMatrix4fv(lightVolumeShader["MVP"], 1, GL_FALSE, glm::value_ptr(MVP));
+            glUniform3fv(lightVolumeShader["lightPos"], 1, glm::value_ptr(glm::vec3(camera.GetV() * glm::vec4(light->transform.position, 1))));
+            glUniform3fv(lightVolumeShader["lightColor"], 1, glm::value_ptr(light->color * light->intensity));
+
+            // render the light volume
+            glDrawElements(GL_TRIANGLES, ballModel->meshMaterialPairs[0].first->getNumTriangles() * 3, GL_UNSIGNED_INT, 0);
+        }
+
+        glDisable(GL_BLEND);
+        glDisable(GL_CULL_FACE);
+        glDepthMask(GL_TRUE);
         
         skybox.Render(camera);
 
         //gameObj->transform.position.y += 3;
         //RenderSystem::Render(&scene);
         //gameObj->transform.position.y -= 3;
-
+        
 
         PG::Window::EndFrame();
     }

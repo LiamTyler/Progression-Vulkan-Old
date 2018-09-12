@@ -88,9 +88,10 @@ namespace Progression {
 		std::cout << "Renderer: " << glGetString(GL_RENDERER) << std::endl;
 		std::cout << "Version: " << glGetString(GL_VERSION) << std::endl;
 
-        if (vsync) {
+        /*if (vsync) {
             glfwSwapInterval(1);
-        }
+        }*/
+        glfwSwapInterval(0);
 
         _mUIScreen = new nanogui::Screen;
         _mUIScreen->initialize(_mWindow, false);

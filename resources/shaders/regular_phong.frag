@@ -12,7 +12,7 @@ uniform float specular;
 uniform bool textured;
 uniform sampler2D diffuseTex;
 
-uniform vec3 lights[200];
+uniform vec3 lights[800];
 uniform int numDirectionalLights;
 uniform int numPointLights;
 

@@ -7,7 +7,7 @@ uniform sampler2D gNormal;
 uniform sampler2D gDiffuse;
 uniform sampler2D gSpecularExp;
 
-uniform vec3 lights[200];
+uniform vec3 lights[800];
 uniform int numDirectionalLights;
 uniform int numPointLights;
 
@@ -16,8 +16,6 @@ out vec4 finalColor;
 void main() {    
     vec3 fragPos      = texture(gPosition, UV).rgb;
     vec3 n            = texture(gNormal, UV).rgb;
-    if (n == vec3(-100, -99, -88))
-        discard;
     vec3 diffuseColor = texture(gDiffuse, UV).rgb;
     vec4 specExp      = texture(gSpecularExp, UV);
     // specExp.a = 96.078431;
