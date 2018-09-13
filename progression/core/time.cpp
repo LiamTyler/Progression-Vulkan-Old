@@ -26,6 +26,15 @@ namespace Progression {
         }
     }
 
+    void Time::Restart() {
+        glfwSetTime(0);
+        _mFrameTime = 0;
+        _mDeltaTime = 0;
+        _mFPSTime = 0;
+        _mCurrentFrameCount = 0;
+        _mTotalFrameCount = 0;
+    }
+
     float Time::frameTime() { return _mFrameTime; }
 
     float Time::totalTime() { return glfwGetTime(); }

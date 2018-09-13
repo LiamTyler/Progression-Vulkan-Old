@@ -18,6 +18,7 @@ public:
     static unsigned int totalFrameCount();
     static unsigned int currentFrameCount();
     static void showFPS(bool b);
+    static void Restart();
 
 private:
     static void StartFrame();

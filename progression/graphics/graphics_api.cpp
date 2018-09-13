@@ -6,25 +6,18 @@ namespace Progression { namespace graphics {
         glDepthMask(b ? GL_TRUE : GL_FALSE);
     }
 
-    void ToggleBlending(bool b, BlendType type) {
+    void ToggleBlending(bool b, GLenum srcFactor, GLenum dstFactor) {
         if (b) {
             glEnable(GL_BLEND);
-            if (type == BlendType::ADDITIVE)
-                glBlendFunc(GL_ONE, GL_ONE);
+            glBlendFunc(srcFactor, dstFactor);
         } else {
             glDisable(GL_BLEND);
         }
     }
-    void ToggleCulling(bool b, CullType type) {
+    void ToggleCulling(bool b, GLenum mode) {
         if (b) {
             glEnable(GL_CULL_FACE);
-            if (type == CullType::BACK) {
-                glCullFace(GL_BACK);
-            } else if (type == CullType::FRONT) {
-                glCullFace(GL_FRONT);
-            } else {
-                glCullFace(GL_FRONT_AND_BACK);
-            }
+            glCullFace(mode);
         } else {
             glDisable(GL_CULL_FACE);
         }
@@ -37,9 +30,7 @@ namespace Progression { namespace graphics {
             glDisable(GL_DEPTH_TEST);
     }
 
-    GLuint Create2DTexture(int width, int height, TextureFormat internalFormat,
-        Filter minFilter, Filter magFilter, unsigned char* data, TextureFormat dataFormat)
-    {
+    GLuint Create2DTexture(int width, int height, GLenum internalFormat, GLint minFilter, GLint magFilter) {
         GLuint tex;
         glGenTextures(1, &tex);
         glBindTexture(GL_TEXTURE_2D, tex);
@@ -55,6 +46,33 @@ namespace Progression { namespace graphics {
         glGenFramebuffers(1, &fbo);
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
         return fbo;
+    }
+
+    void AttachColorTexturesToFBO(std::initializer_list<GLuint> colorAttachments) {
+        std::vector<GLuint> attachments;
+        for (const auto& tex : colorAttachments) {
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachments.size(), GL_TEXTURE_2D, tex, 0);
+            attachments.push_back(GL_COLOR_ATTACHMENT0 + attachments.size());
+        }
+        glDrawBuffers(attachments.size(), &attachments[0]);
+    }
+
+    GLuint CreateRenderBuffer(int width, int height, GLenum internalFormat) {
+        GLuint rbo;
+        glGenRenderbuffers(1, &rbo);
+        glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+        glRenderbufferStorage(GL_RENDERBUFFER, internalFormat, width, height);
+
+        return rbo;
+    }
+
+    void AttachRenderBufferToFBO(GLuint buffer, GLenum attachmentType) {
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachmentType, GL_RENDERBUFFER, buffer);
+    }
+
+    void FinalizeFBO() {
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            std::cout << "frame buffer incomplete" << std::endl;
     }
 
     void SetClearColor(const glm::vec4& color) {
