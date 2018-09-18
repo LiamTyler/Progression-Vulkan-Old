@@ -11,7 +11,7 @@ namespace Progression {
 
 	class GameObject {
 	public:
-		GameObject(const Transform& t = Transform());
+		GameObject(const Transform& t = Transform(), const std::string& name = "");
 		~GameObject();
 
 		void Update();
@@ -43,6 +43,7 @@ namespace Progression {
 		}
 
 		Transform transform;
+        std::string name;
 
 	protected:
 		std::unordered_map<std::type_index, Component*> component_list_;

@@ -83,6 +83,10 @@ set(
 
 add_library(progression STATIC ${SRCS} ${HEADERS})
 
+if(MSVC)
+    target_compile_options(progression PRIVATE "/MP")
+endif()
+
 set_target_properties(
     progression
     PROPERTIES

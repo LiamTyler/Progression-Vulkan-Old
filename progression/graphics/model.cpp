@@ -4,9 +4,4 @@
 
 namespace Progression {
 
-    // TODO: Clean up
-    Model::~Model() {
-        
-    }
-
 } // namespace Progression

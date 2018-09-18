@@ -5,6 +5,7 @@
 #include "glm/ext.hpp"
 #include <string>
 #include <iostream>
+#include <memory>
 
 namespace Progression {
 

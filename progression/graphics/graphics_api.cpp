@@ -30,6 +30,19 @@ namespace Progression { namespace graphics {
             glDisable(GL_DEPTH_TEST);
     }
 
+    GLuint CreateVAO() {
+        GLuint vao;
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+        return vao;
+    }
+
+    void Bind2DTexture(GLuint tex, GLuint uniformLocation, int unit) {
+        glActiveTexture(GL_TEXTURE0 + unit);
+        glBindTexture(GL_TEXTURE_2D, tex);
+        glUniform1i(uniformLocation, unit);
+    }
+
     GLuint Create2DTexture(int width, int height, GLenum internalFormat, GLint minFilter, GLint magFilter) {
         GLuint tex;
         glGenTextures(1, &tex);
@@ -75,6 +88,10 @@ namespace Progression { namespace graphics {
             std::cout << "frame buffer incomplete" << std::endl;
     }
 
+    void BindFrameBuffer(GLuint fbo) {
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    }
+
     void SetClearColor(const glm::vec4& color) {
         SetClearColor(color.r, color.g, color.b, color.a);
     }
@@ -83,5 +100,8 @@ namespace Progression { namespace graphics {
         glClearColor(r, b, g, a);
     }
 
+    void Clear(GLbitfield mask) {
+        glClear(mask);
+    }
 
 } } // namespace Progression::graphics

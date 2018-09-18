@@ -4,6 +4,9 @@
 #include "types/lights.h"
 #include "core/camera.h"
 #include "graphics/skybox.h"
+#include "graphics/material.h"
+#include "graphics/shader.h"
+#include "graphics/model.h"
 
 namespace Progression {
 
@@ -12,13 +15,14 @@ namespace Progression {
         Scene(unsigned int maxObjects = 1000000, unsigned int maxLights = 400);
         ~Scene();
 
-        bool Load(const std::string& filename);
-        bool Save(const std::string& filename);
+        static Scene* Load(const std::string& filename);
+        static bool Save(const std::string& filename);
 
         void Update();
 
         void AddGameObject(GameObject* o);
         void RemoveGameObject(GameObject* o);
+        GameObject* GetGameObject(const std::string& name) const;
 
         bool AddLight(Light* light);
         void RemoveLight(Light* light);
@@ -26,9 +30,6 @@ namespace Progression {
         void AddCamera(Camera* camera, bool setMain = false);
         void RemoveCamera(Camera* camera);
         Camera* GetCamera(int index = 0) { return cameras_[index]; }
-
-        Skybox* getSkybox() const { return skybox_; }
-        void setSkybox(Skybox* skybox) { skybox_ = skybox; }
 
         void GenerateVisibilityList();
 
@@ -39,6 +40,8 @@ namespace Progression {
         const std::vector<GameObject*>& GetGameObjects() const { return gameObjects_; }
         glm::vec4 GetBackgroundColor() const { return backgroundColor_; }
         void SetBackgroundColor(const glm::vec4& color) { backgroundColor_ = color; }
+        std::shared_ptr<Skybox> getSkybox() const { return skybox_; }
+        void setSkybox(std::shared_ptr<Skybox> skybox) { skybox_ = skybox; }
 
     protected:
         unsigned int maxGameObjects_;
@@ -50,7 +53,12 @@ namespace Progression {
         std::vector<Camera*> cameras_;
 
         glm::vec4 backgroundColor_;
-        Skybox* skybox_;
+        std::shared_ptr<Skybox> skybox_;
+
+        // scene file parser helpers
+        static void ParseCamera(Scene* scene, std::ifstream& in);
+        static void ParseLight(Scene* scene, std::ifstream& in);
+        static void ParseGameObject(Scene* scene, std::ifstream& in);
     };
 
 } // namespace Progression

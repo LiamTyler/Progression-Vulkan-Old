@@ -1,4 +1,8 @@
 #include "core/scene.h"
+#include <filesystem>
+#include <fstream>
+#include <sstream>
+#include "core/resource_manager.h"
 
 namespace Progression {
 
@@ -15,9 +19,49 @@ namespace Progression {
             delete o;
     }
 
-    // TODO: implement the scene loading from a file
-    bool Scene::Load(const std::string& filename) {
-        return false;
+    Scene* Scene::Load(const std::string& filename) {
+        std::filesystem::path path(filename);
+        if (!std::filesystem::exists(path)) {
+            std::cout << "File does not exist: " << path << std::endl;
+            return nullptr;
+        }
+
+        Scene* scene = new Scene;
+
+        std::ifstream in(path);
+        std::string line;
+        while (std::getline(in, line)) {
+            if (line == "")
+                continue;
+            if (line[0] == '#')
+                continue;
+            if (line == "Resource-file") {
+                std::getline(in, line);
+                std::stringstream ss(line);
+                std::string filename;
+                ss >> filename;
+                ss >> filename;
+                ResourceManager::LoadResourceFile(filename);
+            } else if (line == "Camera") {
+                ParseCamera(scene, in);
+            } else if (line == "Light") {
+                ParseLight(scene, in);
+            } else if (line == "GameObject") {
+                ParseGameObject(scene, in);
+            } else if (line == "Skybox") {
+                std::getline(in, line);
+                std::stringstream ss(line);
+                std::string name;
+                ss >> name;
+                ss >> name;
+                scene->skybox_ = ResourceManager::GetSkybox(name);
+            }
+            
+        }
+
+        in.close();
+
+        return scene;
     }
 
     // TODO: implement the scene saving to a file
@@ -38,6 +82,13 @@ namespace Progression {
 
     void Scene::AddGameObject(GameObject* o) {
         gameObjects_.push_back(o);
+    }
+
+    GameObject* Scene::GetGameObject(const std::string& name) const {
+        for (const auto& obj : gameObjects_)
+            if (obj->name == name)
+                return obj;
+        return nullptr;
     }
 
     void Scene::RemoveGameObject(GameObject* o) {
@@ -89,6 +140,122 @@ namespace Progression {
     // TODO: Implement view frustrum culling
     void Scene::GenerateVisibilityList() {
 
+    }
+
+    void Scene::ParseCamera(Scene* scene, std::ifstream& in) {
+        Camera* camera = new Camera;
+        std::string line = " ";
+        bool primaryCamera = false;
+        while (line != "") {
+            std::getline(in, line);
+            std::stringstream ss(line);
+            std::string first;
+            ss >> first;
+            if (first == "name") {
+                ss >> camera->name;
+            } else if (first == "position") {
+                float x, y, z;
+                ss >> x >> y >> z;
+                camera->transform.position = glm::vec3(x, y, z);
+            } else if (first == "rotation") {
+                float x, y, z;
+                ss >> x >> y >> z;
+                camera->transform.rotation = glm::vec3(glm::radians(x), glm::radians(y), glm::radians(z));
+            } else if (first == "scale") {
+                float x, y, z;
+                ss >> x >> y >> z;
+                camera->transform.scale = glm::vec3(x, y, z);
+            } else if (first == "fov") {
+                float x;
+                ss >> x;
+                camera->SetFOV(x);
+            } else if (first == "aspect") {
+                float width, height;
+                char colon;
+                ss >> width >> colon >> height;
+                camera->SetAspectRatio(width / height);
+            } else if (first == "near-plane") {
+                float x;
+                ss >> x;
+                camera->SetNearPlane(x);
+            } else if (first == "far-plane") {
+                float x;
+                ss >> x;
+                camera->SetFarPlane(x);
+            } else if (first == "primary-camera") {
+                std::string tmp;
+                ss >> tmp;
+                if (tmp == "true")
+                    primaryCamera = true;
+            }
+        }
+
+        scene->AddCamera(camera, primaryCamera);
+    }
+
+    void Scene::ParseLight(Scene* scene, std::ifstream& in) {
+        Light* light = new Light;
+        std::string line = " ";
+        while (line != "") {
+            std::getline(in, line);
+            std::stringstream ss(line);
+            std::string first;
+            ss >> first;
+            if (first == "name") {
+                ss >> light->name;
+            } else if (first == "type") {
+                std::string type;
+                ss >> type;
+                if (type == "directional")
+                    light->type = Light::Type::DIRECTIONAL;
+            } else if (first == "intensity") {
+                ss >> light->intensity;
+            } else if (first == "color") {
+                float x, y, z;
+                ss >> x >> y >> z;
+                light->color = glm::vec3(x, y, z);
+            } else if (first == "position") {
+                float x, y, z;
+                ss >> x >> y >> z;
+                light->transform.position = glm::vec3(x, y, z);
+            } else if (first == "rotation") {
+                float x, y, z;
+                ss >> x >> y >> z;
+                light->transform.rotation = glm::vec3(glm::radians(x), glm::radians(y), glm::radians(z));
+            } else if (first == "scale") {
+                float x, y, z;
+                ss >> x >> y >> z;
+                light->transform.scale = glm::vec3(x, y, z);
+            }
+        }
+        scene->AddLight(light);
+    }
+
+    void Scene::ParseGameObject(Scene* scene, std::ifstream& in) {
+        GameObject* obj = new GameObject;
+        std::string line = " ";
+        while (line != "") {
+            std::getline(in, line);
+            std::stringstream ss(line);
+            std::string first;
+            ss >> first;
+            if (first == "name") {
+                ss >> obj->name;
+            } else if (first == "position") {
+                float x, y, z;
+                ss >> x >> y >> z;
+                obj->transform.position = glm::vec3(x, y, z);
+            } else if (first == "rotation") {
+                float x, y, z;
+                ss >> x >> y >> z;
+                obj->transform.rotation = glm::vec3(glm::radians(x), glm::radians(y), glm::radians(z));
+            } else if (first == "scale") {
+                float x, y, z;
+                ss >> x >> y >> z;
+                obj->transform.scale = glm::vec3(x, y, z);
+            }
+        }
+        scene->AddGameObject(obj);
     }
 
 } // namespace Progression

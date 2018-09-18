@@ -1,0 +1,25 @@
+Resource-file
+filename scenes/scene1Resources.txt
+
+Camera
+name main-camera
+position -20 15 -25
+rotation -20 -135 0
+scale 1 1 1
+fov 45
+aspect 16:9
+near-plane .1
+far-plane 100
+primary-camera true
+
+Light
+name mainDirectional
+type directional
+rotation -35 220 0
+
+Skybox
+name water
+
+GameObject
+name floor
+scale 25 1 25

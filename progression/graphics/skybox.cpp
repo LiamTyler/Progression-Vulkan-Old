@@ -4,6 +4,14 @@
 
 namespace Progression {
 
+    Skybox::Skybox() :
+        skyboxTextureID_(-1),
+        cubeVao_(-1),
+        cubeVbo_(-1)
+    {
+        shader_ = ResourceManager::GetShader("skybox");
+    }
+
     Skybox::Skybox(
         const std::string& right,
         const std::string& left,

@@ -6,7 +6,7 @@ namespace Progression {
 
     class Texture {
     public:
-        Texture(Image* image, bool mipMapped = true, bool upload = true, bool free = true);
+        Texture(Image* image = nullptr, bool mipMapped = true, bool upload = true, bool free = true);
         ~Texture();
 
         Texture(const Texture& texture) = delete;

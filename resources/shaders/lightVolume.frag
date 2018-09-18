@@ -10,16 +10,11 @@ uniform sampler2D gSpecularExp;
 uniform vec3 lightPos;
 uniform vec3 lightColor;
 
-uniform vec2 screenSize;
-
 out vec4 finalColor;
 
 void main() {
-    //finalColor = vec4(1, 0, 0, 1);
-    //return;
-    //vec3 NDC = glPos.xyz / glPos.w;
-    //vec2 UV = .5 * (NDC.xy + vec2(1));
-    vec2 UV = gl_FragCoord.xy / screenSize;
+    vec3 NDC = glPos.xyz / glPos.w;
+    vec2 UV = .5 * (NDC.xy + vec2(1));
     vec3 fragPos      = texture(gPosition, UV).rgb;
     vec3 n            = texture(gNormal, UV).rgb;
     vec3 diffuseColor = texture(gDiffuse, UV).rgb;

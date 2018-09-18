@@ -61,11 +61,9 @@ int main(int argc, char* argv[]) {
     PG::EngineInitialize(conf);
 
     Shader deferredShader = Shader(rootDirectory + "resources/shaders/deferred_phong.vert", rootDirectory + "resources/shaders/deferred_phong.frag");
-    std::cout << "\ndeferred combine:\n" << std::endl;
     Shader combineShader = Shader(rootDirectory + "resources/shaders/deferred_combine.vert", rootDirectory + "resources/shaders/deferred_combine.frag");
     combineShader.AddUniform("lights");
     Shader lightVolumeShader = Shader(rootDirectory + "resources/shaders/lightVolume.vert", rootDirectory + "resources/shaders/lightVolume.frag");
-
 
     float quadVerts[] = {
         -1, 1,
@@ -86,80 +84,43 @@ int main(int argc, char* argv[]) {
     glEnableVertexAttribArray(combineShader["vertex"]);
     glVertexAttribPointer(combineShader["vertex"], 2, GL_FLOAT, GL_FALSE, 0, 0);
 
-    Scene scene;
+    auto scene = Scene::Load(rootDirectory + "resources/scenes/scene1.pgscn");
 
-    Camera camera = Camera(Transform(
-        glm::vec3(-20, 15, -25),
-        glm::vec3(glm::radians(-20.0f), glm::radians(-135.0f), 0),
-        glm::vec3(1)));
-    camera.AddComponent<UserCameraComponent>(new UserCameraComponent(&camera));
+    auto camera = scene->GetCamera();
+    camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera));
 
-    Material* metalMaterial = new Material(
-        glm::vec3(0),
-        glm::vec3(1, 1, 1),
-        glm::vec3(.1),
-        50,
-        new Texture(new Image(rootDirectory + "resources/textures/metal.jpg")),
-        ResourceManager::GetShader("default-mesh")
-    );
-
-    Material* metalMaterial2 = new Material(
-        glm::vec3(0),
-        glm::vec3(1, 1, 1),
-        glm::vec3(.1),
-        50,
-        new Texture(new Image(rootDirectory + "resources/textures/metal2.jpg")),
-        ResourceManager::GetShader("default-mesh")
-    );
-
-    Model* ballModel = ResourceManager::LoadModel("models/UVSphere.obj");
-    ballModel->meshMaterialPairs[0].second = metalMaterial;
-
-    Model* planeModel = ResourceManager::LoadModel("models/plane.obj");
-    planeModel->meshMaterialPairs[0].second = metalMaterial2;
+    auto ballModel = ResourceManager::GetModel("metalBall");
+    auto planeModel = ResourceManager::GetModel("metalFloor");
 
     for (int x = 0; x < 20; x++) {
         for (int z = 0; z < 20; z++) {
             float randHeight = 3 + 2 * (rand() / static_cast<float>(RAND_MAX));
             glm::vec3 pos = glm::vec3(-20 + 2 * x, randHeight, -20 + 2 * z);
             GameObject* ballObj = new GameObject(Transform(pos, glm::vec3(0), glm::vec3(.5)));
-            ballObj->AddComponent<ModelRenderer>(new ModelRenderer(ballObj, ballModel));
+            ballObj->AddComponent<ModelRenderer>(new ModelRenderer(ballObj, ballModel.get()));
             ballObj->AddComponent<BounceComponent>(new BounceComponent(ballObj));
 
             glm::vec3 randColor = glm::vec3((rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)));
             PG::Light* pl = new Light(PG::Light::Type::POINT, pos, randColor, 2);
             pl->AddComponent<LightBallComponent>(new LightBallComponent(pl, ballObj));
 
-            scene.AddGameObject(ballObj);
-            scene.AddLight(pl);
+            scene->AddGameObject(ballObj);
+            scene->AddLight(pl);
         }
     }
     
-
-    GameObject* planeObj = new GameObject(Transform(glm::vec3(0, 0, 0), glm::vec3(0), glm::vec3(25)));
-    planeObj->AddComponent<ModelRenderer>(new ModelRenderer(planeObj, planeModel));
+    GameObject* planeObj = scene->GetGameObject("floor");
+    planeObj->AddComponent<ModelRenderer>(new ModelRenderer(planeObj, planeModel.get()));
     
-    Skybox* skybox = ResourceManager::LoadSkybox({ "water/right.jpg", "water/left.jpg", "water/top.jpg", "water/bottom.jpg", "water/front.jpg", "water/back.jpg" });
+    auto skybox = scene->getSkybox();
 
-    Light directionalLight(Light::Type::DIRECTIONAL);
-    directionalLight.transform.rotation = glm::vec3(-glm::radians(35.0f), glm::radians(220.0f), 0);
-    
-    scene.AddCamera(&camera);
-    scene.AddLight(&directionalLight);
-    // scene.AddLight(&pointLight1);
-    // scene.AddGameObject(ballObj);
-    scene.AddGameObject(planeObj);
-
-    GLuint lightVolumeVAO;
-    glGenVertexArrays(1, &lightVolumeVAO);
-    glBindVertexArray(lightVolumeVAO);
-    GLuint* lightVolumeVBOs = ballModel->meshMaterialPairs[0].first->getBuffers();
+    GLuint lightVolumeVAO = graphics::CreateVAO();
+    GLuint* lightVolumeVBOs = ballModel->meshes[0]->getBuffers();
 
     glBindBuffer(GL_ARRAY_BUFFER, lightVolumeVBOs[0]);
     glEnableVertexAttribArray(lightVolumeShader["vertex"]);
     glVertexAttribPointer(lightVolumeShader["vertex"], 3, GL_FLOAT, GL_FALSE, 0, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, lightVolumeVBOs[3]);
-
 
     GLuint gBuffer = graphics::CreateFrameBuffer();
     GLuint gPosition = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGB32F);
@@ -173,44 +134,41 @@ int main(int argc, char* argv[]) {
     graphics::AttachRenderBufferToFBO(rboDepth);
     graphics::FinalizeFBO();
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    graphics::BindFrameBuffer();
 
     // Note: After changing the input mode, should poll for events again
     Window::SetRelativeMouse(true);
     PG::Input::PollEvents();
 
-    glEnable(GL_DEPTH_TEST);
-    Time::ResetAll();
+    graphics::ToggleDepthTesting(true);
+    Time::Restart();
 
     // Game loop
     while (!PG::EngineShutdown) {
         PG::Window::StartFrame();
         PG::Input::PollEvents();
 
-        std::cout << Time::deltaTime() << std::endl;
         if (PG::Input::GetKeyDown(PG::PG_K_ESC))
             PG::EngineShutdown = true;
 
-        scene.Update();
+        scene->Update();
 
-        RenderSystem::UpdateLights(&scene, &camera);
+        RenderSystem::UpdateLights(scene, camera);
 
-        glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+        graphics::BindFrameBuffer(gBuffer);
 
-        const auto& bgColor = scene.GetBackgroundColor();
-        // glClearColor(bgColor.r, bgColor.g, bgColor.b, bgColor.a);
-        glClearColor(0, 0, 0, 0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        graphics::SetClearColor(glm::vec4(0));
+        graphics::Clear();
 
         deferredShader.Enable();
 
-        RenderSystem::UploadCameraProjection(deferredShader, camera);
+        RenderSystem::UploadCameraProjection(deferredShader, *camera);
 
-        const auto& gameObjects = scene.GetGameObjects();
+        const auto& gameObjects = scene->GetGameObjects();
         // std::cout << gameObjects.size() << std::endl;
-        for (const auto& obj : scene.GetGameObjects()) {
+        for (const auto& obj : scene->GetGameObjects()) {
             glm::mat4 M = obj->transform.GetModelMatrix();
-            glm::mat4 MV = camera.GetV() * M;
+            glm::mat4 MV = camera->GetV() * M;
             glm::mat4 normalMatrix = glm::transpose(glm::inverse(MV));
             glUniformMatrix4fv(deferredShader["modelViewMatrix"], 1, GL_FALSE, glm::value_ptr(MV));
             glUniformMatrix4fv(deferredShader["normalMatrix"], 1, GL_FALSE, glm::value_ptr(normalMatrix));
@@ -222,7 +180,7 @@ int main(int argc, char* argv[]) {
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        graphics::Clear();
 
         // blit the deferred depth buffer to the main screen
         glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
@@ -237,27 +195,17 @@ int main(int argc, char* argv[]) {
         graphics::ToggleCulling(true);
         graphics::ToggleDepthBufferWriting(false);
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, gPosition);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, gNormal);
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, gDiffuse);
-        glActiveTexture(GL_TEXTURE3);
-        glBindTexture(GL_TEXTURE_2D, gSpecularExp);
-        glUniform1i(lightVolumeShader["gPosition"], 0);
-        glUniform1i(lightVolumeShader["gNormal"], 1);
-        glUniform1i(lightVolumeShader["gDiffuse"], 2);
-        glUniform1i(lightVolumeShader["gSpecularExp"], 3);
-
-        glUniform2fv(lightVolumeShader["screenSize"], 1, glm::value_ptr(glm::vec2(Window::getWindowSize().x, Window::getWindowSize().y)));
+        graphics::Bind2DTexture(gPosition, lightVolumeShader["gPosition"], 0);
+        graphics::Bind2DTexture(gNormal, lightVolumeShader["gNormal"], 1);
+        graphics::Bind2DTexture(gDiffuse, lightVolumeShader["gDiffuse"], 2);
+        graphics::Bind2DTexture(gSpecularExp, lightVolumeShader["gSpecularExp"], 3);
 
         glBindVertexArray(lightVolumeVAO);
-        const auto& pointLights = scene.GetPointLights();
+        const auto& pointLights = scene->GetPointLights();
         for (const auto& light : pointLights) {
 
             // calculate light volume model matrix
-            float cutOffIntensity = 0.05;
+            float cutOffIntensity = 0.02;
             float lightRadius = std::sqrtf(light->intensity / cutOffIntensity);
             lightRadius = 4;
             glm::mat4 lightModelMatrix(1);
@@ -265,27 +213,22 @@ int main(int argc, char* argv[]) {
             lightModelMatrix = glm::scale(lightModelMatrix, glm::vec3(lightRadius));
 
             // calculate MVP
-            glm::mat4 MVP = camera.GetP() * camera.GetV() * lightModelMatrix;
+            glm::mat4 MVP = camera->GetP() * camera->GetV() * lightModelMatrix;
 
             // upload data to GPU
             glUniformMatrix4fv(lightVolumeShader["MVP"], 1, GL_FALSE, glm::value_ptr(MVP));
-            glUniform3fv(lightVolumeShader["lightPos"], 1, glm::value_ptr(glm::vec3(camera.GetV() * glm::vec4(light->transform.position, 1))));
+            glUniform3fv(lightVolumeShader["lightPos"], 1, glm::value_ptr(glm::vec3(camera->GetV() * glm::vec4(light->transform.position, 1))));
             glUniform3fv(lightVolumeShader["lightColor"], 1, glm::value_ptr(light->color * light->intensity));
 
             // render the light volume
-            glDrawElements(GL_TRIANGLES, ballModel->meshMaterialPairs[0].first->getNumTriangles() * 3, GL_UNSIGNED_INT, 0);
+            glDrawElements(GL_TRIANGLES, ballModel->meshes[0]->getNumTriangles() * 3, GL_UNSIGNED_INT, 0);
         }
 
         graphics::ToggleBlending(false);
         graphics::ToggleCulling(false);
         graphics::ToggleDepthBufferWriting(true);
         
-        skybox->Render(camera);
-
-        //gameObj->transform.position.y += 3;
-        //RenderSystem::Render(&scene);
-        //gameObj->transform.position.y -= 3;
-        
+        skybox->Render(*camera);
 
         PG::Window::EndFrame();
     }

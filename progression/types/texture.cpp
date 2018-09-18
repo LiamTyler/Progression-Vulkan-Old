@@ -33,6 +33,8 @@ namespace Progression {
     }
 
     void Texture::UploadToGPU(bool free) {
+        if (!image_)
+            return;
         glBindTexture(GL_TEXTURE_2D, gpuHandle_);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_->Width(), image_->Height(), 0, GL_RGBA, GL_FLOAT, image_->GetData());
         if (mipMapped_) {

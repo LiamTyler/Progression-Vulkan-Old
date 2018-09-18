@@ -16,6 +16,10 @@ namespace Progression {
             Texture* diffuseTex = nullptr,
             Shader* shader = nullptr);
 
+        ~Material() = default;
+        Material(const Material& material) = default;
+        Material& operator=(const Material& material) = default;
+        
         glm::vec3 ambient;
         glm::vec3 diffuse;
         glm::vec3 specular;

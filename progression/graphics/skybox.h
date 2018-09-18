@@ -8,6 +8,7 @@ namespace Progression {
 
 	class Skybox {
 	public:
+        Skybox();
 		Skybox(
             const std::string& right,
             const std::string& left,
@@ -26,15 +27,15 @@ namespace Progression {
 		void Render(const Camera& camera);
 
 		GLuint getGPUHandle() const { return skyboxTextureID_; }
-		Shader* GetShader() const { return shader_; }
+		std::shared_ptr<Shader> GetShader() const { return shader_; }
 
-	private:
         bool Load(const std::vector<std::string>& faces);
 
+	private:
 		GLuint skyboxTextureID_;
 		GLuint cubeVao_;
 		GLuint cubeVbo_;
-        Shader* shader_;
+        std::shared_ptr<Shader> shader_;
 	};
 
 } // namespace Progression
