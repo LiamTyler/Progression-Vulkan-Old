@@ -18,6 +18,7 @@ public:
 
     void Update() {
         gameObject->transform = ball->transform;
+        gameObject->boundingBox.setCenter(gameObject->transform.position);
     }
 
 
@@ -37,7 +38,7 @@ public:
     void Stop() {}
 
     void Update() {
-        float dt = 1.0f / 30.0f;
+        float dt = 1.0f / 100.0f;
         //float dt = Time::deltaTime();
         velocity.y += -9.81f * dt;
         gameObject->transform.position += velocity * dt;
@@ -45,6 +46,7 @@ public:
             gameObject->transform.position.y = gameObject->transform.scale.x;
             velocity.y *= -.97;
         }
+        gameObject->boundingBox.setCenter(gameObject->transform.position);
     }
 
     glm::vec3 velocity;
@@ -87,22 +89,34 @@ int main(int argc, char* argv[]) {
     auto scene = Scene::Load(rootDirectory + "resources/scenes/scene1.pgscn");
 
     auto camera = scene->GetCamera();
-    camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera));
+    camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera, 15));
 
     auto ballModel = ResourceManager::GetModel("metalBall");
     auto planeModel = ResourceManager::GetModel("metalFloor");
 
-    for (int x = 0; x < 20; x++) {
-        for (int z = 0; z < 20; z++) {
+    int X = 20;
+    int Z = 20;
+    int DX = 4;
+    int DZ = 4;
+    //for (int x = 0; x < 20; x++) {
+    //    for (int z = 0; z < 20; z++) {
+            for (int x = 0; x < X; x += DX) {
+                for (int z = 0; z < Z; z += DZ) {
             float randHeight = 3 + 2 * (rand() / static_cast<float>(RAND_MAX));
-            glm::vec3 pos = glm::vec3(-20 + 2 * x, randHeight, -20 + 2 * z);
+            glm::vec3 pos = glm::vec3(-X + 2 * x, randHeight, -Z + 2 * z);
             GameObject* ballObj = new GameObject(Transform(pos, glm::vec3(0), glm::vec3(.5)));
             ballObj->AddComponent<ModelRenderer>(new ModelRenderer(ballObj, ballModel.get()));
             ballObj->AddComponent<BounceComponent>(new BounceComponent(ballObj));
+            ballObj->boundingBox.Encompass(BoundingBox(glm::vec3(-1), glm::vec3(1)), ballObj->transform);
 
             glm::vec3 randColor = glm::vec3((rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)));
             PG::Light* pl = new Light(PG::Light::Type::POINT, pos, randColor, 2);
             pl->AddComponent<LightBallComponent>(new LightBallComponent(pl, ballObj));
+            float cutOffIntensity = 0.03;
+            float lightRadius = std::sqrtf(pl->intensity / cutOffIntensity);
+            std::cout << lightRadius << std::endl;
+            // lightRadius = 4;
+            pl->boundingBox.Encompass(BoundingBox(glm::vec3(-1), glm::vec3(1)), Transform(pl->transform.position, glm::vec3(0), glm::vec3(lightRadius)));
 
             scene->AddGameObject(ballObj);
             scene->AddLight(pl);
@@ -111,6 +125,7 @@ int main(int argc, char* argv[]) {
     
     GameObject* planeObj = scene->GetGameObject("floor");
     planeObj->AddComponent<ModelRenderer>(new ModelRenderer(planeObj, planeModel.get()));
+    planeObj->boundingBox = BoundingBox(glm::vec3(-25, -.1, -25), glm::vec3(25, .1, 25));
     
     auto skybox = scene->getSkybox();
 
@@ -142,6 +157,84 @@ int main(int argc, char* argv[]) {
 
     graphics::ToggleDepthTesting(true);
     Time::Restart();
+
+    Shader lineShader = Shader(rootDirectory + "resources/shaders/line_shader.vert", rootDirectory + "resources/shaders/line_shader.frag");
+
+    float bbData[] = {
+        -1, -1, -1,
+        1, -1, -1,
+        1, -1, -1,
+        1, -1, 1,
+        1, -1, 1,
+        -1, -1, 1,
+        -1, -1, 1,
+        -1, -1, -1,
+
+        -1, -1, -1,
+        -1, 1, -1,
+        1, -1, -1,
+        1, 1, -1,
+        1, -1, 1,
+        1, 1, 1,
+        -1, -1, 1,
+        -1, 1, 1,
+
+        -1, 1, -1,
+        1, 1, -1,
+        1, 1, -1,
+        1, 1, 1,
+        1, 1, 1,
+        -1, 1, 1,
+        -1, 1, 1,
+        -1, 1, -1
+    };
+
+    GLuint bbVao = graphics::CreateVAO();
+    GLuint bbVbo;
+    glGenBuffers(1, &bbVbo);
+    glBindBuffer(GL_ARRAY_BUFFER, bbVbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(bbData), bbData, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(lineShader["vertex"]);
+    glVertexAttribPointer(lineShader["vertex"], 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bbVbo);
+
+    Shader computeShader;
+    computeShader.AttachShaderFromFile(GL_COMPUTE_SHADER, rootDirectory + "resources/shaders/compute.glsl");
+    std::cout << "vendor: " << glGetString(GL_VENDOR) << endl;
+    std::cout << "renderer: " << glGetString(GL_RENDERER) << endl;
+    std::cout << "version: " << glGetString(GL_VERSION) << endl;
+    glm::ivec3 work_group_cnt;
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &work_group_cnt[0]);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, &work_group_cnt[1]);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &work_group_cnt[2]);
+
+    cout << "max global work group size: " << work_group_cnt.x << ", " << work_group_cnt.y
+        << ", " << work_group_cnt.z << endl;
+
+    glm::ivec3 work_group_size;
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &work_group_size[0]);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &work_group_size[1]);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, &work_group_size[2]);
+
+    cout << "max global work group size: " << work_group_size.x << ", " << work_group_size.y
+        << ", " << work_group_size.z << endl;
+
+    int work_group_invocations;
+    glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &work_group_invocations);
+    cout << "max local work group invocations: " << work_group_invocations << endl;
+
+
+    tex_output_;
+    glGenTextures(1, &tex_output_);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tex_output_);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, SW_, SH_, 0, GL_RGBA, GL_FLOAT, NULL);
+    glBindImageTexture(0, tex_output_, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
     // Game loop
     while (!PG::EngineShutdown) {
@@ -188,6 +281,10 @@ int main(int argc, char* argv[]) {
         glBlitFramebuffer(0, 0, Window::getWindowSize().x, Window::getWindowSize().y, 0, 0, Window::getWindowSize().x, Window::getWindowSize().y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+        glm::mat4 VP = camera->GetP() * camera->GetV();
+
+        /*
+
         lightVolumeShader.Enable();
 
         // Turn on additive blending and disable depth writing
@@ -205,15 +302,15 @@ int main(int argc, char* argv[]) {
         for (const auto& light : pointLights) {
 
             // calculate light volume model matrix
-            float cutOffIntensity = 0.02;
+            float cutOffIntensity = 0.03;
             float lightRadius = std::sqrtf(light->intensity / cutOffIntensity);
-            lightRadius = 4;
+            //lightRadius = 4;
             glm::mat4 lightModelMatrix(1);
             lightModelMatrix = glm::translate(lightModelMatrix, light->transform.position);
             lightModelMatrix = glm::scale(lightModelMatrix, glm::vec3(lightRadius));
 
             // calculate MVP
-            glm::mat4 MVP = camera->GetP() * camera->GetV() * lightModelMatrix;
+            glm::mat4 MVP = VP * lightModelMatrix;
 
             // upload data to GPU
             glUniformMatrix4fv(lightVolumeShader["MVP"], 1, GL_FALSE, glm::value_ptr(MVP));
@@ -227,9 +324,32 @@ int main(int argc, char* argv[]) {
         graphics::ToggleBlending(false);
         graphics::ToggleCulling(false);
         graphics::ToggleDepthBufferWriting(true);
-        
+        */
+
         skybox->Render(*camera);
 
+        /*
+        Frustum frustum(*camera);
+
+        lineShader.Enable();
+        glUniform3fv(lineShader["color"], 1, glm::value_ptr(glm::vec3(0, 1, 0)));
+        glBindVertexArray(bbVao);
+
+        glm::mat4 M = planeObj->boundingBox.GetModelMatrix();
+        glUniformMatrix4fv(lineShader["MVP"], 1, GL_FALSE, glm::value_ptr(VP * M));
+        glDrawArrays(GL_LINES, 0, 24);
+        int drawn = 0;
+
+        for (const auto& obj : scene->GetPointLights()) {
+            if (frustum.boxInFrustum(obj->boundingBox)) {
+                drawn++;
+                glm::mat4 M = obj->boundingBox.GetModelMatrix();
+                glUniformMatrix4fv(lineShader["MVP"], 1, GL_FALSE, glm::value_ptr(VP * M));
+                // glDrawArrays(GL_LINES, 0, 24);
+            }
+        }
+        */
+        
         PG::Window::EndFrame();
     }
 

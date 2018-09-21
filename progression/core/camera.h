@@ -8,7 +8,7 @@ namespace Progression {
 		public:
 			Camera(
 				const Transform& t = Transform(),
-				float fov = glm::radians(45.0f),
+				float fovy = glm::radians(45.0f),
 				float a = 16.0f / 9.0f,
 				float np = .1f,
 				float fp = 100.0f);

@@ -13,6 +13,8 @@
 #include "core/window.h"
 #include "core/resource_manager.h"
 #include "core/scene.h"
+#include "core/bounding_box.h"
+#include "core/frustum.h"
 
 #include "graphics/material.h"
 #include "graphics/mesh.h"

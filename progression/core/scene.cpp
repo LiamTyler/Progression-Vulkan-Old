@@ -168,7 +168,7 @@ namespace Progression {
             } else if (first == "fov") {
                 float x;
                 ss >> x;
-                camera->SetFOV(x);
+                camera->SetFOV(glm::radians(x));
             } else if (first == "aspect") {
                 float width, height;
                 char colon;

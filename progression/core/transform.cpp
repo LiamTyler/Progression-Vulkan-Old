@@ -9,7 +9,7 @@ namespace Progression {
 	{
 	}
 
-	glm::mat4 Transform::GetModelMatrix() {
+	glm::mat4 Transform::GetModelMatrix() const {
 		glm::mat4 model(1);
 		model = glm::translate(model, position);
 		model = glm::rotate(model, rotation.z, glm::vec3(0, 0, 1));

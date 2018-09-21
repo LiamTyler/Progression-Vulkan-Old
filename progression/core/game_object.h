@@ -6,6 +6,7 @@
 
 #include "core/transform.h"
 #include "core/component.h"
+#include "core/bounding_box.h"
 
 namespace Progression {
 
@@ -43,6 +44,7 @@ namespace Progression {
 		}
 
 		Transform transform;
+        BoundingBox boundingBox;
         std::string name;
 
 	protected:

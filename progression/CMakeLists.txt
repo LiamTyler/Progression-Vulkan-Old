@@ -17,6 +17,8 @@ set(
     core/window.cpp
     core/scene.cpp
     core/resource_manager.cpp
+    core/bounding_box.cpp
+    core/frustum.cpp
 
     types/lights.cpp
     types/texture.cpp
@@ -54,6 +56,8 @@ set(
     core/window.h
     core/scene.h
     core/resource_manager.h
+    core/bounding_box.h
+    core/frustum.h
     
     types/lights.h
     types/texture.h

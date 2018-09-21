@@ -2,9 +2,9 @@
 
 namespace Progression {
 
-	Camera::Camera(const Transform& t, float fov, float a, float np, float fp) :
+	Camera::Camera(const Transform& t, float fovy, float a, float np, float fp) :
         GameObject(t),
-		fieldOfView_(fov),
+		fieldOfView_(fovy),
 		aspectRatio_(a),
 		nearPlane_(np),
 		farPlane_(fp)
