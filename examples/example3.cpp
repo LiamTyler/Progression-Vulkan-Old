@@ -1,8 +1,10 @@
 #include "progression.h"
 
+#define BLOCK_SIZE 16
 using namespace Progression;
 
 std::string rootDirectory;
+
 
 class LightBallComponent : public Component {
 public:
@@ -38,7 +40,7 @@ public:
     void Stop() {}
 
     void Update() {
-        float dt = 1.0f / 100.0f;
+        float dt = 1.0f / 60.0f;
         //float dt = Time::deltaTime();
         velocity.y += -9.81f * dt;
         gameObject->transform.position += velocity * dt;
@@ -50,6 +52,60 @@ public:
     }
 
     glm::vec3 velocity;
+};
+
+void SendFrustumData(Shader& shader, const Camera& camera) {
+    glm::vec3 ntl, ntr, nbl, nbr, ftl, ftr, fbr, fbl;
+    float nearHeight, nearWidth, farHeight, farWidth;
+
+    float angle = 0.5 * camera.GetFOV();
+    float nearDist = camera.GetNearPlane();
+    float farDist = camera.GetFarPlane();
+
+    nearHeight = nearDist * std::tanf(angle);
+    farHeight = farDist * std::tanf(angle);
+    nearWidth = camera.GetAspectRatio() * nearHeight;
+    farWidth = camera.GetAspectRatio() * farHeight;
+
+    glm::vec3 nc = camera.transform.position + nearDist * camera.GetForwardDir();
+    glm::vec3 fc = camera.transform.position + farDist * camera.GetForwardDir();
+
+    glm::vec3 Y = camera.GetUpDir();
+    glm::vec3 X = camera.GetRightDir();
+    ntl = nc + Y * nearHeight - X * nearWidth;
+    ntr = nc + Y * nearHeight + X * nearWidth;
+    nbl = nc - Y * nearHeight - X * nearWidth;
+    nbr = nc - Y * nearHeight + X * nearWidth;
+    ftl = fc + Y * farHeight - X * farWidth;
+    ftr = fc + Y * farHeight + X * farWidth;
+    fbl = fc - Y * farHeight - X * farWidth;
+    fbr = fc - Y * farHeight + X * farWidth;
+    glUniform3fv(shader["NBL"], 1, glm::value_ptr(nbl));
+    glUniform3fv(shader["FBL"], 1, glm::value_ptr(fbl));
+
+
+
+    /*float DIVX = 1280.0 / BLOCK_SIZE;
+    float DIVY = 720.0 / BLOCK_SIZE;
+    float dnx = 2 * nearWidth / DIVX;
+    float dny = 2 * nearHeight / DIVY;
+    float dfx = 2 * farWidth / DIVX;
+    float dfy = 2 * farHeight / DIVY;
+    glUniform3fv(shader["NDX"], 1, glm::value_ptr(dnx * X));
+    glUniform3fv(shader["NDY"], 1, glm::value_ptr(dny * -Y));
+    glUniform3fv(shader["FDX"], 1, glm::value_ptr(dfx * X));
+    glUniform3fv(shader["FDY"], 1, glm::value_ptr(dfy * -Y));
+    */
+    float numGroupsX = 1280.0 / BLOCK_SIZE;
+    float numGroupsY = 720.0 / BLOCK_SIZE;
+    glm::vec3 dnx = (nbr - nbl) / numGroupsX;
+    glm::vec3 dny = (ntl - nbl) / numGroupsY;
+    glm::vec3 dfx = (fbr - fbl) / numGroupsX;
+    glm::vec3 dfy = (ftl - fbl) / numGroupsY;
+    glUniform3fv(shader["NDX"], 1, glm::value_ptr(dnx));
+    glUniform3fv(shader["NDY"], 1, glm::value_ptr(dny));
+    glUniform3fv(shader["FDX"], 1, glm::value_ptr(dfx));
+    glUniform3fv(shader["FDY"], 1, glm::value_ptr(dfy));
 };
 
 // argv[1] = path of the root directory
@@ -93,16 +149,17 @@ int main(int argc, char* argv[]) {
     auto ballModel = ResourceManager::GetModel("metalBall");
     auto planeModel = ResourceManager::GetModel("metalFloor");
 
-    int X = 20;
-    int Z = 20;
-    int DX = 4;
-    int DZ = 4;
-    //for (int x = 0; x < 20; x++) {
-    //    for (int z = 0; z < 20; z++) {
-            for (int x = 0; x < X; x += DX) {
-                for (int z = 0; z < Z; z += DZ) {
+    int X = 1;
+    int Z = 1;
+    int startX = 0; // = -X;
+    int startZ = 0; // = -Z;
+    int DX = 10;
+    int DZ = 10;
+
+    for (int x = 0; x < X; x += DX) {
+        for (int z = 0; z < Z; z += DZ) {
             float randHeight = 3 + 2 * (rand() / static_cast<float>(RAND_MAX));
-            glm::vec3 pos = glm::vec3(-X + 2 * x, randHeight, -Z + 2 * z);
+            glm::vec3 pos = glm::vec3(startX + 2 * x, randHeight, startZ + 2 * z);
             GameObject* ballObj = new GameObject(Transform(pos, glm::vec3(0), glm::vec3(.5)));
             ballObj->AddComponent<ModelRenderer>(new ModelRenderer(ballObj, ballModel.get()));
             ballObj->AddComponent<BounceComponent>(new BounceComponent(ballObj));
@@ -248,7 +305,11 @@ int main(int argc, char* argv[]) {
     GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
     glm::vec4* lightBuffer = (glm::vec4*) glMapBufferRange( GL_SHADER_STORAGE_BUFFER, 0, 2 * sizeof(glm::vec4) * scene->GetNumPointLights(), bufMask);
     for( int i = 0; i < scene->GetNumPointLights(); i++) {
-        lightBuffer[2 * i + 0] = camera->GetV() * glm::vec4(scene->GetPointLights()[i]->transform.position, 1);
+        float cutOffIntensity = 0.03;
+        float lightRadius = std::sqrtf(scene->GetPointLights()[i]->intensity / cutOffIntensity);
+        // lightBuffer[2 * i + 0] = camera->GetV() * glm::vec4(scene->GetPointLights()[i]->transform.position, 1);
+        lightBuffer[2 * i + 0] = glm::vec4(scene->GetPointLights()[i]->transform.position, 1);
+        lightBuffer[2 * i + 0].w = lightRadius;
         lightBuffer[2 * i + 1] = glm::vec4(scene->GetPointLights()[i]->intensity * scene->GetPointLights()[i]->color, 1);
     }
     glUnmapBuffer( GL_SHADER_STORAGE_BUFFER );
@@ -303,7 +364,11 @@ int main(int argc, char* argv[]) {
         const auto& pointLights = scene->GetPointLights();
         glm::vec4* lightBuffer = (glm::vec4*) glMapBufferRange( GL_SHADER_STORAGE_BUFFER, 0, 2 * sizeof(glm::vec4) * scene->GetNumPointLights(), bufMask);
         for (int i = 0; i < pointLights.size(); ++i) {
-            lightBuffer[2 * i + 0] = camera->GetV() * glm::vec4(pointLights[i]->transform.position, 1);
+            float cutOffIntensity = 0.03;
+            float lightRadius = std::sqrtf(scene->GetPointLights()[i]->intensity / cutOffIntensity);
+            //lightBuffer[2 * i + 0] = camera->GetV() * glm::vec4(pointLights[i]->transform.position, lightRadius);
+            lightBuffer[2 * i + 0] = glm::vec4(pointLights[i]->transform.position, 1);
+            lightBuffer[2 * i + 0].w = lightRadius;
             lightBuffer[2 * i + 1] = glm::vec4(pointLights[i]->intensity * pointLights[i]->color, 1);
         }
         glUnmapBuffer( GL_SHADER_STORAGE_BUFFER );
@@ -315,11 +380,14 @@ int main(int argc, char* argv[]) {
         glBindImageTexture(3, gDiffuse, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8);
         glBindImageTexture(4, gSpecularExp, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
         glUniform1i(computeShader["numPointLights"], scene->GetNumPointLights());
+        SendFrustumData(computeShader, *camera);
 
-        glDispatchCompute(Window::getWindowSize().x / 16, Window::getWindowSize().y / 16, 1);
+        //glDispatchCompute(Window::getWindowSize().x / BLOCK_SIZE, Window::getWindowSize().y / BLOCK_SIZE, 1);
+        glDispatchCompute(80, 45, 1);
 
         // make sure writing to image has finished before read
-        // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        //glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
         graphics::ToggleDepthBufferWriting(false);
         graphics::ToggleDepthTesting(false);
@@ -328,6 +396,7 @@ int main(int argc, char* argv[]) {
         glBindVertexArray(quadVAO);
         graphics::Bind2DTexture(computeOutput, combineShader["computeOutput"], 0);
         glDrawArrays(GL_TRIANGLES, 0, 6);
+
         graphics::ToggleDepthTesting(true);
         graphics::ToggleDepthBufferWriting(true);
 
@@ -376,16 +445,18 @@ int main(int argc, char* argv[]) {
 
         skybox->Render(*camera);
 
-        /*
+        //graphics::ToggleDepthBufferWriting(false);
+        //graphics::ToggleDepthTesting(false);
+        
         Frustum frustum(*camera);
 
         lineShader.Enable();
         glUniform3fv(lineShader["color"], 1, glm::value_ptr(glm::vec3(0, 1, 0)));
         glBindVertexArray(bbVao);
 
-        glm::mat4 M = planeObj->boundingBox.GetModelMatrix();
+        /*glm::mat4 M = planeObj->boundingBox.GetModelMatrix();
         glUniformMatrix4fv(lineShader["MVP"], 1, GL_FALSE, glm::value_ptr(VP * M));
-        glDrawArrays(GL_LINES, 0, 24);
+        glDrawArrays(GL_LINES, 0, 24);*/
         int drawn = 0;
 
         for (const auto& obj : scene->GetPointLights()) {
@@ -393,10 +464,11 @@ int main(int argc, char* argv[]) {
                 drawn++;
                 glm::mat4 M = obj->boundingBox.GetModelMatrix();
                 glUniformMatrix4fv(lineShader["MVP"], 1, GL_FALSE, glm::value_ptr(VP * M));
-                // glDrawArrays(GL_LINES, 0, 24);
+                glDrawArrays(GL_LINES, 0, 24);
             }
         }
-        */
+        
+        
         
         PG::Window::EndFrame();
     }
