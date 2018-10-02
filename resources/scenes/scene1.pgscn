@@ -9,7 +9,7 @@ scale 1 1 1
 fov 45
 aspect 16:9
 near-plane .1
-far-plane 100
+far-plane 300
 primary-camera true
 
 Light
@@ -22,4 +22,4 @@ name water
 
 GameObject
 name floor
-scale 25 1 25
+scale 100 1 100
