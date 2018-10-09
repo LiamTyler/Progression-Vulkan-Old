@@ -100,7 +100,7 @@ int main(int argc, char* argv[]) {
     float DX, DZ;
 
     bool single = false;
-    bool fourH = true;
+    bool fourH = false;
     bool oneK = false;
     bool fourK = false;
     bool tenK = true;
@@ -354,8 +354,6 @@ int main(int argc, char* argv[]) {
 
     int counter = 0;
     double sphereTotal = 0, lightTotal = 0, computeTotal = 0, updateTotal = 0, finishTotal = 0;
-    glm::vec4* lightBuffer = new glm::vec4[2 * scene->GetNumPointLights()];
-    glm::mat4* modelBuffer = new glm::mat4[10000];
     // Game loop
     while (!PG::EngineShutdown) {
         PG::Window::StartFrame();
@@ -364,9 +362,7 @@ int main(int argc, char* argv[]) {
         if (PG::Input::GetKeyDown(PG::PG_K_ESC))
             PG::EngineShutdown = true;
 
-        auto timer = Time::getTimePoint();
         scene->Update();
-        updateTotal += Time::getDuration(timer);
 
         // RenderSystem::UpdateLights(scene, camera);
 
@@ -378,7 +374,6 @@ int main(int argc, char* argv[]) {
         deferredShader.Enable();
         RenderSystem::UploadCameraProjection(deferredShader, *camera);
 
-        timer = Time::getTimePoint();
         const auto& gameObjects = scene->GetGameObjects();
         
         for (const auto& obj : scene->GetGameObjects()) {
@@ -392,27 +387,7 @@ int main(int argc, char* argv[]) {
                 RenderSystem::UploadMaterial(deferredShader, *mr->material);
                 glDrawElements(GL_TRIANGLES, mr->mesh->getNumTriangles() * 3, GL_UNSIGNED_INT, 0);
             }
-            break;
         }
-        
-        instanceShader.Enable();
-        RenderSystem::UploadCameraProjection(instanceShader, *camera);
-        glBindVertexArray(instanceVAO);
-        for (int i = 1; i < gameObjects.size(); ++i) {
-            glm::mat4 M = gameObjects[i]->transform.GetModelMatrix();
-            glm::mat4 MV = camera->GetV() * M;
-            modelBuffer[i - 1] = MV;
-        }
-        RenderSystem::UploadMaterial(instanceShader, *gameObjects[1]->GetComponent<ModelRenderer>()->meshRenderers[0]->material);
-        glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(glm::mat4) * 10000, modelBuffer);
-        glDrawElementsInstanced(GL_TRIANGLES, ballModel->meshes[0]->getNumTriangles() * 3, GL_UNSIGNED_INT, 0, 10000);
-        
-
-        glFlush();
-        glFinish();
-        sphereTotal += Time::getDuration(timer);
-
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         graphics::Clear();
@@ -423,7 +398,6 @@ int main(int argc, char* argv[]) {
         glBlitFramebuffer(0, 0, Window::getWindowSize().x, Window::getWindowSize().y, 0, 0, Window::getWindowSize().x, Window::getWindowSize().y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        timer  = Time::getTimePoint();
         glm::mat4 VP = camera->GetP() * camera->GetV();
         glm::mat4 V = camera->GetV();
         const auto& pointLights = scene->GetPointLights();
@@ -438,24 +412,7 @@ int main(int argc, char* argv[]) {
             lightBuffer[2 * i + 1] = glm::vec4(pointLights[i]->intensity * pointLights[i]->color, 1);
         }
         glUnmapBuffer( GL_SHADER_STORAGE_BUFFER );
-        glFlush();
-        glFinish();
-        /*
-        for (int i = 0; i < pointLights.size(); ++i) {
-            float lightRadius = std::sqrtf(scene->GetPointLights()[i]->intensity / cutOffIntensity);
-            //lightRadius = 6;
-            //lightBuffer[2 * i + 0] = camera->GetV() * glm::vec4(pointLights[i]->transform.position, lightRadius);
-            lightBuffer[2 * i + 0] = V * glm::vec4(pointLights[i]->transform.position, 1);
-            lightBuffer[2 * i + 0].w = lightRadius;
-            lightBuffer[2 * i + 1] = glm::vec4(pointLights[i]->intensity * pointLights[i]->color, 1);
-        }
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSSBO);
-        glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, 2 * sizeof(glm::vec4) * scene->GetNumPointLights(), lightBuffer);
-        */
 
-        lightTotal += Time::getDuration(timer);
-
-        timer = Time::getTimePoint();
         computeShader.Enable();
         glBindImageTexture(0, computeOutput, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
         glBindImageTexture(1, gPosition, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
@@ -471,13 +428,9 @@ int main(int argc, char* argv[]) {
         // glDispatchCompute(80, 45, 1);
 
         // make sure writing to image has finished before read
-        // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-        glMemoryBarrier(GL_ALL_BARRIER_BITS);
-        glFlush();
-        glFinish();
-        computeTotal += Time::getDuration(timer);
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        // glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
-        timer = Time::getTimePoint();
         graphics::ToggleDepthBufferWriting(false);
         graphics::ToggleDepthTesting(false);
 
@@ -515,15 +468,13 @@ int main(int argc, char* argv[]) {
         }
         */
         
-        counter++;
         PG::Window::EndFrame();
-        finishTotal += Time::getDuration(timer);
     }
-    std::cout << "Average scene update time: " << updateTotal / counter << std::endl;
+    /*std::cout << "Average scene update time: " << updateTotal / counter << std::endl;
     std::cout << "Average sphere rendering time: " << sphereTotal / counter << std::endl;
     std::cout << "Average light upload time: " << lightTotal / counter << std::endl;
     std::cout << "Average compute shader time: " << computeTotal / counter << std::endl;
-    std::cout << "Average final stages time: " << finishTotal / counter << std::endl;
+    std::cout << "Average final stages time: " << finishTotal / counter << std::endl;*/
 
     PG::EngineQuit();
 

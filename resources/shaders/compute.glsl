@@ -19,7 +19,7 @@ layout(std430, binding=6) buffer point_light_list
     vec4 lights[];
 };
 
-#define MAX_LIGHTS_PER_TILE 500
+#define MAX_LIGHTS_PER_TILE 600
 shared int tileLightList[MAX_LIGHTS_PER_TILE];
 shared int numLightsInTile;
 

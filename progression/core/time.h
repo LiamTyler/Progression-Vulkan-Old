@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/config.h"
+#include <chrono>
 
 namespace Progression {
 
@@ -19,6 +20,8 @@ public:
     static unsigned int currentFrameCount();
     static void showFPS(bool b);
     static void Restart();
+    static std::chrono::high_resolution_clock::time_point getTimePoint();
+    static double getDuration(const std::chrono::high_resolution_clock::time_point& point);
 
 private:
     static void StartFrame();

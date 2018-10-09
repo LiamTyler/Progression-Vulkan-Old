@@ -27,7 +27,8 @@ shader default-mesh
 
 Model
 name metalBall
-filename models/UVSphere.obj
+filename models/sphere2.obj
+#filename models/UVSphere.obj
 material metalBall
 
 Model

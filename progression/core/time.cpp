@@ -64,4 +64,12 @@ namespace Progression {
         }
     }
 
+    std::chrono::high_resolution_clock::time_point Time::getTimePoint() {
+        return std::chrono::high_resolution_clock::now();
+    }
+
+    double Time::getDuration(const std::chrono::high_resolution_clock::time_point& point) {
+        return (std::chrono::high_resolution_clock::now() - point).count() / (double) 1e6;
+    }
+
 } // namespace Progression

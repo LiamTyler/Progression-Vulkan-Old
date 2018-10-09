@@ -42,7 +42,7 @@ namespace Progression {
         int glMajor = 4;
         int glMinor = 3;
         bool resizeable = true;
-        bool vsync = true;
+        bool vsync = false;
         _mTitle = "Untitled";
         _mWindowSize = { 640, 480 };
 
@@ -88,10 +88,11 @@ namespace Progression {
 		std::cout << "Renderer: " << glGetString(GL_RENDERER) << std::endl;
 		std::cout << "Version: " << glGetString(GL_VERSION) << std::endl;
 
-        /*if (vsync) {
+        if (vsync) {
             glfwSwapInterval(1);
-        }*/
-        glfwSwapInterval(0);
+        } else {
+            glfwSwapInterval(0);
+        }
 
         _mUIScreen = new nanogui::Screen;
         _mUIScreen->initialize(_mWindow, false);
