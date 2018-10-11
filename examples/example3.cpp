@@ -178,7 +178,7 @@ int main(int argc, char* argv[]) {
     auto skybox = scene->getSkybox();
 
     GLuint lightVolumeVAO = graphics::CreateVAO();
-    GLuint* lightVolumeVBOs = ballModel->meshes[0]->getBuffers();
+    GLuint* lightVolumeVBOs = &ballModel->meshes[0]->vbos[0];
 
     glBindBuffer(GL_ARRAY_BUFFER, lightVolumeVBOs[0]);
     glEnableVertexAttribArray(lightVolumeShader["vertex"]);
@@ -317,7 +317,7 @@ int main(int argc, char* argv[]) {
     GLuint instanceVAO;
     glGenVertexArrays(1, &instanceVAO);
     glBindVertexArray(instanceVAO);
-    GLuint* vbos = ballModel->meshes[0]->getBuffers();
+    GLuint* vbos = &ballModel->meshes[0]->vbos[0];
 
     glBindBuffer(GL_ARRAY_BUFFER, vbos[0]);
     glEnableVertexAttribArray(instanceShader["vertex"]);
@@ -390,7 +390,7 @@ int main(int argc, char* argv[]) {
             for (const auto& mr : obj->GetComponent<ModelRenderer>()->meshRenderers) {
                 glBindVertexArray(mr->vao);
                 RenderSystem::UploadMaterial(deferredShader, *mr->material);
-                glDrawElements(GL_TRIANGLES, mr->mesh->getNumTriangles() * 3, GL_UNSIGNED_INT, 0);
+                glDrawElements(GL_TRIANGLES, mr->mesh->numTriangles * 3, GL_UNSIGNED_INT, 0);
             }
             break;
         }
@@ -406,7 +406,7 @@ int main(int argc, char* argv[]) {
         RenderSystem::UploadMaterial(instanceShader, *gameObjects[1]->GetComponent<ModelRenderer>()->meshRenderers[0]->material);
         glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(glm::mat4) * 10000, modelBuffer);
-        glDrawElementsInstanced(GL_TRIANGLES, ballModel->meshes[0]->getNumTriangles() * 3, GL_UNSIGNED_INT, 0, 10000);
+        glDrawElementsInstanced(GL_TRIANGLES, ballModel->meshes[0]->numTriangles * 3, GL_UNSIGNED_INT, 0, 10000);
         
 
         glFlush();

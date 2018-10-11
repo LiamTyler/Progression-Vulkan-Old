@@ -3,6 +3,7 @@
 #include "core/image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image/stb_image_write.h"
+#include "core/time.h"
 
 #include <iostream>
 #include <iomanip>
@@ -68,7 +69,9 @@ namespace Progression {
 
 	bool Image::LoadImage(const std::string& fname) {
 		int nC;
+        auto timer = Time::getTimePoint();
 		unsigned char *raw = stbi_load(fname.c_str(), &width_, &height_, &nC, 4);
+        std::cout << "stb Image load time: " << Time::getDuration(timer) << std::endl;
 		if (raw == NULL) {
 			std::cout << "Failed to load : " << fname << std::endl;
 			return false;

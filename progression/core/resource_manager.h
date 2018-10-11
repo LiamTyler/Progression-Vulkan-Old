@@ -22,6 +22,8 @@ namespace Progression {
         static void Free();
 
         static void LoadResourceFile(const std::string& relativePath);
+
+        static std::string GetRootResourceDir() { return rootResourceDir_; }
         
         static std::shared_ptr<Model> GetModel(const std::string& name, bool shallowCopy = true) {
             if (models_.find(name) == models_.end()) {
@@ -79,6 +81,9 @@ namespace Progression {
         static std::shared_ptr<Shader> AddShader(Shader& shader, const std::string& name);
         static std::shared_ptr<Material> AddMaterial(Material& material, const std::string& name);
 
+        static std::shared_ptr<Model> LoadOBJ(const std::string& fullPath);
+        static std::shared_ptr<Model> LoadPGModel(const std::string& fullPath);
+        static bool ConvertOBJToPGModel(const std::string& fullPathToOBJ, const std::string& fullPathToMaterialDir, const std::string& fullOutputPath);
 
     private:
         static std::string rootResourceDir_;

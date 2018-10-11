@@ -1,15 +1,15 @@
 #include "core/resource_manager.h"
 #include "graphics/mesh.h"
 #include "tinyobjloader/tiny_obj_loader.h"
+#include "memory_map/MemoryMapped.h"
 
 #include <functional>
 #include <filesystem>
 #include <fstream>
 
-/*
+
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
-namespace { namespace filescope {
 
     class Vertex {
     public:
@@ -26,19 +26,19 @@ namespace { namespace filescope {
         glm::vec3 normal;
         glm::vec2 uv;
     };
-
+    
     namespace std {
-    template<> struct hash<Vertex> {
-    size_t operator()(Vertex const& vertex) const {
-    return ((hash<glm::vec3>()(vertex.vertex) ^
-    (hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^
-    (hash<glm::vec2>()(vertex.uv) << 1);
-    }
-    };
-    }         
+        template<> struct hash<Vertex> {
+            size_t operator()(Vertex const& vertex) const {
+                return ((hash<glm::vec3>()(vertex.vertex) ^
+                (hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^
+                (hash<glm::vec2>()(vertex.uv) << 1);
+            }
+        };
+    }        
+    
 
-} } // namespace anonymous::filescope
-*/
+
 
 
 namespace Progression {
@@ -244,18 +244,131 @@ namespace Progression {
             return models_[relativePath];
 
         std::string fullFileName = rootResourceDir_ + relativePath;
+        std::filesystem::path file(fullFileName);
+        if (!std::filesystem::exists(file)) {
+            std::cout << "File: " << fullFileName << " not found" << std::endl;
+            return nullptr;
+        }
+        std::shared_ptr<Model> model;
+        if (file.extension() == ".obj") {
+            model = LoadOBJ(fullFileName);
+        } else if (file.extension() == ".pgModel") {
+            model = LoadPGModel(fullFileName);
+        } else {
+            std::cout << "Trying to load model from unsupported file: " << file.extension() << std::endl;
+            return nullptr;
+        }
+
+        if (addToManager && model != nullptr)
+            models_[relativePath] = model;
+
+        return model;
+    }
+
+    std::shared_ptr<Model> ResourceManager::LoadPGModel(const std::string& fullPath) {
+        
+        std::ifstream in(fullPath, std::ios::binary);
+        if (!in) {
+            std::cout << "Failed to load the input file: " << fullPath << std::endl;
+            return nullptr;
+        }
+
+        auto model = std::make_shared<Model>();
+
+        int numMeshes, numMaterials;
+        in.read((char*)&numMeshes, sizeof(int));
+        in.read((char*)&numMaterials, sizeof(int));
+        model->meshes.resize(numMeshes);
+        model->materials.resize(numMeshes);
+
+        std::vector<std::shared_ptr<Material>> materials(numMaterials);
+        std::string texName(100, ' ');
+        // parse all of the materials
+        for (int i = 0; i < numMaterials; ++i) {
+            auto mat = std::make_shared<Material>();
+
+            in.read((char*)&mat->ambient, sizeof(glm::vec3));
+            in.read((char*)&mat->diffuse, sizeof(glm::vec3));
+            in.read((char*)&mat->specular, sizeof(glm::vec3));
+            in.read((char*)&mat->shininess, sizeof(float));
+            unsigned int texNameSize;
+            in.read((char*)&texNameSize, sizeof(unsigned int));
+
+            std::cout << mat->ambient << std::endl;
+            std::cout << mat->diffuse << std::endl;
+            std::cout << mat->specular << std::endl;
+            std::cout << mat->shininess << std::endl;
+            std::cout << texNameSize << std::endl;
+            if (texNameSize > texName.size()) {
+                texName.resize(texNameSize);
+            }
+            if (texNameSize != 0) {
+                in.read(&texName[0], sizeof(char) * texNameSize);
+                mat->diffuseTexture = new Texture(new Image(rootResourceDir_ + texName), true, true, true);
+            }
+            mat->shader = shaders_["default-mesh"].get();
+            materials[i] = mat;
+        }
+
+        std::vector<glm::vec3> verts;
+        std::vector<glm::vec3> normals;
+        std::vector<glm::vec2> uvs;
+        std::vector<unsigned int> indices;
+        // parse all of the meshes
+        for (int i = 0; i < numMeshes; ++i) {
+            unsigned int numVertices, numTriangles, materialIndex;
+            bool textured;
+
+            in.read((char*)&numVertices, sizeof(unsigned int));
+            in.read((char*)&numTriangles, sizeof(unsigned int));
+            in.read((char*)&materialIndex, sizeof(unsigned int));
+            in.read((char*)&textured, sizeof(bool));
+
+            // expand the buffers if necessary
+            if (numVertices > verts.size()) {
+                verts.resize(numVertices);
+                normals.resize(numVertices);
+            }
+            if (textured && uvs.size() < numVertices)
+                uvs.resize(numVertices);
+            if (indices.size() < 3 * numTriangles)
+                indices.resize(3 * numTriangles);
+
+            // read in the mesh data
+            in.read((char*)&verts[0], numVertices * sizeof(glm::vec3));
+            in.read((char*)&normals[0], numVertices * sizeof(glm::vec3));
+            if (textured)
+                in.read((char*)&uvs[0], numVertices * sizeof(glm::vec2));
+            in.read((char*)&indices[0], 3 * numTriangles * sizeof(unsigned int));
+
+            // create and upload the mesh
+            glm::vec2* texCoords = textured ? &uvs[0] : nullptr;
+            auto mesh = std::make_shared<Mesh>(numVertices, numTriangles, &verts[0], &normals[0], texCoords, &indices[0]);
+            mesh->UploadToGPU(true, false);
+
+            model->meshes[i] = mesh;
+            model->materials[i] = materials[materialIndex];
+        }
+
+        in.close();
+        
+        
+        return model;
+    }
+
+    std::shared_ptr<Model> ResourceManager::LoadOBJ(const std::string& fullPath) {
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
         std::vector<tinyobj::material_t> materials;
         std::string err;
-        bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, fullFileName.c_str(), rootResourceDir_.c_str(), true);
+        bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, fullPath.c_str(), rootResourceDir_.c_str(), true);
 
         if (!err.empty()) {
             std::cerr << err << std::endl;
         }
 
         if (!ret) {
-            std::cout << "Failed to load the input file: " << fullFileName << std::endl;
+            std::cout << "Failed to load the input file: " << fullPath << std::endl;
             return nullptr;
         }
         
@@ -270,14 +383,19 @@ namespace Progression {
                 glm::vec3 ambient(mat.ambient[0], mat.ambient[1], mat.ambient[2]);
                 glm::vec3 diffuse(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
                 glm::vec3 specular(mat.specular[0], mat.specular[1], mat.specular[2]);
-                float shinyness = mat.shininess;
-                currentMaterial = std::make_shared<Material>(ambient, diffuse, specular, shinyness, nullptr, shaders_["default-mesh"].get());
+                float shininess = mat.shininess;
+                Texture* diffuseTex = nullptr;
+                if (mat.diffuse_texname != "")
+                    diffuseTex = new Texture(new Image(rootResourceDir_ + mat.diffuse_texname), true, true, true);
+
+                currentMaterial = std::make_shared<Material>(ambient, diffuse, specular, shininess, diffuseTex, shaders_["default-mesh"].get());
             }
 
             std::vector<glm::vec3> verts;
             std::vector<glm::vec3> normals;
             std::vector<glm::vec2> uvs;
             std::vector<unsigned int> indices;
+            std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
 
             for (const auto& shape : shapes) {
                 // Loop over faces(polygon)
@@ -289,30 +407,40 @@ namespace Progression {
                             tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index + 0];
                             tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
                             tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
-                            verts.emplace_back(vx, vy, vz);
+                            //verts.emplace_back(vx, vy, vz);
 
                             tinyobj::real_t nx = attrib.normals[3 * idx.normal_index + 0];
                             tinyobj::real_t ny = attrib.normals[3 * idx.normal_index + 1];
                             tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
-                            normals.emplace_back(nx, ny, nz);
+                            //normals.emplace_back(nx, ny, nz);
 
+                            tinyobj::real_t tx = 0, ty = 0;
                             if (idx.texcoord_index != -1) {
-                                tinyobj::real_t tx = attrib.texcoords[2 * idx.texcoord_index + 0];
-                                tinyobj::real_t ty = attrib.texcoords[2 * idx.texcoord_index + 1];
-                                uvs.emplace_back(tx, ty);
+                                tx = attrib.texcoords[2 * idx.texcoord_index + 0];
+                                ty = attrib.texcoords[2 * idx.texcoord_index + 1];
+                                //uvs.emplace_back(tx, ty);
                             }
 
-                            indices.push_back(indices.size());
+                            Vertex vertex(glm::vec3(vx, vy, vz), glm::vec3(nx, ny, nz), glm::vec2(ty, ty));
+                            if (uniqueVertices.count(vertex) == 0) {
+                                uniqueVertices[vertex] = static_cast<uint32_t>(verts.size());
+                                verts.emplace_back(vx, vy, vz);
+                                normals.emplace_back(nx, ny, nz);
+                                if (idx.texcoord_index != -1)
+                                    uvs.emplace_back(tx, ty);
+                            }
+
+                            indices.push_back(uniqueVertices[vertex]);
+                            
                         }
                     }
                 }
             }
 
-            //TODO: remove duplicate vertices from each mesh
-
             // create mesh and upload to GPU
             if (verts.size()) {
-                auto currentMesh = std::make_shared<Mesh>(verts.size(), verts.size() / 3, &verts[0], &normals[0], &uvs[0], &indices[0]);
+                // TODO: make this work for meshes that dont have UVS
+                auto currentMesh = std::make_shared<Mesh>(verts.size(), indices.size() / 3, &verts[0], &normals[0], &uvs[0], &indices[0]);
                 currentMesh->UploadToGPU(true, false);
 
                 model->meshes.push_back(currentMesh);
@@ -320,10 +448,163 @@ namespace Progression {
             }
         }
 
-        if (addToManager)
-            models_[relativePath] = model;
-        
         return model;
+    }
+
+    bool ResourceManager::ConvertOBJToPGModel(const std::string& fullPathToOBJ, const std::string& fullPathToMaterialDir, const std::string& fullOutputPath) {
+
+        std::filesystem::path file(fullOutputPath);
+        if (file.extension() != ".pgModel") {
+            std::cout << "Output filename has to have extension '.pgModel'" << std::endl;
+            return false;
+        }
+        std::ofstream outFile(fullOutputPath, std::ios::binary);
+        if (!outFile) {
+            std::cout << "Could not open output file: " << fullOutputPath << std::endl;
+            return false;
+        }
+        tinyobj::attrib_t attrib;
+        std::vector<tinyobj::shape_t> shapes;
+        std::vector<tinyobj::material_t> materials;
+        std::string err;
+        bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, fullPathToOBJ.c_str(), fullPathToMaterialDir.c_str(), true);
+
+        if (!err.empty()) {
+            std::cerr << err << std::endl;
+        }
+
+        if (!ret) {
+            std::cout << "Failed to load the input OBJ: " << fullPathToOBJ << std::endl;
+            outFile.close();
+            return false;
+        }
+
+        std::vector<int> materialList;
+        std::vector<Mesh> meshList;
+        for (int currentMaterialID = -1; currentMaterialID < (int) materials.size(); ++currentMaterialID) {
+            std::vector<glm::vec3> verts;
+            std::vector<glm::vec3> normals;
+            std::vector<glm::vec2> uvs;
+            std::vector<unsigned int> indices;
+            std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
+            for (const auto& shape : shapes) {
+                // Loop over faces(polygon)
+                for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
+                    if (shape.mesh.material_ids[f] == currentMaterialID) {
+                        // Loop over vertices in the face. Each face should have 3 vertices from the LoadObj triangulation
+                        for (size_t v = 0; v < 3; v++) {
+                            tinyobj::index_t idx = shape.mesh.indices[3 * f + v];
+                            tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index + 0];
+                            tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
+                            tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
+                            //verts.emplace_back(vx, vy, vz);
+
+                            tinyobj::real_t nx = attrib.normals[3 * idx.normal_index + 0];
+                            tinyobj::real_t ny = attrib.normals[3 * idx.normal_index + 1];
+                            tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
+                            //normals.emplace_back(nx, ny, nz);
+
+                            tinyobj::real_t tx = 0, ty = 0;
+                            if (idx.texcoord_index != -1) {
+                                tx = attrib.texcoords[2 * idx.texcoord_index + 0];
+                                ty = attrib.texcoords[2 * idx.texcoord_index + 1];
+                                //uvs.emplace_back(tx, ty);
+                            }
+
+                            Vertex vertex(glm::vec3(vx, vy, vz), glm::vec3(nx, ny, nz), glm::vec2(ty, ty));
+                            if (uniqueVertices.count(vertex) == 0) {
+                                uniqueVertices[vertex] = static_cast<uint32_t>(verts.size());
+                                verts.emplace_back(vx, vy, vz);
+                                normals.emplace_back(nx, ny, nz);
+                                if (idx.texcoord_index != -1)
+                                    uvs.emplace_back(tx, ty);
+                            }
+
+                            indices.push_back(uniqueVertices[vertex]);
+                        }
+                    }
+                }
+            }
+
+            // create mesh and upload to GPU
+            if (verts.size()) {
+                Mesh m;
+
+                m.numVertices = verts.size();
+                m.numTriangles = indices.size() / 3;
+                m.vertices = new glm::vec3[verts.size()];
+                memcpy(m.vertices, &verts[0].x, sizeof(glm::vec3) * verts.size());
+                m.normals = new glm::vec3[verts.size()];
+                memcpy(m.normals, &normals[0], sizeof(glm::vec3) * verts.size());
+                if (uvs.size()) {
+                    m.uvs = new glm::vec2[verts.size()];
+                    memcpy(m.uvs, &uvs[0], sizeof(glm::vec2) * verts.size());
+                }
+                m.indices = new unsigned int[indices.size()];
+                memcpy(m.indices, &indices[0], sizeof(unsigned int) * indices.size());
+                meshList.emplace_back(std::move(m));
+                materialList.push_back(currentMaterialID);
+            }
+        }
+
+        std::map<int, int> usedMaterialMap;
+        for (const auto& matID : materialList) {
+            if (!usedMaterialMap.count(matID))
+                usedMaterialMap[matID] = usedMaterialMap.size();
+        }
+
+        unsigned int numMeshes = meshList.size();
+        unsigned int numMaterials = usedMaterialMap.size();
+        outFile.write((char*) &numMeshes, sizeof(unsigned int));
+        outFile.write((char*) &numMaterials, sizeof(unsigned int));
+
+        for (const auto& matID : usedMaterialMap) {
+            glm::vec3 ambient, diffuse, specular;
+            float shininess;
+            unsigned int diffuseNameLength = 0;
+            std::string diffuseTexName = "";
+            
+            if (matID.first == -1) {
+                Material mat = *ResourceManager::GetMaterial("default");
+                ambient = mat.ambient;
+                diffuse = mat.diffuse;
+                specular = mat.specular;
+                shininess = mat.shininess;
+            } else {
+                tinyobj::material_t& mat = materials[matID.first];
+                ambient = glm::vec3(mat.ambient[0], mat.ambient[1], mat.ambient[2]);
+                diffuse = glm::vec3(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
+                specular = glm::vec3(mat.specular[0], mat.specular[1], mat.specular[2]);
+                shininess = mat.shininess;
+                diffuseTexName = mat.diffuse_texname;
+                diffuseNameLength = diffuseTexName.length();
+            }
+            outFile.write((char*) &ambient, sizeof(glm::vec3));
+            outFile.write((char*) &diffuse, sizeof(glm::vec3));
+            outFile.write((char*) &specular, sizeof(glm::vec3));
+            outFile.write((char*) &shininess, sizeof(float));
+            outFile.write((char*) &diffuseNameLength, sizeof(unsigned int));
+            if (diffuseNameLength)
+                outFile.write((char*) &diffuseTexName[0], sizeof(char) * diffuseNameLength);
+        }
+
+        for (int i = 0; i < meshList.size(); ++i) {
+            const auto& mesh = meshList[i];
+            outFile.write((char*) &mesh.numVertices, sizeof(unsigned int));
+            outFile.write((char*) &mesh.numTriangles, sizeof(unsigned int));
+            outFile.write((char*) &usedMaterialMap[materialList[i]], sizeof(unsigned int));
+            bool textured = mesh.uvs != nullptr;
+            outFile.write((char*) &textured, sizeof(bool));
+            outFile.write((char*) mesh.vertices, sizeof(glm::vec3) * mesh.numVertices);
+            outFile.write((char*) mesh.normals, sizeof(glm::vec3) * mesh.numVertices);
+            if (textured)
+                outFile.write((char*) mesh.uvs, sizeof(glm::vec2) * mesh.numVertices);
+            outFile.write((char*) mesh.indices, sizeof(unsigned int) * 3 * mesh.numTriangles);
+        }
+
+        outFile.close();
+
+        return true;
     }
 
     std::shared_ptr<Skybox> ResourceManager::LoadSkybox(const std::string& name, const std::vector<std::string>& textures, bool addToManager) {

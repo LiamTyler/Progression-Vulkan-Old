@@ -39,6 +39,8 @@ set(
     components/user_camera_component.cpp
 
     ${CMAKE_SOURCE_DIR}/ext/tinyobjloader/tiny_obj_loader.cc
+    ${CMAKE_SOURCE_DIR}/ext/memory_map/MemoryMapped.cpp
+    
     )
 
 set(
@@ -80,6 +82,8 @@ set(
     ${CMAKE_SOURCE_DIR}/ext/tinyobjloader/tiny_obj_loader.h
     ${CMAKE_SOURCE_DIR}/ext/stb_image/stb_image.h
     ${CMAKE_SOURCE_DIR}/ext/stb_image/stb_image_write.h
+    
+    ${CMAKE_SOURCE_DIR}/ext/memory_map/MemoryMapped.h
 
     progression.h
 )

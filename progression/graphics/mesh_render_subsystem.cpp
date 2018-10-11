@@ -18,7 +18,7 @@ namespace Progression {
         if (vaos_.find(mr->mesh) == vaos_.end()) {
             glGenVertexArrays(1, &vao);
             glBindVertexArray(vao);
-            GLuint* vbos_ = mr->mesh->getBuffers();
+            GLuint* vbos_ = &mr->mesh->vbos[0];
             Shader& shader = *mr->material->shader;
 
             glBindBuffer(GL_ARRAY_BUFFER, vbos_[0]);
@@ -64,7 +64,7 @@ namespace Progression {
             glm::mat4 normalMatrix = glm::transpose(glm::inverse(MV));
             glUniformMatrix4fv(shader["modelViewMatrix"], 1, GL_FALSE, glm::value_ptr(MV));
             glUniformMatrix4fv(shader["normalMatrix"], 1, GL_FALSE, glm::value_ptr(normalMatrix));
-            glDrawElements(GL_TRIANGLES, mr->mesh->getNumTriangles() * 3, GL_UNSIGNED_INT, 0);
+            glDrawElements(GL_TRIANGLES, mr->mesh->numTriangles * 3, GL_UNSIGNED_INT, 0);
         }
     }
 

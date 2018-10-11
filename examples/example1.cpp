@@ -4,52 +4,6 @@ using namespace Progression;
 
 std::string rootDirectory;
 
-class LightBallComponent : public Component {
-public:
-    LightBallComponent(GameObject* obj, GameObject* _ball) :
-        Component(obj),
-        ball(_ball)
-    {
-    }
-
-    ~LightBallComponent() = default;
-    void Start() {}
-    void Stop() {}
-
-    void Update() {
-        gameObject->transform = ball->transform;
-    }
-
-
-    GameObject* ball;
-};
-
-class BounceComponent : public Component {
-public:
-    BounceComponent(GameObject* obj, const glm::vec3 startVel = glm::vec3(0, 0, 0)) :
-        Component(obj),
-        velocity(startVel)
-    {
-    }
-
-    ~BounceComponent() = default;
-    void Start() {}
-    void Stop() {}
-
-    void Update() {
-        float dt = 1.0f / 30.0f;
-        //float dt = Time::deltaTime();
-        velocity.y += -9.81f * dt;
-        gameObject->transform.position += velocity * dt;
-        if (gameObject->transform.position.y < gameObject->transform.scale.x) {
-            gameObject->transform.position.y = gameObject->transform.scale.x;
-            velocity.y *= -.97;
-        }
-    }
-
-    glm::vec3 velocity;
-};
-
 int main(int argc, char* argv[]) {
     srand(time(NULL));
 
@@ -63,64 +17,45 @@ int main(int argc, char* argv[]) {
     Scene scene;
 
     Camera camera = Camera(Transform(
-        glm::vec3(-20, 15, -25),
-        glm::vec3(glm::radians(-20.0f), glm::radians(-135.0f), 0),
+        glm::vec3(0, 0, 5),
+        glm::vec3(0),
         glm::vec3(1)));
     camera.AddComponent<UserCameraComponent>(new UserCameraComponent(&camera));
 
-    Material* metalMaterial = new Material(
-        glm::vec3(0),
-        glm::vec3(1, 1, 1),
-        glm::vec3(.1),
-        50,
-        new Texture(new Image(rootDirectory + "resources/textures/metal.jpg")),
-        ResourceManager::GetShader("default-mesh")
-    );
-
-    Material* metalMaterial2 = new Material(
-        glm::vec3(0),
-        glm::vec3(1, 1, 1),
-        glm::vec3(.1),
-        50,
-        new Texture(new Image(rootDirectory + "resources/textures/metal2.jpg")),
-        ResourceManager::GetShader("default-mesh")
-    );
-
-    Model* ballModel = ResourceManager::LoadModel("models/UVSphere.obj");
-    ballModel->meshMaterialPairs[0].second = metalMaterial;
-
-    Model* planeModel = ResourceManager::LoadModel("models/plane.obj");
-    planeModel->meshMaterialPairs[0].second = metalMaterial2;
-
-    for (int x = 0; x < 20; x++) {
-        for (int z = 0; z < 20; z++) {
-            float randHeight = 3 + 2 * (rand() / static_cast<float>(RAND_MAX));
-            glm::vec3 pos = glm::vec3(-20 + 2 * x, randHeight, -20 + 2 * z);
-            GameObject* ballObj = new GameObject(Transform(pos, glm::vec3(0), glm::vec3(.5)));
-            ballObj->AddComponent<ModelRenderer>(new ModelRenderer(ballObj, ballModel));
-            ballObj->AddComponent<BounceComponent>(new BounceComponent(ballObj));
-
-            glm::vec3 randColor = glm::vec3((rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)));
-            PG::Light* pl = new Light(PG::Light::Type::POINT, pos, randColor, 2);
-            pl->AddComponent<LightBallComponent>(new LightBallComponent(pl, ballObj));
-
-            scene.AddGameObject(ballObj);
-            scene.AddLight(pl);
-        }
-    }
-
-
-    GameObject* planeObj = new GameObject(Transform(glm::vec3(0, 0, 0), glm::vec3(0), glm::vec3(25)));
-    planeObj->AddComponent<ModelRenderer>(new ModelRenderer(planeObj, planeModel));
-
-    Skybox* skybox = ResourceManager::LoadSkybox({ "water/right.jpg", "water/left.jpg", "water/top.jpg", "water/bottom.jpg", "water/front.jpg", "water/back.jpg" });
 
     Light directionalLight(Light::Type::DIRECTIONAL);
     directionalLight.transform.rotation = glm::vec3(-glm::radians(35.0f), glm::radians(220.0f), 0);
 
+    GameObject chalet(Transform(glm::vec3(0), glm::vec3(glm::radians(-90.0f), 0, 0), glm::vec3(1)));
+
+    auto timer = Time::getTimePoint();
+    
+    auto chaletModel = ResourceManager::LoadModel("models/chalet.obj", false);
+    std::cout << "Chalet Model Info:" << std::endl;
+    std::cout << "Num meshes: " << chaletModel->meshes.size() << std::endl;
+    std::cout << "Num mats: " << chaletModel->materials.size() << std::endl;
+    for (const auto& mesh : chaletModel->meshes) {
+        static int i = 0;
+        std::cout << "Mesh " << i << ": " << std::endl;
+        std::cout << "\tNumVerts: " << mesh->numVertices << std::endl;
+        std::cout << "\tNumTriangles: " << mesh->numTriangles << std::endl;
+        i++;
+    }
+    
+    
+
+    
+    // auto chaletModel = ResourceManager::LoadModel("models/chalet.pgModel", false);
+
+    std::cout << "Loading model time: " << Time::getDuration(timer) << std::endl;
+
+    chalet.AddComponent<ModelRenderer>(new ModelRenderer(&chalet, chaletModel.get()));
+    auto modelRenderComponent = chalet.GetComponent<ModelRenderer>();
+    std::cout << "added model render component" << std::endl;
+
     scene.AddCamera(&camera);
-    // scene.AddLight(&directionalLight);
-    scene.AddGameObject(planeObj);
+    scene.AddLight(&directionalLight);
+    scene.AddGameObject(&chalet);
 
     // Note: After changing the input mode, should poll for events again
     Window::SetRelativeMouse(true);
@@ -137,9 +72,7 @@ int main(int argc, char* argv[]) {
             PG::EngineShutdown = true;
 
         scene.Update();
-
         RenderSystem::Render(&scene);
-        skybox->Render(camera);
 
         PG::Window::EndFrame();
     }
