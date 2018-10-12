@@ -39,13 +39,15 @@ namespace Progression {
     }
 
     void RenderSystem::UpdateLights(Scene* scene, Camera* camera) {
+        
         numPointLights_ = scene->GetNumPointLights();
         numDirectionalLights_ = scene->GetNumDirectionalLights();
         lightBuffer_.clear();
         lightBuffer_.resize(2 * (numDirectionalLights_ + numPointLights_));
-
+        
         glm::mat4 V = camera->GetV();
         const auto& dirLights = scene->GetDirectionalLights();
+
         for (int i = 0; i < numDirectionalLights_; ++i) {
             glm::vec3 dir(0, 0, -1);
             glm::mat4 rot(1);

@@ -9,6 +9,10 @@
 
 namespace Progression {
 
+    inline std::ostream& operator <<(std::ostream& out, const glm::vec2& v) {
+        return out << v.x << " " << v.y;
+    }
+
 	inline std::ostream& operator <<(std::ostream& out, const glm::vec3& v) {
 		return out << v.x << " " << v.y << " " << v.z;
 	}

@@ -24,38 +24,29 @@ int main(int argc, char* argv[]) {
 
 
     Light directionalLight(Light::Type::DIRECTIONAL);
-    directionalLight.transform.rotation = glm::vec3(-glm::radians(35.0f), glm::radians(220.0f), 0);
+    directionalLight.transform.rotation = glm::vec3(glm::radians(-20.0f), glm::radians(0.0f), 0);
 
-    GameObject chalet(Transform(glm::vec3(0), glm::vec3(glm::radians(-90.0f), 0, 0), glm::vec3(1)));
-
-    auto timer = Time::getTimePoint();
+    // GameObject chalet(Transform(glm::vec3(0), glm::vec3(glm::radians(0.0f), 0, 0), glm::vec3(5)));
+    GameObject gameObj(Transform(glm::vec3(0, 0, 0), glm::vec3(glm::radians(0.0f), glm::radians(0.0f), 0), glm::vec3(6)));
     
-    auto chaletModel = ResourceManager::LoadModel("models/chalet.obj", false);
-    std::cout << "Chalet Model Info:" << std::endl;
-    std::cout << "Num meshes: " << chaletModel->meshes.size() << std::endl;
-    std::cout << "Num mats: " << chaletModel->materials.size() << std::endl;
-    for (const auto& mesh : chaletModel->meshes) {
+    auto model = ResourceManager::LoadModel("models/robot.pgModel", false);
+    std::cout << "Model Info:" << std::endl;
+    std::cout << "Num meshes: " << model->meshes.size() << std::endl;
+    std::cout << "Num mats: " << model->materials.size() << std::endl;
+    for (const auto& mesh : model->meshes) {
         static int i = 0;
         std::cout << "Mesh " << i << ": " << std::endl;
         std::cout << "\tNumVerts: " << mesh->numVertices << std::endl;
         std::cout << "\tNumTriangles: " << mesh->numTriangles << std::endl;
         i++;
     }
-    
-    
 
-    
-    // auto chaletModel = ResourceManager::LoadModel("models/chalet.pgModel", false);
-
-    std::cout << "Loading model time: " << Time::getDuration(timer) << std::endl;
-
-    chalet.AddComponent<ModelRenderer>(new ModelRenderer(&chalet, chaletModel.get()));
-    auto modelRenderComponent = chalet.GetComponent<ModelRenderer>();
-    std::cout << "added model render component" << std::endl;
+    gameObj.AddComponent<ModelRenderer>(new ModelRenderer(&gameObj, model.get()));
+    auto modelRenderComponent = gameObj.GetComponent<ModelRenderer>();
 
     scene.AddCamera(&camera);
     scene.AddLight(&directionalLight);
-    scene.AddGameObject(&chalet);
+    scene.AddGameObject(&gameObj);
 
     // Note: After changing the input mode, should poll for events again
     Window::SetRelativeMouse(true);
@@ -72,6 +63,7 @@ int main(int argc, char* argv[]) {
             PG::EngineShutdown = true;
 
         scene.Update();
+
         RenderSystem::Render(&scene);
 
         PG::Window::EndFrame();

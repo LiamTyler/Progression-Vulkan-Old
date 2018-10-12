@@ -1,7 +1,7 @@
 #include "core/resource_manager.h"
 #include "graphics/mesh.h"
 #include "tinyobjloader/tiny_obj_loader.h"
-#include "memory_map/MemoryMapped.h"
+#include "core/time.h"
 
 #include <functional>
 #include <filesystem>
@@ -11,34 +11,31 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
-    class Vertex {
-    public:
-        Vertex(const glm::vec3& vert, const glm::vec3& norm, const glm::vec2& tex) :
-            vertex(vert),
-            normal(norm),
-            uv(tex) {}
+class Vertex {
+public:
+    Vertex(const glm::vec3& vert, const glm::vec3& norm, const glm::vec2& tex) :
+        vertex(vert),
+        normal(norm),
+        uv(tex) {}
 
-        bool operator==(const Vertex& other) const {
-            return vertex == other.vertex && normal == other.normal && uv == other.uv;
+    bool operator==(const Vertex& other) const {
+        return vertex == other.vertex && normal == other.normal && uv == other.uv;
+    }
+
+    glm::vec3 vertex;
+    glm::vec3 normal;
+    glm::vec2 uv;
+};
+    
+namespace std {
+    template<> struct hash<Vertex> {
+        size_t operator()(Vertex const& vertex) const {
+            return ((hash<glm::vec3>()(vertex.vertex) ^
+            (hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^
+            (hash<glm::vec2>()(vertex.uv) << 1);
         }
-
-        glm::vec3 vertex;
-        glm::vec3 normal;
-        glm::vec2 uv;
     };
-    
-    namespace std {
-        template<> struct hash<Vertex> {
-            size_t operator()(Vertex const& vertex) const {
-                return ((hash<glm::vec3>()(vertex.vertex) ^
-                (hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^
-                (hash<glm::vec2>()(vertex.uv) << 1);
-            }
-        };
-    }        
-    
-
-
+}        
 
 
 namespace Progression {
@@ -58,10 +55,8 @@ namespace Progression {
         }
 
         // load defaults
-        // shaders_["default-mesh"] = Shader(rootResourceDir_ + "shaders/regular_phong.vert", rootResourceDir_ + "shaders/regular_phong.frag");
         shaders_["default-mesh"] = std::make_shared<Shader>(rootResourceDir_ + "shaders/regular_phong.vert", rootResourceDir_ + "shaders/regular_phong.frag");
         shaders_["default-mesh"]->AddUniform("lights");
-        // shaders_["skybox"] = Shader(rootResourceDir_ + "shaders/skybox.vert", rootResourceDir_ + "shaders/skybox.frag");
         shaders_["skybox"] = std::make_shared<Shader>(rootResourceDir_ + "shaders/skybox.vert", rootResourceDir_ + "shaders/skybox.frag");
         materials_["default"] = std::make_shared<Material>();
         materials_["default"]->shader = shaders_["default-mesh"].get();
@@ -266,7 +261,6 @@ namespace Progression {
     }
 
     std::shared_ptr<Model> ResourceManager::LoadPGModel(const std::string& fullPath) {
-        
         std::ifstream in(fullPath, std::ios::binary);
         if (!in) {
             std::cout << "Failed to load the input file: " << fullPath << std::endl;
@@ -282,7 +276,8 @@ namespace Progression {
         model->materials.resize(numMeshes);
 
         std::vector<std::shared_ptr<Material>> materials(numMaterials);
-        std::string texName(100, ' ');
+        std::vector<std::string> diffuseTexNames;
+        std::string texName;
         // parse all of the materials
         for (int i = 0; i < numMaterials; ++i) {
             auto mat = std::make_shared<Material>();
@@ -294,18 +289,14 @@ namespace Progression {
             unsigned int texNameSize;
             in.read((char*)&texNameSize, sizeof(unsigned int));
 
-            std::cout << mat->ambient << std::endl;
-            std::cout << mat->diffuse << std::endl;
-            std::cout << mat->specular << std::endl;
-            std::cout << mat->shininess << std::endl;
-            std::cout << texNameSize << std::endl;
-            if (texNameSize > texName.size()) {
-                texName.resize(texNameSize);
-            }
             if (texNameSize != 0) {
+                texName.resize(texNameSize);
                 in.read(&texName[0], sizeof(char) * texNameSize);
-                mat->diffuseTexture = new Texture(new Image(rootResourceDir_ + texName), true, true, true);
+                diffuseTexNames.push_back(texName);
+            } else {
+                diffuseTexNames.push_back("");
             }
+
             mat->shader = shaders_["default-mesh"].get();
             materials[i] = mat;
         }
@@ -349,14 +340,18 @@ namespace Progression {
             model->meshes[i] = mesh;
             model->materials[i] = materials[materialIndex];
         }
-
         in.close();
-        
+
+        for (int i = 0; i < numMaterials; ++i) {
+            if (diffuseTexNames[i] != "") {
+                materials[i]->diffuseTexture = new Texture(new Image(rootResourceDir_ + diffuseTexNames[i]), true, true, true);
+            }
+        }
         
         return model;
     }
 
-    std::shared_ptr<Model> ResourceManager::LoadOBJ(const std::string& fullPath) {
+    std::shared_ptr<Model> ResourceManager::LoadOBJ(const std::string& fullPath) {        
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
         std::vector<tinyobj::material_t> materials;
@@ -385,8 +380,9 @@ namespace Progression {
                 glm::vec3 specular(mat.specular[0], mat.specular[1], mat.specular[2]);
                 float shininess = mat.shininess;
                 Texture* diffuseTex = nullptr;
-                if (mat.diffuse_texname != "")
+                if (mat.diffuse_texname != "") {
                     diffuseTex = new Texture(new Image(rootResourceDir_ + mat.diffuse_texname), true, true, true);
+                }
 
                 currentMaterial = std::make_shared<Material>(ambient, diffuse, specular, shininess, diffuseTex, shaders_["default-mesh"].get());
             }
@@ -396,7 +392,6 @@ namespace Progression {
             std::vector<glm::vec2> uvs;
             std::vector<unsigned int> indices;
             std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
-
             for (const auto& shape : shapes) {
                 // Loop over faces(polygon)
                 for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
@@ -421,6 +416,7 @@ namespace Progression {
                                 //uvs.emplace_back(tx, ty);
                             }
 
+                            
                             Vertex vertex(glm::vec3(vx, vy, vz), glm::vec3(nx, ny, nz), glm::vec2(ty, ty));
                             if (uniqueVertices.count(vertex) == 0) {
                                 uniqueVertices[vertex] = static_cast<uint32_t>(verts.size());
@@ -429,9 +425,9 @@ namespace Progression {
                                 if (idx.texcoord_index != -1)
                                     uvs.emplace_back(tx, ty);
                             }
-
-                            indices.push_back(uniqueVertices[vertex]);
                             
+
+                            indices.push_back(uniqueVertices[vertex]);                            
                         }
                     }
                 }
@@ -439,12 +435,18 @@ namespace Progression {
 
             // create mesh and upload to GPU
             if (verts.size()) {
+                std::cout << "verts size: " << verts.size() << ", material id: " << currentMaterialID << std::endl;
                 // TODO: make this work for meshes that dont have UVS
-                auto currentMesh = std::make_shared<Mesh>(verts.size(), indices.size() / 3, &verts[0], &normals[0], &uvs[0], &indices[0]);
+                glm::vec2* texCoords = nullptr;
+                if (uvs.size())
+                    texCoords = &uvs[0];
+                auto currentMesh = std::make_shared<Mesh>(verts.size(), indices.size() / 3, &verts[0], &normals[0], texCoords, &indices[0]);
                 currentMesh->UploadToGPU(true, false);
 
+                std::cout << "meshes size: " << model->meshes.size() << std::endl;
                 model->meshes.push_back(currentMesh);
                 model->materials.push_back(currentMaterial);
+                std::cout << "meshes size: " << model->meshes.size() << std::endl;
             }
         }
 

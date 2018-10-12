@@ -21,19 +21,21 @@ namespace Progression {
             GLuint* vbos_ = &mr->mesh->vbos[0];
             Shader& shader = *mr->material->shader;
 
-            glBindBuffer(GL_ARRAY_BUFFER, vbos_[0]);
+            glBindBuffer(GL_ARRAY_BUFFER, vbos_[Mesh::vboName::VERTEX]);
             glEnableVertexAttribArray(shader["vertex"]);
             glVertexAttribPointer(shader["vertex"], 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-            glBindBuffer(GL_ARRAY_BUFFER, vbos_[1]);
+            glBindBuffer(GL_ARRAY_BUFFER, vbos_[Mesh::vboName::NORMAL]);
             glEnableVertexAttribArray(shader["normal"]);
             glVertexAttribPointer(shader["normal"], 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-            glBindBuffer(GL_ARRAY_BUFFER, vbos_[2]);
-            glEnableVertexAttribArray(shader["inTexCoord"]);
-            glVertexAttribPointer(shader["inTexCoord"], 2, GL_FLOAT, GL_FALSE, 0, 0);
+            if (mr->mesh->vbos[Mesh::vboName::UV] != -1) {
+                glBindBuffer(GL_ARRAY_BUFFER, vbos_[Mesh::vboName::UV]);
+                glEnableVertexAttribArray(shader["inTexCoord"]);
+                glVertexAttribPointer(shader["inTexCoord"], 2, GL_FLOAT, GL_FALSE, 0, 0);
+            }
 
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos_[3]);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos_[Mesh::vboName::INDEX]);
             vaos_[mr->mesh] = vao;
         } else {
             vao = vaos_[mr->mesh];

@@ -10,16 +10,16 @@ namespace Progression {
     *   - handle copying
     */
     class Mesh {
-
+    public:
         enum vboName : unsigned int {
             VERTEX,
             NORMAL,
-            UV,
             INDEX,
+            UV,
             TOTAL_VBOS
         };
 
-    public:
+
         Mesh();
         Mesh(int numVerts, int numTris, glm::vec3* verts, glm::vec3* norms, glm::vec2* uvs, unsigned int* indices);
         virtual ~Mesh();

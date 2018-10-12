@@ -39,8 +39,7 @@ set(
     components/user_camera_component.cpp
 
     ${CMAKE_SOURCE_DIR}/ext/tinyobjloader/tiny_obj_loader.cc
-    ${CMAKE_SOURCE_DIR}/ext/memory_map/MemoryMapped.cpp
-    
+    ${CMAKE_SOURCE_DIR}/ext/memory_map/MemoryMapped.cpp    
     )
 
 set(

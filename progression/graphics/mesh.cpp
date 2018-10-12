@@ -11,7 +11,6 @@ namespace Progression {
         uvs(nullptr),
         indices(nullptr)
     {
-        //glGenBuffers(vboName::TOTAL_VBOS, vbos);
         for (int i = 0; i < vboName::TOTAL_VBOS; ++i) vbos[i] = -1;
     }
 
@@ -23,13 +22,16 @@ namespace Progression {
         uvs(texCoords),
         indices(_indices)
     {
-        //glGenBuffers(vboName::TOTAL_VBOS, vbos);
         for (int i = 0; i < vboName::TOTAL_VBOS; ++i) vbos[i] = -1;
     }
 
     Mesh::~Mesh() {
-        if (vbos[0] != -1)
-            glDeleteBuffers(vboName::TOTAL_VBOS, vbos);
+        if (vbos[0] != -1)  {
+            GLuint total = vboName::TOTAL_VBOS;
+            if (vbos[vboName::UV] == -1)
+                total -= 1;
+            glDeleteBuffers(total, vbos);
+        }
         if (vertices)
             delete[] vertices;
         if (normals)
@@ -67,7 +69,11 @@ namespace Progression {
     }
 
     void Mesh::UploadToGPU(bool nullTheBuffers, bool freeMemory) {
-        glGenBuffers(vboName::TOTAL_VBOS, vbos);
+        if (uvs)
+            glGenBuffers(vboName::TOTAL_VBOS, vbos);
+        else
+            glGenBuffers(vboName::TOTAL_VBOS - 1, vbos);
+
         glBindBuffer(GL_ARRAY_BUFFER, vbos[vboName::VERTEX]);
         glBufferData(GL_ARRAY_BUFFER, numVertices * sizeof(glm::vec3), vertices, GL_STATIC_DRAW);
 

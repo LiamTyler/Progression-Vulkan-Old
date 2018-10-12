@@ -1,4 +1,40 @@
 #version 430 core
+/*
+in vec3 vertexInEyeSpace;
+in vec3 normalInEyeSpace;
+in vec2 texCoord;
+
+uniform vec3 ka;
+uniform vec3 kd;
+uniform vec3 ks;
+uniform float specular;
+uniform bool textured;
+uniform sampler2D diffuseTex;
+
+uniform vec3 lightInEyeSpace;
+uniform vec3 lightColor;
+
+out vec4 finalColor;
+
+void main() {
+    vec3 n = normalize(normalInEyeSpace);
+    vec3 l = normalize(-lightInEyeSpace.xyz);
+    vec3 e = normalize(-vertexInEyeSpace);
+    vec3 h = normalize(l + e);
+
+    vec3 outColor = vec3(0, 0, 0);
+    // outColor += lightColor * ka;
+    vec3 diffuseColor = kd;
+    if (textured) {
+        diffuseColor *= texture(diffuseTex, vec2(texCoord.x, 1 - texCoord.y)).xyz;
+    }
+    outColor += lightColor * diffuseColor * max(0.0, dot(l, n));
+    // outColor += lightColor * ks * pow(max(dot(h, n), 0.0), specular);
+
+    finalColor.rgb = outColor;
+    finalColor.a   = 1.0;
+}
+*/
 
 in vec3 vertexInEyeSpace;
 in vec3 normalInEyeSpace;
@@ -21,6 +57,7 @@ out vec4 finalColor;
 void main() {
     vec3 n = normalize(normalInEyeSpace);
     vec3 e = normalize(-vertexInEyeSpace);
+    
     vec3 diffuseColor = kd;
     if (textured) {
         diffuseColor *= texture(diffuseTex, vec2(texCoord.x, 1 - texCoord.y)).xyz;
@@ -33,10 +70,13 @@ void main() {
         vec3 lightColor = lights[2 * i + 1];
         vec3 l = normalize(-lightDir);
         vec3 h = normalize(l + e);
-        // outColor += lightColor * ka;
+        outColor += lightColor * ka;
         outColor += lightColor * diffuseColor * max(0.0, dot(l, n));
-        outColor += lightColor * ks * pow(max(dot(h, n), 0.0), specular);        
+        //outColor += lightColor * ks * pow(max(dot(h, n), 0.0), specular);        
+        outColor += lightColor * ks * pow(max(dot(reflect(-l, n), e), 0.0), specular);        
     }
+    
+    //outColor = texture(diffuseTex, vec2(texCoord.x, 1 - texCoord.y)).xyz;
     
     for (int i = 0; i < numPointLights; ++i) {
         vec3 lightPos   = lights[2 * (numDirectionalLights + i) + 0];
@@ -45,10 +85,11 @@ void main() {
         vec3 l = normalize(lightPos - vertexInEyeSpace);
         vec3 h = normalize(l + e);
         float attenuation = 1.0 / pow(length(lightPos - vertexInEyeSpace), 2.0);
-        // outColor += lightColor * ka;
+        outColor += lightColor * ka;
         outColor += attenuation * lightColor * diffuseColor * max(0.0, dot(l, n));
         outColor += attenuation * lightColor * ks * pow(max(dot(h, n), 0.0), specular);        
     }
+    
     
     finalColor.rgb = outColor;
     finalColor.a   = 1.0;
