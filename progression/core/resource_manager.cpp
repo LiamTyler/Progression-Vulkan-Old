@@ -78,8 +78,8 @@ namespace Progression {
         std::ifstream in(path);
         std::string line;
         while (std::getline(in, line)) {
-            if (line == "")
-                continue;
+			if (line == "")
+				continue;
             if (line[0] == '#')
                 continue;
             if (line == "Skybox") {
@@ -435,7 +435,6 @@ namespace Progression {
 
             // create mesh and upload to GPU
             if (verts.size()) {
-                std::cout << "verts size: " << verts.size() << ", material id: " << currentMaterialID << std::endl;
                 // TODO: make this work for meshes that dont have UVS
                 glm::vec2* texCoords = nullptr;
                 if (uvs.size())
@@ -443,10 +442,8 @@ namespace Progression {
                 auto currentMesh = std::make_shared<Mesh>(verts.size(), indices.size() / 3, &verts[0], &normals[0], texCoords, &indices[0]);
                 currentMesh->UploadToGPU(true, false);
 
-                std::cout << "meshes size: " << model->meshes.size() << std::endl;
                 model->meshes.push_back(currentMesh);
                 model->materials.push_back(currentMaterial);
-                std::cout << "meshes size: " << model->meshes.size() << std::endl;
             }
         }
 

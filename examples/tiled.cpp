@@ -66,8 +66,6 @@ int main(int argc, char* argv[]) {
 
     Shader deferredShader = Shader(rootDirectory + "resources/shaders/deferred_phong.vert", rootDirectory + "resources/shaders/deferred_phong.frag");
     Shader combineShader = Shader(rootDirectory + "resources/shaders/deferred_combine.vert", rootDirectory + "resources/shaders/deferred_combine.frag");
-    Shader lightVolumeShader = Shader(rootDirectory + "resources/shaders/lightVolume.vert", rootDirectory + "resources/shaders/lightVolume.frag");
-    Shader instanceShader = Shader(rootDirectory + "resources/shaders/deferred_instance.vert", rootDirectory + "resources/shaders/deferred_instance.frag");
     
     float quadVerts[] = {
         -1, 1,
@@ -88,7 +86,7 @@ int main(int argc, char* argv[]) {
     glEnableVertexAttribArray(combineShader["vertex"]);
     glVertexAttribPointer(combineShader["vertex"], 2, GL_FLOAT, GL_FALSE, 0, 0);
 
-    auto scene = Scene::Load(rootDirectory + "resources/scenes/scene1.pgscn");
+	auto scene = Scene::Load(rootDirectory + "resources/scenes/scene1.pgscn");
 
     auto camera = scene->GetCamera();
     camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera, 15));
@@ -177,14 +175,6 @@ int main(int argc, char* argv[]) {
     
     auto skybox = scene->getSkybox();
 
-    GLuint lightVolumeVAO = graphics::CreateVAO();
-    GLuint* lightVolumeVBOs = ballModel->meshes[0]->getBuffers();
-
-    glBindBuffer(GL_ARRAY_BUFFER, lightVolumeVBOs[0]);
-    glEnableVertexAttribArray(lightVolumeShader["vertex"]);
-    glVertexAttribPointer(lightVolumeShader["vertex"], 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, lightVolumeVBOs[3]);
-
     GLuint gBuffer = graphics::CreateFrameBuffer();
     GLuint gPosition = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA32F);
     GLuint gNormal = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA32F);
@@ -206,77 +196,11 @@ int main(int argc, char* argv[]) {
     graphics::ToggleDepthTesting(true);
     Time::Restart();
 
-    Shader lineShader = Shader(rootDirectory + "resources/shaders/line_shader.vert", rootDirectory + "resources/shaders/line_shader.frag");
-
-    float bbData[] = {
-        -1, -1, -1,
-        1, -1, -1,
-        1, -1, -1,
-        1, -1, 1,
-        1, -1, 1,
-        -1, -1, 1,
-        -1, -1, 1,
-        -1, -1, -1,
-
-        -1, -1, -1,
-        -1, 1, -1,
-        1, -1, -1,
-        1, 1, -1,
-        1, -1, 1,
-        1, 1, 1,
-        -1, -1, 1,
-        -1, 1, 1,
-
-        -1, 1, -1,
-        1, 1, -1,
-        1, 1, -1,
-        1, 1, 1,
-        1, 1, 1,
-        -1, 1, 1,
-        -1, 1, 1,
-        -1, 1, -1
-    };
-
-    GLuint bbVao = graphics::CreateVAO();
-    GLuint bbVbo;
-    glGenBuffers(1, &bbVbo);
-    glBindBuffer(GL_ARRAY_BUFFER, bbVbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(bbData), bbData, GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(lineShader["vertex"]);
-    glVertexAttribPointer(lineShader["vertex"], 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bbVbo);
-
     Shader computeShader;
     computeShader.AttachShaderFromFile(GL_COMPUTE_SHADER, rootDirectory + "resources/shaders/compute.glsl");
     computeShader.CreateAndLinkProgram();
     std::cout << "compute shader uniforms" << std::endl;
     computeShader.AutoDetectVariables();
-
-    {
-        std::cout << "vendor: " << glGetString(GL_VENDOR) << std::endl;
-        std::cout << "renderer: " << glGetString(GL_RENDERER) << std::endl;
-        std::cout << "version: " << glGetString(GL_VERSION) << std::endl;
-        glm::ivec3 work_group_cnt;
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &work_group_cnt[0]);
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, &work_group_cnt[1]);
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &work_group_cnt[2]);
-
-        std::cout << "max global work group count: " << work_group_cnt.x << ", " << work_group_cnt.y
-            << ", " << work_group_cnt.z << std::endl;
-
-        glm::ivec3 work_group_size;
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &work_group_size[0]);
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &work_group_size[1]);
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, &work_group_size[2]);
-
-        std::cout << "max global work group size: " << work_group_size.x << ", " << work_group_size.y
-            << ", " << work_group_size.z << std::endl;
-
-        int work_group_invocations;
-        glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &work_group_invocations);
-        std::cout << "max local work group invocations: " << work_group_invocations << std::endl;
-    }
 
 
     GLuint computeOutput;
@@ -308,52 +232,6 @@ int main(int argc, char* argv[]) {
     }
     glUnmapBuffer( GL_SHADER_STORAGE_BUFFER );
 
-
-    GLuint instanceVBO;
-    glGenBuffers(1, &instanceVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * 10000, NULL, GL_STREAM_DRAW);
-
-    GLuint instanceVAO;
-    glGenVertexArrays(1, &instanceVAO);
-    glBindVertexArray(instanceVAO);
-    GLuint* vbos = ballModel->meshes[0]->getBuffers();
-
-    glBindBuffer(GL_ARRAY_BUFFER, vbos[0]);
-    glEnableVertexAttribArray(instanceShader["vertex"]);
-    glVertexAttribPointer(instanceShader["vertex"], 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vbos[1]);
-    glEnableVertexAttribArray(instanceShader["normal"]);
-    glVertexAttribPointer(instanceShader["normal"], 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vbos[2]);
-    glEnableVertexAttribArray(instanceShader["inTexCoord"]);
-    glVertexAttribPointer(instanceShader["inTexCoord"], 2, GL_FLOAT, GL_FALSE, 0, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos[3]);
-
-    glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-
-    glEnableVertexAttribArray(instanceShader["MV"] + 0);
-    glEnableVertexAttribArray(instanceShader["MV"] + 1);
-    glEnableVertexAttribArray(instanceShader["MV"] + 2);
-    glEnableVertexAttribArray(instanceShader["MV"] + 3);
-
-    glVertexAttribPointer(instanceShader["MV"] + 0, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), 0);
-    glVertexAttribPointer(instanceShader["MV"] + 1, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*) (4 * sizeof(float)));
-    glVertexAttribPointer(instanceShader["MV"] + 2, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*) (8 * sizeof(float)));
-    glVertexAttribPointer(instanceShader["MV"] + 3, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*) (12 * sizeof(float)));
-    
-    glVertexAttribDivisor(instanceShader["vertex"], 0);
-    glVertexAttribDivisor(instanceShader["normal"], 0);
-    glVertexAttribDivisor(instanceShader["inTexCoord"], 0);
-    glVertexAttribDivisor(instanceShader["MV"] + 0, 1);
-    glVertexAttribDivisor(instanceShader["MV"] + 1, 1);
-    glVertexAttribDivisor(instanceShader["MV"] + 2, 1);
-    glVertexAttribDivisor(instanceShader["MV"] + 3, 1);
-
-    int counter = 0;
-    double sphereTotal = 0, lightTotal = 0, computeTotal = 0, updateTotal = 0, finishTotal = 0;
     // Game loop
     while (!PG::EngineShutdown) {
         PG::Window::StartFrame();
@@ -385,7 +263,7 @@ int main(int argc, char* argv[]) {
             for (const auto& mr : obj->GetComponent<ModelRenderer>()->meshRenderers) {
                 glBindVertexArray(mr->vao);
                 RenderSystem::UploadMaterial(deferredShader, *mr->material);
-                glDrawElements(GL_TRIANGLES, mr->mesh->getNumTriangles() * 3, GL_UNSIGNED_INT, 0);
+                glDrawElements(GL_TRIANGLES, mr->mesh->numTriangles * 3, GL_UNSIGNED_INT, 0);
             }
         }
 
@@ -425,11 +303,8 @@ int main(int argc, char* argv[]) {
         glUniformMatrix4fv(computeShader["invProjMatrix"], 1, GL_FALSE, glm::value_ptr(glm::inverse(camera->GetP())));
 
         glDispatchCompute(Window::getWindowSize().x / BLOCK_SIZE, Window::getWindowSize().y / BLOCK_SIZE, 1);
-        // glDispatchCompute(80, 45, 1);
 
-        // make sure writing to image has finished before read
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-        // glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
         graphics::ToggleDepthBufferWriting(false);
         graphics::ToggleDepthTesting(false);
@@ -444,37 +319,9 @@ int main(int argc, char* argv[]) {
 
         skybox->Render(*camera);
 
-        //graphics::ToggleDepthBufferWriting(false);
-        //graphics::ToggleDepthTesting(false);
-        
-        /*
-        lineShader.Enable();
-        glUniform3fv(lineShader["color"], 1, glm::value_ptr(glm::vec3(0, 1, 0)));
-        glBindVertexArray(bbVao);
-        int drawn = 0;
-        
-        //Frustum frustum(*camera);
-        //glm::mat4 M = planeObj->boundingBox.GetModelMatrix();
-        //glUniformMatrix4fv(lineShader["MVP"], 1, GL_FALSE, glm::value_ptr(VP * M));
-        //glDrawArrays(GL_LINES, 0, 24);
-        
-        for (const auto& obj : scene->GetPointLights()) {
-            if (frustum.boxInFrustum(obj->boundingBox)) {
-                drawn++;
-                glm::mat4 M = obj->boundingBox.GetModelMatrix();
-                glUniformMatrix4fv(lineShader["MVP"], 1, GL_FALSE, glm::value_ptr(VP * M));
-                // glDrawArrays(GL_LINES, 0, 24);
-            }
-        }
-        */
         
         PG::Window::EndFrame();
     }
-    /*std::cout << "Average scene update time: " << updateTotal / counter << std::endl;
-    std::cout << "Average sphere rendering time: " << sphereTotal / counter << std::endl;
-    std::cout << "Average light upload time: " << lightTotal / counter << std::endl;
-    std::cout << "Average compute shader time: " << computeTotal / counter << std::endl;
-    std::cout << "Average final stages time: " << finishTotal / counter << std::endl;*/
 
     PG::EngineQuit();
 

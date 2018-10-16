@@ -56,7 +56,6 @@ namespace Progression {
                 ss >> name;
                 scene->skybox_ = ResourceManager::GetSkybox(name);
             }
-            
         }
 
         in.close();

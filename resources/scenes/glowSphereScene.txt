@@ -1,0 +1,15 @@
+Material
+name metalFloor
+ka 0 0 0
+kd 1 1 1
+ks .1 .1 .1
+ns 50
+diffuseTex textures/metal2.jpg
+shader default-mesh
+
+Model
+name metalFloor
+filename models/plane.obj
+material metalFloor
+
+

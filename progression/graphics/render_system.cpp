@@ -1,5 +1,6 @@
 #include "graphics/render_system.h"
 #include "graphics/render_subsystem.h"
+#include "graphics/graphics_api.h"
 #include "core/scene.h"
 #include "core/camera.h"
 #include "graphics/mesh_render_subsystem.h"
@@ -32,7 +33,8 @@ namespace Progression {
         const auto& bgColor = scene->GetBackgroundColor();
         glClearColor(bgColor.r, bgColor.g, bgColor.b, bgColor.a);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        glEnable(GL_DEPTH_TEST);
+        graphics::ToggleDepthTesting(true);
+        // graphics::ToggleCulling(true);
 
         for (const auto& subsys : subSystems_)
             subsys.second->Render(scene, *camera);

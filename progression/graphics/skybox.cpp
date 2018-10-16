@@ -117,8 +117,10 @@ namespace Progression {
 				std::cout << "Failed to load skybox texture: " << faces[i] << std::endl;
 				return false;
 			}
+
 			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA,
-				img.Width(), img.Height(), 0, GL_RGBA, GL_FLOAT, img.GetData());
+				img.Width(), img.Height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, img.GetData());
+
 		}
 
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
