@@ -83,8 +83,9 @@ namespace Progression {
      void RenderSystem::UploadMaterial(Shader& shader, Material& material) {
          glUniform3fv(shader["ka"], 1, glm::value_ptr(material.ambient));
          glUniform3fv(shader["kd"], 1, glm::value_ptr(material.diffuse));
-         glUniform3fv(shader["ks"], 1, glm::value_ptr(material.specular));
-         glUniform1f(shader["specular"], material.shininess);
+		 glUniform3fv(shader["ks"], 1, glm::value_ptr(material.specular));
+		 glUniform3fv(shader["ke"], 1, glm::value_ptr(material.emissive));
+		 glUniform1f(shader["specular"], material.shininess);
          if (material.diffuseTexture) {
              glUniform1i(shader["textured"], true);
              glActiveTexture(GL_TEXTURE0);

@@ -1,0 +1,6 @@
+window:
+  width: 1280
+  height: 720
+  
+resourceManager:
+  rootDirectory: C:/Users/Liam Tyler/Documents/Progression/resources/

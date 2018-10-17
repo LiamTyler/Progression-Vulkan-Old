@@ -9,6 +9,7 @@ in vec2 texCoord;
 uniform vec3 ka;
 uniform vec3 kd;
 uniform vec3 ks;
+uniform vec3 ke;
 uniform float specular;
 
 uniform bool textured;
@@ -29,7 +30,7 @@ void main() {
         diffuseColor *= texture(diffuseTex, vec2(texCoord.x, 1 - texCoord.y)).xyz;
     }
 
-    vec3 outColor = vec3(0, 0, 0);
+    vec3 outColor = ke;
     
     for (int i = 0; i < numDirectionalLights; ++i) {
         vec3 lightDir   = lights[2 * i + 0];

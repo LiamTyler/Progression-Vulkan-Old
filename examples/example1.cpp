@@ -7,7 +7,7 @@ std::string rootDirectory;
 int main(int argc, char* argv[]) {
     srand(time(NULL));
 
-    rootDirectory = "C:/Users/Tyler/Documents/Progression/";
+    rootDirectory = "C:/Users/Liam Tyler/Documents/Progression/";
 
 
     auto& conf = PG::config::Config(rootDirectory + "configs/default.yaml");
@@ -42,8 +42,9 @@ int main(int argc, char* argv[]) {
         i++;
     }
     model->materials[0]->diffuse = glm::vec3(.7, 0, 0);
-    model->materials[0]->specular = glm::vec3(.7);
-    model->materials[0]->shininess = 60;
+	model->materials[0]->specular = glm::vec3(.7);
+	model->materials[0]->emissive = glm::vec3(0, 0, .7);
+	model->materials[0]->shininess = 60;
 
     gameObj.AddComponent<ModelRenderer>(new ModelRenderer(&gameObj, model.get()));
     auto modelRenderComponent = gameObj.GetComponent<ModelRenderer>();
@@ -55,7 +56,7 @@ int main(int argc, char* argv[]) {
 
     // scene.AddGameObject(&floor);
     scene.AddCamera(&camera);
-    scene.AddLight(&directionalLight);
+    // scene.AddLight(&directionalLight);
     // scene.AddLight(&pointLight);
     scene.AddGameObject(&gameObj);
     

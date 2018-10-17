@@ -139,7 +139,11 @@ namespace Progression {
                         float x, y, z;
                         ss >> x >> y >> z;
                         material->specular = glm::vec3(x, y, z);
-                    } else if (first == "ns") {
+                    } else if (first == "ke") {
+						float x, y, z;
+						ss >> x >> y >> z;
+						material->emissive = glm::vec3(x, y, z);
+					} else if (first == "ns") {
                         float x;
                         ss >> x;
                         material->shininess = x;
@@ -284,8 +288,9 @@ namespace Progression {
 
             in.read((char*)&mat->ambient, sizeof(glm::vec3));
             in.read((char*)&mat->diffuse, sizeof(glm::vec3));
-            in.read((char*)&mat->specular, sizeof(glm::vec3));
-            in.read((char*)&mat->shininess, sizeof(float));
+			in.read((char*)&mat->specular, sizeof(glm::vec3));
+			in.read((char*)&mat->emissive, sizeof(glm::vec3));
+			in.read((char*)&mat->shininess, sizeof(float));
             unsigned int texNameSize;
             in.read((char*)&texNameSize, sizeof(unsigned int));
 
@@ -377,14 +382,15 @@ namespace Progression {
                 tinyobj::material_t& mat = materials[currentMaterialID];
                 glm::vec3 ambient(mat.ambient[0], mat.ambient[1], mat.ambient[2]);
                 glm::vec3 diffuse(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
-                glm::vec3 specular(mat.specular[0], mat.specular[1], mat.specular[2]);
-                float shininess = mat.shininess;
+				glm::vec3 specular(mat.specular[0], mat.specular[1], mat.specular[2]);
+				glm::vec3 emissive(mat.emission[0], mat.emission[1], mat.emission[2]);
+				float shininess = mat.shininess;
                 Texture* diffuseTex = nullptr;
                 if (mat.diffuse_texname != "") {
                     diffuseTex = new Texture(new Image(rootResourceDir_ + mat.diffuse_texname), true, true, true);
                 }
 
-                currentMaterial = std::make_shared<Material>(ambient, diffuse, specular, shininess, diffuseTex, shaders_["default-mesh"].get());
+                currentMaterial = std::make_shared<Material>(ambient, diffuse, specular, emissive, shininess, diffuseTex, shaders_["default-mesh"].get());
             }
 
             std::vector<glm::vec3> verts;
@@ -558,7 +564,7 @@ namespace Progression {
         outFile.write((char*) &numMaterials, sizeof(unsigned int));
 
         for (const auto& matID : usedMaterialMap) {
-            glm::vec3 ambient, diffuse, specular;
+            glm::vec3 ambient, diffuse, specular, emissive;
             float shininess;
             unsigned int diffuseNameLength = 0;
             std::string diffuseTexName = "";
@@ -567,21 +573,24 @@ namespace Progression {
                 Material mat = *ResourceManager::GetMaterial("default");
                 ambient = mat.ambient;
                 diffuse = mat.diffuse;
-                specular = mat.specular;
-                shininess = mat.shininess;
+				specular = mat.specular;
+				emissive = mat.emissive;
+				shininess = mat.shininess;
             } else {
                 tinyobj::material_t& mat = materials[matID.first];
                 ambient = glm::vec3(mat.ambient[0], mat.ambient[1], mat.ambient[2]);
                 diffuse = glm::vec3(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
-                specular = glm::vec3(mat.specular[0], mat.specular[1], mat.specular[2]);
-                shininess = mat.shininess;
+				specular = glm::vec3(mat.specular[0], mat.specular[1], mat.specular[2]);
+				emissive = glm::vec3(mat.emission[0], mat.emission[1], mat.emission[2]);
+				shininess = mat.shininess;
                 diffuseTexName = mat.diffuse_texname;
                 diffuseNameLength = diffuseTexName.length();
             }
             outFile.write((char*) &ambient, sizeof(glm::vec3));
             outFile.write((char*) &diffuse, sizeof(glm::vec3));
-            outFile.write((char*) &specular, sizeof(glm::vec3));
-            outFile.write((char*) &shininess, sizeof(float));
+			outFile.write((char*) &specular, sizeof(glm::vec3));
+			outFile.write((char*) &emissive, sizeof(glm::vec3));
+			outFile.write((char*) &shininess, sizeof(float));
             outFile.write((char*) &diffuseNameLength, sizeof(unsigned int));
             if (diffuseNameLength)
                 outFile.write((char*) &diffuseTexName[0], sizeof(char) * diffuseNameLength);

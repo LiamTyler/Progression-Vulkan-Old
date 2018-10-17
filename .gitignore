@@ -3,6 +3,7 @@ build/
 a.out
 resources/models/
 resources/textures/
+configs/default.yaml
 
 # Prerequisites
 *.d

@@ -58,7 +58,7 @@ public:
 int main(int argc, char* argv[]) {
     srand(time(NULL));
 
-    rootDirectory = "C:/Users/Tyler/Documents/Progression/";
+    rootDirectory = "C:/Users/Liam Tyler/Documents/Progression/";
 
     auto& conf = PG::config::Config(rootDirectory + "configs/default.yaml");
 
