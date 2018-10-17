@@ -59,6 +59,16 @@ int main(int argc, char* argv[]) {
     // scene.AddLight(&directionalLight);
     // scene.AddLight(&pointLight);
     scene.AddGameObject(&gameObj);
+
+	GLuint postProcessFBO = graphics::CreateFrameBuffer();
+	GLuint mainBuffer = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA);
+	GLuint glowBuffer = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA);
+
+	graphics::AttachColorTexturesToFBO({ mainBuffer, glowBuffer });
+
+	graphics::FinalizeFBO();
+
+	
     
     /*
 
@@ -91,6 +101,8 @@ int main(int argc, char* argv[]) {
             PG::EngineShutdown = true;
 
         scene.Update();
+
+		graphics::BindFrameBuffer(postProcessFBO);
 
         RenderSystem::Render(&scene);
 

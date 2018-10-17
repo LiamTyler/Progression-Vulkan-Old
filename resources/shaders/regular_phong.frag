@@ -19,7 +19,8 @@ uniform vec3 lights[1000];
 uniform int numDirectionalLights;
 uniform int numPointLights;
 
-out vec4 finalColor;
+layout (location = 0) out vec4 finalColor;
+layout (location = 1) out vec4 glowColor;
 
 void main() {
     vec3 n = normalize(normalInEyeSpace);
@@ -59,4 +60,6 @@ void main() {
     
     finalColor.rgb = outColor;
     finalColor.a   = 1.0;
+	
+	glowColor = vec4(outColor * .1, finalColor.a);
 }
