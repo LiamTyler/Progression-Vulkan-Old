@@ -62,4 +62,5 @@ void main() {
     finalColor.a   = 1.0;
 	
 	glowColor = vec4(outColor * .1, finalColor.a);
+	//glowColor = vec4(.7, 0, 0, 1);
 }
