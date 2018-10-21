@@ -7,7 +7,7 @@ std::string rootDirectory;
 int main(int argc, char* argv[]) {
     srand(time(NULL));
 
-    rootDirectory = "C:/Users/Tyler/Documents/Progression/";
+    rootDirectory = "C:/Users/Liam Tyler/Documents/Progression/";
 
 
     auto& conf = PG::config::Config(rootDirectory + "configs/default.yaml");
@@ -18,83 +18,41 @@ int main(int argc, char* argv[]) {
 	Shader bloomCombineShader = Shader(rootDirectory + "resources/shaders/bloomCombine.vert", rootDirectory + "resources/shaders/bloomCombine.frag");
 	std::cout << "\nblur shader: " << std::endl;
 	Shader blurShader         = Shader(rootDirectory + "resources/shaders/blur.vert", rootDirectory + "resources/shaders/blur.frag");
+	std::cout << "\copy shader: " << std::endl;
+	Shader copyShader = Shader(rootDirectory + "resources/shaders/copy.vert", rootDirectory + "resources/shaders/copy.frag");
 
-    Scene scene;
+	auto scene = Scene::Load(rootDirectory + "resources/scenes/glowSphereScene.pgscn");
 
-    Camera camera = Camera(Transform(
-        glm::vec3(0, 0, 5),
-        glm::vec3(0),
-        glm::vec3(1)));
-    camera.AddComponent<UserCameraComponent>(new UserCameraComponent(&camera));
+	auto camera = scene->GetCamera();
+	camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera, 15));
 
 
-    Light directionalLight(Light::Type::DIRECTIONAL);
-    directionalLight.transform.rotation = glm::vec3(glm::radians(0.0f), glm::radians(0.0f), 0);
-
-    // GameObject chalet(Transform(glm::vec3(0), glm::vec3(glm::radians(0.0f), 0, 0), glm::vec3(5)));
-    GameObject gameObj(Transform(glm::vec3(0, 0, 0), glm::vec3(glm::radians(0.0f), glm::radians(0.0f), 0), glm::vec3(1)));
-    
-    auto model = ResourceManager::LoadModel("models/cube.obj", false);
-    std::cout << "Model Info:" << std::endl;
-    std::cout << "Num meshes: " << model->meshes.size() << std::endl;
-    std::cout << "Num mats: " << model->materials.size() << std::endl;
-    for (const auto& mesh : model->meshes) {
-        static int i = 0;
-        std::cout << "Mesh " << i << ": " << std::endl;
-        std::cout << "\tNumVerts: " << mesh->numVertices << std::endl;
-        std::cout << "\tNumTriangles: " << mesh->numTriangles << std::endl;
-        i++;
-    }
-    model->materials[0]->diffuse = glm::vec3(.7, 0, 0);
-	model->materials[0]->specular = glm::vec3(.7);
-	model->materials[0]->emissive = glm::vec3(0, 0, .7);
-	model->materials[0]->shininess = 60;
-
-    gameObj.AddComponent<ModelRenderer>(new ModelRenderer(&gameObj, model.get()));
-    auto modelRenderComponent = gameObj.GetComponent<ModelRenderer>();
-
-    Light pointLight(Light::Type::POINT, Transform(gameObj.transform.position), glm::vec3(0, 0, 1), 1);
-
-    GameObject floor(Transform(glm::vec3(0, -2, 0), glm::vec3(0), glm::vec3(20, 1, 20)));
-    //floor.AddComponent<ModelRenderer>(new ModelRenderer(&floor, ResourceManager::GetModel("plane").get()));
-
-    // scene.AddGameObject(&floor);
-    scene.AddCamera(&camera);
-    // scene.AddLight(&directionalLight);
-    // scene.AddLight(&pointLight);
-    scene.AddGameObject(&gameObj);
+	auto skybox = scene->getSkybox();
 
 	
 	GLuint postProcessFBO = graphics::CreateFrameBuffer();
-	GLuint mainBuffer = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA);
-	GLuint glowBuffer = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA);
-	GLuint glowBufferBlur = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA);
-
+	GLuint mainBuffer = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA, GL_LINEAR, GL_LINEAR);
+	GLuint glowBuffer = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA, GL_LINEAR, GL_LINEAR);
 	graphics::AttachColorTexturesToFBO({ mainBuffer, glowBuffer });
+	GLuint rboDepth = graphics::CreateRenderBuffer(Window::getWindowSize().x, Window::getWindowSize().y);
+	graphics::AttachRenderBufferToFBO(rboDepth);
 	graphics::FinalizeFBO();
-	
-	/*
-	unsigned int postProcessFBO;
-	glGenFramebuffers(1, &postProcessFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, postProcessFBO);
-	unsigned int colorBuffers[2];
-	glGenTextures(2, colorBuffers);
-	for (unsigned int i = 0; i < 2; i++)
-	{
-		glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
-		glTexImage2D(
-			GL_TEXTURE_2D, 0, GL_RGB16F, Window::getWindowSize().x, Window::getWindowSize().y, 0, GL_RGB, GL_FLOAT, NULL
-		);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		// attach texture to framebuffer
-		glFramebufferTexture2D(
-			GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, colorBuffers[i], 0
-		);
-	}
-	*/
+
+	GLuint pingPongFBO = graphics::CreateFrameBuffer();
+	GLuint glowBufferBlur = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA, GL_LINEAR, GL_LINEAR);
+
+	graphics::AttachColorTexturesToFBO({ glowBufferBlur });
+	graphics::FinalizeFBO();
+
+	GLuint halfGlowBuffer = graphics::Create2DTexture(Window::getWindowSize().x / 2, Window::getWindowSize().y / 2, GL_RGBA, GL_LINEAR, GL_LINEAR);
+	GLuint quarterGlowBuffer = graphics::Create2DTexture(Window::getWindowSize().x / 4, Window::getWindowSize().y / 4, GL_RGBA, GL_LINEAR, GL_LINEAR);
+	GLuint eigthGlowBuffer = graphics::Create2DTexture(Window::getWindowSize().x / 8, Window::getWindowSize().y / 8, GL_RGBA, GL_LINEAR, GL_LINEAR);
+	GLuint sixteenthGlowBuffer = graphics::Create2DTexture(Window::getWindowSize().x / 16, Window::getWindowSize().y / 16, GL_RGBA, GL_LINEAR, GL_LINEAR);
+
+	GLuint halfGlowBuffer2 = graphics::Create2DTexture(Window::getWindowSize().x / 2, Window::getWindowSize().y / 2, GL_RGBA, GL_LINEAR, GL_LINEAR);
+	GLuint quarterGlowBuffer2 = graphics::Create2DTexture(Window::getWindowSize().x / 4, Window::getWindowSize().y / 4, GL_RGBA, GL_LINEAR, GL_LINEAR);
+	GLuint eigthGlowBuffer2 = graphics::Create2DTexture(Window::getWindowSize().x / 8, Window::getWindowSize().y / 8, GL_RGBA, GL_LINEAR, GL_LINEAR);
+	GLuint sixteenthGlowBuffer2 = graphics::Create2DTexture(Window::getWindowSize().x / 16, Window::getWindowSize().y / 16, GL_RGBA, GL_LINEAR, GL_LINEAR);
 
 	float quadVerts[] = {
 		-1, 1,
@@ -119,61 +77,143 @@ int main(int argc, char* argv[]) {
     Window::SetRelativeMouse(true);
     PG::Input::PollEvents();
 
-    glEnable(GL_DEPTH_TEST);
-
 	graphics::BindFrameBuffer(0);
 
-    // Game loop
+	bool blur = true;
+	bool bloom = true;
+	// Game loop
     while (!PG::EngineShutdown) {
         PG::Window::StartFrame();
         PG::Input::PollEvents();
 
         if (PG::Input::GetKeyDown(PG::PG_K_ESC))
             PG::EngineShutdown = true;
+		if (PG::Input::GetKeyDown(PG::PG_K_G))
+			blur = !blur;
 
-        scene.Update();
+		if (PG::Input::GetKeyDown(PG::PG_K_B))
+			bloom = !bloom;
+
+        scene->Update();
 
 		graphics::BindFrameBuffer(postProcessFBO);
 
-        RenderSystem::Render(&scene);
-
+        RenderSystem::Render(scene);
 		
-		blurShader.Enable();
-
+		graphics::BindFrameBuffer(pingPongFBO);
+		copyShader.Enable();
 		glBindVertexArray(quadVAO);
+		graphics::Bind2DTexture(glowBuffer, copyShader["tex"], 0);
 
+		glViewport(0, 0, Window::getWindowSize().x / 2, Window::getWindowSize().y / 2);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, halfGlowBuffer, 0);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		glViewport(0, 0, Window::getWindowSize().x / 4, Window::getWindowSize().y / 4);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, quarterGlowBuffer, 0);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		glViewport(0, 0, Window::getWindowSize().x / 8, Window::getWindowSize().y / 8);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, eigthGlowBuffer, 0);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		glViewport(0, 0, Window::getWindowSize().x / 16, Window::getWindowSize().y / 16);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sixteenthGlowBuffer, 0);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		// BLUR
+		blurShader.Enable();
+		glBindVertexArray(quadVAO);
 		
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, glowBufferBlur, 0);
-		graphics::Bind2DTexture(glowBuffer, blurShader["tex"], 0);
-		glUniform2f(blurShader["offset"], 1.2f / Window::getWindowSize().x, 0);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+		if (blur) {
+			// Blur half resolution glowBuffer
+			//---------------------------------------------------------------------------------------------
+			glViewport(0, 0, Window::getWindowSize().x / 2, Window::getWindowSize().y / 2);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, halfGlowBuffer2, 0);
+			graphics::Bind2DTexture(halfGlowBuffer, blurShader["tex"], 0);
+			glUniform2f(blurShader["offset"], 1.0f / Window::getWindowSize().x * 2.0f, 0);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
 
-		graphics::Bind2DTexture(glowBufferBlur, blurShader["tex"], 0);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, glowBuffer, 0);
-		glUniform2f(blurShader["offset"], 0, 1.2f / Window::getWindowSize().y);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+			graphics::Bind2DTexture(halfGlowBuffer2, blurShader["tex"], 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, halfGlowBuffer, 0);
+			glUniform2f(blurShader["offset"], 0, 1.0f / Window::getWindowSize().y * 2.0f);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+
+			// Blur quarter resolution glowBuffer
+			//---------------------------------------------------------------------------------------------
+			glViewport(0, 0, Window::getWindowSize().x / 4, Window::getWindowSize().y / 4);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, quarterGlowBuffer2, 0);
+			graphics::Bind2DTexture(quarterGlowBuffer, blurShader["tex"], 0);
+			glUniform2f(blurShader["offset"], 1.0f / Window::getWindowSize().x * 4.0f, 0);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+
+			graphics::Bind2DTexture(quarterGlowBuffer2, blurShader["tex"], 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, quarterGlowBuffer, 0);
+			glUniform2f(blurShader["offset"], 0, 1.0f / Window::getWindowSize().y * 4.0f);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+
+			// Blur eigth resolution glowBuffer
+			//---------------------------------------------------------------------------------------------
+			glViewport(0, 0, Window::getWindowSize().x / 8, Window::getWindowSize().y / 8);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, eigthGlowBuffer2, 0);
+			graphics::Bind2DTexture(eigthGlowBuffer, blurShader["tex"], 0);
+			glUniform2f(blurShader["offset"], 1.0f / Window::getWindowSize().x * 8.0f, 0);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+
+			graphics::Bind2DTexture(eigthGlowBuffer2, blurShader["tex"], 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, eigthGlowBuffer, 0);
+			glUniform2f(blurShader["offset"], 0, 1.0f / Window::getWindowSize().y * 8.0f);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+
+			glViewport(0, 0, Window::getWindowSize().x / 16, Window::getWindowSize().y / 16);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sixteenthGlowBuffer2, 0);
+			graphics::Bind2DTexture(sixteenthGlowBuffer, blurShader["tex"], 0);
+			glUniform2f(blurShader["offset"], 1.0f / Window::getWindowSize().x * 16.0f, 0);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+
+			graphics::Bind2DTexture(sixteenthGlowBuffer2, blurShader["tex"], 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sixteenthGlowBuffer, 0);
+			glUniform2f(blurShader["offset"], 0, 1.0f / Window::getWindowSize().y * 16.0f);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+		}
 		
 
 		graphics::BindFrameBuffer(0);
-		glClearColor(0, 0, 0, 0);
+		glViewport(0, 0, Window::getWindowSize().x, Window::getWindowSize().y);
+
+		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		bloomCombineShader.Enable();
-		glBindVertexArray(quadVAO);
-		graphics::Bind2DTexture(mainBuffer, bloomCombineShader["originalColor"], 0);
-		graphics::Bind2DTexture(glowBuffer, bloomCombineShader["glow0"], 1);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-		
-		/*
-		graphics::BindFrameBuffer(0);
 
-		bloomCombineShader.Enable();
+		graphics::ToggleDepthBufferWriting(false);
+		graphics::ToggleDepthTesting(false);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, postProcessFBO);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		glBlitFramebuffer(0, 0, Window::getWindowSize().x, Window::getWindowSize().y, 0, 0, Window::getWindowSize().x, Window::getWindowSize().y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+		
+		if (!bloom) {
+			copyShader.Enable();
+			glBindVertexArray(quadVAO);
+			graphics::Bind2DTexture(mainBuffer, copyShader["tex"], 0);
+
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		} else {
+			bloomCombineShader.Enable();
+			glBindVertexArray(quadVAO);
+			graphics::Bind2DTexture(mainBuffer, bloomCombineShader["originalColor"], 0);
+			graphics::Bind2DTexture(sixteenthGlowBuffer, bloomCombineShader["fullGlow"], 1);
+			graphics::Bind2DTexture(halfGlowBuffer, bloomCombineShader["halfGlow"], 2);
+			graphics::Bind2DTexture(quarterGlowBuffer, bloomCombineShader["quarterGlow"], 3);
+			graphics::Bind2DTexture(eigthGlowBuffer, bloomCombineShader["eigthGlow"], 4);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+		}
+
 		graphics::ToggleDepthTesting(true);
-		glBindVertexArray(quadVAO);
-		graphics::Bind2DTexture(colorBuffers[0], bloomCombineShader["originalColor"], 0);
-		graphics::Bind2DTexture(colorBuffers[1], bloomCombineShader["glow0"], 1);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-		*/
+		graphics::ToggleDepthBufferWriting(true);
+		
+
+		skybox->Render(*camera);
 		
 
         PG::Window::EndFrame();

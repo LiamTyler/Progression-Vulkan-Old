@@ -33,6 +33,12 @@ namespace Progression {
         if (Input::GetKeyDown(PG_K_A)) {
             velocity.x = -1;
         }
+		if (Input::GetKeyDown(PG_K_LEFT_CONTROL)) {
+			velocity.y = -1;
+		}
+		if (Input::GetKeyDown(PG_K_SPACE)) {
+			velocity.y = 1;
+		}
 
         if (Input::GetKeyUp(PG_K_W) || Input::GetKeyUp(PG_K_S)) {
             velocity.z = 0;
@@ -40,6 +46,9 @@ namespace Progression {
         if (Input::GetKeyUp(PG_K_D) || Input::GetKeyUp(PG_K_A)) {
             velocity.x = 0;
         }
+		if (Input::GetKeyUp(PG_K_LEFT_CONTROL) || Input::GetKeyUp(PG_K_SPACE)) {
+			velocity.y = 0;
+		}
 
         glm::ivec2 dMouse = -Input::GetMouseChange();
         glm::vec3 dRotation(glm::vec3(dMouse.y, dMouse.x, 0));

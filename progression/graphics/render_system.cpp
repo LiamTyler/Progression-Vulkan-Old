@@ -31,8 +31,9 @@ namespace Progression {
         UpdateLights(scene, camera);
         
         const auto& bgColor = scene->GetBackgroundColor();
-        glClearColor(bgColor.r, bgColor.g, bgColor.b, bgColor.a);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		// glClearColor(bgColor.r, bgColor.g, bgColor.b, bgColor.a);
+		glClearColor(0, 0, 0, 1);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         graphics::ToggleDepthTesting(true);
         // graphics::ToggleCulling(true);
 

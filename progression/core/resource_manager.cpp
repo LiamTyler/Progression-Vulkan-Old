@@ -86,7 +86,7 @@ namespace Progression {
                 std::string name = "";
                 line = " ";
                 std::string right, left, top, bottom, front, back;
-                while (line != "") {
+                while (line != "" && !in.eof()) {
                     std::getline(in, line);
                     std::stringstream ss(line);
                     std::string first;
@@ -120,7 +120,7 @@ namespace Progression {
                 auto material = std::make_shared<Material>();
                 std::string name = "";
                 line = " ";
-                while (line != "") {
+                while (line != "" && !in.eof()) {
                     std::getline(in, line);
                     std::stringstream ss(line);
                     std::string first;
@@ -170,7 +170,7 @@ namespace Progression {
             } else if (line == "Model") {
                 std::string filename, material, name;
                 line = " ";
-                while (line != "") {
+                while (line != "" && !in.eof()) {
                     std::getline(in, line);
                     std::stringstream ss(line);
                     std::string first;
@@ -200,7 +200,7 @@ namespace Progression {
             } else if (line == "Texture") {
                 std::string filename;
                 line = " ";
-                while (line != "") {
+                while (line != "" && !in.eof()) {
                     std::getline(in, line);
                     std::stringstream ss(line);
                     std::string first;
@@ -213,7 +213,7 @@ namespace Progression {
             } else if (line == "Shader") {
                 std::string name, vertex, frag;
                 line = " ";
-                while (line != "") {
+                while (line != "" && !in.eof()) {
                     std::getline(in, line);
                     std::stringstream ss(line);
                     std::string first;

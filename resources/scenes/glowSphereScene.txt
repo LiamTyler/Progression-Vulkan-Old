@@ -1,3 +1,12 @@
+Skybox
+name water
+right skybox/water/right.jpg
+left skybox/water/left.jpg
+top skybox/water/top.jpg
+bottom skybox/water/bottom.jpg
+front skybox/water/front.jpg
+back skybox/water/back.jpg
+
 Material
 name metalFloor
 ka 0 0 0
@@ -12,4 +21,95 @@ name metalFloor
 filename models/plane.obj
 material metalFloor
 
+#### BLUE SPHERES ####
+Material
+name blueGlowLow
+ke 0 0 .3
+shader default-mesh
 
+Model
+name blueGlowSphereLow
+filename models/UVSphere.obj
+material blueGlowLow
+
+Material
+name blueGlowMedium
+ke 0 0 .7
+shader default-mesh
+
+Model
+name blueGlowSphereMedium
+filename models/UVSphere.obj
+material blueGlowMedium
+
+Material
+name blueGlowHigh
+ke 0 0 1
+shader default-mesh
+
+Model
+name blueGlowSphereHigh
+filename models/UVSphere.obj
+material blueGlowHigh
+
+#### GREEN SPHERES ####
+Material
+name greenGlowLow
+ke 0 .3 0
+shader default-mesh
+
+Model
+name greenGlowSphereLow
+filename models/UVSphere.obj
+material greenGlowLow
+
+Material
+name greenGlowMedium
+ke 0 .7 0
+shader default-mesh
+
+Model
+name greenGlowSphereMedium
+filename models/UVSphere.obj
+material greenGlowMedium
+
+Material
+name greenGlowHigh
+ke 0 1 0
+shader default-mesh
+
+Model
+name greenGlowSphereHigh
+filename models/UVSphere.obj
+material greenGlowHigh
+
+#### RED SPHERES ####
+Material
+name redGlowLow
+ke .3 0 0
+shader default-mesh
+
+Model
+name redGlowSphereLow
+filename models/UVSphere.obj
+material redGlowLow
+
+Material
+name redGlowMedium
+ke .7 0 0
+shader default-mesh
+
+Model
+name redGlowSphereMedium
+filename models/UVSphere.obj
+material redGlowMedium
+
+Material
+name redGlowHigh
+ke 1 0 0
+shader default-mesh
+
+Model
+name redGlowSphereHigh
+filename models/UVSphere.obj
+material redGlowHigh

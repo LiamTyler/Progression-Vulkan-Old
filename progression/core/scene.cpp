@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include "core/resource_manager.h"
+#include "graphics/model_render_component.h"
 
 namespace Progression {
 
@@ -145,7 +146,7 @@ namespace Progression {
         Camera* camera = new Camera;
         std::string line = " ";
         bool primaryCamera = false;
-        while (line != "") {
+        while (line != "" && !in.eof()) {
             std::getline(in, line);
             std::stringstream ss(line);
             std::string first;
@@ -195,7 +196,7 @@ namespace Progression {
     void Scene::ParseLight(Scene* scene, std::ifstream& in) {
         Light* light = new Light;
         std::string line = " ";
-        while (line != "") {
+        while (line != "" && !in.eof()) {
             std::getline(in, line);
             std::stringstream ss(line);
             std::string first;
@@ -233,7 +234,7 @@ namespace Progression {
     void Scene::ParseGameObject(Scene* scene, std::ifstream& in) {
         GameObject* obj = new GameObject;
         std::string line = " ";
-        while (line != "") {
+        while (line != "" && !in.eof()) {
             std::getline(in, line);
             std::stringstream ss(line);
             std::string first;
@@ -252,6 +253,11 @@ namespace Progression {
                 float x, y, z;
                 ss >> x >> y >> z;
                 obj->transform.scale = glm::vec3(x, y, z);
+            } else if (first == "model") {
+				std::string modelName;
+				ss >> modelName;
+				auto model = ResourceManager::GetModel(modelName);
+				obj->AddComponent<ModelRenderer>(new ModelRenderer(obj, model.get()));
             }
         }
         scene->AddGameObject(obj);
