@@ -24,7 +24,7 @@ material metalFloor
 #### BLUE SPHERES ####
 Material
 name blueGlowLow
-ke 0 0 .3
+ke 0 0 1
 shader default-mesh
 
 Model
@@ -34,7 +34,7 @@ material blueGlowLow
 
 Material
 name blueGlowMedium
-ke 0 0 .7
+ke 0 0 15
 shader default-mesh
 
 Model
@@ -44,7 +44,7 @@ material blueGlowMedium
 
 Material
 name blueGlowHigh
-ke 0 0 5
+ke 0 0 100
 shader default-mesh
 
 Model
@@ -65,7 +65,7 @@ material greenGlowLow
 
 Material
 name greenGlowMedium
-ke 0 .7 0
+ke 0 2 0
 shader default-mesh
 
 Model
@@ -75,7 +75,7 @@ material greenGlowMedium
 
 Material
 name greenGlowHigh
-ke 0 1 0
+ke 0 10 0
 shader default-mesh
 
 Model
@@ -86,7 +86,7 @@ material greenGlowHigh
 #### RED SPHERES ####
 Material
 name redGlowLow
-ke .3 0 0
+ke 1 0 0
 shader default-mesh
 
 Model
@@ -96,7 +96,7 @@ material redGlowLow
 
 Material
 name redGlowMedium
-ke .7 0 0
+ke 5 0 0
 shader default-mesh
 
 Model
@@ -106,7 +106,7 @@ material redGlowMedium
 
 Material
 name redGlowHigh
-ke 1 0 0
+ke 10 0 0
 shader default-mesh
 
 Model

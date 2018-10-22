@@ -54,15 +54,15 @@ int main(int argc, char* argv[]) {
 
 
 	GLuint postProcessFBO = graphics::CreateFrameBuffer();
-	GLuint mainBuffer = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA, GL_LINEAR, GL_LINEAR);
-	GLuint glowBuffer = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA, GL_LINEAR, GL_LINEAR);
+	GLuint mainBuffer = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA16F, GL_LINEAR, GL_LINEAR);
+	GLuint glowBuffer = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA16F, GL_LINEAR, GL_LINEAR);
 	graphics::AttachColorTexturesToFBO({ mainBuffer, glowBuffer });
 	GLuint rboDepth = graphics::CreateRenderBuffer(Window::getWindowSize().x, Window::getWindowSize().y);
 	graphics::AttachRenderBufferToFBO(rboDepth);
 	graphics::FinalizeFBO();
 
 	GLuint pingPongFBO = graphics::CreateFrameBuffer();
-	GLuint glowBufferBlur = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA, GL_LINEAR, GL_LINEAR);
+	GLuint glowBufferBlur = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA16F, GL_LINEAR, GL_LINEAR);
 
 	graphics::AttachColorTexturesToFBO({ glowBufferBlur });
 	graphics::FinalizeFBO();
@@ -107,8 +107,8 @@ int main(int argc, char* argv[]) {
 	GLuint glowBuffers[levels][2];
 	int divisor = divisorStart;
 	for (int i = 0; i < levels; ++i) {
-		glowBuffers[i][0] = graphics::Create2DTexture(Window::getWindowSize().x / divisor, Window::getWindowSize().y / divisor, GL_RGBA, GL_LINEAR, GL_LINEAR);
-		glowBuffers[i][1] = graphics::Create2DTexture(Window::getWindowSize().x / divisor, Window::getWindowSize().y / divisor, GL_RGBA, GL_LINEAR, GL_LINEAR);
+		glowBuffers[i][0] = graphics::Create2DTexture(Window::getWindowSize().x / divisor, Window::getWindowSize().y / divisor, GL_RGBA16F, GL_LINEAR, GL_LINEAR);
+		glowBuffers[i][1] = graphics::Create2DTexture(Window::getWindowSize().x / divisor, Window::getWindowSize().y / divisor, GL_RGBA16F, GL_LINEAR, GL_LINEAR);
 		divisor *= divisorMult;
 		std::cout << "level = " << i << std::endl;
 	}
@@ -181,6 +181,7 @@ int main(int argc, char* argv[]) {
 
 		bloomCombineShader.Enable();
 		glUniform1f(bloomCombineShader["bloomIntensity"], 1.0f);
+		glUniform1f(bloomCombineShader["exposure"], 1);
 		glBindVertexArray(quadVAO);
 		graphics::Bind2DTexture(mainBuffer, bloomCombineShader["originalColor"], 0);
 		graphics::Bind2DTexture(glowBuffers[0][0], bloomCombineShader["blur1"], 1);

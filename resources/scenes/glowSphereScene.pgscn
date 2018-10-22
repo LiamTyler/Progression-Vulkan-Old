@@ -27,22 +27,22 @@ model metalFloor
 
 GameObject
 name blueSphereLow
-position -4 2 4
+position -5 2 5
 model blueGlowSphereLow
 
 GameObject
 name blueSphereMedium
-position 0 2 4
+position 0 2 5 
 model blueGlowSphereMedium
 
 GameObject
 name blueSphereHigh
-position 4 2 4
+position 5 2 5
 model blueGlowSphereHigh
 
 GameObject
 name greenSphereLow
-position -4 2 0
+position -5 2 0
 model greenGlowSphereLow
 
 GameObject
@@ -52,20 +52,20 @@ model greenGlowSphereMedium
 
 GameObject
 name greenSphereHigh
-position 4 2 0
+position 5 2 0
 model greenGlowSphereHigh
 
 GameObject
 name redSphereLow
-position -4 2 -4
+position -5 2 -5
 model redGlowSphereLow
 
 GameObject
 name redSphereMedium
-position 0 2 -4
+position 0 2 -5
 model redGlowSphereMedium
 
 GameObject
 name redSphereHigh
-position 4 2 -4
+position 5 2 -5
 model redGlowSphereHigh

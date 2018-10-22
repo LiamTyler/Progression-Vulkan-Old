@@ -65,7 +65,7 @@ void main() {
 	
 	vec3 brightnessVec = vec3(0.2126, 0.7152, 0.0722);
 	// vec3 brightnessVec = vec3(0.299, 0.587, 0.114);
-	float cutoff = .5;
+	float cutoff = 1;
 	if (dot(brightnessVec, outColor) > cutoff)
 		glowColor = vec4(outColor, finalColor.a);
 	else
