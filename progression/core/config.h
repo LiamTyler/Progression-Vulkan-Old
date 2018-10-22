@@ -1,7 +1,6 @@
 #pragma once
 
-#define YAML_CPP_DLL
-#include "yaml-cpp/yaml.h"
+#include "cpptoml.h"
 
 namespace Progression { namespace config {
 
