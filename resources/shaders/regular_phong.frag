@@ -19,6 +19,8 @@ uniform vec3 lights[1000];
 uniform int numDirectionalLights;
 uniform int numPointLights;
 
+uniform float bloomThreshold;
+
 layout (location = 0) out vec4 finalColor;
 layout (location = 1) out vec4 glowColor;
 
@@ -61,6 +63,11 @@ void main() {
     finalColor.rgb = outColor;
     finalColor.a   = 1.0;
 	
-	glowColor = vec4(outColor * 0.09, finalColor.a);
-	//glowColor = vec4(.7, 0, 0, 1);
+	vec3 brightnessVec = vec3(0.2126, 0.7152, 0.0722);
+	// vec3 brightnessVec = vec3(0.299, 0.587, 0.114);
+	float cutoff = .5;
+	if (dot(brightnessVec, outColor) > cutoff)
+		glowColor = vec4(outColor, finalColor.a);
+	else
+		glowColor = vec4(0, 0, 0, finalColor.a);
 }

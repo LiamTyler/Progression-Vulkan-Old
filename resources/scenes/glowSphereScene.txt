@@ -44,7 +44,7 @@ material blueGlowMedium
 
 Material
 name blueGlowHigh
-ke 0 0 1
+ke 0 0 5
 shader default-mesh
 
 Model
