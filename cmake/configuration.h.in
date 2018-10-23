@@ -1,0 +1,4 @@
+#pragma once
+
+#define PG_ROOT_DIR "${PROGRESSION_DIR}/"
+#define PG_RESOURCE_DIR "${PROGRESSION_DIR}/resources/"

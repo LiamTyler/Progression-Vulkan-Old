@@ -4,6 +4,7 @@ a.out
 resources/models/
 resources/textures/
 configs/default.toml
+progression/core/configuration.h
 
 # Prerequisites
 *.d

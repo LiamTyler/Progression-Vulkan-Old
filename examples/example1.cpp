@@ -29,7 +29,7 @@ float* genKernel(int size, float sigma) {
 int main(int argc, char* argv[]) {
 	srand(time(NULL));
 
-	rootDirectory = "/home/liam/Documents/Progression/";
+	rootDirectory = "C:/Users/Tyler/Documents/Progression/";
 
 	auto conf = PG::config::Config(rootDirectory + "configs/default.toml");
 	if (!conf) {

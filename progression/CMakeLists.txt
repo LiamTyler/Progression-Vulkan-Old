@@ -4,6 +4,8 @@ project(Progression-lib)
 
 include(Progression-base)
 
+configure_file(${PROGRESSION_DIR}/cmake/configuration.h.in ../../progression/core/configuration.h)
+
 set(
     SRCS
     core/camera.cpp
@@ -40,6 +42,7 @@ set(
 
     ${CMAKE_SOURCE_DIR}/ext/tinyobjloader/tiny_obj_loader.cc
     ${CMAKE_SOURCE_DIR}/ext/memory_map/MemoryMapped.cpp    
+    ${CMAKE_SOURCE_DIR}/ext/glad/glad.c
     )
 
 set(
@@ -82,6 +85,7 @@ set(
     ${CMAKE_SOURCE_DIR}/ext/stb_image/stb_image.h
     ${CMAKE_SOURCE_DIR}/ext/stb_image/stb_image_write.h
     ${CMAKE_SOURCE_DIR}/ext/cpptoml.h
+    ${CMAKE_SOURCE_DIR}/ext/glad/glad.h
     
     ${CMAKE_SOURCE_DIR}/ext/memory_map/MemoryMapped.h
 

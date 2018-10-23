@@ -6,17 +6,14 @@ option(PROGRESSION_BUILD_EXAMPLES "Build the example programs" ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-if (MSVC)
+
+
+if (UNIX AND NOT APPLE)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CPP_VERSION} -g")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CPP_VERSION} -O3")
+elseif (MSVC)
     add_compile_options("/std:c++17")
 endif()
-
-
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CPP_VERSION} -g")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CPP_VERSION} -O3")
-
-#if (UNIX AND NOT APPLE)
-#    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} stdc++fs")
-#endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -32,23 +29,17 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_BINARY_DIR}/lib)
 
 # Disable building extras we won't need (pure C++ project)
-set(NANOGUI_BUILD_EXAMPLE OFF CACHE BOOL " " FORCE)
-set(NANOGUI_BUILD_PYTHON  OFF CACHE BOOL " " FORCE)
-set(NANOGUI_INSTALL       OFF CACHE BOOL " " FORCE)
+set(GLFW_BUILD_EXAMPLES  OFF CACHE BOOL " " FORCE)
+set(GLFW_BUILD_TESTS     OFF CACHE BOOL " " FORCE)
+set(GLFW_BUILD_DOCS      OFF CACHE BOOL " " FORCE)
 
-# Add the configurations from nanogui
-add_subdirectory(ext/nanogui)
+add_subdirectory(ext/glfw)
 
-include_directories(${NANOGUI_EXTRA_INCS})
-
-# For reliability of parallel build, make the NanoGUI targets dependencies
-
-add_subdirectory(progression/)
-
-#set_property(progression glfw nanogui PROPERTY FOLDER "dependencies")
+add_subdirectory(progression)
 
 if (PROGRESSION_BUILD_EXAMPLES)
     add_subdirectory(examples/)
+    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example1)
 endif()
 
 add_subdirectory(tools/)

@@ -1,21 +1,18 @@
 set(PROGRESSION_INCLUDE_DIRS
     ${PROGRESSION_DIR}/ext
+    ${PROGRESSION_DIR}/ext/glfw/include
     ${PROGRESSION_DIR}/progression
     ${PROGRESSION_DIR}/progression/src
-    ${PROGRESSION_DIR}/ext/nanogui/include
-    ${NANOGUI_EXTRA_INCS}
-    )
+)
 
 set(SYSTEM_LIBS "")
 if (UNIX AND NOT APPLE)
     set(SYSTEM_LIBS "stdc++fs")
 endif()
 
-
 set(PROGRESSION_LIBS
-    nanogui
+    glfw
     ${SYSTEM_LIBS}
-    ${NANOGUI_EXTRA_LIBS}
 )
 
 if (NOT PROGRESSION_LIB_DIR)

@@ -4,21 +4,16 @@
 namespace Progression {
 
     GLFWwindow* Window::_mWindow = nullptr;
-    nanogui::Screen* Window::_mUIScreen = nullptr;
 
     std::string Window::_mTitle = "";
     glm::ivec2 Window::_mWindowSize = { 0, 0 };
 
 	void Window::Free() {
-        if (_mUIScreen)
-            delete _mUIScreen;
-
         if (_mWindow)
             glfwDestroyWindow(_mWindow);
 
         glfwTerminate();
         _mWindow = nullptr;
-        _mUIScreen = nullptr;
 	}
 
 	void Window::Init(const config::Config& config) {
@@ -86,10 +81,6 @@ namespace Progression {
         } else {
             glfwSwapInterval(0);
         }
-
-        _mUIScreen = new nanogui::Screen;
-        _mUIScreen->initialize(_mWindow, false);
-
 
         int fbW, fbH, wW, wH;
         glfwGetFramebufferSize(_mWindow, &fbW, &fbH);

@@ -1,8 +1,10 @@
 #pragma once
 
-#include "nanogui/nanogui.h"
+#include "glad/glad.h"
+#include "GLFW/glfw3.h"
 #include "glm/glm.hpp"
 #include "glm/ext.hpp"
+#include "core/configuration.h"
 #include <string>
 #include <iostream>
 #include <memory>

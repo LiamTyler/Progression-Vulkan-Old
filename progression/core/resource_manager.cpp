@@ -2,6 +2,7 @@
 #include "graphics/mesh.h"
 #include "tinyobjloader/tiny_obj_loader.h"
 #include "core/time.h"
+#include "core/common.h"
 
 #include <functional>
 #include <filesystem>
@@ -45,19 +46,17 @@ namespace Progression {
     std::unordered_map<std::string, std::shared_ptr<Shader>> ResourceManager::shaders_ = {};
     std::unordered_map<std::string, std::shared_ptr<Texture>> ResourceManager::textures_ = {};
     std::unordered_map<std::string, std::shared_ptr<Skybox>> ResourceManager::skyboxes_ = {};
-    std::string ResourceManager::rootResourceDir_ = "";
 
     void ResourceManager::Init(const config::Config& config) {
         auto rm = config->get_table("resourceManager");
-		if (!rm)
-			std::cout << "Need to specify the resource manager subsystem in the config file!" << std::endl;
+		if (rm) {
 
-		rootResourceDir_ = rm->get_as<std::string>("rootDirectory").value_or("");
+		}
 
 		// load defaults
-        shaders_["default-mesh"] = std::make_shared<Shader>(rootResourceDir_ + "shaders/regular_phong.vert", rootResourceDir_ + "shaders/regular_phong.frag");
+        shaders_["default-mesh"] = std::make_shared<Shader>(PG_RESOURCE_DIR "shaders/regular_phong.vert", PG_RESOURCE_DIR "shaders/regular_phong.frag");
         shaders_["default-mesh"]->AddUniform("lights");
-        shaders_["skybox"] = std::make_shared<Shader>(rootResourceDir_ + "shaders/skybox.vert", rootResourceDir_ + "shaders/skybox.frag");
+        shaders_["skybox"] = std::make_shared<Shader>(PG_RESOURCE_DIR "shaders/skybox.vert", PG_RESOURCE_DIR "shaders/skybox.frag");
         materials_["default"] = std::make_shared<Material>();
         materials_["default"]->shader = shaders_["default-mesh"].get();
         models_["plane"] = LoadModel("models/plane.obj");	
@@ -69,7 +68,7 @@ namespace Progression {
     }
 
     void ResourceManager::LoadResourceFile(const std::string& relativePath) {
-        std::filesystem::path path(rootResourceDir_ + relativePath);
+        std::filesystem::path path(PG_RESOURCE_DIR + relativePath);
         if (!std::filesystem::exists(path)) {
             std::cout << "File does not exist: " << path << std::endl;
             return;
@@ -107,12 +106,12 @@ namespace Progression {
                         ss >> back;
                     }
                 }
-                right = rootResourceDir_ + right;
-                left = rootResourceDir_ + left;
-                top = rootResourceDir_ + top;
-                bottom = rootResourceDir_ + bottom;
-                front = rootResourceDir_ + front;
-                back = rootResourceDir_ + back;
+                right = PG_RESOURCE_DIR + right;
+                left = PG_RESOURCE_DIR + left;
+                top = PG_RESOURCE_DIR + top;
+                bottom = PG_RESOURCE_DIR + bottom;
+                front = PG_RESOURCE_DIR + front;
+                back = PG_RESOURCE_DIR + back;
                 if (skyboxes_.find(name) != skyboxes_.end())
                     std::cout << "warning: resource manager already contains a skybox with the name '" << name << "'. Overriding with the new skybox" << std::endl;
                 skyboxes_[name] = std::make_shared<Skybox>(right, left, top, bottom, front, back);
@@ -242,7 +241,7 @@ namespace Progression {
         if (models_.find(relativePath) != models_.end())
             return models_[relativePath];
 
-        std::string fullFileName = rootResourceDir_ + relativePath;
+        std::string fullFileName = PG_RESOURCE_DIR + relativePath;
         std::filesystem::path file(fullFileName);
         if (!std::filesystem::exists(file)) {
             std::cout << "File: " << fullFileName << " not found" << std::endl;
@@ -349,7 +348,7 @@ namespace Progression {
 
         for (int i = 0; i < numMaterials; ++i) {
             if (diffuseTexNames[i] != "") {
-                materials[i]->diffuseTexture = new Texture(new Image(rootResourceDir_ + diffuseTexNames[i]), true, true, true);
+                materials[i]->diffuseTexture = new Texture(new Image(PG_RESOURCE_DIR + diffuseTexNames[i]), true, true, true);
             }
         }
         
@@ -361,7 +360,7 @@ namespace Progression {
         std::vector<tinyobj::shape_t> shapes;
         std::vector<tinyobj::material_t> materials;
         std::string err;
-        bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, fullPath.c_str(), rootResourceDir_.c_str(), true);
+        bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, fullPath.c_str(), std::string(PG_RESOURCE_DIR).c_str(), true);
 
         if (!err.empty()) {
             std::cerr << err << std::endl;
@@ -387,7 +386,7 @@ namespace Progression {
 				float shininess = mat.shininess;
                 Texture* diffuseTex = nullptr;
                 if (mat.diffuse_texname != "") {
-                    diffuseTex = new Texture(new Image(rootResourceDir_ + mat.diffuse_texname), true, true, true);
+                    diffuseTex = new Texture(new Image(PG_RESOURCE_DIR + mat.diffuse_texname), true, true, true);
                 }
 
                 currentMaterial = std::make_shared<Material>(ambient, diffuse, specular, emissive, shininess, diffuseTex, shaders_["default-mesh"].get());
@@ -619,7 +618,7 @@ namespace Progression {
         if (skyboxes_.find(name) == skyboxes_.end()) {
             std::vector<std::string> fullTexturePaths; 
             for (const auto& tex : textures)
-                fullTexturePaths.push_back(rootResourceDir_ + "skybox/" + tex);
+                fullTexturePaths.push_back(PG_RESOURCE_DIR "skybox/" + tex);
             auto sp = std::make_shared<Skybox>(
                 fullTexturePaths[0],
                 fullTexturePaths[1],
@@ -639,7 +638,7 @@ namespace Progression {
 
     std::shared_ptr<Texture> ResourceManager::LoadTexture(const std::string& relativePath, bool addToManager) {
         if (textures_.find(relativePath) == textures_.end()) {
-            auto sp = std::make_shared<Texture>(new Image(rootResourceDir_ + relativePath));
+            auto sp = std::make_shared<Texture>(new Image(PG_RESOURCE_DIR + relativePath));
             if (addToManager)
                 textures_[relativePath] = sp;
             else

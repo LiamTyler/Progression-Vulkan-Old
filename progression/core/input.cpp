@@ -18,51 +18,10 @@ namespace Progression {
         currentCursorPos_ = glm::ivec2(x, y);
         lastCursorPos_ = currentCursorPos_;
 
-        glfwSetCursorPosCallback(window,
-            [](GLFWwindow *window, double x, double y) {
-            Window::getUIScreen()->cursorPosCallbackEvent(x, y);
-            cursor_position_callback(window, x, y);
-        }
-        );
-
-        glfwSetMouseButtonCallback(window,
-            [](GLFWwindow *window, int button, int action, int modifiers) {
-            Window::getUIScreen()->mouseButtonCallbackEvent(button, action, modifiers);
-            mouse_button_callback(window, button, action, modifiers);
-        }
-        );
-
-        glfwSetKeyCallback(window,
-            [](GLFWwindow *window, int key, int scancode, int action, int mods) {
-            Window::getUIScreen()->keyCallbackEvent(key, scancode, action, mods);
-            key_callback(window, key, scancode, action, mods);
-        }
-        );
-
-        glfwSetCharCallback(window,
-            [](GLFWwindow *window, unsigned int codepoint) {
-            Window::getUIScreen()->charCallbackEvent(codepoint);
-        }
-        );
-
-        glfwSetDropCallback(window,
-            [](GLFWwindow *window, int count, const char **filenames) {
-            Window::getUIScreen()->dropCallbackEvent(count, filenames);
-        }
-        );
-
-        glfwSetScrollCallback(window,
-            [](GLFWwindow *window, double x, double y) {
-            Window::getUIScreen()->scrollCallbackEvent(x, y);
-            scroll_callback(window, x, y);
-        }
-        );
-
-        glfwSetFramebufferSizeCallback(window,
-            [](GLFWwindow *window, int width, int height) {
-            Window::getUIScreen()->resizeCallbackEvent(width, height);
-        }
-        );
+        glfwSetCursorPosCallback(window, cursor_position_callback);
+        glfwSetMouseButtonCallback(window, mouse_button_callback);
+		glfwSetKeyCallback(window, key_callback);
+        glfwSetScrollCallback(window, scroll_callback);
 
         PollEvents();
     }
