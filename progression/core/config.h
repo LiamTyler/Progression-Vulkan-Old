@@ -1,18 +1,21 @@
 #pragma once
 
-#define YAML_CPP_DLL
-#include "yaml-cpp/yaml.h"
+#include "cpptoml.h"
 
 namespace Progression { namespace config {
-
+	
     class Config {
     public:
-        Config();
-        Config(const std::string& fname);
-        ~Config() = default;
+		Config(const std::string& fname);
+		Config(std::shared_ptr<cpptoml::table>& handle);
+		~Config() = default;
 
-        explicit operator bool() const;
+		explicit operator bool() const;
 
+		std::shared_ptr<cpptoml::table> operator->() const {
+			return handle_;
+		}
+		/*
         template <typename T>
         T as() const {
             T ret;
@@ -24,24 +27,17 @@ namespace Progression { namespace config {
             }
             return ret;
         }
+		*/
 
-        template <typename T>
+        /*template <typename T>
         Config operator[](const T& key) const {
             return Config(node[key]);
-        }
-
-        template <typename T>
-        void set(const std::string& key, T value) {
-            node[key] = value;
-        }
-
-        friend Config LoadFile(const std::string& fname);
+        }*/
 
     private:
-        Config(const YAML::Node& n);
-
-        YAML::Node node;
-        bool valid;
+		std::shared_ptr<cpptoml::table> handle_;
     };
+
+	Config parseFile(const std::string& path);
 
 } } // namespace Progression::config

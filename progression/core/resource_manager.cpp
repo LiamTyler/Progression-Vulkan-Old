@@ -48,19 +48,19 @@ namespace Progression {
     std::string ResourceManager::rootResourceDir_ = "";
 
     void ResourceManager::Init(const config::Config& config) {
-        auto& rm = config["resourceManager"];
-        if (rm) {
-            if (rm["rootDirectory"])
-                rootResourceDir_ = rm["rootDirectory"].as<std::string>();
-        }
+        auto& rm = config->get_table("resourceManager");
+		if (!rm)
+			std::cout << "Need to specify the resource manager subsystem in the config file!" << std::endl;
 
-        // load defaults
+		rootResourceDir_ = rm->get_as<std::string>("rootDirectory").value_or("");
+
+		// load defaults
         shaders_["default-mesh"] = std::make_shared<Shader>(rootResourceDir_ + "shaders/regular_phong.vert", rootResourceDir_ + "shaders/regular_phong.frag");
         shaders_["default-mesh"]->AddUniform("lights");
         shaders_["skybox"] = std::make_shared<Shader>(rootResourceDir_ + "shaders/skybox.vert", rootResourceDir_ + "shaders/skybox.frag");
         materials_["default"] = std::make_shared<Material>();
         materials_["default"]->shader = shaders_["default-mesh"].get();
-        models_["plane"] = LoadModel("models/plane.obj");
+        models_["plane"] = LoadModel("models/plane.obj");	
     }
 
     // TODO: implement

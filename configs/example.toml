@@ -1,0 +1,13 @@
+[window]
+    width = 1280
+    height = 720
+
+[resourceManager]
+    rootDirectory = "C:/Users/Tyler/Documents/Progression/resources/"
+
+[time]
+    displayFPS = true
+
+[input]
+
+[render_system]

@@ -29,10 +29,14 @@ float* genKernel(int size, float sigma) {
 int main(int argc, char* argv[]) {
 	srand(time(NULL));
 
-	rootDirectory = "C:/Users/Liam Tyler/Documents/Progression/";
+	rootDirectory = "C:/Users/Tyler/Documents/Progression/";
 
 
-	auto& conf = PG::config::Config(rootDirectory + "configs/default.yaml");
+	auto& conf = PG::config::Config(rootDirectory + "configs/default.toml");
+	if (!conf) {
+		std::cout << "could not parse config file" << std::endl;
+		exit(0);
+	}
 
 	PG::EngineInitialize(conf);
 

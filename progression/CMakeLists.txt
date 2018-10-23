@@ -81,6 +81,7 @@ set(
     ${CMAKE_SOURCE_DIR}/ext/tinyobjloader/tiny_obj_loader.h
     ${CMAKE_SOURCE_DIR}/ext/stb_image/stb_image.h
     ${CMAKE_SOURCE_DIR}/ext/stb_image/stb_image_write.h
+    ${CMAKE_SOURCE_DIR}/ext/cpptoml.h
     
     ${CMAKE_SOURCE_DIR}/ext/memory_map/MemoryMapped.h
 

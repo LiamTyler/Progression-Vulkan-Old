@@ -39,31 +39,25 @@ namespace Progression {
         glfwWindowHint(GLFW_DEPTH_BITS, 24);
 
         // default configurable settings
-        int glMajor = 4;
-        int glMinor = 3;
-        bool resizeable = true;
-        bool vsync = false;
-        _mTitle = "Untitled";
-        _mWindowSize = { 640, 480 };
+		int glMajor;
+		int glMinor;
+		bool resizeable;
+		bool vsync;
 
+		
         // Grab the specified values in the config if available
-        auto& winConfig = config["window"];
-        if (winConfig) {
-            if (winConfig["glMajor"])
-                glMajor = winConfig["glMajor"].as<int>();
-            if (winConfig["glMinor"])
-                glMinor = winConfig["glMinor"].as<int>();
-            if (winConfig["resizeable"])
-                resizeable = winConfig["resizeable"].as<bool>();
-            if (winConfig["title"])
-                _mTitle = winConfig["title"].as<std::string>();
-            if (winConfig["width"])
-                _mWindowSize.x = winConfig["width"].as<int>();
-            if (winConfig["height"])
-                _mWindowSize.y = winConfig["height"].as<int>();
-            if (winConfig["vsync"])
-                vsync = winConfig["vsync"].as<bool>();
-        }
+		auto winConfig = config->get_table("window");
+		if (!winConfig)
+			std::cout << "Need to specify the window subsystem in the config file!" << std::endl;
+
+		glMajor = winConfig->get_as<int>("glMajor").value_or(4);
+        glMinor = winConfig->get_as<int>("glMinor").value_or(3);
+		resizeable = winConfig->get_as<bool>("resizeable").value_or(false);
+		_mTitle = winConfig->get_as<std::string>("title").value_or("untitled");
+		_mWindowSize.x = winConfig->get_as<int>("width").value_or(640);
+		_mWindowSize.y = winConfig->get_as<int>("height").value_or(480);
+		vsync = winConfig->get_as<bool>("vsync").value_or(false);
+		
 
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, glMajor);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, glMinor);        

@@ -26,12 +26,6 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_BINARY_DIR}/lib)
 
-# for the config manager
-set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "disable yaml-cpp tests build")
-set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "disable yaml-cpp tools build")
-set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "disable yaml-cpp contrib build")
-add_subdirectory(ext/yaml-cpp EXCLUDE_FROM_ALL)
-
 # Disable building extras we won't need (pure C++ project)
 set(NANOGUI_BUILD_EXAMPLE OFF CACHE BOOL " " FORCE)
 set(NANOGUI_BUILD_PYTHON  OFF CACHE BOOL " " FORCE)
