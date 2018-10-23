@@ -6,8 +6,15 @@ set(PROGRESSION_INCLUDE_DIRS
     ${NANOGUI_EXTRA_INCS}
     )
 
+set(SYSTEM_LIBS "")
+if (UNIX AND NOT APPLE)
+    set(SYSTEM_LIBS "stdc++fs")
+endif()
+
+
 set(PROGRESSION_LIBS
     nanogui
+    ${SYSTEM_LIBS}
     ${NANOGUI_EXTRA_LIBS}
 )
 

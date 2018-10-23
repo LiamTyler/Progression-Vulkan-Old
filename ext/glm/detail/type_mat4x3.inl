@@ -1,6 +1,3 @@
-/// @ref core
-/// @file glm/detail/type_mat4x3.inl
-
 namespace glm
 {
 	// -- Constructors --

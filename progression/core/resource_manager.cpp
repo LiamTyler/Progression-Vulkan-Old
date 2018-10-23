@@ -48,7 +48,7 @@ namespace Progression {
     std::string ResourceManager::rootResourceDir_ = "";
 
     void ResourceManager::Init(const config::Config& config) {
-        auto& rm = config->get_table("resourceManager");
+        auto rm = config->get_table("resourceManager");
 		if (!rm)
 			std::cout << "Need to specify the resource manager subsystem in the config file!" << std::endl;
 

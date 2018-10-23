@@ -1,6 +1,5 @@
-#pragma once
-
 #include "core/frustum.h"
+#include <math.h>
 
 namespace Progression {
 
@@ -24,8 +23,8 @@ namespace Progression {
         float nearDist = camera.GetNearPlane();
         float farDist = camera.GetFarPlane();
 
-        nearHeight = nearDist * std::tanf(angle);
-        farHeight = farDist * std::tanf(angle);
+        nearHeight = nearDist * tanf(angle);
+        farHeight = farDist * tanf(angle);
         nearWidth = camera.GetAspectRatio() * nearHeight;
         farWidth = camera.GetAspectRatio() * farHeight;
 

@@ -14,7 +14,7 @@ float* genKernel(int size, float sigma) {
 	int halfSize = size / 2.0f;
 	float sum = 0;
 	for (int i = 0; i < size; i++) {
-		kernel[i] = 1.0f / (std::sqrtf(2 * M_PI) * sigma)  * exp(-0.5 * pow((i - halfSize) / sigma, 2.0));
+		kernel[i] = 1.0f / (sqrtf(2 * M_PI) * sigma)  * exp(-0.5 * pow((i - halfSize) / sigma, 2.0));
 		sum += kernel[i];
 	}
 	for (int i = 0; i < size; i++) {
@@ -29,10 +29,9 @@ float* genKernel(int size, float sigma) {
 int main(int argc, char* argv[]) {
 	srand(time(NULL));
 
-	rootDirectory = "C:/Users/Tyler/Documents/Progression/";
+	rootDirectory = "/home/liam/Documents/Progression/";
 
-
-	auto& conf = PG::config::Config(rootDirectory + "configs/default.toml");
+	auto conf = PG::config::Config(rootDirectory + "configs/default.toml");
 	if (!conf) {
 		std::cout << "could not parse config file" << std::endl;
 		exit(0);
@@ -45,7 +44,7 @@ int main(int argc, char* argv[]) {
 	std::cout << "\nblur shader: " << std::endl;
 	Shader blurShader = Shader(rootDirectory + "resources/shaders/blur.vert", rootDirectory + "resources/shaders/blur.frag");
 	blurShader.AddUniform("kernel");
-	std::cout << "\copy shader: " << std::endl;
+	std::cout << "\ncopy shader: " << std::endl;
 	Shader copyShader = Shader(rootDirectory + "resources/shaders/copy.vert", rootDirectory + "resources/shaders/copy.frag");
 
 	auto scene = Scene::Load(rootDirectory + "resources/scenes/glowSphereScene.pgscn");

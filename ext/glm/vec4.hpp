@@ -2,21 +2,14 @@
 /// @file glm/vec4.hpp
 
 #pragma once
-#include "bvec4.hpp"
-#include "bvec4_precision.hpp"
-#include "fvec4.hpp"
-#include "fvec4_precision.hpp"
-#include "dvec4.hpp"
-#include "dvec4_precision.hpp"
-#include "ivec4.hpp"
-#include "ivec4_precision.hpp"
-#include "uvec4.hpp"
-#include "uvec4_precision.hpp"
-
-namespace glm
-{
-#	if GLM_HAS_TEMPLATE_ALIASES
-		template <typename T, qualifier Q = defaultp> using tvec4 = vec<4, T, Q>;
-#	endif
-}//namespace glm
+#include "./ext/vector_bool4.hpp"
+#include "./ext/vector_bool4_precision.hpp"
+#include "./ext/vector_float4.hpp"
+#include "./ext/vector_float4_precision.hpp"
+#include "./ext/vector_double4.hpp"
+#include "./ext/vector_double4_precision.hpp"
+#include "./ext/vector_int4.hpp"
+#include "./ext/vector_int4_precision.hpp"
+#include "./ext/vector_uint4.hpp"
+#include "./ext/vector_uint4_precision.hpp"
 

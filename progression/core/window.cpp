@@ -44,7 +44,6 @@ namespace Progression {
 		bool resizeable;
 		bool vsync;
 
-		
         // Grab the specified values in the config if available
 		auto winConfig = config->get_table("window");
 		if (!winConfig)

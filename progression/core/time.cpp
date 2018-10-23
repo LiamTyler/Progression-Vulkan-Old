@@ -19,7 +19,7 @@ namespace Progression {
         _mCurrentFrameCount = 0;
         _mTotalFrameCount = 0;
 		
-        auto& timeConf = config->get_table("time");
+        auto timeConf = config->get_table("time");
 		if (!timeConf)
 			std::cout << "Need to specify the time subsystem in the config file!" << std::endl;
 
