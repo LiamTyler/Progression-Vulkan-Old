@@ -7,8 +7,6 @@
 using namespace Progression;
 // using namespace std;
 
-std::string rootDirectory;
-
 float* genKernel(int size, float sigma) {
 	float* kernel = new float[size];
 	int halfSize = size / 2.0f;
@@ -29,9 +27,7 @@ float* genKernel(int size, float sigma) {
 int main(int argc, char* argv[]) {
 	srand(time(NULL));
 
-	rootDirectory = "C:/Users/Tyler/Documents/Progression/";
-
-	auto conf = PG::config::Config(rootDirectory + "configs/default.toml");
+	auto conf = PG::config::Config(PG_ROOT_DIR "configs/default.toml");
 	if (!conf) {
 		std::cout << "could not parse config file" << std::endl;
 		exit(0);
@@ -40,14 +36,14 @@ int main(int argc, char* argv[]) {
 	PG::EngineInitialize(conf);
 
 	std::cout << "\nbloom combine shader: " << std::endl;
-	Shader bloomCombineShader = Shader(rootDirectory + "resources/shaders/bloomCombine.vert", rootDirectory + "resources/shaders/bloomCombine.frag");
+	Shader bloomCombineShader = Shader(PG_ROOT_DIR "resources/shaders/bloomCombine.vert", PG_ROOT_DIR "resources/shaders/bloomCombine.frag");
 	std::cout << "\nblur shader: " << std::endl;
-	Shader blurShader = Shader(rootDirectory + "resources/shaders/blur.vert", rootDirectory + "resources/shaders/blur.frag");
+	Shader blurShader = Shader(PG_ROOT_DIR "resources/shaders/blur.vert", PG_ROOT_DIR "resources/shaders/blur.frag");
 	blurShader.AddUniform("kernel");
 	std::cout << "\ncopy shader: " << std::endl;
-	Shader copyShader = Shader(rootDirectory + "resources/shaders/copy.vert", rootDirectory + "resources/shaders/copy.frag");
+	Shader copyShader = Shader(PG_ROOT_DIR "resources/shaders/copy.vert", PG_ROOT_DIR "resources/shaders/copy.frag");
 
-	auto scene = Scene::Load(rootDirectory + "resources/scenes/glowSphereScene.pgscn");
+	auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/glowSphereScene.pgscn");
 
 	auto camera = scene->GetCamera();
 	camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera, 3));

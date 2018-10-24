@@ -179,11 +179,11 @@ namespace Progression {
 
 	GLuint Shader::operator[] (const std::string& name) const {		
 		std::unordered_map<std::string, GLuint>::const_iterator it = uniformList_.find(name);
-        assert(it != uniformList_.end());
+        // assert(it != uniformList_.end());
 		if (it != uniformList_.end())
 			return it->second;
 		it = attributeList_.find(name);
-        assert(it != attributeList_.end());
+        // assert(it != attributeList_.end());
 		if (it != attributeList_.end())
 			return it->second;
 

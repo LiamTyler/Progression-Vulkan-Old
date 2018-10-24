@@ -64,7 +64,6 @@ namespace Progression {
 
     // TODO: implement
     void ResourceManager::Free() {
-        
     }
 
     void ResourceManager::LoadResourceFile(const std::string& relativePath) {
