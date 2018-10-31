@@ -7,7 +7,10 @@ set(PROGRESSION_INCLUDE_DIRS
 
 set(SYSTEM_LIBS "")
 if (UNIX AND NOT APPLE)
-    set(SYSTEM_LIBS "stdc++fs")
+    set(SYSTEM_LIBS
+        dl
+        stdc++fs
+    )
 endif()
 
 set(PROGRESSION_LIBS
