@@ -4,6 +4,11 @@ project(Progression-lib)
 
 include(Progression-base)
 
+set(PG_AUDIO_ENABLED 0)
+if (PROGRESSION_AUDIO)
+    set(PG_AUDIO_ENABLED 1)
+endif()
+
 configure_file(${PROGRESSION_DIR}/cmake/configuration.h.in ../../progression/core/configuration.h)
 
 set(
@@ -43,7 +48,7 @@ set(
     ${CMAKE_SOURCE_DIR}/ext/tinyobjloader/tiny_obj_loader.cc
     ${CMAKE_SOURCE_DIR}/ext/memory_map/MemoryMapped.cpp    
     ${CMAKE_SOURCE_DIR}/ext/glad/glad.c
-    )
+)
 
 set(
     HEADERS
@@ -91,7 +96,23 @@ set(
 
     progression.h
 )
-	
+
+set(AUDIO_SRCS
+    audio/audio_file.cpp
+    audio/audio_source.cpp
+    audio/audio_system.cpp
+)
+
+set(AUDIO_INCLUDES
+    audio/audio_file.hpp
+    audio/audio_source.hpp
+    audio/audio_system.hpp
+)
+
+if (PROGRESSION_AUDIO)
+    set(SRCS ${SRCS} ${AUDIO_SRCS})
+    set(HEADERS ${HEADERS} ${AUDIO_INCLUDES})
+endif()
 
 add_library(progression STATIC ${SRCS} ${HEADERS})
 

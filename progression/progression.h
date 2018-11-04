@@ -15,6 +15,7 @@
 #include "core/scene.h"
 #include "core/bounding_box.h"
 #include "core/frustum.h"
+#include "core/configuration.h"
 
 #include "graphics/material.h"
 #include "graphics/mesh.h"
@@ -34,6 +35,11 @@
 
 #include "components/user_camera_component.h"
 
+#if PG_AUDIO_ENABLED
+    #include "audio/audio_system.hpp"
+    #include "audio/audio_file.hpp"
+#endif
+
 namespace PG = Progression;
 
 namespace Progression {
@@ -46,9 +52,15 @@ namespace Progression {
         Input::Init(conf);
         ResourceManager::Init(conf);
         RenderSystem::Init(conf);
+        #if PG_AUDIO_ENABLED
+            AudioSystem::Init(conf);
+        #endif
     }
 
     inline void EngineQuit() {
+        #if PG_AUDIO_ENABLED
+            AudioSystem::Free();
+        #endif
         RenderSystem::Free();
         ResourceManager::Free();
         Input::Free();
