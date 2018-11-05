@@ -21,20 +21,6 @@ name metalFloor
 filename models/plane.obj
 material metalFloor
 
-#Model
-#name robot
-#filename models/robot.obj
-#
-#Model
-#name belt
-#filename models/belt.obj
-
-Material
-name blueGlowHigh
-ke 0 0 30
-shader default-mesh
-
 Model
-name blueSphere
-filename models/UVSphere.obj
-material blueGlowHigh
+name robot
+filename models/robot.obj

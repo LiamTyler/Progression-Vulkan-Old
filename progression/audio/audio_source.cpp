@@ -31,7 +31,7 @@ namespace Progression {
         alSourceStop(source_);
     }
 
-    void AudioSource::setAudioFile(AudioFile* audioFile) {
+    void AudioSource::setAudio(AudioFile* audioFile) {
         audioFile_ = audioFile;
         alSourcei(source_, AL_BUFFER, audioFile_->getBuffer());
     }

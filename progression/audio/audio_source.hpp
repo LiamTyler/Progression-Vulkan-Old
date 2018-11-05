@@ -17,14 +17,14 @@ namespace Progression {
             void Play();
             void Pause();
             void Stop();
-            void setAudioFile(AudioFile* file);
+            void setAudio(AudioFile* file);
             void setVolume(float volume);
             void setLooping(bool b);
             void setPosition(const glm::vec3& pos);
             void setVelocity(const glm::vec3& vel);
             void setDirection(const glm::vec3& forwardDir);
 
-            AudioFile* getAudioFile() const { return audioFile_; }
+            AudioFile* getAudio() const { return audioFile_; }
             float getVolume() const;
             bool isLooping() const;
             glm::vec3 getPosition() const;

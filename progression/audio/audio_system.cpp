@@ -29,17 +29,65 @@ namespace Progression {
         }
     }
 
-    void AudioSystem::PlayAllAudio() {
+    AudioFile* AudioSystem::LoadAudio(const std::string& path) {
+        if (audioFiles_.find(path) != audioFiles_.end())
+            return audioFiles_[path];
+
+        AudioFile* aFile = new AudioFile;
+        if (aFile->Open(path) && aFile->Read()) {
+            audioFiles_[path] = aFile;
+            return aFile;
+        } else {
+            delete aFile;
+            return nullptr;
+        }
+    }
+
+    AudioFile* AudioSystem::getAudio(const std::string& path) {
+        if (audioFiles_.find(path) != audioFiles_.end())
+            return audioFiles_[path];
+        else
+            return nullptr;
+    }
+
+    void AudioSystem::FreeAudio(const std::string& path) {
+        if (audioFiles_.find(path) == audioFiles_.end())
+            return;
+        delete audioFiles_[path];
+        audioFiles_.erase(path);
+    }
+
+    AudioSource* AudioSystem::AddSource(const std::string& sourceName) {
+        if (audioSources_.find(sourceName) != audioSources_.end())
+            return audioSources_[sourceName];
+        audioSources_[sourceName] = new AudioSource;
+        return audioSources_[sourceName];
+    }
+
+    AudioSource* AudioSystem::getSource(const std::string& sourceName) {
+        if (audioSources_.find(sourceName) == audioSources_.end())
+            return nullptr;
+        return audioSources_[sourceName];
+    }
+
+    void AudioSystem::RemoveSource(const std::string& sourceName) {
+        if (audioSources_.find(sourceName) == audioSources_.end())
+            return;
+        delete audioSources_[sourceName];
+        audioSources_.erase(sourceName);
+    }
+
+    void AudioSystem::PlayAll() {
         for (auto& source : audioSources_)
             source.second->Play();
     }
 
-    void AudioSystem::PauseAllAudio() {
+    void AudioSystem::PauseAll() {
         for (auto& source : audioSources_)
             source.second->Pause();
     }
 
-    void AudioSystem::StopAllAudio() {
+    void AudioSystem::StopAll() {
         for (auto& source : audioSources_)
             source.second->Stop();
     }

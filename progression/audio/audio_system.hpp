@@ -14,12 +14,18 @@ namespace Progression {
             static void Init(const config::Config& config);
             static void Free();
 
-            static bool LoadAudioFile(const std::string& path);
-            static bool FreeAudioFile(const std::string& path);
+            static AudioFile* LoadAudio(const std::string& path);
+            static AudioFile* getAudio(const std::string& path);
+            static void FreeAudio(const std::string& path);
 
-            static void PlayAllAudio();
-            static void PauseAllAudio();
-            static void StopAllAudio();
+            static AudioSource* AddSource(const std::string& sourceName);
+            static AudioSource* getSource(const std::string& sourceName);
+            static void RemoveSource(const std::string& sourceName);
+
+
+            static void PlayAll();
+            static void PauseAll();
+            static void StopAll();
 
             static std::vector<std::string> getPlaybackDevices();
             static std::vector<std::string> getCaptureDevices();

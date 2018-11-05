@@ -12,7 +12,7 @@ set_target_properties(
     example1 example2 example3 forward deferred deferred_light_vols tiled
     PROPERTIES
     DEBUG_POSTFIX _debug
-    )
+)
 
 #target_link_libraries(example1 ${EXTERNAL_LIBS} debug ${PROGRESSION_LIB_NAME_DEBUG} optimized ${PROGRESSION_LIB_NAME})
 #target_link_libraries(example2 ${EXTERNAL_LIBS} debug ${PROGRESSION_LIB_NAME_DEBUG} optimized ${PROGRESSION_LIB_NAME})
@@ -24,3 +24,13 @@ target_link_libraries(forward ${PROGRESSION_LIBS})
 target_link_libraries(deferred ${PROGRESSION_LIBS})
 target_link_libraries(deferred_light_vols ${PROGRESSION_LIBS})
 target_link_libraries(tiled ${PROGRESSION_LIBS})
+
+if (PROGRESSION_AUDIO)
+    add_executable(audio audio_example.cpp)
+    set_target_properties(
+        audio
+        PROPERTIES
+        DEBUG_POSTFIX _debug
+    )
+    target_link_libraries(audio ${PROGRESSION_LIBS})
+endif()
