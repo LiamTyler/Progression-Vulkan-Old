@@ -7,6 +7,51 @@
 using namespace Progression;
 using namespace std;
 
+/*
+void Update() {
+    float dt = Time::deltaTime();
+    glm::vec3 toGoal = glm::normalize(goal - gameObject->transform.position);
+    velocity += dt * toGoal;
+    float speed = glm::length(velocity);
+    if (speed < 2)
+        velocity = speed * glm::normalize(velocity);
+    gameObject->transform.position += velocity * dt;
+
+    if (glm::length(goal - gameObject->transform.position) < .1) {
+        goal.x *= -1;
+        goal.z *= -1;
+    }
+}
+*/
+
+float E(float t) {
+    return 
+
+float ttc(const glm::vec3& pa, const glm::vec3& pb, const glm::vec3& va,
+        const glm::vec3& vb, float ra, float rb)
+{
+    float maxt = 999;
+    glm::vec3 pDiff = pb - pa;
+
+    glm::vec3 relativeVelocity = vb - va;
+    float a = glm::dot(relativeVelocity, relativeVelocity);
+    float b = 2 * glm::dot(relativeVelocity, pDiff);
+    float c = glm::dot(pDiff, pDiff) - pow(ra + rb, 2.0);
+
+    float det = b*b - 4*a*c;
+    float t1 = maxt, t2 = maxt;
+    if (det > 0) {
+        t1 = (-b + sqrt(det)) / (2 * a);
+        t2 = (-b - sqrt(det)) / (2 * a);
+    }
+
+    float t = std::min(t1, t2);
+    if (t < 0 && std::max(t1, t2) > 0) t = 100;
+    if (t < 0 || t > maxt) t = maxt;
+
+    return t;
+}
+
 class TTCcomponent : public Component {
     public:
         TTCcomponent(GameObject* g) :
@@ -22,22 +67,23 @@ class TTCcomponent : public Component {
         void Stop() {}
         
         void Update() {
-            float dt = Time::deltaTime();
-            glm::vec3 toGoal = glm::normalize(goal - gameObject->transform.position);
-            velocity += dt * toGoal;
-            float speed = glm::length(velocity);
-            if (speed < 2)
-                velocity = speed * glm::normalize(velocity);
-            gameObject->transform.position += velocity * dt;
+        }
 
+        void PostUpdate() {
+            velocity += Time::deltaTime() * a;
+            gameObject->transform.position += velocity * Time::deltaTime();
             if (glm::length(goal - gameObject->transform.position) < .1) {
                 goal.x *= -1;
                 goal.z *= -1;
             }
         }
 
+        float radius;
+        glm::vec3 a;
         glm::vec3 velocity;
+        glm::vec3 goalVelocity;
         glm::vec3 goal;
+        std::vector<TTCcomponent*> ttc;
 };
 
 int main(int argc, char* argv[]) {
