@@ -23,6 +23,7 @@ namespace Progression {
         void AddGameObject(GameObject* o);
         void RemoveGameObject(GameObject* o);
         GameObject* GetGameObject(const std::string& name) const;
+        void GetNeighbors(GameObject* o, float radius, std::vector<GameObject*>& neighborList);
 
         bool AddLight(Light* light);
         void RemoveLight(Light* light);

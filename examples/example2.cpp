@@ -24,41 +24,50 @@ void Update() {
 }
 */
 
-float E(float t) {
-    return 
-
-float ttc(const glm::vec3& pa, const glm::vec3& pb, const glm::vec3& va,
-        const glm::vec3& vb, float ra, float rb)
+glm::vec2 dE(const glm::vec2& pa, const glm::vec2& pb, const glm::vec2& va,
+        const glm::vec2& vb, float ra, float rb)
 {
-    float maxt = 999;
-    glm::vec3 pDiff = pb - pa;
+    float maxt  = 999;
+    auto pDiff  = pb - pa;
+    auto vDiff  = va - vb;
+    // cout << "pDiff= " << pDiff << " vDiff = " << vDiff << endl;
+    auto radius = ra + rb;
+    auto dist = glm::length(pDiff);
+    if (radius > dist)
+        radius = .99 * dist;
 
-    glm::vec3 relativeVelocity = vb - va;
-    float a = glm::dot(relativeVelocity, relativeVelocity);
-    float b = 2 * glm::dot(relativeVelocity, pDiff);
-    float c = glm::dot(pDiff, pDiff) - pow(ra + rb, 2.0);
+    float a = glm::dot(vDiff, vDiff);
+    float b = glm::dot(vDiff, pDiff);
+    float c = glm::dot(pDiff, pDiff) - radius * radius;
 
-    float det = b*b - 4*a*c;
-    float t1 = maxt, t2 = maxt;
-    if (det > 0) {
-        t1 = (-b + sqrt(det)) / (2 * a);
-        t2 = (-b - sqrt(det)) / (2 * a);
-    }
+    float disc = b*b - a*c;
+    // cout << "disc = " << disc << ", a = " << a << ", b = " << b << ", c = " << c << endl;
+    if (disc < 0 || abs(a) < 0.001)
+        return glm::vec2(0);
+    
+    disc = sqrt(disc);
+    float t = (b - disc) /  a;
+    if (t < 0 || t > maxt)
+        return glm::vec2(0);
 
-    float t = std::min(t1, t2);
-    if (t < 0 && std::max(t1, t2) > 0) t = 100;
-    if (t < 0 || t > maxt) t = maxt;
-
-    return t;
+    float k = 10.5;
+    float m = 2.0;
+    float t0 = 3;
+    return k * exp(-t / t0)*(vDiff - (vDiff*b - pDiff*a)/disc)/(a*pow(t, m))*(m/t + 1.0f /t0);
 }
 
 class TTCcomponent : public Component {
     public:
-        TTCcomponent(GameObject* g) :
+        TTCcomponent(GameObject* g, Scene* sc) :
             Component(g),
+            scene(sc),
+            radius(1.5),
+            force(0),
             velocity(0),
+            goalVelocity(0),
             goal(0)
         {
+            goal = 50.0f * glm::vec2(2.0f * (rand() / (float) RAND_MAX) - 1.0f, 2.0f * (rand() / (float) RAND_MAX) - 1.0f);
         }
 
         ~TTCcomponent() = default;
@@ -67,23 +76,57 @@ class TTCcomponent : public Component {
         void Stop() {}
         
         void Update() {
-        }
+            glm::vec2 pos = glm::vec2(gameObject->transform.position.x, gameObject->transform.position.z);
+            // cout << "pos = " << pos << endl;
+            goalVelocity = 6.0f * glm::normalize(goal - pos);
+            
+            scene->GetNeighbors(gameObject, 10, neighbors);
+            force = 2.0f * (goalVelocity - velocity);
+            force += glm::vec2(2.0f * (rand() / (float) RAND_MAX) - 1.0f, 2.0f * (rand() / (float) RAND_MAX) - 1.0f);
 
-        void PostUpdate() {
-            velocity += Time::deltaTime() * a;
-            gameObject->transform.position += velocity * Time::deltaTime();
-            if (glm::length(goal - gameObject->transform.position) < .1) {
-                goal.x *= -1;
-                goal.z *= -1;
+            for (auto& neighbor : neighbors) {
+                auto ttc = neighbor->GetComponent<TTCcomponent>();
+                if (ttc) {
+                    glm::vec2 nPos = glm::vec2(neighbor->transform.position.x, neighbor->transform.position.z);
+                    // cout << "nPos = " << nPos << endl;
+                    auto diff = pos - nPos;
+                    float dist = glm::length(diff);
+                    float r = radius;
+                    if (dist < 2 * r)
+                        r = dist / 2.001;
+
+                    auto dEdx = dE(pos, nPos, velocity, ttc->velocity, radius, ttc->radius);
+                    // std::cout << dEdx << endl;
+                    auto FAvoid = -dEdx;
+                    float mag = glm::length(FAvoid);
+                    float maxF = 15;
+                    if (mag > maxF)
+                        FAvoid = maxF * FAvoid / mag;
+
+                    force += FAvoid;
+                }
             }
         }
 
+        void PostUpdate() {
+            float dt = Time::deltaTime();
+            velocity += force * dt;
+            auto dP = velocity * dt;
+            gameObject->transform.position += glm::vec3(dP.x, 0, dP.y);
+            auto xzPos = glm::vec2(gameObject->transform.position.x, gameObject->transform.position.z);
+            if (glm::length(goal - xzPos) < .1) {
+                goal.x *= -1;
+                goal.y *= -1;
+            }
+        }
+
+        Scene* scene;
         float radius;
-        glm::vec3 a;
-        glm::vec3 velocity;
-        glm::vec3 goalVelocity;
-        glm::vec3 goal;
-        std::vector<TTCcomponent*> ttc;
+        glm::vec2 force;
+        glm::vec2 velocity;
+        glm::vec2 goalVelocity;
+        glm::vec2 goal;
+        std::vector<GameObject*> neighbors;
 };
 
 int main(int argc, char* argv[]) {
@@ -109,11 +152,11 @@ int main(int argc, char* argv[]) {
     int SIZE = 10;
     for (int r = 0; r < 10; ++r) {
         for (int c = 0; c < SIZE; ++c) {
-            Transform t(3.0f * glm::vec3(-SIZE + 2 * c, .1, SIZE - 2*r), glm::vec3(0), glm::vec3(16));
+            Transform t(3.0f * glm::vec3(-20 + 4 * c, .1, 20 - 4*r), glm::vec3(0), glm::vec3(16));
             auto g = new GameObject(t);
             g->AddComponent<ModelRenderer>(new ModelRenderer(g, robotModel.get()));
-            g->AddComponent<TTCcomponent>(new TTCcomponent(g));
-            g->GetComponent<TTCcomponent>()->goal = glm::vec3(50, .3, -50);
+            g->AddComponent<TTCcomponent>(new TTCcomponent(g, scene));
+            // g->GetComponent<TTCcomponent>()->goal = glm::vec2(50, -50);
             scene->AddGameObject(g);
         }
     }
@@ -129,6 +172,13 @@ int main(int argc, char* argv[]) {
             PG::EngineShutdown = true;
 
         scene->Update();
+        auto& gameObjects = scene->GetGameObjects();
+        for (auto& obj : gameObjects) {
+            auto ttc = obj->GetComponent<TTCcomponent>();
+            if (ttc) {
+                ttc->PostUpdate();
+            }
+        }
 
         RenderSystem::Render(scene);
         skybox->Render(*camera);

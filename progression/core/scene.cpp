@@ -97,6 +97,17 @@ namespace Progression {
             gameObjects_.erase(iter);
     }
 
+    void Scene::GetNeighbors(GameObject* o, float radius, std::vector<GameObject*>& neighborList) {
+        neighborList.clear();
+        float r2 = radius*radius;
+        auto& pos = o->transform.position;
+        for (auto& obj : gameObjects_) {
+            auto diff = obj->transform.position - pos;
+            if (obj != o && glm::dot(diff, diff) < r2)
+                neighborList.push_back(obj);
+        }
+    }
+
     bool Scene::AddLight(Light* light) {
         if (directionalLights_.size() + pointLights_.size() == maxLights_)
             return false;
