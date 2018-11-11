@@ -61,7 +61,7 @@ class TTCcomponent : public Component {
         TTCcomponent(GameObject* g, Scene* sc) :
             Component(g),
             scene(sc),
-            radius(1.5),
+            radius(1.75),
             force(0),
             velocity(0),
             goalVelocity(0),
@@ -99,7 +99,7 @@ class TTCcomponent : public Component {
                     // std::cout << dEdx << endl;
                     auto FAvoid = -dEdx;
                     float mag = glm::length(FAvoid);
-                    float maxF = 15;
+                    float maxF = 25;
                     if (mag > maxF)
                         FAvoid = maxF * FAvoid / mag;
 
@@ -152,7 +152,7 @@ int main(int argc, char* argv[]) {
     int SIZE = 10;
     for (int r = 0; r < 10; ++r) {
         for (int c = 0; c < SIZE; ++c) {
-            Transform t(3.0f * glm::vec3(-20 + 4 * c, .1, 20 - 4*r), glm::vec3(0), glm::vec3(16));
+            Transform t(3.0f * glm::vec3(-20 + 4 * c, .1, 20 - 4*r), glm::vec3(0), glm::vec3(1));
             auto g = new GameObject(t);
             g->AddComponent<ModelRenderer>(new ModelRenderer(g, robotModel.get()));
             g->AddComponent<TTCcomponent>(new TTCcomponent(g, scene));
