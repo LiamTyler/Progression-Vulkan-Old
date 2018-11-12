@@ -10,7 +10,7 @@ using namespace std;
 #define NUM_SPHERES 5
 GameObject* SPHERES[NUM_SPHERES];
 #define AGENT_RADIUS 3
-#define ROTATING_RADIUS 2
+#define ROTATING_RADIUS 2.5
 
 float* genKernel(int size, float sigma) {
 	float* kernel = new float[size];
@@ -78,7 +78,7 @@ public:
 		spheres.push_back(sphere);
 		pointLights.push_back(light);
 		scene->AddGameObject(sphere);
-		//scene->AddLight(pointLights[pointLights.size() - 1]);
+		scene->AddLight(light);
 		for (int i = 0; i < spheres.size(); ++i) {
 			glm::vec3 relPos(0, gameObject->transform.position.y + 1, 0);
 			float angle = 2 * M_PI * i / spheres.size();
@@ -97,7 +97,7 @@ public:
 	void Update() {
 		totAngle += Time::deltaTime() * rotSpeed;
 		for (int i = 0; i < spheres.size(); ++i) {
-			glm::vec3 relPos(0, gameObject->transform.position.y + 3, 0);
+			glm::vec3 relPos(0, gameObject->transform.position.y + 1, 0);
 			float angle = 2 * M_PI * i / spheres.size() + totAngle;
 			relPos.x = radius * cos(angle);
 			relPos.z = radius * sin(angle);
@@ -168,7 +168,8 @@ public:
 	}
 
 	void PostUpdate() {
-		float dt = Time::deltaTime();
+		float dt = .005;
+		// float dt = Time::deltaTime();
 		velocity += force * dt;
 		auto dP = velocity * dt;
 		gameObject->transform.position += glm::vec3(dP.x, 0, dP.y);
@@ -178,14 +179,14 @@ public:
 		}*/
 
 		auto xzPos = glm::vec2(gameObject->transform.position.x, gameObject->transform.position.z);
-		if (glm::length(goal - xzPos) < 4) {
-			velocity = glm::vec2(0);
+		if (glm::length(goal - xzPos) < 6) {
 			gameObject->GetComponent<RotatingSpheres>()->AddSphere(goalSphere->GetComponent<ModelRenderer>()->model);
 			for (int i = 0; i < NUM_SPHERES; ++i)
 				if (goalSphere == SPHERES[i])
 					spheresReached[i] = true;
 			
 
+			/*
 			int reached = 0;
 			for (int i = 0; i < NUM_SPHERES; ++i)
 				reached += spheresReached[i];
@@ -201,6 +202,15 @@ public:
 					}
 				} 
 			}
+			*/
+			int i = rand() % NUM_SPHERES;
+			while (spheresReached[i])
+				i = rand() % NUM_SPHERES;
+			goalSphere = SPHERES[i];
+			goal = glm::vec2(goalSphere->transform.position.x, goalSphere->transform.position.z);
+			velocity = 6.0f * glm::normalize(goal - xzPos);
+
+
 		}
 	}
 
@@ -261,7 +271,7 @@ int main(int argc, char* argv[]) {
 	int SIZE = 10;
 	for (int r = 0; r < SIZE; ++r) {
 		for (int c = 0; c < SIZE; ++c) {
-			Transform t(3.0f * glm::vec3(-SIZE + 4 * c, .1, SIZE - 4 * r), glm::vec3(0), glm::vec3(1));
+			Transform t(3.0f * glm::vec3(-SIZE + 4 * c, .1, SIZE - 4 * r), glm::vec3(0), glm::vec3(2));
 			auto g = new GameObject(t);
 			g->AddComponent<ModelRenderer>(new ModelRenderer(g, robotModel.get()));
 			g->AddComponent<RotatingSpheres>(new RotatingSpheres(g, scene));
@@ -331,7 +341,6 @@ int main(int argc, char* argv[]) {
 		glowBuffers[i][0] = graphics::Create2DTexture(Window::getWindowSize().x / divisor, Window::getWindowSize().y / divisor, GL_RGBA16F, GL_LINEAR, GL_LINEAR);
 		glowBuffers[i][1] = graphics::Create2DTexture(Window::getWindowSize().x / divisor, Window::getWindowSize().y / divisor, GL_RGBA16F, GL_LINEAR, GL_LINEAR);
 		divisor *= divisorMult;
-		std::cout << "level = " << i << std::endl;
 	}
 
 	// Game loop

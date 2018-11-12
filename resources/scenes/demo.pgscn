@@ -22,7 +22,7 @@ name water
 
 GameObject
 name floor
-scale 50 1 50
+scale 100 1 100
 model metalFloor
 
 #GameObject
@@ -33,30 +33,30 @@ model metalFloor
 
 GameObject
 name blueSphere
-position 25 3 -40
+position 0 3 -60
 scale 1 1 1
 model blueSphere
 
 GameObject
 name greenSphere
-position 40 3 10
+position 60 3 0
 scale 1 1 1
 model greenSphere
 
 GameObject
 name redSphere
-position -30 3 -20
+position -60 3 0
 scale 1 1 1
 model redSphere
 
 GameObject
 name yellowSphere
-position -40 3 35
+position -35 3 60
 scale 1 1 1
 model yellowSphere
 
 GameObject
 name orangeSphere
-position 10 3 40
+position 35 3 60
 scale 1 1 1
 model orangeSphere
