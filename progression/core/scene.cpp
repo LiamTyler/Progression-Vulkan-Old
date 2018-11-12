@@ -111,13 +111,11 @@ namespace Progression {
     bool Scene::AddLight(Light* light) {
         if (directionalLights_.size() + pointLights_.size() == maxLights_)
             return false;
-
         if (light->type == Light::Type::DIRECTIONAL) {
             directionalLights_.push_back(light);
         } else if (light->type == Light::Type::POINT) {
             pointLights_.push_back(light);
         }
-		std::cout << "lights = " << pointLights_.size() << std::endl;
         return true;
     }
 

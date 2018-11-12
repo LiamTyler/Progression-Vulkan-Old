@@ -7,14 +7,14 @@ option(PROGRESSION_BUILD_EXAMPLES "Build the example programs" ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+option(PROGRESSION_AUDIO "Enable the progression audio system" OFF)
 
 if (UNIX AND NOT APPLE)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CPP_VERSION} -g")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CPP_VERSION} -O3")
-    option(PROGRESSION_AUDIO "Enable the progression audio system" ON)
+    #option(PROGRESSION_AUDIO "Enable the progression audio system" ON)
 elseif (MSVC)
     add_compile_options("/std:c++17")
-    option(PROGRESSION_AUDIO "Enable the progression audio system" OFF)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -41,7 +41,7 @@ add_subdirectory(progression)
 
 if (PROGRESSION_BUILD_EXAMPLES)
     add_subdirectory(examples/)
-    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example1)
+    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT demo)
 endif()
 
 add_subdirectory(tools/)

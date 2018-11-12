@@ -7,6 +7,7 @@
 #include "graphics/material.h"
 #include "graphics/shader.h"
 #include "graphics/model.h"
+#include <mutex>
 
 namespace Progression {
 

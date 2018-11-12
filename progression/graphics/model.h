@@ -11,7 +11,7 @@ namespace Progression {
     class Model {
     public:
         Model() = default;
-		virtual ~Model() { std::cout << "in model destructor" << std::endl; }
+		virtual ~Model() = default;
 
         // TODO: Fix model and mesh copy & move ctors
         Model(const Model& mesh) = default;

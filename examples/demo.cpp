@@ -9,6 +9,8 @@ using namespace std;
 
 #define NUM_SPHERES 5
 GameObject* SPHERES[NUM_SPHERES];
+#define AGENT_RADIUS 3
+#define ROTATING_RADIUS 2
 
 float* genKernel(int size, float sigma) {
 	float* kernel = new float[size];
@@ -59,7 +61,7 @@ glm::vec2 dE(const glm::vec2& pa, const glm::vec2& pb, const glm::vec2& va,
 
 class RotatingSpheres : public Component {
 public:
-	RotatingSpheres(GameObject* obj, Scene* s, int num = 8, float r = 4, float speed = 1) :
+	RotatingSpheres(GameObject* obj, Scene* s, int num = 8, float r = ROTATING_RADIUS, float speed = 1) :
 		Component(obj),
 		rotSpeed(speed),
 		scene(s),
@@ -69,14 +71,16 @@ public:
 	}
 
 	void AddSphere(Model* model) {
-		GameObject* sphere = new GameObject;
+		auto sphere = new GameObject;
 		sphere->AddComponent<ModelRenderer>(new ModelRenderer(sphere, model));
+		auto light = new Light(Light::Type::POINT, glm::vec3(0), glm::normalize(model->materials[0]->emissive), 5);
+
 		spheres.push_back(sphere);
-		pointLights.push_back(new Light(Light::Type::POINT, glm::vec3(0), glm::normalize(model->materials[0]->emissive), 5));
+		pointLights.push_back(light);
 		scene->AddGameObject(sphere);
-		scene->AddLight(pointLights[pointLights.size() - 1]);
+		//scene->AddLight(pointLights[pointLights.size() - 1]);
 		for (int i = 0; i < spheres.size(); ++i) {
-			glm::vec3 relPos(0, gameObject->transform.position.y + 3, 0);
+			glm::vec3 relPos(0, gameObject->transform.position.y + 1, 0);
 			float angle = 2 * M_PI * i / spheres.size();
 			relPos.x = radius * cos(angle);
 			relPos.z = radius * sin(angle);
@@ -115,7 +119,7 @@ public:
 	TTCcomponent(GameObject* g, Scene* sc) :
 		Component(g),
 		scene(sc),
-		radius(1.75),
+		radius(AGENT_RADIUS),
 		force(0),
 		velocity(0),
 		goalVelocity(0),
@@ -160,6 +164,7 @@ public:
 				force += FAvoid;
 			}
 		}
+		//cout << force << endl;
 	}
 
 	void PostUpdate() {
@@ -168,6 +173,9 @@ public:
 		auto dP = velocity * dt;
 		gameObject->transform.position += glm::vec3(dP.x, 0, dP.y);
 		gameObject->transform.rotation.y = -atan2(velocity.y, velocity.x) + M_PI / 2.0f;
+		/*if (glm::length(gameObject->transform.position) > 200) {
+			cout << gameObject->transform.position << endl;
+		}*/
 
 		auto xzPos = glm::vec2(gameObject->transform.position.x, gameObject->transform.position.z);
 		if (glm::length(goal - xzPos) < 4) {
