@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <memory>
+#include <iostream>
 
 namespace Progression {
     class Mesh;
@@ -10,7 +11,7 @@ namespace Progression {
     class Model {
     public:
         Model() = default;
-        virtual ~Model() = default;
+		virtual ~Model() { std::cout << "in model destructor" << std::endl; }
 
         // TODO: Fix model and mesh copy & move ctors
         Model(const Model& mesh) = default;

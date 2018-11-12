@@ -268,8 +268,6 @@ namespace Progression {
 				std::string modelName;
 				ss >> modelName;
 				auto model = ResourceManager::GetModel(modelName);
-				std::cout << "Adding model = " << model.get() << " with name = " << modelName << " to obj: " << obj << std::endl;
-				std::cout << "mats = " << model->materials.size() << std::endl;
 				obj->AddComponent<ModelRenderer>(new ModelRenderer(obj, model.get()));
             }
         }

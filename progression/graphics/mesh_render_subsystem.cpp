@@ -9,18 +9,14 @@ namespace Progression {
     }
 
     void MeshRenderSubSystem::AddRenderComponent(RenderComponent* rc) {
-		std::cout << "in add RC " << std::endl;
         MeshRenderer* mr = static_cast<MeshRenderer*>(rc);
         meshRenderers.push_back(mr);
         assert(mr->mesh != nullptr);
         assert(mr->material != nullptr);
         assert(mr->material->shader != nullptr);
         GLuint vao;
-		std::cout << "in add RC 2 " << std::endl;
 
         if (vaos_.find(mr->mesh) == vaos_.end()) {
-			std::cout << "in add RC 3" << std::endl;
-
             glGenVertexArrays(1, &vao);
             glBindVertexArray(vao);
             GLuint* vbos_ = &mr->mesh->vbos[0];
@@ -43,8 +39,6 @@ namespace Progression {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos_[Mesh::vboName::INDEX]);
             vaos_[mr->mesh] = vao;
         } else {
-			std::cout << "in add RC 4" << std::endl;
-
             vao = vaos_[mr->mesh];
         }
 

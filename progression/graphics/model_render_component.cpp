@@ -10,7 +10,6 @@ namespace Progression {
         model(mod)
     {
         for (int i = 0; i < model->meshes.size(); i++) {
-			std::cout << "mesh[" << i << "]" << std::endl;
             MeshRenderer* mr = new MeshRenderer(go, model->meshes[i].get(), model->materials[i].get());
             meshRenderers.push_back(mr);
         }

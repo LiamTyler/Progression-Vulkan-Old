@@ -61,34 +61,31 @@ glm::vec2 dE(const glm::vec2& pa, const glm::vec2& pb, const glm::vec2& va,
 
 class RotatingSpheres : public Component {
 public:
-	RotatingSpheres(GameObject* obj, Scene* s, int num = 8, float r=4, float speed=0.3) :
+	RotatingSpheres(GameObject* obj, Scene* s, int num = 8, float r = 4, float speed = 1) :
 		Component(obj),
 		rotSpeed(speed),
 		scene(s),
-		radius(r)
+		radius(r),
+		totAngle(0)
 	{
 	}
 
 	void AddSphere(Model* model) {
 		GameObject* sphere = new GameObject;
-		cout << "about to add MR component" << endl;
-		cout << "model = " << model << endl;
-		cout << "model mats = " << model->materials.size() << endl;
 		sphere->AddComponent<ModelRenderer>(new ModelRenderer(sphere, model));
-		cout << "finished adding MR component" << endl;
-		//spheres.push_back(sphere);
-		//pointLights.push_back(new Light(Light::Type::POINT, glm::vec3(0), model->materials[0]->emissive, 5));
+		spheres.push_back(sphere);
+		pointLights.push_back(new Light(Light::Type::POINT, glm::vec3(0), glm::normalize(model->materials[0]->emissive), 5));
 		scene->AddGameObject(sphere);
-		//scene->AddLight(pointLights[pointLights.size() - 1]);
-
-		/*for (int i = 0; i < spheres.size(); ++i) {
-			glm::vec3 relPos(0, gameObject->transform.position.y, 0);
+		scene->AddLight(pointLights[pointLights.size() - 1]);
+		for (int i = 0; i < spheres.size(); ++i) {
+			glm::vec3 relPos(0, gameObject->transform.position.y + 3, 0);
 			float angle = 2 * M_PI * i / spheres.size();
 			relPos.x = radius * cos(angle);
 			relPos.z = radius * sin(angle);
-			sphere->transform.position = gameObject->transform.position + relPos;
-			sphere->transform.scale = glm::vec3(.25);
-		}*/
+			spheres[i]->transform.position = gameObject->transform.position + relPos;
+			pointLights[i]->transform.position = spheres[i]->transform.position;
+			spheres[i]->transform.scale = glm::vec3(.25);
+		}
 	}
 
 	~RotatingSpheres() = default;
@@ -96,6 +93,15 @@ public:
 	void Stop() {}
 
 	void Update() {
+		totAngle += Time::deltaTime() * rotSpeed;
+		for (int i = 0; i < spheres.size(); ++i) {
+			glm::vec3 relPos(0, gameObject->transform.position.y + 3, 0);
+			float angle = 2 * M_PI * i / spheres.size() + totAngle;
+			relPos.x = radius * cos(angle);
+			relPos.z = radius * sin(angle);
+			spheres[i]->transform.position = gameObject->transform.position + relPos;
+			pointLights[i]->transform.position = spheres[i]->transform.position;
+		}
 	}
 
 	std::vector<GameObject*> spheres;
@@ -103,6 +109,7 @@ public:
 	Scene* scene;
 	float rotSpeed;
 	float radius;
+	float totAngle;
 };
 
 class TTCcomponent : public Component {
@@ -119,7 +126,6 @@ public:
 		int sphere = rand() % NUM_SPHERES;
 		goalSphere = SPHERES[sphere];
 		goal = glm::vec2(goalSphere->transform.position.x, goalSphere->transform.position.z);
-		cout << "goal = " << goal << endl;
 		memset(spheresReached, 0, sizeof(spheresReached));
 	}
 
@@ -141,7 +147,6 @@ public:
 			auto ttc = neighbor->GetComponent<TTCcomponent>();
 			if (ttc) {
 				glm::vec2 nPos = glm::vec2(neighbor->transform.position.x, neighbor->transform.position.z);
-				// cout << "nPos = " << nPos << endl;
 				auto diff = pos - nPos;
 				float dist = glm::length(diff);
 				float r = radius;
@@ -149,7 +154,6 @@ public:
 					r = dist / 2.001;
 
 				auto dEdx = dE(pos, nPos, velocity, ttc->velocity, radius, ttc->radius);
-				// std::cout << dEdx << endl;
 				auto FAvoid = -dEdx;
 				float mag = glm::length(FAvoid);
 				float maxF = 25;
@@ -166,10 +170,11 @@ public:
 		velocity += force * dt;
 		auto dP = velocity * dt;
 		gameObject->transform.position += glm::vec3(dP.x, 0, dP.y);
+		gameObject->transform.rotation.y = -atan2(velocity.y, velocity.x) + M_PI / 2.0f;
+
 		auto xzPos = glm::vec2(gameObject->transform.position.x, gameObject->transform.position.z);
 		if (glm::length(goal - xzPos) < 2) {
 			velocity = glm::vec2(0);
-			cout << "call to AddSphere" << endl;
 			gameObject->GetComponent<RotatingSpheres>()->AddSphere(goalSphere->GetComponent<ModelRenderer>()->model);
 			for (int i = 0; i < NUM_SPHERES; ++i)
 				if (goalSphere == SPHERES[i])
@@ -179,9 +184,7 @@ public:
 			int reached = 0;
 			for (int i = 0; i < NUM_SPHERES; ++i)
 				reached += spheresReached[i];
-			cout << "reached = " << reached << endl;
 			int sphere = rand() % (NUM_SPHERES - reached);
-			cout << "sphere = " << sphere << endl;
 			reached = 0;
 			for (int i = 0; i < NUM_SPHERES; ++i) {
 				if (!spheresReached[i] && reached == sphere) {
