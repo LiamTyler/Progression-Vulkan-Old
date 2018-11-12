@@ -26,29 +26,15 @@ namespace Progression {
         static std::shared_ptr<Model> GetModel(const std::string& name, bool shallowCopy = false) {
             if (models_.find(name) == models_.end()) {
                 return nullptr;
-            } else {
-                std::shared_ptr<Model> ret;
-                if (shallowCopy) {
-                    ret = std::make_shared<Model>(*models_[name]);
-                } else {
-                    ret = models_[name];
-                }
-                return ret;
             }
+			return models_[name];
         }
 
         static std::shared_ptr<Material> GetMaterial(const std::string& name, bool shallowCopy = false) {
             if (materials_.find(name) == materials_.end()) {
                 return nullptr;
-            } else {
-                std::shared_ptr<Material> ret;
-                if (shallowCopy) {
-                    ret = std::make_shared<Material>(*materials_[name]);
-                } else {
-                    ret = materials_[name];
-                }
-                return ret;
             }
+			return materials_[name];
         }
 
         static std::shared_ptr<Shader> GetShader(const std::string& name) {

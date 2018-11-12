@@ -25,11 +25,11 @@ name floor
 scale 50 1 50
 model metalFloor
 
-GameObject
-name robot
-position 0 0 0
-scale 1.6 1.6 1.6
-model robot
+#GameObject
+#name robot
+#position 0 0 0
+3scale 1.6 1.6 1.6
+#model robot
 
 GameObject
 name blueSphere

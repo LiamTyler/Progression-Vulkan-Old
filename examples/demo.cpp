@@ -33,7 +33,6 @@ glm::vec2 dE(const glm::vec2& pa, const glm::vec2& pb, const glm::vec2& va,
 	float maxt = 999;
 	auto pDiff = pb - pa;
 	auto vDiff = va - vb;
-	// cout << "pDiff= " << pDiff << " vDiff = " << vDiff << endl;
 	auto radius = ra + rb;
 	auto dist = glm::length(pDiff);
 	if (radius > dist)
@@ -44,7 +43,6 @@ glm::vec2 dE(const glm::vec2& pa, const glm::vec2& pb, const glm::vec2& va,
 	float c = glm::dot(pDiff, pDiff) - radius * radius;
 
 	float disc = b * b - a * c;
-	// cout << "disc = " << disc << ", a = " << a << ", b = " << b << ", c = " << c << endl;
 	if (disc < 0 || abs(a) < 0.001)
 		return glm::vec2(0);
 
@@ -136,7 +134,6 @@ public:
 
 	void Update() {
 		glm::vec2 pos = glm::vec2(gameObject->transform.position.x, gameObject->transform.position.z);
-		// cout << "pos = " << pos << endl;
 		goalVelocity = 6.0f * glm::normalize(goal - pos);
 
 		scene->GetNeighbors(gameObject, 10, neighbors);
@@ -173,7 +170,7 @@ public:
 		gameObject->transform.rotation.y = -atan2(velocity.y, velocity.x) + M_PI / 2.0f;
 
 		auto xzPos = glm::vec2(gameObject->transform.position.x, gameObject->transform.position.z);
-		if (glm::length(goal - xzPos) < 2) {
+		if (glm::length(goal - xzPos) < 4) {
 			velocity = glm::vec2(0);
 			gameObject->GetComponent<RotatingSpheres>()->AddSphere(goalSphere->GetComponent<ModelRenderer>()->model);
 			for (int i = 0; i < NUM_SPHERES; ++i)
@@ -187,12 +184,14 @@ public:
 			int sphere = rand() % (NUM_SPHERES - reached);
 			reached = 0;
 			for (int i = 0; i < NUM_SPHERES; ++i) {
-				if (!spheresReached[i] && reached == sphere) {
-					goalSphere = SPHERES[i];
-					goal = glm::vec2(goalSphere->transform.position.x, goalSphere->transform.position.z);
-				} else {
-					reached++;
-				}
+				if (!spheresReached[i]) {
+					if (reached == sphere) {
+						goalSphere = SPHERES[i];
+						goal = glm::vec2(goalSphere->transform.position.x, goalSphere->transform.position.z);
+					} else {
+						reached++;
+					}
+				} 
 			}
 		}
 	}
@@ -243,10 +242,26 @@ int main(int argc, char* argv[]) {
 	auto camera = scene->GetCamera();
 	camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera, 3));
 
-	auto robot = scene->GetGameObject("robot");
+	/*auto robot = scene->GetGameObject("robot");
 	robot->AddComponent<RotatingSpheres>(new RotatingSpheres(robot, scene));
-	robot->AddComponent<TTCcomponent>(new TTCcomponent(robot, scene));
+	robot->AddComponent<TTCcomponent>(new TTCcomponent(robot, scene));*/
 
+	auto robotModel = ResourceManager::GetModel("robot");
+	cout << "robot meshes: " << robotModel->meshes.size() << endl;
+	for (auto& mesh : robotModel->meshes)
+		cout << "triangles: " << mesh->numTriangles << endl;
+	int SIZE = 10;
+	for (int r = 0; r < SIZE; ++r) {
+		for (int c = 0; c < SIZE; ++c) {
+			Transform t(3.0f * glm::vec3(-SIZE + 4 * c, .1, SIZE - 4 * r), glm::vec3(0), glm::vec3(1));
+			auto g = new GameObject(t);
+			g->AddComponent<ModelRenderer>(new ModelRenderer(g, robotModel.get()));
+			g->AddComponent<RotatingSpheres>(new RotatingSpheres(g, scene));
+			g->AddComponent<TTCcomponent>(new TTCcomponent(g, scene));
+			// g->GetComponent<TTCcomponent>()->goal = glm::vec2(50, -50);
+			scene->AddGameObject(g);
+		}
+	}
 
 	auto skybox = scene->getSkybox();
 

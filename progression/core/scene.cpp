@@ -117,6 +117,7 @@ namespace Progression {
         } else if (light->type == Light::Type::POINT) {
             pointLights_.push_back(light);
         }
+		std::cout << "lights = " << pointLights_.size() << std::endl;
         return true;
     }
 

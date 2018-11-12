@@ -57,7 +57,7 @@ material red
 
 Material
 name yellow
-ke 10 10 0
+ke 5 5 0
 shader default-mesh
 
 Model
