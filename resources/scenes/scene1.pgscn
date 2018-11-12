@@ -25,20 +25,14 @@ name floor
 scale 100 1 100
 model metalFloor
 
-#GameObject
-#name robot
-#position 0 2 0
-#scale 20 20 20
-#model robot
-#
-#GameObject
-#name belt
-#position 0 3 .5
-#scale .9 .9 .9
-#model belt
+GameObject
+name robot
+position 0 2 0
+scale 20 20 20
+model robot
 
 #GameObject
-#name blueSphere1
+#name blueSphere
 #position 3 3.5 .5
 #scale .25 .25 .25
 #model blueSphere

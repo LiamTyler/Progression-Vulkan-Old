@@ -1,0 +1,62 @@
+Resource-file
+filename scenes/demoResources.txt
+
+Camera
+name main-camera
+position 0 5 15
+rotation 0 0 0
+scale 1 1 1
+fov 45
+aspect 16:9
+near-plane .1
+far-plane 300
+primary-camera true
+
+Light
+name mainDirectional
+type directional
+rotation -35 -40 0
+
+Skybox
+name water
+
+GameObject
+name floor
+scale 50 1 50
+model metalFloor
+
+GameObject
+name robot
+position 0 0 0
+scale 1.6 1.6 1.6
+model robot
+
+GameObject
+name blueSphere
+position 25 3 -40
+scale 1 1 1
+model blueSphere
+
+GameObject
+name greenSphere
+position 40 3 10
+scale 1 1 1
+model greenSphere
+
+GameObject
+name redSphere
+position -30 3 -20
+scale 1 1 1
+model redSphere
+
+GameObject
+name yellowSphere
+position -40 3 35
+scale 1 1 1
+model yellowSphere
+
+GameObject
+name orangeSphere
+position 10 3 40
+scale 1 1 1
+model orangeSphere

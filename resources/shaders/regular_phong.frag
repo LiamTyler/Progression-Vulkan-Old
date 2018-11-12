@@ -43,8 +43,7 @@ void main() {
         outColor += lightColor * ka;
         outColor += lightColor * diffuseColor * max(0.0, dot(l, n));
         if (dot(l, n) > EPSILON)
-            outColor += lightColor * ks * pow(max(dot(h, n), 0.0), 4*specular);        
-            // outColor += lightColor * ks * pow(max(dot(reflect(-l, n), e), 0.0), specular);        
+            outColor += lightColor * ks * pow(max(dot(h, n), 0.0), 4*specular);
     }
         
     for (int i = 0; i < numPointLights; ++i) {
@@ -56,7 +55,8 @@ void main() {
         float attenuation = 1.0 / pow(length(lightPos - vertexInEyeSpace), 2.0);
         outColor += lightColor * ka;
         outColor += attenuation * lightColor * diffuseColor * max(0.0, dot(l, n));
-        outColor += attenuation * lightColor * ks * pow(max(dot(h, n), 0.0), specular);        
+        if (dot(l, n) > EPSILON)
+            outColor += lightColor * ks * pow(max(dot(h, n), 0.0), 4*specular);
     }
     
     

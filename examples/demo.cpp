@@ -5,64 +5,10 @@
 #endif
 
 using namespace Progression;
-// using namespace std;
+using namespace std;
 
-class RotateComponent : public Component {
-public:
-	RotateComponent(GameObject* obj, float speed=0.2) :
-		Component(obj),
-		rotSpeed(speed)
-	{
-	}
-
-	~RotateComponent() = default;
-	void Start() {}
-	void Stop() {}
-
-	void Update() {
-		gameObject->transform.rotation.y += rotSpeed * Time::deltaTime();
-	}
-
-	float rotSpeed;
-};
-
-class RotatingSpheres : public Component {
-public:
-	RotatingSpheres(GameObject* obj, Scene* scene, int num = 8, float radius=2, float speed=0.3) :
-		Component(obj),
-		rotSpeed(speed)
-	{
-		for (int i = 0; i < num; ++i) {
-			GameObject* sphere = new GameObject;
-			sphere->AddComponent<ModelRenderer>(new ModelRenderer(sphere, ResourceManager::GetModel("blueSphere").get()));
-			glm::vec3 relPos(0, 1, 0);
-			float angle = 2 * M_PI * i / num;
-			relPos.x = radius * cos(angle);
-			relPos.z = radius * sin(angle);
-			sphere->transform.position = obj->transform.position + relPos;
-			sphere->transform.scale = glm::vec3(.25);
-
-			spheres_.push_back(sphere);
-			pointLights_.push_back(new Light(Light::Type::POINT, spheres_[i]->transform, glm::vec3(0, 0, 1), 5));
-
-			scene->AddGameObject(sphere);
-			scene->AddLight(pointLights_[i]);
-		}
-	}
-
-	~RotatingSpheres() = default;
-	void Start() {}
-	void Stop() {}
-
-	void Update() {
-	}
-
-	std::vector<GameObject*> spheres_;
-	std::vector<Light*> pointLights_;
-	float rotSpeed;
-
-};
-
+#define NUM_SPHERES 5
+GameObject* SPHERES[NUM_SPHERES];
 
 float* genKernel(int size, float sigma) {
 	float* kernel = new float[size];
@@ -80,6 +26,184 @@ float* genKernel(int size, float sigma) {
 
 	return kernel;
 }
+
+glm::vec2 dE(const glm::vec2& pa, const glm::vec2& pb, const glm::vec2& va,
+	const glm::vec2& vb, float ra, float rb)
+{
+	float maxt = 999;
+	auto pDiff = pb - pa;
+	auto vDiff = va - vb;
+	// cout << "pDiff= " << pDiff << " vDiff = " << vDiff << endl;
+	auto radius = ra + rb;
+	auto dist = glm::length(pDiff);
+	if (radius > dist)
+		radius = .99 * dist;
+
+	float a = glm::dot(vDiff, vDiff);
+	float b = glm::dot(vDiff, pDiff);
+	float c = glm::dot(pDiff, pDiff) - radius * radius;
+
+	float disc = b * b - a * c;
+	// cout << "disc = " << disc << ", a = " << a << ", b = " << b << ", c = " << c << endl;
+	if (disc < 0 || abs(a) < 0.001)
+		return glm::vec2(0);
+
+	disc = sqrt(disc);
+	float t = (b - disc) / a;
+	if (t < 0 || t > maxt)
+		return glm::vec2(0);
+
+	float k = 10.5;
+	float m = 2.0;
+	float t0 = 3;
+	return k * exp(-t / t0)*(vDiff - (vDiff*b - pDiff * a) / disc) / (a*pow(t, m))*(m / t + 1.0f / t0);
+}
+
+class RotatingSpheres : public Component {
+public:
+	RotatingSpheres(GameObject* obj, Scene* s, int num = 8, float r=4, float speed=0.3) :
+		Component(obj),
+		rotSpeed(speed),
+		scene(s),
+		radius(r)
+	{
+	}
+
+	void AddSphere(Model* model) {
+		GameObject* sphere = new GameObject;
+		cout << "about to add MR component" << endl;
+		cout << "model = " << model << endl;
+		cout << "model mats = " << model->materials.size() << endl;
+		sphere->AddComponent<ModelRenderer>(new ModelRenderer(sphere, model));
+		cout << "finished adding MR component" << endl;
+		//spheres.push_back(sphere);
+		//pointLights.push_back(new Light(Light::Type::POINT, glm::vec3(0), model->materials[0]->emissive, 5));
+		scene->AddGameObject(sphere);
+		//scene->AddLight(pointLights[pointLights.size() - 1]);
+
+		/*for (int i = 0; i < spheres.size(); ++i) {
+			glm::vec3 relPos(0, gameObject->transform.position.y, 0);
+			float angle = 2 * M_PI * i / spheres.size();
+			relPos.x = radius * cos(angle);
+			relPos.z = radius * sin(angle);
+			sphere->transform.position = gameObject->transform.position + relPos;
+			sphere->transform.scale = glm::vec3(.25);
+		}*/
+	}
+
+	~RotatingSpheres() = default;
+	void Start() {}
+	void Stop() {}
+
+	void Update() {
+	}
+
+	std::vector<GameObject*> spheres;
+	std::vector<Light*> pointLights;
+	Scene* scene;
+	float rotSpeed;
+	float radius;
+};
+
+class TTCcomponent : public Component {
+public:
+	TTCcomponent(GameObject* g, Scene* sc) :
+		Component(g),
+		scene(sc),
+		radius(1.75),
+		force(0),
+		velocity(0),
+		goalVelocity(0),
+		goal(0)
+	{
+		int sphere = rand() % NUM_SPHERES;
+		goalSphere = SPHERES[sphere];
+		goal = glm::vec2(goalSphere->transform.position.x, goalSphere->transform.position.z);
+		cout << "goal = " << goal << endl;
+		memset(spheresReached, 0, sizeof(spheresReached));
+	}
+
+	~TTCcomponent() = default;
+
+	void Start() {}
+	void Stop() {}
+
+	void Update() {
+		glm::vec2 pos = glm::vec2(gameObject->transform.position.x, gameObject->transform.position.z);
+		// cout << "pos = " << pos << endl;
+		goalVelocity = 6.0f * glm::normalize(goal - pos);
+
+		scene->GetNeighbors(gameObject, 10, neighbors);
+		force = 2.0f * (goalVelocity - velocity);
+		force += glm::vec2(2.0f * (rand() / (float)RAND_MAX) - 1.0f, 2.0f * (rand() / (float)RAND_MAX) - 1.0f);
+
+		for (auto& neighbor : neighbors) {
+			auto ttc = neighbor->GetComponent<TTCcomponent>();
+			if (ttc) {
+				glm::vec2 nPos = glm::vec2(neighbor->transform.position.x, neighbor->transform.position.z);
+				// cout << "nPos = " << nPos << endl;
+				auto diff = pos - nPos;
+				float dist = glm::length(diff);
+				float r = radius;
+				if (dist < 2 * r)
+					r = dist / 2.001;
+
+				auto dEdx = dE(pos, nPos, velocity, ttc->velocity, radius, ttc->radius);
+				// std::cout << dEdx << endl;
+				auto FAvoid = -dEdx;
+				float mag = glm::length(FAvoid);
+				float maxF = 25;
+				if (mag > maxF)
+					FAvoid = maxF * FAvoid / mag;
+
+				force += FAvoid;
+			}
+		}
+	}
+
+	void PostUpdate() {
+		float dt = Time::deltaTime();
+		velocity += force * dt;
+		auto dP = velocity * dt;
+		gameObject->transform.position += glm::vec3(dP.x, 0, dP.y);
+		auto xzPos = glm::vec2(gameObject->transform.position.x, gameObject->transform.position.z);
+		if (glm::length(goal - xzPos) < 2) {
+			velocity = glm::vec2(0);
+			cout << "call to AddSphere" << endl;
+			gameObject->GetComponent<RotatingSpheres>()->AddSphere(goalSphere->GetComponent<ModelRenderer>()->model);
+			for (int i = 0; i < NUM_SPHERES; ++i)
+				if (goalSphere == SPHERES[i])
+					spheresReached[i] = true;
+			
+
+			int reached = 0;
+			for (int i = 0; i < NUM_SPHERES; ++i)
+				reached += spheresReached[i];
+			cout << "reached = " << reached << endl;
+			int sphere = rand() % (NUM_SPHERES - reached);
+			cout << "sphere = " << sphere << endl;
+			reached = 0;
+			for (int i = 0; i < NUM_SPHERES; ++i) {
+				if (!spheresReached[i] && reached == sphere) {
+					goalSphere = SPHERES[i];
+					goal = glm::vec2(goalSphere->transform.position.x, goalSphere->transform.position.z);
+				} else {
+					reached++;
+				}
+			}
+		}
+	}
+
+	Scene* scene;
+	float radius;
+	glm::vec2 force;
+	glm::vec2 velocity;
+	glm::vec2 goalVelocity;
+	glm::vec2 goal;
+	GameObject* goalSphere;
+	std::vector<GameObject*> neighbors;
+	bool spheresReached[NUM_SPHERES];
+};
 
 int main(int argc, char* argv[]) {
 	srand(time(NULL));
@@ -100,12 +224,25 @@ int main(int argc, char* argv[]) {
 	std::cout << "\ncopy shader: " << std::endl;
 	Shader copyShader = Shader(PG_ROOT_DIR "resources/shaders/copy.vert", PG_ROOT_DIR "resources/shaders/copy.frag");
 
-	auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/scene1.pgscn");
+	auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/demo.pgscn");
+	const std::string sphereNames[NUM_SPHERES] = {
+		"blueSphere",
+		"greenSphere",
+		"redSphere",
+		"yellowSphere",
+		"orangeSphere",
+	};
+	for (int i = 0; i < NUM_SPHERES; ++i) {
+		SPHERES[i] = scene->GetGameObject(sphereNames[i]);
+		if (SPHERES[i])
+			cout << "spheres[" << i << "] = " << sphereNames[i] << endl;
+	}
 	auto camera = scene->GetCamera();
 	camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera, 3));
 
 	auto robot = scene->GetGameObject("robot");
-	robot->AddComponent< RotatingSpheres>(new RotatingSpheres(robot, scene));
+	robot->AddComponent<RotatingSpheres>(new RotatingSpheres(robot, scene));
+	robot->AddComponent<TTCcomponent>(new TTCcomponent(robot, scene));
 
 
 	auto skybox = scene->getSkybox();
@@ -180,11 +317,18 @@ int main(int argc, char* argv[]) {
             PG::EngineShutdown = true;
 
         scene->Update();
+		auto& gameObjects = scene->GetGameObjects();
+		for (auto& obj : gameObjects) {
+			auto ttc = obj->GetComponent<TTCcomponent>();
+			if (ttc) {
+				ttc->PostUpdate();
+			}
+		}
 
 		graphics::BindFrameBuffer(postProcessFBO);
 
         RenderSystem::Render(scene);
-		
+
 		graphics::BindFrameBuffer(pingPongFBO);
 		copyShader.Enable();
 		glBindVertexArray(quadVAO);
@@ -252,9 +396,7 @@ int main(int argc, char* argv[]) {
 		graphics::ToggleDepthTesting(true);
 		graphics::ToggleDepthBufferWriting(true);
 		
-
 		skybox->Render(*camera);
-		
 
         PG::Window::EndFrame();
     }
