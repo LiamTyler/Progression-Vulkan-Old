@@ -4,6 +4,12 @@
 
 namespace Progression {
 
+	enum class RenderingPipeline {
+		FORWARD,
+		DEFERRED,
+		TILED_DEFERRED
+	};
+
 	class Camera : public GameObject {
 		public:
 			Camera(
@@ -22,11 +28,13 @@ namespace Progression {
 			glm::vec3 GetForwardDir() const;
 			glm::vec3 GetUpDir() const;
 			glm::vec3 GetRightDir() const;
+			RenderingPipeline GetRenderingPipeline() const;
 
 			void SetFOV(float f);
 			void SetAspectRatio(float a);
 			void SetNearPlane(float p);
 			void SetFarPlane(float p);
+			void SetRenderingPipeline(RenderingPipeline p);
 			void UpdateOrientationVectors();
 			void UpdateViewMatrix();
 
@@ -41,6 +49,7 @@ namespace Progression {
 			glm::vec3 currDir_;
 			glm::vec3 currUp_;
 			glm::vec3 currRight_;
+			RenderingPipeline renderingPipeline_;
 	};
 
 } // namespace Progression

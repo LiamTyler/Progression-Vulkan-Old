@@ -58,7 +58,6 @@ namespace Progression {
         shaders_["default-mesh"]->AddUniform("lights");
         shaders_["skybox"] = std::make_shared<Shader>(PG_RESOURCE_DIR "shaders/skybox.vert", PG_RESOURCE_DIR "shaders/skybox.frag");
         materials_["default"] = std::make_shared<Material>();
-        materials_["default"]->shader = shaders_["default-mesh"].get();
         models_["plane"] = LoadModel("models/plane.obj");	
     }
 
@@ -152,13 +151,6 @@ namespace Progression {
                         if (!tex)
                             std::cout << "Warning: Material '" << name << "'s diffuse texture: " << filename << " not yet loaded. Setting to nullptr" << std::endl;
                         material->diffuseTexture = tex.get();
-                    } else if (first == "shader") {
-                        std::string tmp;
-                        ss >> tmp;
-                        auto shader = ResourceManager::GetShader(tmp);
-                        if (!shader)
-                            std::cout << "Warning: Material '" << name << "'s shader: " << tmp << " not yet loaded. Setting to nullptr" << std::endl;
-                        material->shader = shader.get();
                     }
                 }
 
@@ -301,7 +293,6 @@ namespace Progression {
                 diffuseTexNames.push_back("");
             }
 
-            mat->shader = shaders_["default-mesh"].get();
             materials[i] = mat;
         }
 
@@ -390,7 +381,7 @@ namespace Progression {
                     diffuseTex = new Texture(new Image(PG_RESOURCE_DIR + mat.diffuse_texname), true, true, true);
                 }
 
-                currentMaterial = std::make_shared<Material>(ambient, diffuse, specular, emissive, shininess, diffuseTex, shaders_["default-mesh"].get());
+                currentMaterial = std::make_shared<Material>(ambient, diffuse, specular, emissive, shininess, diffuseTex);
             }
 
             std::vector<glm::vec3> verts;

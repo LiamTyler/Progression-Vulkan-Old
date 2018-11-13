@@ -197,7 +197,16 @@ namespace Progression {
                 ss >> tmp;
                 if (tmp == "true")
                     primaryCamera = true;
-            }
+            } else if (first == "rendering-pipeline") {
+				std::string tmp;
+				ss >> tmp;
+				RenderingPipeline pipeline;
+				if (tmp == "deferred")
+					pipeline = RenderingPipeline::DEFERRED;
+				else if (tmp == "tiled-deferred")
+					pipeline = RenderingPipeline::TILED_DEFERRED;
+				camera->SetRenderingPipeline(pipeline);
+			}
         }
 
         scene->AddCamera(camera, primaryCamera);
