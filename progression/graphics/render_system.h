@@ -45,6 +45,14 @@ namespace Progression {
         static unsigned int maxNumLights_;
         static GLuint lightSSBO_;
         static float lightIntensityCutoff_;
+        static GLuint tdGbuffer_;
+        static GLuint tdTextures_[4];
+        static GLuint tdDepth_;
+        static Shader* tdLightingShader_;
+        static GLuint tdLightingOutput_;
+        static Shader* tdCombineShader_;
+        static GLuint tdQuadVAO_;
+        static GLuint tdQuadVBO_;
     };
 
 } // namespace Progression

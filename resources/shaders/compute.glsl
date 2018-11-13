@@ -10,6 +10,7 @@ layout(rgba32f, binding = 4) readonly uniform image2D gSpecularExp;
 
 
 uniform int numPointLights;
+uniform int numDirectionalLights;
 uniform ivec2 screenSize;
 uniform mat4 invProjMatrix;
 
@@ -19,6 +20,7 @@ layout(std430, binding=6) buffer point_light_list
     vec4 lights[];
 };
 
+#define EPSILON 0.000001
 #define MAX_LIGHTS_PER_TILE 600
 shared int tileLightList[MAX_LIGHTS_PER_TILE];
 shared int numLightsInTile;
@@ -80,7 +82,7 @@ void main() {
     
     int threadsPerTile = WORK_GROUP_SIZE * WORK_GROUP_SIZE;
     for (int i = int(gl_LocalInvocationIndex); i < numPointLights; i += threadsPerTile) {
-        vec4 light = lights[2 * i + 0];
+        vec4 light = lights[2 * (numDirectionalLights + i) + 0];
         vec3 pos = light.xyz;
         float r = light.w;
         
@@ -93,7 +95,7 @@ void main() {
                 getSignedDistanceFromPlane(frustumPlanes[3], pos) < r)
                 {
                     uint id = atomicAdd(numLightsInTile, 1);
-                    tileLightList[id] = i;
+                    tileLightList[id] = i + numDirectionalLights;
                 }
         }
     }
@@ -105,10 +107,21 @@ void main() {
     vec3 n            = imageLoad(gNormal, coords).xyz;
     vec3 diffuseColor = imageLoad(gDiffuse, coords).rgb;
     vec4 specExp      = imageLoad(gSpecularExp, coords);
-    
-    vec3 e = normalize(-position);
 
+    vec3 e = normalize(-position);
     vec3 color = vec3(0);
+
+    for (int i = 0; i < numDirectionalLights; ++i) {
+        vec3 lightDir   = lights[2 * i + 0].xyz;
+        vec3 lightColor = lights[2 * i + 1].xyz;
+        vec3 l = normalize(-lightDir);
+        vec3 h = normalize(l + e);
+        // color += lightColor * ka;
+        color += lightColor * diffuseColor * max(0.0, dot(l, n));
+        if (dot(l, n) > EPSILON)
+            color += lightColor * specExp.rgb * pow(max(dot(h, n), 0.0), 4*specExp.a);
+    }
+
     for (int i = 0; i < numLightsInTile; ++i) {
         int lightID = tileLightList[i];
         vec3 lightPos = lights[2 * lightID + 0].xyz;
@@ -118,12 +131,11 @@ void main() {
         vec3 h = normalize(l + e);
         float attenuation = 1.0 / pow(length(lightPos - position), 2.0);
               
-        // Blinn-phong
-        // color += lightColor * ka;
+        // outColor += lightColor * ka;
         color += attenuation * lightColor * diffuseColor * max(0.0, dot(l, n));
-        color += attenuation * lightColor * specExp.rgb * pow(max(dot(h, n), 0.0), specExp.a);
+        if (dot(l, n) > EPSILON)
+            color += lightColor * specExp.rgb * pow(max(dot(h, n), 0.0), 4*specExp.a);
     }
     
     imageStore(img_output, coords, vec4(color, 1));
-    
 }

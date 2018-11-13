@@ -16,8 +16,7 @@ namespace Progression {
 		if (AttachShaderFromFile(GL_VERTEX_SHADER, vertex_file) && AttachShaderFromFile(GL_FRAGMENT_SHADER, frag_file)) {
 			CreateAndLinkProgram();
 			AutoDetectVariables();
-		}
-		else {
+		} else {
 			std::cout << "failed to attach shaders" << std::endl;
 		}
 	}
@@ -138,7 +137,7 @@ namespace Progression {
 			glGetActiveUniform(program_, (GLuint)i, uniformBufSize,
 				&length, &size, &type, uniformName);
 			std::string sName(uniformName);
-			std::cout << "uniform: " << i << " = " << sName << std::endl;
+			// std::cout << "uniform: " << i << " = " << sName << std::endl;
 			// uniformList_[sName] = i;
 			AddUniform(sName);
 		}
