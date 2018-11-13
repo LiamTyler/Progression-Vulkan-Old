@@ -4,10 +4,10 @@
 
 namespace Progression {
 
-	enum class RenderingPipeline {
+	enum RenderingPipeline : uint8_t {
 		FORWARD,
-		DEFERRED,
-		TILED_DEFERRED
+		TILED_DEFERRED,
+        NUM_PIPELINES
 	};
 
 	class Camera : public GameObject {

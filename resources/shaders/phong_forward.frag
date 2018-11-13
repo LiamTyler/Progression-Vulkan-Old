@@ -15,9 +15,13 @@ uniform float specular;
 uniform bool textured;
 uniform sampler2D diffuseTex;
 
-uniform vec3 lights[1000];
 uniform int numDirectionalLights;
 uniform int numPointLights;
+
+layout(std430, binding=6) buffer point_light_list
+{
+    vec4 lights[];
+};
 
 uniform float bloomThreshold;
 
@@ -36,8 +40,8 @@ void main() {
     vec3 outColor = ke;
     
     for (int i = 0; i < numDirectionalLights; ++i) {
-        vec3 lightDir   = lights[2 * i + 0];
-        vec3 lightColor = lights[2 * i + 1];
+        vec3 lightDir   = lights[2 * i + 0].xyz;
+        vec3 lightColor = lights[2 * i + 1].xyz;
         vec3 l = normalize(-lightDir);
         vec3 h = normalize(l + e);
         outColor += lightColor * ka;
@@ -47,8 +51,8 @@ void main() {
     }
         
     for (int i = 0; i < numPointLights; ++i) {
-        vec3 lightPos   = lights[2 * (numDirectionalLights + i) + 0];
-        vec3 lightColor = lights[2 * (numDirectionalLights + i) + 1];
+        vec3 lightPos   = lights[2 * (numDirectionalLights + i) + 0].xyz;
+        vec3 lightColor = lights[2 * (numDirectionalLights + i) + 1].xyz;
 
         vec3 l = normalize(lightPos - vertexInEyeSpace);
         vec3 h = normalize(l + e);

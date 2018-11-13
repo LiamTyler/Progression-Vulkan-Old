@@ -62,7 +62,7 @@ namespace Progression {
         static std::shared_ptr<Texture> LoadTexture(const std::string& relativePath, bool addToManager=true);
         static std::shared_ptr<Skybox> LoadSkybox(const std::string& name, const std::vector<std::string>& textures, bool addToManager=true);
 
-        static std::shared_ptr<Shader> AddShader(Shader& shader, const std::string& name);
+        static std::shared_ptr<Shader> AddShader(Shader&& shader, const std::string& name);
         static std::shared_ptr<Material> AddMaterial(Material& material, const std::string& name);
 
         static std::shared_ptr<Model> LoadOBJ(const std::string& fullPath);

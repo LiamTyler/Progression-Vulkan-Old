@@ -201,8 +201,8 @@ namespace Progression {
 				std::string tmp;
 				ss >> tmp;
 				RenderingPipeline pipeline;
-				if (tmp == "deferred")
-					pipeline = RenderingPipeline::DEFERRED;
+				if (tmp == "forward")
+					pipeline = RenderingPipeline::FORWARD;
 				else if (tmp == "tiled-deferred")
 					pipeline = RenderingPipeline::TILED_DEFERRED;
 				camera->SetRenderingPipeline(pipeline);

@@ -284,7 +284,6 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < pointLights.size(); ++i) {
             float lightRadius = std::sqrtf(scene->GetPointLights()[i]->intensity / cutOffIntensity);
             //lightRadius = 6;
-            //lightBuffer[2 * i + 0] = camera->GetV() * glm::vec4(pointLights[i]->transform.position, lightRadius);
             lightBuffer[2 * i + 0] = V * glm::vec4(pointLights[i]->transform.position, 1);
             lightBuffer[2 * i + 0].w = lightRadius;
             lightBuffer[2 * i + 1] = glm::vec4(pointLights[i]->intensity * pointLights[i]->color, 1);

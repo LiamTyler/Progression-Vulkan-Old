@@ -49,13 +49,10 @@ namespace Progression {
 
     void ResourceManager::Init(const config::Config& config) {
         auto rm = config->get_table("resourceManager");
-		if (rm) {
-
-		}
+		// if (!rm) {
+		// }
 
 		// load defaults
-        shaders_["default-mesh"] = std::make_shared<Shader>(PG_RESOURCE_DIR "shaders/regular_phong.vert", PG_RESOURCE_DIR "shaders/regular_phong.frag");
-        shaders_["default-mesh"]->AddUniform("lights");
         shaders_["skybox"] = std::make_shared<Shader>(PG_RESOURCE_DIR "shaders/skybox.vert", PG_RESOURCE_DIR "shaders/skybox.frag");
         materials_["default"] = std::make_shared<Material>();
         models_["plane"] = LoadModel("models/plane.obj");	
@@ -647,7 +644,7 @@ namespace Progression {
         return materials_[name];
     }
 
-    std::shared_ptr<Shader> ResourceManager::AddShader(Shader& shader, const std::string& name) {
+    std::shared_ptr<Shader> ResourceManager::AddShader(Shader&& shader, const std::string& name) {
         if (shaders_.find(name) != shaders_.end())
             return nullptr;
         shaders_[name] = std::make_shared<Shader>(std::move(shader));

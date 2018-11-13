@@ -37,11 +37,14 @@ namespace Progression {
         static void UploadCameraProjection(Shader& shader, Camera& camera);
         static void UploadMaterial(Shader& shader, Material& material);
 
-    protected:
+    private:
         static std::unordered_map<std::type_index, RenderSubSystem*> subSystems_;
         static std::vector<glm::vec3> lightBuffer_;
         static unsigned int numDirectionalLights_;
         static unsigned int numPointLights_;
+        static unsigned int maxNumLights_;
+        static GLuint lightSSBO_;
+        static float lightIntensityCutoff_;
     };
 
 } // namespace Progression

@@ -3,11 +3,10 @@
     height = 720
 
 [resourceManager]
-    rootDirectory = "C:/Users/Tyler/Documents/Progression/resources/"
 
 [time]
     displayFPS = true
 
-[input]
-
-[render_system]
+[renderSystem]
+    maxNumLights = 10001
+    lightIntensityCutoff = 0.03
