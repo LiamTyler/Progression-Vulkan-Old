@@ -181,7 +181,6 @@ namespace Progression {
                         continue;
                     }
                     auto mat = GetMaterial(material, false);
-					std::cout << "models mat size: " << model->materials.size() << std::endl;
                     for (int i = 0; i < model->materials.size(); ++i)
                         model->materials[i] = mat;
                 }
@@ -344,7 +343,6 @@ namespace Progression {
     }
 
     std::shared_ptr<Model> ResourceManager::LoadOBJ(const std::string& fullPath) {
-		std::cout << "in load obj" << std::endl;
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
         std::vector<tinyobj::material_t> materials;
@@ -440,7 +438,6 @@ namespace Progression {
                 model->materials.push_back(currentMaterial);
             }
         }
-		std::cout << "done with load obj" << std::endl;
 
         return model;
     }

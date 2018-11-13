@@ -12,6 +12,7 @@ in vec2 texCoord;
 uniform vec3 ka;
 uniform vec3 kd;
 uniform vec3 ks;
+uniform vec3 ke;
 uniform float specular;
 
 uniform bool textured;

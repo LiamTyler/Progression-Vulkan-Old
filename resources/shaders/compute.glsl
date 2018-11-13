@@ -95,7 +95,7 @@ void main() {
                 getSignedDistanceFromPlane(frustumPlanes[3], pos) < r)
                 {
                     uint id = atomicAdd(numLightsInTile, 1);
-                    tileLightList[id] = i + numDirectionalLights;
+                    tileLightList[id] = i;
                 }
         }
     }
@@ -124,8 +124,8 @@ void main() {
 
     for (int i = 0; i < numLightsInTile; ++i) {
         int lightID = tileLightList[i];
-        vec3 lightPos = lights[2 * lightID + 0].xyz;
-        vec3 lightColor = lights[2 * lightID + 1].rgb;
+        vec3 lightPos = lights[2 * (lightID + numDirectionalLights) + 0].xyz;
+        vec3 lightColor = lights[2 * (lightID + numDirectionalLights) + 1].rgb;
         
         vec3 l = normalize(lightPos - position);
         vec3 h = normalize(l + e);

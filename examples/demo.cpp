@@ -185,24 +185,6 @@ public:
 				if (goalSphere == SPHERES[i])
 					spheresReached[i] = true;
 			
-
-			/*
-			int reached = 0;
-			for (int i = 0; i < NUM_SPHERES; ++i)
-				reached += spheresReached[i];
-			int sphere = rand() % (NUM_SPHERES - reached);
-			reached = 0;
-			for (int i = 0; i < NUM_SPHERES; ++i) {
-				if (!spheresReached[i]) {
-					if (reached == sphere) {
-						goalSphere = SPHERES[i];
-						goal = glm::vec2(goalSphere->transform.position.x, goalSphere->transform.position.z);
-					} else {
-						reached++;
-					}
-				} 
-			}
-			*/
 			int i = rand() % NUM_SPHERES;
 			while (spheresReached[i])
 				i = rand() % NUM_SPHERES;
@@ -236,12 +218,9 @@ int main(int argc, char* argv[]) {
 
 	PG::EngineInitialize(conf);
 
-	std::cout << "\nbloom combine shader: " << std::endl;
 	Shader bloomCombineShader = Shader(PG_ROOT_DIR "resources/shaders/bloomCombine.vert", PG_ROOT_DIR "resources/shaders/bloomCombine.frag");
-	std::cout << "\nblur shader: " << std::endl;
 	Shader blurShader = Shader(PG_ROOT_DIR "resources/shaders/blur.vert", PG_ROOT_DIR "resources/shaders/blur.frag");
 	blurShader.AddUniform("kernel");
-	std::cout << "\ncopy shader: " << std::endl;
 	Shader copyShader = Shader(PG_ROOT_DIR "resources/shaders/copy.vert", PG_ROOT_DIR "resources/shaders/copy.frag");
 
 	auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/demo.pgscn");
@@ -260,10 +239,6 @@ int main(int argc, char* argv[]) {
 	auto camera = scene->GetCamera();
 	camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera, 3));
 
-	/*auto robot = scene->GetGameObject("robot");
-	robot->AddComponent<RotatingSpheres>(new RotatingSpheres(robot, scene));
-	robot->AddComponent<TTCcomponent>(new TTCcomponent(robot, scene));*/
-
 	auto robotModel = ResourceManager::GetModel("robot");
 	cout << "robot meshes: " << robotModel->meshes.size() << endl;
 	for (auto& mesh : robotModel->meshes)
@@ -276,7 +251,6 @@ int main(int argc, char* argv[]) {
 			g->AddComponent<ModelRenderer>(new ModelRenderer(g, robotModel.get()));
 			g->AddComponent<RotatingSpheres>(new RotatingSpheres(g, scene));
 			g->AddComponent<TTCcomponent>(new TTCcomponent(g, scene));
-			// g->GetComponent<TTCcomponent>()->goal = glm::vec2(50, -50);
 			scene->AddGameObject(g);
 		}
 	}
@@ -359,77 +333,78 @@ int main(int argc, char* argv[]) {
 				ttc->PostUpdate();
 			}
 		}
+		RenderSystem::Render(scene);
 
-		graphics::BindFrameBuffer(postProcessFBO);
+		//graphics::BindFrameBuffer(postProcessFBO);
 
-        RenderSystem::Render(scene);
+  //      RenderSystem::Render(scene);
 
-		graphics::BindFrameBuffer(pingPongFBO);
-		copyShader.Enable();
-		glBindVertexArray(quadVAO);
-		graphics::Bind2DTexture(glowBuffer, copyShader["tex"], 0);
+		//graphics::BindFrameBuffer(pingPongFBO);
+		//copyShader.Enable();
+		//glBindVertexArray(quadVAO);
+		//graphics::Bind2DTexture(glowBuffer, copyShader["tex"], 0);
 
-		divisor = divisorStart;
-		for (int i = 0; i < levels; ++i) {
-			glViewport(0, 0, Window::getWindowSize().x / divisor, Window::getWindowSize().y / divisor);
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, glowBuffers[i][0], 0);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-			divisor *= divisorMult;
-		}
+		//divisor = divisorStart;
+		//for (int i = 0; i < levels; ++i) {
+		//	glViewport(0, 0, Window::getWindowSize().x / divisor, Window::getWindowSize().y / divisor);
+		//	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, glowBuffers[i][0], 0);
+		//	glDrawArrays(GL_TRIANGLES, 0, 6);
+		//	divisor *= divisorMult;
+		//}
 
-		// BLUR
-		blurShader.Enable();
-		glBindVertexArray(quadVAO);
-		graphics::ToggleDepthBufferWriting(false);
-		
-		divisor = divisorStart;
-		for (int i = 0; i < levels; ++i) {
-			glUniform1fv(blurShader["kernel"], kernelSizes[i], kernels[i]);
-			glUniform1i(blurShader["halfKernelWidth"], kernelSizes[i] / 2);
+		//// BLUR
+		//blurShader.Enable();
+		//glBindVertexArray(quadVAO);
+		//graphics::ToggleDepthBufferWriting(false);
+		//
+		//divisor = divisorStart;
+		//for (int i = 0; i < levels; ++i) {
+		//	glUniform1fv(blurShader["kernel"], kernelSizes[i], kernels[i]);
+		//	glUniform1i(blurShader["halfKernelWidth"], kernelSizes[i] / 2);
 
-			glViewport(0, 0, Window::getWindowSize().x / divisor, Window::getWindowSize().y / divisor);
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, glowBuffers[i][1], 0);
-			graphics::Bind2DTexture(glowBuffers[i][0], blurShader["tex"], 0);
-			glUniform2f(blurShader["offset"], static_cast<float>(divisor) / Window::getWindowSize().x, 0);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
+		//	glViewport(0, 0, Window::getWindowSize().x / divisor, Window::getWindowSize().y / divisor);
+		//	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, glowBuffers[i][1], 0);
+		//	graphics::Bind2DTexture(glowBuffers[i][0], blurShader["tex"], 0);
+		//	glUniform2f(blurShader["offset"], static_cast<float>(divisor) / Window::getWindowSize().x, 0);
+		//	glDrawArrays(GL_TRIANGLES, 0, 6);
 
-			graphics::Bind2DTexture(glowBuffers[i][1], blurShader["tex"], 0);
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, glowBuffers[i][0], 0);
-			glUniform2f(blurShader["offset"], 0, static_cast<float>(divisor) / Window::getWindowSize().y);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-			divisor *= divisorMult;
-		}
-		
-		graphics::ToggleDepthBufferWriting(true);
+		//	graphics::Bind2DTexture(glowBuffers[i][1], blurShader["tex"], 0);
+		//	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, glowBuffers[i][0], 0);
+		//	glUniform2f(blurShader["offset"], 0, static_cast<float>(divisor) / Window::getWindowSize().y);
+		//	glDrawArrays(GL_TRIANGLES, 0, 6);
+		//	divisor *= divisorMult;
+		//}
+		//
+		//graphics::ToggleDepthBufferWriting(true);
 
-		graphics::BindFrameBuffer(0);
-		glViewport(0, 0, Window::getWindowSize().x, Window::getWindowSize().y);
+		//graphics::BindFrameBuffer(0);
+		//glViewport(0, 0, Window::getWindowSize().x, Window::getWindowSize().y);
 
-		glClearColor(0, 0, 0, 1);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-
-		graphics::ToggleDepthBufferWriting(false);
-		graphics::ToggleDepthTesting(false);
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, postProcessFBO);
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-		glBlitFramebuffer(0, 0, Window::getWindowSize().x, Window::getWindowSize().y, 0, 0, Window::getWindowSize().x, Window::getWindowSize().y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-		
-
-		bloomCombineShader.Enable();
-		glUniform1f(bloomCombineShader["bloomIntensity"], 1.0f);
-		glUniform1f(bloomCombineShader["exposure"], 1);
-		glBindVertexArray(quadVAO);
-		graphics::Bind2DTexture(mainBuffer, bloomCombineShader["originalColor"], 0);
-		graphics::Bind2DTexture(glowBuffers[0][0], bloomCombineShader["blur1"], 1);
-		graphics::Bind2DTexture(glowBuffers[1][0], bloomCombineShader["blur2"], 2);
-		graphics::Bind2DTexture(glowBuffers[2][0], bloomCombineShader["blur3"], 3);
-		graphics::Bind2DTexture(glowBuffers[3][0], bloomCombineShader["blur4"], 4);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+		//glClearColor(0, 0, 0, 1);
+		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-		graphics::ToggleDepthTesting(true);
-		graphics::ToggleDepthBufferWriting(true);
+		//graphics::ToggleDepthBufferWriting(false);
+		//graphics::ToggleDepthTesting(false);
+		//glBindFramebuffer(GL_READ_FRAMEBUFFER, postProcessFBO);
+		//glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		//glBlitFramebuffer(0, 0, Window::getWindowSize().x, Window::getWindowSize().y, 0, 0, Window::getWindowSize().x, Window::getWindowSize().y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+		//
+
+		//bloomCombineShader.Enable();
+		//glUniform1f(bloomCombineShader["bloomIntensity"], 1.0f);
+		//glUniform1f(bloomCombineShader["exposure"], 1);
+		//glBindVertexArray(quadVAO);
+		//graphics::Bind2DTexture(mainBuffer, bloomCombineShader["originalColor"], 0);
+		//graphics::Bind2DTexture(glowBuffers[0][0], bloomCombineShader["blur1"], 1);
+		//graphics::Bind2DTexture(glowBuffers[1][0], bloomCombineShader["blur2"], 2);
+		//graphics::Bind2DTexture(glowBuffers[2][0], bloomCombineShader["blur3"], 3);
+		//graphics::Bind2DTexture(glowBuffers[3][0], bloomCombineShader["blur4"], 4);
+		//glDrawArrays(GL_TRIANGLES, 0, 6);
+
+
+		//graphics::ToggleDepthTesting(true);
+		//graphics::ToggleDepthBufferWriting(true);
 		
 		skybox->Render(*camera);
 

@@ -34,7 +34,7 @@ namespace Progression {
             glGenVertexArrays(1, &vao);
             glBindVertexArray(vao);
             GLuint* vbos_ = &mr->mesh->vbos[0];
-            Shader& shader = *pipelineShaders[RenderingPipeline::FORWARD];
+            Shader& shader = *pipelineShaders[RenderingPipeline::TILED_DEFERRED];
 
             glBindBuffer(GL_ARRAY_BUFFER, vbos_[Mesh::vboName::VERTEX]);
             glEnableVertexAttribArray(shader["vertex"]);
@@ -67,7 +67,8 @@ namespace Progression {
     void MeshRenderSubSystem::Render(Scene* scene, Camera& camera) {
         auto& shader = *pipelineShaders[camera.GetRenderingPipeline()];
         shader.Enable();
-        RenderSystem::UploadLights(shader);
+		if (camera.GetRenderingPipeline() == RenderingPipeline::FORWARD)
+			RenderSystem::UploadLights(shader);
         RenderSystem::UploadCameraProjection(shader, camera);
         for (const auto& mr : meshRenderers) {
             glBindVertexArray(mr->vao);

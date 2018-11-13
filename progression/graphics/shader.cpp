@@ -132,7 +132,7 @@ namespace Progression {
 		glGetProgramiv(program_, GL_ACTIVE_UNIFORM_MAX_LENGTH, &uniformBufSize);
 		GLchar* uniformName = new GLchar[uniformBufSize];
 		glGetProgramiv(program_, GL_ACTIVE_UNIFORMS, &count);
-		std::cout << "num uniforms: " << count << std::endl;
+		// std::cout << "num uniforms: " << count << std::endl;
 		for (i = 0; i < count; i++) {
 			glGetActiveUniform(program_, (GLuint)i, uniformBufSize,
 				&length, &size, &type, uniformName);
@@ -186,6 +186,7 @@ namespace Progression {
 		if (it != attributeList_.end())
 			return it->second;
 
+		// std::cout << "uniform '" << name << "' not found!" << std::endl;
 		return -1;
 	}
 

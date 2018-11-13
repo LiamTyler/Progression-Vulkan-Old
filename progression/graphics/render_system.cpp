@@ -35,7 +35,28 @@ namespace Progression {
         }
         maxNumLights_ = rsConfig->get_as<int>("maxNumLights").value_or(10001);
         lightIntensityCutoff_ = rsConfig->get_as<float>("lightIntensityCutoff").value_or(0.03f);
+		std::cout << "max Lights = " << maxNumLights_ << std::endl;
+		std::cout << "lightIntensityCutoff_ = " << lightIntensityCutoff_ << std::endl;
+		std::cout << "window size = " << Window::getWindowSize().x << " " << Window::getWindowSize().y << std::endl;
 
+		tdCombineShader_ = new Shader(PG_RESOURCE_DIR "shaders/deferred_combine.vert", PG_RESOURCE_DIR "shaders/deferred_combine.frag");
+
+		float quadVerts[] = {
+			-1, 1,
+			-1, -1,
+			1, -1,
+
+			-1, 1,
+			1, -1,
+			1, 1
+		};
+		glGenVertexArrays(1, &tdQuadVAO_);
+		glBindVertexArray(tdQuadVAO_);
+		glGenBuffers(1, &tdQuadVBO_);
+		glBindBuffer(GL_ARRAY_BUFFER, tdQuadVBO_);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVerts), quadVerts, GL_STATIC_DRAW);
+		glEnableVertexAttribArray((*tdCombineShader_)["vertex"]);
+		glVertexAttribPointer((*tdCombineShader_)["vertex"], 2, GL_FLOAT, GL_FALSE, 0, 0);
 
         tdGbuffer_     = graphics::CreateFrameBuffer();
         tdTextures_[0] = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA32F);
@@ -45,7 +66,7 @@ namespace Progression {
 
         graphics::AttachColorTexturesToFBO({ tdTextures_[0], tdTextures_[1], tdTextures_[2], tdTextures_[3] });
 
-        GLuint tdDepth_ = graphics::CreateRenderBuffer(Window::getWindowSize().x, Window::getWindowSize().y);
+        tdDepth_ = graphics::CreateRenderBuffer(Window::getWindowSize().x, Window::getWindowSize().y);
         graphics::AttachRenderBufferToFBO(tdDepth_);
         graphics::FinalizeFBO();
         graphics::BindFrameBuffer();
@@ -69,26 +90,6 @@ namespace Progression {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSSBO_);
         glBufferData(GL_SHADER_STORAGE_BUFFER, 2 * sizeof(glm::vec4) * maxNumLights_, NULL, GL_STREAM_COPY);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, lightSSBO_);
-
-        tdCombineShader_ = new Shader(PG_RESOURCE_DIR "shaders/deferred_combine.vert", PG_RESOURCE_DIR "shaders/deferred_combine.frag");
-
-        float quadVerts[] = {
-            -1, 1,
-            -1, -1,
-            1, -1,
-
-            -1, 1,
-            1, -1,
-            1, 1
-        };
-        glGenVertexArrays(1, &tdQuadVAO_);
-        glBindVertexArray(tdQuadVAO_);
-        glGenBuffers(1, &tdQuadVBO_);
-        glBindBuffer(GL_ARRAY_BUFFER, tdQuadVBO_);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVerts), quadVerts, GL_STATIC_DRAW);
-        glEnableVertexAttribArray((*tdCombineShader_)["vertex"]);
-        glVertexAttribPointer((*tdCombineShader_)["vertex"], 2, GL_FLOAT, GL_FALSE, 0, 0);
-
     }
 
     // TODO: Actually release the openGL stuff!
@@ -123,7 +124,7 @@ namespace Progression {
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             graphics::Clear();
 
-            // blit the deferred depth buffer to the main screen
+            //// blit the deferred depth buffer to the main screen
             glBindFramebuffer(GL_READ_FRAMEBUFFER, tdGbuffer_);
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
             glBlitFramebuffer(0, 0, Window::getWindowSize().x, Window::getWindowSize().y, 0, 0, Window::getWindowSize().x, Window::getWindowSize().y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
@@ -182,7 +183,7 @@ namespace Progression {
         }
         numDirectionalLights_ = i;
 
-        for (int i = 0; i < pointLights.size() && (i + dirLights.size()) < maxNumLights_; ++i) {
+        for (i = 0; i < pointLights.size() && (i + dirLights.size()) < maxNumLights_; ++i) {
             float lightRadius = sqrtf(pointLights[i]->intensity / lightIntensityCutoff_);
             lightBuffer[2 * (numDirectionalLights_ + i) + 0] = V * glm::vec4(pointLights[i]->transform.position, 1);
             lightBuffer[2 * (numDirectionalLights_ + i) + 0].w = lightRadius;
