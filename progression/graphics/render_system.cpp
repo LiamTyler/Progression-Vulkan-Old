@@ -35,9 +35,6 @@ namespace Progression {
         }
         maxNumLights_ = rsConfig->get_as<int>("maxNumLights").value_or(10001);
         lightIntensityCutoff_ = rsConfig->get_as<float>("lightIntensityCutoff").value_or(0.03f);
-		std::cout << "max Lights = " << maxNumLights_ << std::endl;
-		std::cout << "lightIntensityCutoff_ = " << lightIntensityCutoff_ << std::endl;
-		std::cout << "window size = " << Window::getWindowSize().x << " " << Window::getWindowSize().y << std::endl;
 
 		tdCombineShader_ = new Shader(PG_RESOURCE_DIR "shaders/deferred_combine.vert", PG_RESOURCE_DIR "shaders/deferred_combine.frag");
 
@@ -98,6 +95,7 @@ namespace Progression {
             delete subsys.second;
     }
 
+	// TODO: Give a warning message if there is no camera, and return
     void RenderSystem::Render(Scene* scene, Camera* camera) {
         if (!camera) {
             camera = scene->GetCamera(0);

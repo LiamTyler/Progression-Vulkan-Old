@@ -20,6 +20,7 @@ namespace Progression {
             delete o;
     }
 
+	// TODO: Fix the need for a newline at the end of a file (if this is still a problem)
     Scene* Scene::Load(const std::string& filename) {
         std::filesystem::path path(filename);
         if (!std::filesystem::exists(path)) {
