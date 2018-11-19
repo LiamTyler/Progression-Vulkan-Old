@@ -1,0 +1,38 @@
+Skybox
+name water
+right skybox/water/right.jpg
+left skybox/water/left.jpg
+top skybox/water/top.jpg
+bottom skybox/water/bottom.jpg
+front skybox/water/front.jpg
+back skybox/water/back.jpg
+
+Material
+name metalBall
+ka 0 0 0
+kd 1 1 1
+#ks .1 .1 .1
+ks 0 0 0
+ns 50
+diffuseTex textures/metal.jpg
+shader default-mesh
+
+Material
+name metalFloor
+ka 0 0 0
+kd 1 1 1
+ks .1 .1 .1
+ns 50
+diffuseTex textures/metal2.jpg
+shader default-mesh
+
+Model
+name metalBall
+filename models/sphere2.obj
+material metalBall
+
+Model
+name metalFloor
+filename models/plane.obj
+material metalFloor
+

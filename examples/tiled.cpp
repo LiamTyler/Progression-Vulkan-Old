@@ -58,179 +58,98 @@ public:
 int main(int argc, char* argv[]) {
     srand(time(NULL));
 
-    rootDirectory = "C:/Users/Liam Tyler/Documents/Progression/";
+	auto conf = PG::config::Config(PG_ROOT_DIR "configs/bouncing_ball.toml");
+	if (!conf) {
+		std::cout << "could not parse config file" << std::endl;
+		exit(0);
+	}
 
-    auto& conf = PG::config::Config(rootDirectory + "configs/default.yaml");
+	PG::EngineInitialize(conf);
+	auto scene = Scene::Load(PG_RESOURCE_DIR "scenes/bouncing_ball.pgscn");
 
-    PG::EngineInitialize(conf);
+	auto skybox = scene->getSkybox();
 
-    Shader deferredShader = Shader(rootDirectory + "resources/shaders/deferred_phong.vert", rootDirectory + "resources/shaders/deferred_phong.frag");
-    Shader combineShader = Shader(rootDirectory + "resources/shaders/deferred_combine.vert", rootDirectory + "resources/shaders/deferred_combine.frag");
-    
-    float quadVerts[] = {
-        -1, 1,
-        -1, -1,
-        1, -1,
+	auto camera = scene->GetCamera();
+	camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera, 15));
+	camera->SetRenderingPipeline(RenderingPipeline::TILED_DEFERRED);
 
-        -1, 1,
-        1, -1,
-        1, 1
-    };
-    GLuint quadVAO;
-    GLuint quadVBO;
-    glGenVertexArrays(1, &quadVAO);
-    glBindVertexArray(quadVAO);
-    glGenBuffers(1, &quadVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVerts), quadVerts, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(combineShader["vertex"]);
-    glVertexAttribPointer(combineShader["vertex"], 2, GL_FLOAT, GL_FALSE, 0, 0);
+	auto ballModel = ResourceManager::GetModel("metalBall");
+	auto planeModel = ResourceManager::GetModel("metalFloor");
 
-	auto scene = Scene::Load(rootDirectory + "resources/scenes/scene1.pgscn");
+	int X, Z, startX, startZ;
+	float DX, DZ;
 
-    auto camera = scene->GetCamera();
-    camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera, 15));
+	int numBalls;
+	auto val = conf->get_table("app");
+	numBalls = *val->get_as<int>("numBalls");
 
-    auto ballModel = ResourceManager::GetModel("metalBall");
-    auto planeModel = ResourceManager::GetModel("metalFloor");
+	if (numBalls == 100) {
+		X = 1;
+		Z = 1;
+		startX = 0;
+		startZ = 0;
+		DX = 10;
+		DZ = 10;
+	} else if (numBalls == 400) {
+		X = 20;
+		Z = 20;
+		startX = -X;
+		startZ = -Z;
+		DX = 1;
+		DZ = 1;
+	} else if (numBalls == 1000) {
+		X = 32;
+		Z = 32;
+		startX = -X;
+		startZ = -Z;
+		DX = 1;
+		DZ = 1;
+	} else if (numBalls == 4000) {
+		X = 64;
+		Z = 64;
+		startX = -X;
+		startZ = -Z;
+		DX = 1;
+		DZ = 1;
+	} else if (numBalls == 10000) {
+		X = 100;
+		Z = 100;
+		startX = -X;
+		startZ = -Z;
+		DX = 1;
+		DZ = 1;
+	}
 
-    int X, Z, startX, startZ;
-    float DX, DZ;
+	float intensity = *val->get_as<float>("intensity");
+	float cutOffIntensity = 0.03;
+	for (float x = 0; x < X; x += DX) {
+		for (float z = 0; z < Z; z += DZ) {
+			float randHeight = 3 + 2 * (rand() / static_cast<float>(RAND_MAX));
+			glm::vec3 pos = glm::vec3(startX + 2 * x, randHeight, startZ + 2 * z);
+			GameObject* ballObj = new GameObject(Transform(pos, glm::vec3(0), glm::vec3(.5)));
+			ballObj->AddComponent<ModelRenderer>(new ModelRenderer(ballObj, ballModel.get()));
+			ballObj->AddComponent<BounceComponent>(new BounceComponent(ballObj));
+			ballObj->boundingBox.Encompass(BoundingBox(glm::vec3(-1), glm::vec3(1)), ballObj->transform);
 
-    bool single = false;
-    bool fourH = false;
-    bool oneK = false;
-    bool fourK = false;
-    bool tenK = true;
+			glm::vec3 randColor = glm::vec3((rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)));
+			PG::Light* pl = new Light(PG::Light::Type::POINT, pos, randColor, intensity);
+			pl->AddComponent<LightBallComponent>(new LightBallComponent(pl, ballObj));
+			float lightRadius = std::sqrtf(intensity / cutOffIntensity);
+			// lightRadius = 4;
+			pl->boundingBox.Encompass(BoundingBox(glm::vec3(-1), glm::vec3(1)), Transform(pl->transform.position, glm::vec3(0), glm::vec3(lightRadius)));
 
-    if (single) {
-        X = 1;
-        Z = 1;
-        startX = 0;
-        startZ = 0;
-        DX = 10;
-        DZ = 10;
-    }
-    if (fourH) {
-        X = 20;
-        Z = 20;
-        startX = -X;
-        startZ = -Z;
-        DX = 1;
-        DZ = 1;
-    }
-    if (oneK) {
-        X = 32;
-        Z = 32;
-        startX = -X;
-        startZ = -Z;
-        DX = 1;
-        DZ = 1;
-    }
-    if (fourK) {
-        X = 64;
-        Z = 64;
-        startX = -X;
-        startZ = -Z;
-        DX = 1;
-        DZ = 1;
-    }
-    if (tenK) {
-        X = 100;
-        Z = 100;
-        startX = -X;
-        startZ = -Z;
-        DX = 1;
-        DZ = 1;
-    }
+			scene->AddGameObject(ballObj);
+			scene->AddLight(pl);
+		}
+	}
+	std::cout << "light Radius = " << std::sqrtf(intensity / cutOffIntensity) << std::endl;
 
-    float intensity = 2;
-    float cutOffIntensity = 0.03;
-    for (float x = 0; x < X; x += DX) {
-        for (float z = 0; z < Z; z += DZ) {
-            float randHeight = 3 + 2 * (rand() / static_cast<float>(RAND_MAX));
-            glm::vec3 pos = glm::vec3(startX + 2 * x, randHeight, startZ + 2 * z);
-            GameObject* ballObj = new GameObject(Transform(pos, glm::vec3(0), glm::vec3(.5)));
-            ballObj->AddComponent<ModelRenderer>(new ModelRenderer(ballObj, ballModel.get()));
-            ballObj->AddComponent<BounceComponent>(new BounceComponent(ballObj));
-            ballObj->boundingBox.Encompass(BoundingBox(glm::vec3(-1), glm::vec3(1)), ballObj->transform);
+	GameObject* planeObj = scene->GetGameObject("floor");
+	planeObj->AddComponent<ModelRenderer>(new ModelRenderer(planeObj, planeModel.get()));
 
-            glm::vec3 randColor = glm::vec3((rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)));
-            PG::Light* pl = new Light(PG::Light::Type::POINT, pos, randColor, intensity);
-            pl->AddComponent<LightBallComponent>(new LightBallComponent(pl, ballObj));
-            float lightRadius = std::sqrtf(intensity / cutOffIntensity);
-            // lightRadius = 4;
-            pl->boundingBox.Encompass(BoundingBox(glm::vec3(-1), glm::vec3(1)), Transform(pl->transform.position, glm::vec3(0), glm::vec3(lightRadius)));
-
-            scene->AddGameObject(ballObj);
-            scene->AddLight(pl);
-        }
-    }
-    std::cout << "light Radius = " << std::sqrtf(intensity / cutOffIntensity) << std::endl;
-    
-    GameObject* planeObj = scene->GetGameObject("floor");
-    planeObj->AddComponent<ModelRenderer>(new ModelRenderer(planeObj, planeModel.get()));
-    float e = 100;
-    planeObj->boundingBox = BoundingBox(glm::vec3(-e, -.1, -e), glm::vec3(e, .1, e));
-    
-    auto skybox = scene->getSkybox();
-
-    GLuint gBuffer = graphics::CreateFrameBuffer();
-    GLuint gPosition = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA32F);
-    GLuint gNormal = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA32F);
-    GLuint gDiffuse = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA);
-    GLuint gSpecularExp = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA32F);
-
-    graphics::AttachColorTexturesToFBO({ gPosition, gNormal, gDiffuse, gSpecularExp });
-
-    GLuint rboDepth = graphics::CreateRenderBuffer(Window::getWindowSize().x, Window::getWindowSize().y);
-    graphics::AttachRenderBufferToFBO(rboDepth);
-    graphics::FinalizeFBO();
-
-    graphics::BindFrameBuffer();
-
-    // Note: After changing the input mode, should poll for events again
-    Window::SetRelativeMouse(true);
-    PG::Input::PollEvents();
-
-    graphics::ToggleDepthTesting(true);
-    Time::Restart();
-
-    Shader computeShader;
-    computeShader.AttachShaderFromFile(GL_COMPUTE_SHADER, rootDirectory + "resources/shaders/compute.glsl");
-    computeShader.CreateAndLinkProgram();
-    std::cout << "compute shader uniforms" << std::endl;
-    computeShader.AutoDetectVariables();
-
-
-    GLuint computeOutput;
-    glGenTextures(1, &computeOutput);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, computeOutput);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, Window::getWindowSize().x, Window::getWindowSize().y, 0, GL_RGBA, GL_FLOAT, NULL);
-    glBindImageTexture(0, computeOutput, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-    // point
-    GLuint lightSSBO;
-    glGenBuffers(1, &lightSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSSBO);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, 2 * sizeof(glm::vec4) * scene->GetNumPointLights(), NULL, GL_STREAM_COPY);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, lightSSBO);
-    GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_UNSYNCHRONIZED_BIT;
-    glm::vec4* lightBuf = (glm::vec4*) glMapBufferRange( GL_SHADER_STORAGE_BUFFER, 0, 2 * sizeof(glm::vec4) * scene->GetNumPointLights(), bufMask);
-    for( int i = 0; i < scene->GetNumPointLights(); i++) {
-        float cutOffIntensity = 0.03;
-        float lightRadius = std::sqrtf(scene->GetPointLights()[i]->intensity / cutOffIntensity);
-        // lightBuffer[2 * i + 0] = camera->GetV() * glm::vec4(scene->GetPointLights()[i]->transform.position, 1);
-        lightBuf[2 * i + 0] = camera->GetV() * glm::vec4(scene->GetPointLights()[i]->transform.position, 1);
-        lightBuf[2 * i + 0].w = lightRadius;
-        lightBuf[2 * i + 1] = glm::vec4(scene->GetPointLights()[i]->intensity * scene->GetPointLights()[i]->color, 1);
-    }
-    glUnmapBuffer( GL_SHADER_STORAGE_BUFFER );
+	// Note: After changing the input mode, should poll for events again
+	Window::SetRelativeMouse(true);
+	PG::Input::PollEvents();
 
     // Game loop
     while (!PG::EngineShutdown) {
@@ -242,6 +161,8 @@ int main(int argc, char* argv[]) {
 
         scene->Update();
 
+		RenderSystem::Render(scene);
+		/*
         // RenderSystem::UpdateLights(scene, camera);
 
         graphics::BindFrameBuffer(gBuffer);
@@ -317,9 +238,11 @@ int main(int argc, char* argv[]) {
         graphics::ToggleDepthBufferWriting(true);
 
         skybox->Render(*camera);
+		*/
 
-        
-        PG::Window::EndFrame();
+		skybox->Render(*camera);
+
+		PG::Window::EndFrame();
     }
 
     PG::EngineQuit();

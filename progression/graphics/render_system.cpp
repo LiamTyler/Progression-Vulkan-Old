@@ -138,7 +138,7 @@ namespace Progression {
 		postProcessingData_.bloomLevels = 4;
 		postProcessingData_.exposure = 1;
 		postProcessingData_.bloomIntensity = 1;
-		options_ |= BLOOM;
+		//options_ |= BLOOM;
 
 		int divisor = 2;
 		for (int i = 0; i < 4; ++i) {

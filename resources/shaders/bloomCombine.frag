@@ -36,4 +36,5 @@ void main() {
     mapped = pow(mapped, vec3(1.0 / gamma));
 	
 	finalColor = vec4(mapped, 1.0);
+	finalColor.rgb = hdrColor;
 }
