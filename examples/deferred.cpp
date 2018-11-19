@@ -104,13 +104,21 @@ int main(int argc, char* argv[]) {
 	auto val = conf->get_table("app");
 	numBalls = *val->get_as<int>("numBalls");
 
-	if (numBalls == 100) {
-		X = 1;
-		Z = 1;
+	if (numBalls == 9) {
+		X = 3;
+		Z = 3;
 		startX = 0;
 		startZ = 0;
-		DX = 10;
-		DZ = 10;
+		DX = 1;
+		DZ = 1;
+	}
+	else if (numBalls == 100) {
+		X = 10;
+		Z = 10;
+		startX = 0;
+		startZ = 0;
+		DX = 1;
+		DZ = 1;
 	}
 	else if (numBalls == 400) {
 		X = 20;
