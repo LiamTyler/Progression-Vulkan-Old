@@ -176,6 +176,22 @@ namespace Progression {
 		uniformList_[uniform] = glGetUniformLocation(program_, uniform.c_str());
 	}
 
+	GLuint Shader::GetUniform(const std::string& name) const {
+		auto it = uniformList_.find(name);
+		if (it == uniformList_.end())
+			return -1;
+		else
+			return it->second;
+	}
+
+	GLuint Shader::GetAttribute(const std::string& name) const {
+		auto it = attributeList_.find(name);
+		if (it == attributeList_.end())
+			return -1;
+		else
+			return it->second;
+	}
+
 	GLuint Shader::operator[] (const std::string& name) const {		
 		std::unordered_map<std::string, GLuint>::const_iterator it = uniformList_.find(name);
         // assert(it != uniformList_.end());

@@ -11,6 +11,7 @@ aspect 16:9
 near-plane .1
 far-plane 300
 primary-camera true
+rendering-pipeline tiled-deferred
 
 Light
 name mainDirectional
@@ -31,8 +32,3 @@ position 0 2 0
 scale 20 20 20
 model robot
 
-#GameObject
-#name blueSphere
-#position 3 3.5 .5
-#scale .25 .25 .25
-#model blueSphere

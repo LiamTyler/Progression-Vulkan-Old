@@ -18,7 +18,7 @@ uniform sampler2D diffuseTex;
 uniform int numDirectionalLights;
 uniform int numPointLights;
 
-layout(std430, binding=6) buffer point_light_list
+layout(std430, binding=10) buffer point_light_list
 {
     vec4 lights[];
 };

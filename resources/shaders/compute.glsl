@@ -1,12 +1,14 @@
 #version 430
 #define WORK_GROUP_SIZE 16
 layout(local_size_x = WORK_GROUP_SIZE, local_size_y = WORK_GROUP_SIZE) in;
-layout(rgba32f, binding = 0) writeonly uniform image2D img_output;
+layout(rgba16f, binding = 0) writeonly uniform image2D imgOutput;
+layout(rgba16f, binding = 1) writeonly uniform image2D bloomOutput;
 
-layout(rgba32f, binding = 1) readonly uniform image2D gPosition;
-layout(rgba32f, binding = 2) readonly uniform image2D gNormal;
-layout(rgba8, binding = 3) readonly uniform image2D gDiffuse;
-layout(rgba32f, binding = 4) readonly uniform image2D gSpecularExp;
+layout(rgba32f, binding = 2) readonly uniform image2D gPosition;
+layout(rgba32f, binding = 3) readonly uniform image2D gNormal;
+layout(rgba8, binding = 4) readonly uniform image2D gDiffuse;
+layout(rgba32f, binding = 5) readonly uniform image2D gSpecularExp;
+layout(rgba16f, binding = 6) readonly uniform image2D gEmissive;
 
 
 uniform int numPointLights;
@@ -15,7 +17,7 @@ uniform ivec2 screenSize;
 uniform mat4 invProjMatrix;
 
 
-layout(std430, binding=6) buffer point_light_list
+layout(std430, binding=10) buffer point_light_list
 {
     vec4 lights[];
 };
@@ -109,7 +111,7 @@ void main() {
     vec4 specExp      = imageLoad(gSpecularExp, coords);
 
     vec3 e = normalize(-position);
-    vec3 color = vec3(0);
+    vec3 color = imageLoad(gEmissive, coords).rgb;
 
     for (int i = 0; i < numDirectionalLights; ++i) {
         vec3 lightDir   = lights[2 * i + 0].xyz;
@@ -137,5 +139,13 @@ void main() {
             color += lightColor * specExp.rgb * pow(max(dot(h, n), 0.0), 4*specExp.a);
     }
     
-    imageStore(img_output, coords, vec4(color, 1));
+    imageStore(imgOutput, coords, vec4(color, 1));
+    
+    vec3 brightnessVec = vec3(0.2126, 0.7152, 0.0722);
+	// vec3 brightnessVec = vec3(0.299, 0.587, 0.114);
+    vec4 glowColor = vec4(0, 0, 0, 1);
+	if (dot(brightnessVec, color) > 1)
+		glowColor = vec4(color, 1);
+
+    imageStore(bloomOutput, coords, glowColor);
 }
