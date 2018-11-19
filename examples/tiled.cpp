@@ -159,6 +159,9 @@ int main(int argc, char* argv[]) {
 	Window::SetRelativeMouse(true);
 	PG::Input::PollEvents();
 
+	while (!PG::Input::GetKeyDown(PG::PG_K_P))
+		PG::Input::PollEvents();
+
     // Game loop
     while (!PG::EngineShutdown) {
         PG::Window::StartFrame();
