@@ -23,32 +23,18 @@ namespace Progression {
 
         static void LoadResourceFile(const std::string& relativePath);
         
-        static std::shared_ptr<Model> GetModel(const std::string& name, bool shallowCopy = true) {
+        static std::shared_ptr<Model> GetModel(const std::string& name, bool shallowCopy = false) {
             if (models_.find(name) == models_.end()) {
                 return nullptr;
-            } else {
-                std::shared_ptr<Model> ret;
-                if (shallowCopy) {
-                    ret = std::make_shared<Model>(*models_[name]);
-                } else {
-                    ret = models_[name];
-                }
-                return ret;
             }
+			return models_[name];
         }
 
-        static std::shared_ptr<Material> GetMaterial(const std::string& name, bool shallowCopy = true) {
+        static std::shared_ptr<Material> GetMaterial(const std::string& name, bool shallowCopy = false) {
             if (materials_.find(name) == materials_.end()) {
                 return nullptr;
-            } else {
-                std::shared_ptr<Material> ret;
-                if (shallowCopy) {
-                    ret = std::make_shared<Material>(*materials_[name]);
-                } else {
-                    ret = materials_[name];
-                }
-                return ret;
             }
+			return materials_[name];
         }
 
         static std::shared_ptr<Shader> GetShader(const std::string& name) {
@@ -76,13 +62,14 @@ namespace Progression {
         static std::shared_ptr<Texture> LoadTexture(const std::string& relativePath, bool addToManager=true);
         static std::shared_ptr<Skybox> LoadSkybox(const std::string& name, const std::vector<std::string>& textures, bool addToManager=true);
 
-        static std::shared_ptr<Shader> AddShader(Shader& shader, const std::string& name);
+        static std::shared_ptr<Shader> AddShader(Shader&& shader, const std::string& name);
         static std::shared_ptr<Material> AddMaterial(Material& material, const std::string& name);
 
+        static std::shared_ptr<Model> LoadOBJ(const std::string& fullPath);
+        static std::shared_ptr<Model> LoadPGModel(const std::string& fullPath);
+        static bool ConvertOBJToPGModel(const std::string& fullPathToOBJ, const std::string& fullPathToMaterialDir, const std::string& fullOutputPath);
 
     private:
-        static std::string rootResourceDir_;
-
         static std::unordered_map<std::string, std::shared_ptr<Model>> models_;
         static std::unordered_map<std::string, std::shared_ptr<Material>> materials_;
         static std::unordered_map<std::string, std::shared_ptr<Texture>> textures_;

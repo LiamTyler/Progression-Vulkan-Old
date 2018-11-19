@@ -1,10 +1,7 @@
-/// @ref gtc_random
-/// @file glm/gtc/random.inl
-
 #include "../geometric.hpp"
 #include "../exponential.hpp"
 #include "../trigonometric.hpp"
-#include "../ext/vec1.hpp"
+#include "../detail/type_vec1.hpp"
 #include <cstdlib>
 #include <ctime>
 #include <cassert>

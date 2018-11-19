@@ -21,25 +21,30 @@ namespace Progression {
         float dt = Time::deltaTime();
         Camera& camera = *(Camera*)gameObject;
 
-        if (Input::GetKeyDown(PG_K_W)) {
+        if (Input::GetKeyDown(PG_K_W))
             velocity.z = 1;
-        }
-        if (Input::GetKeyDown(PG_K_S)) {
+        if (Input::GetKeyDown(PG_K_S))
             velocity.z = -1;
-        }
-        if (Input::GetKeyDown(PG_K_D)) {
+        if (Input::GetKeyDown(PG_K_D))
             velocity.x = 1;
-        }
-        if (Input::GetKeyDown(PG_K_A)) {
-            velocity.x = -1;
-        }
 
-        if (Input::GetKeyUp(PG_K_W) || Input::GetKeyUp(PG_K_S)) {
+        if (Input::GetKeyDown(PG_K_A))
+            velocity.x = -1;
+		if (Input::GetKeyDown(PG_K_LEFT_CONTROL))
+			velocity.y = -1;
+		if (Input::GetKeyDown(PG_K_SPACE))
+			velocity.y = 1;
+		if (Input::GetKeyDown(PG_K_LEFT_SHIFT))
+			moveSpeed *= 10;
+
+        if (Input::GetKeyUp(PG_K_W) || Input::GetKeyUp(PG_K_S))
             velocity.z = 0;
-        }
-        if (Input::GetKeyUp(PG_K_D) || Input::GetKeyUp(PG_K_A)) {
+        if (Input::GetKeyUp(PG_K_D) || Input::GetKeyUp(PG_K_A))
             velocity.x = 0;
-        }
+		if (Input::GetKeyUp(PG_K_LEFT_CONTROL) || Input::GetKeyUp(PG_K_SPACE))
+			velocity.y = 0;
+		if (Input::GetKeyUp(PG_K_LEFT_SHIFT))
+			moveSpeed *= .1;
 
         glm::ivec2 dMouse = -Input::GetMouseChange();
         glm::vec3 dRotation(glm::vec3(dMouse.y, dMouse.x, 0));

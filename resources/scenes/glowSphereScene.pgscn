@@ -1,0 +1,71 @@
+Resource-file
+filename scenes/glowSphereScene.txt
+
+Camera
+name main-camera
+position 0 12 12
+rotation -45 0 0
+scale 1 1 1
+fov 45
+aspect 16:9
+near-plane .1
+far-plane 300
+primary-camera true
+
+Light
+name mainDirectional
+type directional
+rotation -35 0 0
+
+Skybox
+name water
+
+GameObject
+name floor
+scale 50 1 50
+model metalFloor
+
+GameObject
+name blueSphereLow
+position -5 2 5
+model blueGlowSphereLow
+
+GameObject
+name blueSphereMedium
+position 0 2 5 
+model blueGlowSphereMedium
+
+GameObject
+name blueSphereHigh
+position 5 2 5
+model blueGlowSphereHigh
+
+GameObject
+name greenSphereLow
+position -5 2 0
+model greenGlowSphereLow
+
+GameObject
+name greenSphereMedium
+position 0 2 0
+model greenGlowSphereMedium
+
+GameObject
+name greenSphereHigh
+position 5 2 0
+model greenGlowSphereHigh
+
+GameObject
+name redSphereLow
+position -5 2 -5
+model redGlowSphereLow
+
+GameObject
+name redSphereMedium
+position 0 2 -5
+model redGlowSphereMedium
+
+GameObject
+name redSphereHigh
+position 5 2 -5
+model redGlowSphereHigh

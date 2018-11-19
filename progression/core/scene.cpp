@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include "core/resource_manager.h"
+#include "graphics/model_render_component.h"
 
 namespace Progression {
 
@@ -19,6 +20,7 @@ namespace Progression {
             delete o;
     }
 
+	// TODO: Fix the need for a newline at the end of a file (if this is still a problem)
     Scene* Scene::Load(const std::string& filename) {
         std::filesystem::path path(filename);
         if (!std::filesystem::exists(path)) {
@@ -56,7 +58,6 @@ namespace Progression {
                 ss >> name;
                 scene->skybox_ = ResourceManager::GetSkybox(name);
             }
-            
         }
 
         in.close();
@@ -97,10 +98,20 @@ namespace Progression {
             gameObjects_.erase(iter);
     }
 
+    void Scene::GetNeighbors(GameObject* o, float radius, std::vector<GameObject*>& neighborList) {
+        neighborList.clear();
+        float r2 = radius*radius;
+        auto& pos = o->transform.position;
+        for (auto& obj : gameObjects_) {
+            auto diff = obj->transform.position - pos;
+            if (obj != o && glm::dot(diff, diff) < r2)
+                neighborList.push_back(obj);
+        }
+    }
+
     bool Scene::AddLight(Light* light) {
         if (directionalLights_.size() + pointLights_.size() == maxLights_)
             return false;
-
         if (light->type == Light::Type::DIRECTIONAL) {
             directionalLights_.push_back(light);
         } else if (light->type == Light::Type::POINT) {
@@ -146,7 +157,7 @@ namespace Progression {
         Camera* camera = new Camera;
         std::string line = " ";
         bool primaryCamera = false;
-        while (line != "") {
+        while (line != "" && !in.eof()) {
             std::getline(in, line);
             std::stringstream ss(line);
             std::string first;
@@ -168,7 +179,7 @@ namespace Progression {
             } else if (first == "fov") {
                 float x;
                 ss >> x;
-                camera->SetFOV(x);
+                camera->SetFOV(glm::radians(x));
             } else if (first == "aspect") {
                 float width, height;
                 char colon;
@@ -187,7 +198,16 @@ namespace Progression {
                 ss >> tmp;
                 if (tmp == "true")
                     primaryCamera = true;
-            }
+            } else if (first == "rendering-pipeline") {
+				std::string tmp;
+				ss >> tmp;
+				RenderingPipeline pipeline;
+				if (tmp == "forward")
+					pipeline = RenderingPipeline::FORWARD;
+				else if (tmp == "tiled-deferred")
+					pipeline = RenderingPipeline::TILED_DEFERRED;
+				camera->SetRenderingPipeline(pipeline);
+			}
         }
 
         scene->AddCamera(camera, primaryCamera);
@@ -196,7 +216,7 @@ namespace Progression {
     void Scene::ParseLight(Scene* scene, std::ifstream& in) {
         Light* light = new Light;
         std::string line = " ";
-        while (line != "") {
+        while (line != "" && !in.eof()) {
             std::getline(in, line);
             std::stringstream ss(line);
             std::string first;
@@ -234,7 +254,7 @@ namespace Progression {
     void Scene::ParseGameObject(Scene* scene, std::ifstream& in) {
         GameObject* obj = new GameObject;
         std::string line = " ";
-        while (line != "") {
+        while (line != "" && !in.eof()) {
             std::getline(in, line);
             std::stringstream ss(line);
             std::string first;
@@ -253,6 +273,11 @@ namespace Progression {
                 float x, y, z;
                 ss >> x >> y >> z;
                 obj->transform.scale = glm::vec3(x, y, z);
+            } else if (first == "model") {
+				std::string modelName;
+				ss >> modelName;
+				auto model = ResourceManager::GetModel(modelName);
+				obj->AddComponent<ModelRenderer>(new ModelRenderer(obj, model.get()));
             }
         }
         scene->AddGameObject(obj);

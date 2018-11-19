@@ -21,7 +21,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <iostream>
 
 #if __cplusplus > 201103L
 #define CPPTOML_DEPRECATED(reason) [[deprecated(reason)]]
@@ -1263,7 +1262,22 @@ get_impl(const std::shared_ptr<base>& elem)
 }
 
 template <class T>
-typename std::enable_if<!std::is_integral<T>::value
+typename std::enable_if<std::is_same<T, float>::value,
+                        option<T>>::type
+get_impl(const std::shared_ptr<base>& elem)
+{
+    if (auto v = elem->as<double>())
+    {
+        return {static_cast<float>(v->get())};
+    }
+    else
+    {
+        return {};
+    }
+}
+
+template <class T>
+typename std::enable_if<(!std::is_integral<T>::value && !std::is_same<T, float>::value)
                             || std::is_same<T, bool>::value,
                         option<T>>::type
 get_impl(const std::shared_ptr<base>& elem)
@@ -2135,8 +2149,6 @@ class parser
     void parse_key_value(std::string::iterator& it, std::string::iterator& end,
                          table* curr_table)
     {
-        std::string v{it, end};
-        std::cout << "in parse key value with string = \"" << v << "\"" << std::endl;
         auto key_end = [](char c) { return c == '='; };
 
         auto key_part_handler = [&](const std::string& part) {
@@ -2172,8 +2184,6 @@ class parser
             throw_parse_exception("Value must follow after a '='");
         ++it;
         consume_whitespace(it, end);
-        std::string v2{it, end};
-        std::cout << "in parse key 2 value with string = \"" << v << "\"" << std::endl;
         curr_table->insert(key, parse_value(it, end));
         consume_whitespace(it, end);
     }
@@ -2317,11 +2327,8 @@ class parser
     parse_type determine_value_type(const std::string::iterator& it,
                                     const std::string::iterator& end)
     {
-        std::string v{it, end};
-        std::cout << "determining value type on string = \"" << v << "\"" << std::endl;
         if (it == end)
         {
-            std::cout << "could not determine value_type" << std::endl;
             throw_parse_exception("Failed to parse value type");
         }
         if (*it == '"' || *it == '\'')
@@ -2342,7 +2349,6 @@ class parser
                  || (*it == 'n' && it + 1 != end && it[1] == 'a'
                      && it + 2 != end && it[2] == 'n') || (*it == '.' && is_number(it[1])))
         {
-            std::cout << "number" << std::endl;
             return determine_number_type(it, end);
         }
         else if (*it == 't' || *it == 'f')
@@ -2357,7 +2363,6 @@ class parser
         {
             return parse_type::INLINE_TABLE;
         }
-        std::cout << "made it to the end" << std::endl;
         throw_parse_exception("Failed to parse value type");
     }
 
@@ -2382,7 +2387,6 @@ class parser
             ++check_it;
             while (check_it != end && is_number(*check_it))
                 ++check_it;
-            std::cout << "Determined the type as a float" << std::endl;
             return parse_type::FLOAT;
         }
         else
@@ -2821,15 +2825,11 @@ class parser
     std::shared_ptr<value<double>> parse_float(std::string::iterator& it,
                                                const std::string::iterator& end)
     {
-        std::cout << "in parse float" << std::endl;
         std::string v{it, end};
-        std::cout << "float string = \"" << v << "\"" << std::endl;
         v.erase(std::remove(v.begin(), v.end(), '_'), v.end());
-        std::cout << "float string next = \"" << v << "\"" << std::endl;
         it = end;
         char decimal_point = std::localeconv()->decimal_point[0];
         std::replace(v.begin(), v.end(), '.', decimal_point);
-        std::cout << "float string next = \"" << v << "\"" << std::endl;
         try
         {
             return make_value<double>(std::stod(v));

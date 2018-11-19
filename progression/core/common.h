@@ -1,13 +1,22 @@
 #pragma once
 
-#include "nanogui/nanogui.h"
+#include "glad/glad.h"
+#include "GLFW/glfw3.h"
 #include "glm/glm.hpp"
 #include "glm/ext.hpp"
+#include "core/configuration.h"
 #include <string>
 #include <iostream>
 #include <memory>
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 namespace Progression {
+
+    inline std::ostream& operator <<(std::ostream& out, const glm::vec2& v) {
+        return out << v.x << " " << v.y;
+    }
 
 	inline std::ostream& operator <<(std::ostream& out, const glm::vec3& v) {
 		return out << v.x << " " << v.y << " " << v.z;

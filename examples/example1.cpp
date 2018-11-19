@@ -1,134 +1,71 @@
 #include "progression.h"
+#include <iomanip>
 
 using namespace Progression;
 
-std::string rootDirectory;
-
-class LightBallComponent : public Component {
+class RotatingSpheres : public Component {
 public:
-    LightBallComponent(GameObject* obj, GameObject* _ball) :
-        Component(obj),
-        ball(_ball)
-    {
-    }
+	RotatingSpheres(GameObject* obj, Scene* scene, int num = 8, float radius=2, float speed=0.3) :
+		Component(obj),
+		rotSpeed(speed)
+	{
+		for (int i = 0; i < num; ++i) {
+			GameObject* sphere = new GameObject;
+			sphere->AddComponent<ModelRenderer>(new ModelRenderer(sphere, ResourceManager::GetModel("blueSphere").get()));
+			glm::vec3 relPos(0, 1, 0);
+			float angle = 2 * M_PI * i / num;
+			relPos.x = radius * cos(angle);
+			relPos.z = radius * sin(angle);
+			sphere->transform.position = obj->transform.position + relPos;
+			sphere->transform.scale = glm::vec3(.25);
 
-    ~LightBallComponent() = default;
-    void Start() {}
-    void Stop() {}
+			spheres_.push_back(sphere);
+			pointLights_.push_back(new Light(Light::Type::POINT, spheres_[i]->transform, glm::vec3(0, 0, 1), 5));
 
-    void Update() {
-        gameObject->transform = ball->transform;
-    }
+			scene->AddGameObject(sphere);
+			scene->AddLight(pointLights_[i]);
+		}
+	}
 
+	~RotatingSpheres() = default;
+	void Start() {}
+	void Stop() {}
 
-    GameObject* ball;
-};
+	void Update() {
+	}
 
-class BounceComponent : public Component {
-public:
-    BounceComponent(GameObject* obj, const glm::vec3 startVel = glm::vec3(0, 0, 0)) :
-        Component(obj),
-        velocity(startVel)
-    {
-    }
+	std::vector<GameObject*> spheres_;
+	std::vector<Light*> pointLights_;
+	float rotSpeed;
 
-    ~BounceComponent() = default;
-    void Start() {}
-    void Stop() {}
-
-    void Update() {
-        float dt = 1.0f / 30.0f;
-        //float dt = Time::deltaTime();
-        velocity.y += -9.81f * dt;
-        gameObject->transform.position += velocity * dt;
-        if (gameObject->transform.position.y < gameObject->transform.scale.x) {
-            gameObject->transform.position.y = gameObject->transform.scale.x;
-            velocity.y *= -.97;
-        }
-    }
-
-    glm::vec3 velocity;
 };
 
 int main(int argc, char* argv[]) {
-    srand(time(NULL));
+	srand(time(NULL));
 
-    rootDirectory = "C:/Users/Tyler/Documents/Progression/";
+	auto conf = PG::config::Config(PG_ROOT_DIR "configs/default.toml");
+	if (!conf) {
+		std::cout << "could not parse config file" << std::endl;
+		exit(0);
+	}
 
+	PG::EngineInitialize(conf);
 
-    auto& conf = PG::config::Config(rootDirectory + "configs/default.yaml");
+	auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/scene1.pgscn");
+	auto camera = scene->GetCamera();
+	camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera, 3));
 
-    PG::EngineInitialize(conf);
-
-    Scene scene;
-
-    Camera camera = Camera(Transform(
-        glm::vec3(-20, 15, -25),
-        glm::vec3(glm::radians(-20.0f), glm::radians(-135.0f), 0),
-        glm::vec3(1)));
-    camera.AddComponent<UserCameraComponent>(new UserCameraComponent(&camera));
-
-    Material* metalMaterial = new Material(
-        glm::vec3(0),
-        glm::vec3(1, 1, 1),
-        glm::vec3(.1),
-        50,
-        new Texture(new Image(rootDirectory + "resources/textures/metal.jpg")),
-        ResourceManager::GetShader("default-mesh")
-    );
-
-    Material* metalMaterial2 = new Material(
-        glm::vec3(0),
-        glm::vec3(1, 1, 1),
-        glm::vec3(.1),
-        50,
-        new Texture(new Image(rootDirectory + "resources/textures/metal2.jpg")),
-        ResourceManager::GetShader("default-mesh")
-    );
-
-    Model* ballModel = ResourceManager::LoadModel("models/UVSphere.obj");
-    ballModel->meshMaterialPairs[0].second = metalMaterial;
-
-    Model* planeModel = ResourceManager::LoadModel("models/plane.obj");
-    planeModel->meshMaterialPairs[0].second = metalMaterial2;
-
-    for (int x = 0; x < 20; x++) {
-        for (int z = 0; z < 20; z++) {
-            float randHeight = 3 + 2 * (rand() / static_cast<float>(RAND_MAX));
-            glm::vec3 pos = glm::vec3(-20 + 2 * x, randHeight, -20 + 2 * z);
-            GameObject* ballObj = new GameObject(Transform(pos, glm::vec3(0), glm::vec3(.5)));
-            ballObj->AddComponent<ModelRenderer>(new ModelRenderer(ballObj, ballModel));
-            ballObj->AddComponent<BounceComponent>(new BounceComponent(ballObj));
-
-            glm::vec3 randColor = glm::vec3((rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)));
-            PG::Light* pl = new Light(PG::Light::Type::POINT, pos, randColor, 2);
-            pl->AddComponent<LightBallComponent>(new LightBallComponent(pl, ballObj));
-
-            scene.AddGameObject(ballObj);
-            scene.AddLight(pl);
-        }
-    }
+	auto robot = scene->GetGameObject("robot");
+	robot->AddComponent<RotatingSpheres>(new RotatingSpheres(robot, scene));
 
 
-    GameObject* planeObj = new GameObject(Transform(glm::vec3(0, 0, 0), glm::vec3(0), glm::vec3(25)));
-    planeObj->AddComponent<ModelRenderer>(new ModelRenderer(planeObj, planeModel));
+	auto skybox = scene->getSkybox();
 
-    Skybox* skybox = ResourceManager::LoadSkybox({ "water/right.jpg", "water/left.jpg", "water/top.jpg", "water/bottom.jpg", "water/front.jpg", "water/back.jpg" });
+	Window::SetRelativeMouse(true);
+	PG::Input::PollEvents();
 
-    Light directionalLight(Light::Type::DIRECTIONAL);
-    directionalLight.transform.rotation = glm::vec3(-glm::radians(35.0f), glm::radians(220.0f), 0);
-
-    scene.AddCamera(&camera);
-    // scene.AddLight(&directionalLight);
-    scene.AddGameObject(planeObj);
-
-    // Note: After changing the input mode, should poll for events again
-    Window::SetRelativeMouse(true);
-    PG::Input::PollEvents();
-
-    glEnable(GL_DEPTH_TEST);
-
-    // Game loop
+	graphics::BindFrameBuffer(0);
+	// Game loop
     while (!PG::EngineShutdown) {
         PG::Window::StartFrame();
         PG::Input::PollEvents();
@@ -136,10 +73,9 @@ int main(int argc, char* argv[]) {
         if (PG::Input::GetKeyDown(PG::PG_K_ESC))
             PG::EngineShutdown = true;
 
-        scene.Update();
-
-        RenderSystem::Render(&scene);
-        skybox->Render(camera);
+        scene->Update();
+		RenderSystem::Render(scene);
+		skybox->Render(*camera);
 
         PG::Window::EndFrame();
     }

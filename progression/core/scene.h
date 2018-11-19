@@ -7,12 +7,13 @@
 #include "graphics/material.h"
 #include "graphics/shader.h"
 #include "graphics/model.h"
+#include <mutex>
 
 namespace Progression {
 
     class Scene {
     public:
-        Scene(unsigned int maxObjects = 1000000, unsigned int maxLights = 400);
+        Scene(unsigned int maxObjects = 1000000, unsigned int maxLights = 100000);
         ~Scene();
 
         static Scene* Load(const std::string& filename);
@@ -23,6 +24,7 @@ namespace Progression {
         void AddGameObject(GameObject* o);
         void RemoveGameObject(GameObject* o);
         GameObject* GetGameObject(const std::string& name) const;
+        void GetNeighbors(GameObject* o, float radius, std::vector<GameObject*>& neighborList);
 
         bool AddLight(Light* light);
         void RemoveLight(Light* light);

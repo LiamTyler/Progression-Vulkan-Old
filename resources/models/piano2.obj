@@ -1,6 +1,6 @@
 # Blender v2.79 (sub 0) OBJ File: ''
 # www.blender.org
-mtllib piano2.mtl
+mtllib models/piano2.mtl
 o 0
 v -0.775600 0.827100 0.050900
 v -0.775600 0.827100 -0.020300

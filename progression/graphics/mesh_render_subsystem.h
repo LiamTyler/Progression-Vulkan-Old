@@ -2,6 +2,7 @@
 
 #include "graphics/render_subsystem.h"
 #include "graphics/mesh_render_component.h"
+#include <vector>
 
 namespace Progression {
 

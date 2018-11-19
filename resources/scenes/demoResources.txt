@@ -1,0 +1,76 @@
+Skybox
+name water
+right skybox/water/right.jpg
+left skybox/water/left.jpg
+top skybox/water/top.jpg
+bottom skybox/water/bottom.jpg
+front skybox/water/front.jpg
+back skybox/water/back.jpg
+
+Material
+name metalFloor
+ka 0 0 0
+kd 1 1 1
+ks .1 .1 .1
+ns 50
+diffuseTex textures/metal2.jpg
+shader default-mesh
+
+Model
+name metalFloor
+filename models/plane.obj
+material metalFloor
+
+Model
+name robot
+filename models/robot5461.obj
+
+Material
+name blue
+ke 0 0 30
+shader default-mesh
+
+Model
+name blueSphere
+filename models/UVSphere.obj
+material blue
+
+Material
+name green
+ke 0 10 0
+shader default-mesh
+
+Model
+name greenSphere
+filename models/UVSphere.obj
+material green
+
+Material
+name red
+ke 10 0 0
+shader default-mesh
+
+Model
+name redSphere
+filename models/UVSphere.obj
+material red
+
+Material
+name yellow
+ke 5 5 0
+shader default-mesh
+
+Model
+name yellowSphere
+filename models/UVSphere.obj
+material yellow
+
+Material
+name orange
+ke 10 0 10
+shader default-mesh
+
+Model
+name orangeSphere
+filename models/UVSphere.obj
+material orange

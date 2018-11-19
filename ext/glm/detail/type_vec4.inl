@@ -1,38 +1,10 @@
 /// @ref core
 
+#include "compute_vector_relational.hpp"
+
 namespace glm{
 namespace detail
 {
-	template<typename T>
-	struct is_int
-	{
-		enum test {value = 0};
-	};
-
-	template<>
-	struct is_int<uint32>
-	{
-		enum test {value = ~0};
-	};
-
-	template<>
-	struct is_int<int32>
-	{
-		enum test {value = ~0};
-	};
-
-	template<>
-	struct is_int<uint64>
-	{
-		enum test {value = ~0};
-	};
-
-	template<>
-	struct is_int<int64>
-	{
-		enum test {value = ~0};
-	};
-
 	template<typename T, qualifier Q, bool Aligned>
 	struct compute_vec4_add
 	{
@@ -160,7 +132,7 @@ namespace detail
 #	if GLM_CONFIG_DEFAULTED_FUNCTIONS == GLM_DISABLE
 		template<typename T, qualifier Q>
 		GLM_FUNC_QUALIFIER GLM_CONSTEXPR vec<4, T, Q>::vec()
-#			if GLM_CONFIG_DEFAULTED_FUNCTIONS != GLM_DISABLE
+#			if GLM_CONFIG_CTOR_INIT != GLM_CTOR_INIT_DISABLE
 				: x(0), y(0), z(0), w(0)
 #			endif
 		{}
@@ -505,14 +477,36 @@ namespace detail
 	GLM_FUNC_QUALIFIER GLM_CONSTEXPR T& vec<4, T, Q>::operator[](typename vec<4, T, Q>::length_type i)
 	{
 		assert(i >= 0 && i < this->length());
-		return (&x)[i];
+		switch(i)
+		{
+		default:
+		case 0:
+			return x;
+		case 1:
+			return y;
+		case 2:
+			return z;
+		case 3:
+			return w;
+		}
 	}
 
 	template<typename T, qualifier Q>
 	GLM_FUNC_QUALIFIER GLM_CONSTEXPR T const& vec<4, T, Q>::operator[](typename vec<4, T, Q>::length_type i) const
 	{
 		assert(i >= 0 && i < this->length());
-		return (&x)[i];
+		switch(i)
+		{
+		default:
+		case 0:
+			return x;
+		case 1:
+			return y;
+		case 2:
+			return z;
+		case 3:
+			return w;
+		}
 	}
 
 	// -- Unary arithmetic operators --

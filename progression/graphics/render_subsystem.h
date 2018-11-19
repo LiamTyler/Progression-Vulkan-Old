@@ -6,6 +6,7 @@ namespace Progression {
 
     class RenderComponent;
     class Scene;
+    class Shader;
 
     class RenderSubSystem {
     public:
@@ -17,6 +18,8 @@ namespace Progression {
 
         virtual void Render(Scene* scene, Camera& camera) = 0;
 
+    protected:
+        Shader* pipelineShaders[RenderingPipeline::NUM_PIPELINES];
     };
 
 } // namespace Progression

@@ -26,6 +26,8 @@ namespace Progression {
 		void Disable();
 		void AddAttribute(const std::string& attribute);
 		void AddUniform(const std::string& uniform);
+		GLuint GetUniform(const std::string& name) const;
+		GLuint GetAttribute(const std::string& name) const;
 		GLuint operator[] (const std::string& name) const;
 
 		GLuint getProgram() { return program_; }

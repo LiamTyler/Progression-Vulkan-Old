@@ -1,0 +1,17 @@
+[window]
+    width = 1280
+    height = 720
+
+[resourceManager]
+
+[time]
+    displayFPS = true
+
+[renderSystem]
+    maxNumLights = 10001
+    lightIntensityCutoff = 0.03
+
+
+[app]
+    numBalls = 10000
+    intensity = 2.0

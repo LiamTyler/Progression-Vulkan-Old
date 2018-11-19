@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <memory>
+#include <iostream>
 
 namespace Progression {
     class Mesh;
@@ -10,13 +11,13 @@ namespace Progression {
     class Model {
     public:
         Model() = default;
-        virtual ~Model() = default;
+		virtual ~Model() = default;
 
         // TODO: Fix model and mesh copy & move ctors
         Model(const Model& mesh) = default;
         Model& operator=(const Model& mesh) = default;
-        Model(Model&& mesh) = default;
-        Model& operator=(Model&& mesh) = default;
+        Model(Model&& mesh) = delete;
+        Model& operator=(Model&& mesh) = delete;
 
         std::vector<std::shared_ptr<Mesh>> meshes;
         std::vector<std::shared_ptr<Material>> materials;

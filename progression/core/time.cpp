@@ -18,12 +18,12 @@ namespace Progression {
         _mFPSTime = 0;
         _mCurrentFrameCount = 0;
         _mTotalFrameCount = 0;
-        _mDisplay = true;
-        auto& timeConf = config["time"];
-        if (timeConf) {
-            if (timeConf["displayFPS"])
-                _mDisplay = timeConf["displayFPS"].as<bool>();
-        }
+		
+        auto timeConf = config->get_table("time");
+		if (!timeConf)
+			std::cout << "Need to specify the time subsystem in the config file!" << std::endl;
+
+	    _mDisplay = timeConf->get_as<bool>("displayFPS").value_or(true);
     }
 
     void Time::Restart() {
@@ -62,6 +62,14 @@ namespace Progression {
             _mCurrentFrameCount = 0;
             _mFPSTime = _mFrameTime;
         }
+    }
+
+    std::chrono::high_resolution_clock::time_point Time::getTimePoint() {
+        return std::chrono::high_resolution_clock::now();
+    }
+
+    double Time::getDuration(const std::chrono::high_resolution_clock::time_point& point) {
+        return (std::chrono::high_resolution_clock::now() - point).count() / (double) 1e6;
     }
 
 } // namespace Progression

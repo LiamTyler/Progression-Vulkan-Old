@@ -13,10 +13,12 @@ namespace Progression {
 		program_(-1),
 		loaded_(false)
 	{
-		AttachShaderFromFile(GL_VERTEX_SHADER, vertex_file);
-		AttachShaderFromFile(GL_FRAGMENT_SHADER, frag_file);
-		CreateAndLinkProgram();
-		AutoDetectVariables();
+		if (AttachShaderFromFile(GL_VERTEX_SHADER, vertex_file) && AttachShaderFromFile(GL_FRAGMENT_SHADER, frag_file)) {
+			CreateAndLinkProgram();
+			AutoDetectVariables();
+		} else {
+			std::cout << "failed to attach shaders" << std::endl;
+		}
 	}
 
 	Shader::~Shader() {
@@ -130,11 +132,12 @@ namespace Progression {
 		glGetProgramiv(program_, GL_ACTIVE_UNIFORM_MAX_LENGTH, &uniformBufSize);
 		GLchar* uniformName = new GLchar[uniformBufSize];
 		glGetProgramiv(program_, GL_ACTIVE_UNIFORMS, &count);
+		// std::cout << "num uniforms: " << count << std::endl;
 		for (i = 0; i < count; i++) {
 			glGetActiveUniform(program_, (GLuint)i, uniformBufSize,
 				&length, &size, &type, uniformName);
 			std::string sName(uniformName);
-			std::cout << "uniform: " << i << " = " << sName << std::endl;
+			// std::cout << "uniform: " << i << " = " << sName << std::endl;
 			// uniformList_[sName] = i;
 			AddUniform(sName);
 		}
@@ -173,16 +176,33 @@ namespace Progression {
 		uniformList_[uniform] = glGetUniformLocation(program_, uniform.c_str());
 	}
 
+	GLuint Shader::GetUniform(const std::string& name) const {
+		auto it = uniformList_.find(name);
+		if (it == uniformList_.end())
+			return -1;
+		else
+			return it->second;
+	}
+
+	GLuint Shader::GetAttribute(const std::string& name) const {
+		auto it = attributeList_.find(name);
+		if (it == attributeList_.end())
+			return -1;
+		else
+			return it->second;
+	}
+
 	GLuint Shader::operator[] (const std::string& name) const {		
 		std::unordered_map<std::string, GLuint>::const_iterator it = uniformList_.find(name);
-        assert(it != uniformList_.end());
+        // assert(it != uniformList_.end());
 		if (it != uniformList_.end())
 			return it->second;
 		it = attributeList_.find(name);
-        assert(it != attributeList_.end());
+        // assert(it != attributeList_.end());
 		if (it != attributeList_.end())
 			return it->second;
 
+		// std::cout << "uniform '" << name << "' not found!" << std::endl;
 		return -1;
 	}
 
