@@ -5,6 +5,8 @@ Camera
 name main-camera
 position -20 15 -25
 rotation -20 -135 0
+#position -130 50 -130
+#rotation -20 -135 0
 scale 1 1 1
 fov 45
 aspect 16:9

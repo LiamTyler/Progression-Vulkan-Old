@@ -128,6 +128,7 @@ int main(int argc, char* argv[]) {
 		DZ = 1;
 	}
 
+	std::cout << numBalls << std::endl;
 	float intensity = *val->get_as<float>("intensity");
 	float cutOffIntensity = 0.03;
 	for (float x = 0; x < X; x += DX) {
@@ -142,7 +143,7 @@ int main(int argc, char* argv[]) {
 			glm::vec3 randColor = glm::vec3((rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)));
 			PG::Light* pl = new Light(PG::Light::Type::POINT, pos, randColor, intensity);
 			pl->AddComponent<LightBallComponent>(new LightBallComponent(pl, ballObj));
-			float lightRadius = std::sqrtf(intensity / cutOffIntensity);
+			float lightRadius = sqrtf(intensity / cutOffIntensity);
 			// lightRadius = 4;
 			pl->boundingBox.Encompass(BoundingBox(glm::vec3(-1), glm::vec3(1)), Transform(pl->transform.position, glm::vec3(0), glm::vec3(lightRadius)));
 
@@ -150,7 +151,7 @@ int main(int argc, char* argv[]) {
 			scene->AddLight(pl);
 		}
 	}
-	std::cout << "light Radius = " << std::sqrtf(intensity / cutOffIntensity) << std::endl;
+	std::cout << "light Radius = " << sqrtf(intensity / cutOffIntensity) << std::endl;
 
 	GameObject* planeObj = scene->GetGameObject("floor");
 	planeObj->AddComponent<ModelRenderer>(new ModelRenderer(planeObj, planeModel.get()));

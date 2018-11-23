@@ -63,7 +63,7 @@ public:
 int main(int argc, char* argv[]) {
 	srand(time(NULL));
 
-	auto& conf = PG::config::Config(PG_ROOT_DIR "configs/bouncing_ball.toml");
+	auto conf = PG::config::Config(PG_ROOT_DIR "configs/bouncing_ball.toml");
 
 	PG::EngineInitialize(conf);
 
@@ -167,14 +167,14 @@ int main(int argc, char* argv[]) {
 			glm::vec3 randColor = glm::vec3((rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)));
 			PG::Light* pl = new Light(PG::Light::Type::POINT, pos, randColor, intensity);
 			pl->AddComponent<LightBallComponent>(new LightBallComponent(pl, ballObj));
-			float lightRadius = std::sqrtf(intensity / cutOffIntensity);
+			float lightRadius = sqrtf(intensity / cutOffIntensity);
 			// lightRadius = 4;
 
 			scene->AddGameObject(ballObj);
 			scene->AddLight(pl);
 		}
 	}
-	std::cout << "light Radius = " << std::sqrtf(intensity / cutOffIntensity) << std::endl;
+	std::cout << "light Radius = " << sqrtf(intensity / cutOffIntensity) << std::endl;
 
 
 	GameObject* planeObj = scene->GetGameObject("floor");
@@ -295,6 +295,7 @@ int main(int argc, char* argv[]) {
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		glViewport(0, 0, Window::getWindowSize().x, Window::getWindowSize().y);
 
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -307,6 +308,7 @@ int main(int argc, char* argv[]) {
 		graphics::ToggleBlending(true);
 		graphics::ToggleCulling(true);
 		graphics::ToggleDepthBufferWriting(false);
+		graphics::ToggleDepthTesting(false);
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, gPosition);
@@ -348,6 +350,7 @@ int main(int argc, char* argv[]) {
 		graphics::ToggleBlending(false);
 		graphics::ToggleCulling(true);
 		graphics::ToggleDepthBufferWriting(false);
+		graphics::ToggleDepthTesting(true);
 
 		skybox->Render(*camera);
 

@@ -3,8 +3,8 @@ filename scenes/demoResources.txt
 
 Camera
 name main-camera
-position 0 5 15
-rotation 0 0 0
+position 0 120 80
+rotation -60 0 0
 scale 1 1 1
 fov 45
 aspect 16:9
@@ -38,11 +38,25 @@ position 0 3 -60
 scale 1 1 1
 model blueSphere
 
+Light
+name blue
+type point
+position 0 3 -60
+color 0 0 1
+intensity 10
+
 GameObject
 name greenSphere
 position 60 3 0
 scale 1 1 1
 model greenSphere
+
+Light
+name green
+type point
+position 60 3 0
+color 0 1 0
+intensity 10
 
 GameObject
 name redSphere
@@ -50,14 +64,35 @@ position -60 3 0
 scale 1 1 1
 model redSphere
 
+Light
+name red
+type point
+position -60 3 0
+color 1 0 0
+intensity 10
+
 GameObject
 name yellowSphere
 position -35 3 60
 scale 1 1 1
 model yellowSphere
 
+Light
+name yellow
+type point
+position -35 3 60
+color 1 1 0
+intensity 10
+
 GameObject
 name orangeSphere
 position 35 3 60
 scale 1 1 1
 model orangeSphere
+
+Light
+name orange
+type point
+position 35 3 60
+color 1 0 1
+intensity 10

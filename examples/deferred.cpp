@@ -63,7 +63,7 @@ public:
 int main(int argc, char* argv[]) {
 	srand(time(NULL));
 
-	auto& conf = PG::config::Config(PG_ROOT_DIR "configs/bouncing_ball.toml");
+	auto conf = PG::config::Config(PG_ROOT_DIR "configs/bouncing_ball.toml");
 
 	PG::EngineInitialize(conf);
 
@@ -166,14 +166,14 @@ int main(int argc, char* argv[]) {
 			glm::vec3 randColor = glm::vec3((rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)));
 			PG::Light* pl = new Light(PG::Light::Type::POINT, pos, randColor, intensity);
 			pl->AddComponent<LightBallComponent>(new LightBallComponent(pl, ballObj));
-			float lightRadius = std::sqrtf(intensity / cutOffIntensity);
+			float lightRadius = sqrtf(intensity / cutOffIntensity);
 			// lightRadius = 4;
 
 			scene->AddGameObject(ballObj);
 			scene->AddLight(pl);
 		}
 	}
-	std::cout << "light Radius = " << std::sqrtf(intensity / cutOffIntensity) << std::endl;
+	std::cout << "light Radius = " << sqrtf(intensity / cutOffIntensity) << std::endl;
 
 
 	GameObject* planeObj = scene->GetGameObject("floor");
@@ -243,6 +243,7 @@ int main(int argc, char* argv[]) {
 	while (!PG::Input::GetKeyDown(PG::PG_K_P))
 		PG::Input::PollEvents();
 
+	bool paused = false;
 	// Game loop
 	while (!PG::EngineShutdown) {
 		PG::Window::StartFrame();
@@ -250,8 +251,13 @@ int main(int argc, char* argv[]) {
 
 		if (PG::Input::GetKeyDown(PG::PG_K_ESC))
 			PG::EngineShutdown = true;
+		if (PG::Input::GetKeyDown(PG::PG_K_P))
+			paused = !paused;
 
-		scene->Update();
+		if (!paused)
+			scene->Update();
+		else
+			camera->Update();
 
 		//RenderSystem::Render(scene);
 
@@ -261,10 +267,13 @@ int main(int argc, char* argv[]) {
 
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
 
+		glEnable(GL_DEPTH_TEST);
+		glDepthMask(GL_TRUE);
+
 		//const auto& bgColor = scene.GetBackgroundColor();
 		// glClearColor(bgColor.r, bgColor.g, bgColor.b, bgColor.a);
 		glClearColor(0, 0, 0, 0);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		deferredShader.Enable();
 
@@ -285,9 +294,17 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		graphics::BindFrameBuffer(0);
+		glViewport(0, 0, Window::getWindowSize().x, Window::getWindowSize().y);
 
+		glClearColor(0, 0, 0, 1);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		graphics::ToggleDepthBufferWriting(false);
+		graphics::ToggleDepthTesting(false);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		glBlitFramebuffer(0, 0, Window::getWindowSize().x, Window::getWindowSize().y, 0, 0, Window::getWindowSize().x, Window::getWindowSize().y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 
 		combineShader.Enable();
 		RenderSystem::UploadLights(combineShader);
@@ -307,14 +324,19 @@ int main(int argc, char* argv[]) {
 		glUniform1i(combineShader["gSpecularExp"], 3);
 
 		glDrawArrays(GL_TRIANGLES, 0, 6);
-
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-		glBlitFramebuffer(0, 0, Window::getWindowSize().x, Window::getWindowSize().y, 0, 0, Window::getWindowSize().x, Window::getWindowSize().y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
+		graphics::ToggleDepthTesting(true);
+		graphics::ToggleDepthBufferWriting(true);
+		//glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
+		//glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		//glBlitFramebuffer(0, 0, Window::getWindowSize().x, Window::getWindowSize().y, 0, 0, Window::getWindowSize().x, Window::getWindowSize().y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+		//glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		
+		//glDepthFunc(GL_LEQUAL);
+		//glDepthRange(1, 1);
+
 		skybox->Render(*camera);
+		//glDepthFunc(GL_LESS);
+		//glDepthRange(0, 1);
 
 		PG::Window::EndFrame();
 	}

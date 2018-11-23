@@ -137,8 +137,7 @@ namespace Progression {
 
 		postProcessingData_.bloomLevels = 4;
 		postProcessingData_.exposure = 1;
-		postProcessingData_.bloomIntensity = 1;
-		//options_ |= BLOOM;
+		postProcessingData_.bloomIntensity = .3;
 
 		int divisor = 2;
 		for (int i = 0; i < 4; ++i) {
@@ -149,7 +148,7 @@ namespace Progression {
 
 		int kernels = 4;
 		int sizes[] = { 5, 11, 21, 41 };
-		int stddev[] = { 3, 3, 5, 10 };
+		int stddev[] = { 3, 3, 5, 11 };
 		for (int i = 0; i < kernels; ++i) {
 			postProcessingData_.bloomKernels[i] = genKernel(sizes[i], stddev[i]);
 			postProcessingData_.bloomKernelSizes[i] = sizes[i];
@@ -323,7 +322,7 @@ namespace Progression {
 
 
     void RenderSystem::UpdateLights(Scene* scene, Camera* camera) {
-        GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_UNSYNCHRONIZED_BIT;
+        GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
         numPointLights_ = 0;
         numDirectionalLights_ = 0;
 

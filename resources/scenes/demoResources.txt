@@ -11,8 +11,8 @@ Material
 name metalFloor
 ka 0 0 0
 kd 1 1 1
-ks .1 .1 .1
-ns 50
+ks .01 .01 .01
+ns 40
 diffuseTex textures/metal2.jpg
 shader default-mesh
 
@@ -27,7 +27,7 @@ filename models/robot5461.obj
 
 Material
 name blue
-ke 0 0 30
+ke 0 0 20
 shader default-mesh
 
 Model
@@ -67,7 +67,7 @@ material yellow
 
 Material
 name orange
-ke 10 0 10
+ke 6 0 6
 shader default-mesh
 
 Model

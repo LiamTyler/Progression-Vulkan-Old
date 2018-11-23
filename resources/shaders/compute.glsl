@@ -23,7 +23,7 @@ layout(std430, binding=10) buffer point_light_list
 };
 
 #define EPSILON 0.000001
-#define MAX_LIGHTS_PER_TILE 600
+#define MAX_LIGHTS_PER_TILE 1000
 shared int tileLightList[MAX_LIGHTS_PER_TILE];
 shared int numLightsInTile;
 
@@ -104,8 +104,8 @@ void main() {
     
     sync();
     
-    //imageStore(img_output, coords, vec4(vec3(float(numLightsInTile) / MAX_LIGHTS_PER_TILE), 1));
-    
+    //imageStore(imgOutput, coords, vec4(vec3(float(numLightsInTile) / MAX_LIGHTS_PER_TILE), 1));
+    //return;
     vec3 n            = imageLoad(gNormal, coords).xyz;
     vec3 diffuseColor = imageLoad(gDiffuse, coords).rgb;
     vec4 specExp      = imageLoad(gSpecularExp, coords);

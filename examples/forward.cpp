@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) {
 			glm::vec3 randColor = glm::vec3((rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)), (rand() / static_cast<float>(RAND_MAX)));
 			PG::Light* pl = new Light(PG::Light::Type::POINT, pos, randColor, intensity);
 			pl->AddComponent<LightBallComponent>(new LightBallComponent(pl, ballObj));
-			float lightRadius = std::sqrtf(intensity / cutOffIntensity);
+			float lightRadius = sqrtf(intensity / cutOffIntensity);
 			// lightRadius = 4;
 
 			scene->AddGameObject(ballObj);
