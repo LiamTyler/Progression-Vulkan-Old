@@ -5,35 +5,35 @@
 #include "core/common.h"
 
 #include <functional>
-#include <filesystem>
 #include <fstream>
+// #include <filesystem>
 
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
 class Vertex {
-public:
-    Vertex(const glm::vec3& vert, const glm::vec3& norm, const glm::vec2& tex) :
-        vertex(vert),
-        normal(norm),
-        uv(tex) {}
+    public:
+        Vertex(const glm::vec3& vert, const glm::vec3& norm, const glm::vec2& tex) :
+            vertex(vert),
+            normal(norm),
+            uv(tex) {}
 
-    bool operator==(const Vertex& other) const {
-        return vertex == other.vertex && normal == other.normal && uv == other.uv;
-    }
+        bool operator==(const Vertex& other) const {
+            return vertex == other.vertex && normal == other.normal && uv == other.uv;
+        }
 
-    glm::vec3 vertex;
-    glm::vec3 normal;
-    glm::vec2 uv;
+        glm::vec3 vertex;
+        glm::vec3 normal;
+        glm::vec2 uv;
 };
-    
+
 namespace std {
     template<> struct hash<Vertex> {
         size_t operator()(Vertex const& vertex) const {
             return ((hash<glm::vec3>()(vertex.vertex) ^
-            (hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^
-            (hash<glm::vec2>()(vertex.uv) << 1);
+                        (hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^
+                (hash<glm::vec2>()(vertex.uv) << 1);
         }
     };
 }        
@@ -49,10 +49,10 @@ namespace Progression {
 
     void ResourceManager::Init(const config::Config& config) {
         auto rm = config->get_table("resourceManager");
-		// if (!rm) {
-		// }
+        // if (!rm) {
+        // }
 
-		// load defaults
+        // load defaults
         shaders_["skybox"] = std::make_shared<Shader>(PG_RESOURCE_DIR "shaders/skybox.vert", PG_RESOURCE_DIR "shaders/skybox.frag");
         materials_["default"] = std::make_shared<Material>();
         models_["plane"] = LoadModel("models/plane.obj");	
@@ -63,17 +63,25 @@ namespace Progression {
     }
 
     void ResourceManager::LoadResourceFile(const std::string& relativePath) {
+        /*
         std::filesystem::path path(PG_RESOURCE_DIR + relativePath);
         if (!std::filesystem::exists(path)) {
             std::cout << "File does not exist: " << path << std::endl;
             return;
         }
-        
+
         std::ifstream in(path);
+        */
+        std::ifstream in(PG_RESOURCE_DIR + relativePath);
+        if (!in) {
+            std::cout << "File does not exist: " << PG_RESOURCE_DIR + relativePath << std::endl;
+            return;
+        }
+
         std::string line;
         while (std::getline(in, line)) {
-			if (line == "")
-				continue;
+            if (line == "")
+                continue;
             if (line[0] == '#')
                 continue;
             if (line == "Skybox") {
@@ -134,10 +142,10 @@ namespace Progression {
                         ss >> x >> y >> z;
                         material->specular = glm::vec3(x, y, z);
                     } else if (first == "ke") {
-						float x, y, z;
-						ss >> x >> y >> z;
-						material->emissive = glm::vec3(x, y, z);
-					} else if (first == "ns") {
+                        float x, y, z;
+                        ss >> x >> y >> z;
+                        material->emissive = glm::vec3(x, y, z);
+                    } else if (first == "ns") {
                         float x;
                         ss >> x;
                         material->shininess = x;
@@ -173,7 +181,7 @@ namespace Progression {
                 auto model = LoadModel(filename);
                 if (name != "") {
                     models_[name] = std::make_shared<Model>(*model);
-					model = models_[name];
+                    model = models_[name];
                 }
                 if (material != "") {
                     if (materials_.find(material) == materials_.end()) {
@@ -222,9 +230,10 @@ namespace Progression {
         }
 
         in.close();
-        
+
     }
 
+    /*
     std::shared_ptr<Model> ResourceManager::LoadModel(const std::string& relativePath, bool addToManager) {
         if (models_.find(relativePath) != models_.end())
             return models_[relativePath];
@@ -242,6 +251,30 @@ namespace Progression {
             model = LoadPGModel(fullFileName);
         } else {
             std::cout << "Trying to load model from unsupported file: " << file.extension() << std::endl;
+            return nullptr;
+        }
+
+        if (addToManager && model != nullptr)
+            models_[relativePath] = model;
+
+        return model;
+    }
+    */
+
+    std::shared_ptr<Model> ResourceManager::LoadModel(const std::string& relativePath, bool addToManager) {
+        if (models_.find(relativePath) != models_.end())
+            return models_[relativePath];
+
+        auto pos = relativePath.find_last_of('.');
+        std::string ext = relativePath.substr(pos);
+        std::string fullFileName = PG_RESOURCE_DIR + relativePath;
+        std::shared_ptr<Model> model;
+        if (ext == ".obj") {
+            model = LoadOBJ(fullFileName);
+        } else if (ext == ".pgModel") {
+            model = LoadPGModel(fullFileName);
+        } else {
+            std::cout << "Trying to load model from unsupported file: " << fullFileName << std::endl;
             return nullptr;
         }
 
@@ -275,9 +308,9 @@ namespace Progression {
 
             in.read((char*)&mat->ambient, sizeof(glm::vec3));
             in.read((char*)&mat->diffuse, sizeof(glm::vec3));
-			in.read((char*)&mat->specular, sizeof(glm::vec3));
-			in.read((char*)&mat->emissive, sizeof(glm::vec3));
-			in.read((char*)&mat->shininess, sizeof(float));
+            in.read((char*)&mat->specular, sizeof(glm::vec3));
+            in.read((char*)&mat->emissive, sizeof(glm::vec3));
+            in.read((char*)&mat->shininess, sizeof(float));
             unsigned int texNameSize;
             in.read((char*)&texNameSize, sizeof(unsigned int));
 
@@ -338,7 +371,7 @@ namespace Progression {
                 materials[i]->diffuseTexture = new Texture(new Image(PG_RESOURCE_DIR + diffuseTexNames[i]), true, true, true);
             }
         }
-        
+
         return model;
     }
 
@@ -357,9 +390,9 @@ namespace Progression {
             std::cout << "Failed to load the input file: " << fullPath << std::endl;
             return nullptr;
         }
-        
+
         auto model = std::make_shared<Model>();
- 
+
         for (int currentMaterialID = -1; currentMaterialID < (int) materials.size(); ++currentMaterialID) {
             std::shared_ptr<Material> currentMaterial;
             if (currentMaterialID == -1) {
@@ -368,9 +401,9 @@ namespace Progression {
                 tinyobj::material_t& mat = materials[currentMaterialID];
                 glm::vec3 ambient(mat.ambient[0], mat.ambient[1], mat.ambient[2]);
                 glm::vec3 diffuse(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
-				glm::vec3 specular(mat.specular[0], mat.specular[1], mat.specular[2]);
-				glm::vec3 emissive(mat.emission[0], mat.emission[1], mat.emission[2]);
-				float shininess = mat.shininess;
+                glm::vec3 specular(mat.specular[0], mat.specular[1], mat.specular[2]);
+                glm::vec3 emissive(mat.emission[0], mat.emission[1], mat.emission[2]);
+                float shininess = mat.shininess;
                 Texture* diffuseTex = nullptr;
                 if (mat.diffuse_texname != "") {
                     diffuseTex = new Texture(new Image(PG_RESOURCE_DIR + mat.diffuse_texname), true, true, true);
@@ -408,7 +441,7 @@ namespace Progression {
                                 //uvs.emplace_back(tx, ty);
                             }
 
-                            
+
                             Vertex vertex(glm::vec3(vx, vy, vz), glm::vec3(nx, ny, nz), glm::vec2(ty, ty));
                             if (uniqueVertices.count(vertex) == 0) {
                                 uniqueVertices[vertex] = static_cast<uint32_t>(verts.size());
@@ -417,7 +450,7 @@ namespace Progression {
                                 if (idx.texcoord_index != -1)
                                     uvs.emplace_back(tx, ty);
                             }
-                            
+
 
                             indices.push_back(uniqueVertices[vertex]);                            
                         }
@@ -444,11 +477,13 @@ namespace Progression {
 
     bool ResourceManager::ConvertOBJToPGModel(const std::string& fullPathToOBJ, const std::string& fullPathToMaterialDir, const std::string& fullOutputPath) {
 
+        /*
         std::filesystem::path file(fullOutputPath);
         if (file.extension() != ".pgModel") {
             std::cout << "Output filename has to have extension '.pgModel'" << std::endl;
             return false;
         }
+        */
         std::ofstream outFile(fullOutputPath, std::ios::binary);
         if (!outFile) {
             std::cout << "Could not open output file: " << fullOutputPath << std::endl;
@@ -554,29 +589,29 @@ namespace Progression {
             float shininess;
             unsigned int diffuseNameLength = 0;
             std::string diffuseTexName = "";
-            
+
             if (matID.first == -1) {
                 Material mat = *ResourceManager::GetMaterial("default");
                 ambient = mat.ambient;
                 diffuse = mat.diffuse;
-				specular = mat.specular;
-				emissive = mat.emissive;
-				shininess = mat.shininess;
+                specular = mat.specular;
+                emissive = mat.emissive;
+                shininess = mat.shininess;
             } else {
                 tinyobj::material_t& mat = materials[matID.first];
                 ambient = glm::vec3(mat.ambient[0], mat.ambient[1], mat.ambient[2]);
                 diffuse = glm::vec3(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
-				specular = glm::vec3(mat.specular[0], mat.specular[1], mat.specular[2]);
-				emissive = glm::vec3(mat.emission[0], mat.emission[1], mat.emission[2]);
-				shininess = mat.shininess;
+                specular = glm::vec3(mat.specular[0], mat.specular[1], mat.specular[2]);
+                emissive = glm::vec3(mat.emission[0], mat.emission[1], mat.emission[2]);
+                shininess = mat.shininess;
                 diffuseTexName = mat.diffuse_texname;
                 diffuseNameLength = diffuseTexName.length();
             }
             outFile.write((char*) &ambient, sizeof(glm::vec3));
             outFile.write((char*) &diffuse, sizeof(glm::vec3));
-			outFile.write((char*) &specular, sizeof(glm::vec3));
-			outFile.write((char*) &emissive, sizeof(glm::vec3));
-			outFile.write((char*) &shininess, sizeof(float));
+            outFile.write((char*) &specular, sizeof(glm::vec3));
+            outFile.write((char*) &emissive, sizeof(glm::vec3));
+            outFile.write((char*) &shininess, sizeof(float));
             outFile.write((char*) &diffuseNameLength, sizeof(unsigned int));
             if (diffuseNameLength)
                 outFile.write((char*) &diffuseTexName[0], sizeof(char) * diffuseNameLength);
@@ -607,13 +642,13 @@ namespace Progression {
             for (const auto& tex : textures)
                 fullTexturePaths.push_back(PG_RESOURCE_DIR "skybox/" + tex);
             auto sp = std::make_shared<Skybox>(
-                fullTexturePaths[0],
-                fullTexturePaths[1],
-                fullTexturePaths[2],
-                fullTexturePaths[3],
-                fullTexturePaths[4],
-                fullTexturePaths[5]
-            );
+                    fullTexturePaths[0],
+                    fullTexturePaths[1],
+                    fullTexturePaths[2],
+                    fullTexturePaths[3],
+                    fullTexturePaths[4],
+                    fullTexturePaths[5]
+                    );
             if (addToManager)
                 skyboxes_[name] = sp;
             else

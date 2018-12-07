@@ -1,7 +1,7 @@
 #include "core/scene.h"
-#include <filesystem>
 #include <fstream>
 #include <sstream>
+// #include <filesystem>
 #include "core/resource_manager.h"
 #include "graphics/model_render_component.h"
 
@@ -22,15 +22,19 @@ namespace Progression {
 
 	// TODO: Fix the need for a newline at the end of a file (if this is still a problem)
     Scene* Scene::Load(const std::string& filename) {
-        std::filesystem::path path(filename);
-        if (!std::filesystem::exists(path)) {
-            std::cout << "File does not exist: " << path << std::endl;
-            return nullptr;
-        }
+        // std::filesystem::path path(filename);
+        // if (!std::filesystem::exists(path)) {
+        //     std::cout << "File does not exist: " << path << std::endl;
+        //     return nullptr;
+        // }
 
         Scene* scene = new Scene;
 
-        std::ifstream in(path);
+        std::ifstream in(filename);
+        if (!in) {
+            std::cout << "File does not exist: " << filename << std::endl;
+            return nullptr;
+        }
         std::string line;
         while (std::getline(in, line)) {
             if (line == "")
