@@ -102,8 +102,8 @@ namespace Progression {
 
 		glGenBuffers(1, &lightSSBO_);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSSBO_);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, 2 * sizeof(glm::vec4) * maxNumLights_, NULL, GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, lightSSBO_);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, 2 * sizeof(glm::vec4) * maxNumLights_, NULL, GL_DYNAMIC_COPY);
 
 		/*
 		postProcessingData_.bloomCombineShader = new Shader(PG_RESOURCE_DIR "shaders/bloomCombine.vert", PG_RESOURCE_DIR "shaders/bloomCombine.frag");
@@ -363,6 +363,7 @@ namespace Progression {
 
 
     void RenderSystem::UploadLights(Shader& shader) {
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSSBO_);
         glUniform1i(shader["numDirectionalLights"], numDirectionalLights_);
         glUniform1i(shader["numPointLights"], numPointLights_);
     }

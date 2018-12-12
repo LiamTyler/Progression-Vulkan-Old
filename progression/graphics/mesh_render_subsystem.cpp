@@ -6,6 +6,7 @@
 namespace Progression {
 
     MeshRenderSubSystem::MeshRenderSubSystem() {
+		/*
         auto forward = ResourceManager::GetShader("mesh-forward");
         auto tiled_deferred = ResourceManager::GetShader("mesh-tiled-deferred");
         if (!forward) {
@@ -19,8 +20,11 @@ namespace Progression {
                     Shader(PG_RESOURCE_DIR "shaders/phong.vert", PG_RESOURCE_DIR "shaders/phong_tiled_deferred.frag"),
                     "mesh-tiled-deferred");
         }
+
         pipelineShaders[RenderingPipeline::FORWARD] = forward.get();
         pipelineShaders[RenderingPipeline::TILED_DEFERRED] = tiled_deferred.get();
+		*/
+		pipelineShaders[RenderingPipeline::FORWARD] = new Shader(PG_RESOURCE_DIR "shaders/phong.vert", PG_RESOURCE_DIR "shaders/phong_forward.frag");
     }
 
     void MeshRenderSubSystem::AddRenderComponent(RenderComponent* rc) {
@@ -34,7 +38,7 @@ namespace Progression {
             glGenVertexArrays(1, &vao);
             glBindVertexArray(vao);
             GLuint* vbos_ = &mr->mesh->vbos[0];
-            Shader& shader = *pipelineShaders[RenderingPipeline::TILED_DEFERRED];
+            Shader& shader = *pipelineShaders[RenderingPipeline::FORWARD];
 
             glBindBuffer(GL_ARRAY_BUFFER, vbos_[Mesh::vboName::VERTEX]);
             glEnableVertexAttribArray(shader["vertex"]);
@@ -65,9 +69,10 @@ namespace Progression {
     }
 
     void MeshRenderSubSystem::Render(Scene* scene, Camera& camera) {
-        auto& shader = *pipelineShaders[camera.GetRenderingPipeline()];
-        shader.Enable();
-		if (camera.GetRenderingPipeline() == RenderingPipeline::FORWARD)
+		// auto& shader = *pipelineShaders[camera.GetRenderingPipeline()];
+		auto& shader = *pipelineShaders[RenderingPipeline::FORWARD];
+		shader.Enable();
+		//if (camera.GetRenderingPipeline() == RenderingPipeline::FORWARD)
 			RenderSystem::UploadLights(shader);
         RenderSystem::UploadCameraProjection(shader, camera);
         for (const auto& mr : meshRenderers) {
