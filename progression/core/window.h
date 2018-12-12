@@ -19,6 +19,7 @@ namespace Progression {
         static GLFWwindow* getGLFWHandle() { return _mWindow; }
         static glm::ivec2 getWindowSize() { return _mWindowSize; }
         static void SetRelativeMouse(bool b);
+		static void setTitle(const std::string& title);
 
 	protected:
         static GLFWwindow* _mWindow;

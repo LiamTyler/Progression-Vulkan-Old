@@ -23,7 +23,8 @@ name water
 
 GameObject
 name floor
-scale 100 1 100
+position 50 0 0
+scale 150 1 100
 model metalFloor
 
 #GameObject

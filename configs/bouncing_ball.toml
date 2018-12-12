@@ -13,5 +13,5 @@
     lightIntensityCutoff = 0.03
 
 [app]
-    numBalls = 10000
+    numBalls = 1000
     intensity = 2.0

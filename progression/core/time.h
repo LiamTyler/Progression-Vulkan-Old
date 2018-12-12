@@ -16,6 +16,7 @@ public:
     static float frameTime();
     static float totalTime();
     static float deltaTime();
+	static unsigned int getFPS() { return _currentFPS; }
     static unsigned int totalFrameCount();
     static unsigned int currentFrameCount();
     static void showFPS(bool b);
@@ -27,6 +28,7 @@ private:
     static void StartFrame();
     static void EndFrame();
 
+	static unsigned _currentFPS;
     static float _mFrameTime;
     static float _mLastFrameTime;
     static float _mFPSTime;

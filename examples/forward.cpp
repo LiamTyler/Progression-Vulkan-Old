@@ -59,7 +59,9 @@ int main(int argc, char* argv[]) {
 
 	PG::EngineInitialize(conf);
 
+	std::cout << "about to laod scene" << std::endl;
 	auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/bouncing_ball.pgscn");
+	std::cout << "done loading scene" << std::endl;
 
 	auto camera = scene->GetCamera();
 	camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera));
@@ -74,7 +76,7 @@ int main(int argc, char* argv[]) {
 	int numBalls;
 	auto val = conf->get_table("app");
 	numBalls = *val->get_as<int>("numBalls");
-
+	std::cout << "num balls" << numBalls << std::endl;
 	if (numBalls == 9) {
 		X = 3;
 		Z = 3;
@@ -144,7 +146,7 @@ int main(int argc, char* argv[]) {
 			scene->AddLight(pl);
 		}
 	}
-
+	std::cout << "done adding components" << std::endl;
 	GameObject* planeObj = scene->GetGameObject("floor");
 	planeObj->AddComponent<ModelRenderer>(new ModelRenderer(planeObj, planeModel.get()));
 

@@ -111,4 +111,9 @@ namespace Progression {
         }
     }
 
+	void Window::setTitle(const std::string& title) {
+		glfwSetWindowTitle(_mWindow, title.c_str());
+	}
+
+
 } // namespace Progression

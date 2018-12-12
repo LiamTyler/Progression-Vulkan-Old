@@ -13,7 +13,7 @@ aspect 16:9
 near-plane .1
 far-plane 500
 primary-camera true
-rendering-pipeline tiled-deferred
+rendering-pipeline forward
 
 #Light
 #name mainDirectional

@@ -7,8 +7,9 @@ namespace Progression {
     float Time::_mLastFrameTime = 0;
     float Time::_mDeltaTime = 0;
     float Time::_mFPSTime = 0;
-    unsigned int Time::_mCurrentFrameCount = 0;
-    unsigned int Time::_mTotalFrameCount = 0;
+	unsigned int Time::_currentFPS = 0;
+	unsigned int Time::_mCurrentFrameCount = 0;
+	unsigned int Time::_mTotalFrameCount = 0;
     bool Time::_mDisplay = false;
 
     void Time::Init(const config::Config& config) {
@@ -59,6 +60,7 @@ namespace Progression {
         if (_mFrameTime > _mFPSTime + 1) {
             if (_mDisplay)
                 std::cout << "FPS: " << _mCurrentFrameCount << std::endl;
+			_currentFPS = _mCurrentFrameCount;
             _mCurrentFrameCount = 0;
             _mFPSTime = _mFrameTime;
         }

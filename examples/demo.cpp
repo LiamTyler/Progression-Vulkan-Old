@@ -11,6 +11,8 @@ using namespace std;
 GameObject* SPHERES[NUM_SPHERES];
 #define AGENT_RADIUS 3
 #define ROTATING_RADIUS 2.5
+#define SIZE 10 // SIZE^2 agents
+glm::vec3 endPositions[SIZE * SIZE];
 
 glm::vec2 dE(const glm::vec2& pa, const glm::vec2& pb, const glm::vec2& va,
 	const glm::vec2& vb, float ra, float rb)
@@ -36,11 +38,13 @@ glm::vec2 dE(const glm::vec2& pa, const glm::vec2& pb, const glm::vec2& va,
 	if (t < 0 || t > maxt)
 		return glm::vec2(0);
 
-	float k = 10.5;
+	float k = 8.5;
 	float m = 2.0;
 	float t0 = 3;
 	return k * exp(-t / t0)*(vDiff - (vDiff*b - pDiff * a) / disc) / (a*pow(t, m))*(m / t + 1.0f / t0);
 }
+int lightAdded = 0;
+
 
 class RotatingSpheres : public Component {
 public:
@@ -62,6 +66,7 @@ public:
 		pointLights.push_back(light);
 		//scene->AddGameObject(sphere);
 		scene->AddLight(light);
+		lightAdded++;
 		for (int i = 0; i < spheres.size(); ++i) {
 			glm::vec3 relPos(0, gameObject->transform.position.y + 1, 0);
 			float angle = 2 * M_PI * i / spheres.size();
@@ -97,10 +102,9 @@ public:
 	float totAngle;
 };
 
-
 class TTCcomponent : public Component {
 public:
-	TTCcomponent(GameObject* g, Scene* sc) :
+	TTCcomponent(GameObject* g, Scene* sc, int i) :
 		Component(g),
 		scene(sc),
 		radius(AGENT_RADIUS),
@@ -108,7 +112,8 @@ public:
 		velocity(0),
 		goalVelocity(0),
 		goal(0),
-		spheres(0)
+		spheres(0),
+		id(i)
 	{
 		int sphere = rand() % NUM_SPHERES;
 		goalSphere = SPHERES[sphere];
@@ -123,7 +128,7 @@ public:
 
 	void Update() {
 		glm::vec2 pos = glm::vec2(gameObject->transform.position.x, gameObject->transform.position.z);
-		goalVelocity = 6.0f * glm::normalize(goal - pos) * (static_cast<float>(NUM_SPHERES + spheres) / NUM_SPHERES);
+		goalVelocity = 4.0f * glm::normalize(goal - pos) * (static_cast<float>(NUM_SPHERES + spheres) / NUM_SPHERES);
 
 		scene->GetNeighbors(gameObject, 10, neighbors);
 		force = 2.0f * (goalVelocity - velocity);
@@ -139,10 +144,10 @@ public:
 				if (dist < 2 * r)
 					r = dist / 2.001;
 
-				auto dEdx = dE(pos, nPos, velocity, ttc->velocity, radius, ttc->radius);
+				auto dEdx = dE(pos, nPos, velocity, ttc->velocity, r, r);
 				auto FAvoid = -dEdx;
 				float mag = glm::length(FAvoid);
-				float maxF = 25;
+				float maxF = 20;
 				if (mag > maxF)
 					FAvoid = maxF * FAvoid / mag;
 
@@ -153,12 +158,12 @@ public:
 	}
 
 	void PostUpdate() {
-		float dt = .005;
+		float dt = .001;
 		// float dt = Time::deltaTime();
 		velocity += force * dt;
 		auto dP = velocity * dt;
 		gameObject->transform.position += glm::vec3(dP.x, 0, dP.y);
-		gameObject->transform.rotation.y += 2*dt * ((-atan2(velocity.y, velocity.x) + M_PI / 2.0f) - gameObject->transform.rotation.y);
+		gameObject->transform.rotation.y += 1*dt * ((-atan2(velocity.y, velocity.x) + M_PI / 2.0f) - gameObject->transform.rotation.y);
 		/*if (glm::length(gameObject->transform.position) > 200) {
 			cout << gameObject->transform.position << endl;
 		}*/
@@ -192,6 +197,7 @@ public:
 	std::vector<GameObject*> neighbors;
 	bool spheresReached[NUM_SPHERES];
 	int spheres;
+	int id;
 };
 
 
@@ -213,25 +219,27 @@ int main(int argc, char* argv[]) {
 	cout << "robot meshes: " << robotModel->meshes.size() << endl;
 	for (auto& mesh : robotModel->meshes)
 		cout << "triangles: " << mesh->numTriangles << endl;
-	int SIZE = 10;
 	for (int r = 0; r < SIZE; ++r) {
 		for (int c = 0; c < SIZE; ++c) {
-			Transform t(3.0f * glm::vec3(-SIZE + 4 * c, .1, SIZE - 4 * r), glm::vec3(0), glm::vec3(2));
+			//Transform t(3.0f * glm::vec3(-SIZE + 4 * c, .1, SIZE - 4 * r), glm::vec3(0), glm::vec3(2));
+			Transform t(3.0f * glm::vec3(40 + 4 * (SIZE / 2 - c), .1, 4 * (SIZE / 2 - r)), glm::vec3(0), glm::vec3(2));
 			auto g = new GameObject(t);
 			g->AddComponent<ModelRenderer>(new ModelRenderer(g, robotModel.get()));
 			g->AddComponent<RotatingSpheres>(new RotatingSpheres(g, scene));
-			g->AddComponent<TTCcomponent>(new TTCcomponent(g, scene));
+			g->AddComponent<TTCcomponent>(new TTCcomponent(g, scene, SIZE*r + c));
 			scene->AddGameObject(g);
+			endPositions[SIZE*r + c] = t.position;
 		}
 	}
 
 	auto skybox = scene->getSkybox();
 
-	RenderSystem::EnableOption(RenderOptions::BLOOM);
+	//RenderSystem::EnableOption(RenderOptions::BLOOM);
 	Window::SetRelativeMouse(true);
 	PG::Input::PollEvents();
 	bool pause = false;
 	while (!PG::EngineShutdown) {
+		lightAdded = 0;
 		PG::Window::StartFrame();
 		PG::Input::PollEvents();
 
@@ -256,6 +264,18 @@ int main(int argc, char* argv[]) {
 
 		skybox->Render(*camera);
 		PG::Window::EndFrame();
+		std::string title = "Light Gathering -- " + std::to_string(Time::getFPS()) + " FPS";
+		Window::setTitle(title);
+		GLenum err;
+		while ((err = glGetError()) != GL_NO_ERROR) {
+			std::cout << "gl error: " << err << std::endl;
+		}
+
+		if (lightAdded) {
+			// std::cout << "Added " << lightAdded << " lights" << std::endl;
+			//while (!PG::Input::GetKeyDown(PG::PG_K_SPACE))
+			//	PG::Input::PollEvents();
+		}
 	}
 
 	PG::EngineQuit();
