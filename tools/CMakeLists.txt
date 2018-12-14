@@ -9,5 +9,6 @@ set_target_properties(
     DEBUG_POSTFIX _debug
     )
 
+target_compile_options(objToRTModel PRIVATE "-O3")
 target_link_libraries(objToPGModel ${PROGRESSION_LIBS})
 target_link_libraries(objToRTModel ${PROGRESSION_LIBS})

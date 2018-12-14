@@ -296,6 +296,8 @@ namespace Progression {
         int numMeshes, numMaterials;
         in.read((char*)&numMeshes, sizeof(int));
         in.read((char*)&numMaterials, sizeof(int));
+        std::cout << "num meshes: " << numMeshes << std::endl;
+        std::cout << "num materials: " << numMaterials << std::endl;
         model->meshes.resize(numMeshes);
         model->materials.resize(numMeshes);
 
@@ -338,6 +340,10 @@ namespace Progression {
             in.read((char*)&numTriangles, sizeof(unsigned int));
             in.read((char*)&materialIndex, sizeof(unsigned int));
             in.read((char*)&textured, sizeof(bool));
+            std::cout << "num verts: " << numVertices << std::endl;
+            std::cout << "num triangles: " << numTriangles << std::endl;
+            std::cout << "mat index: " << materialIndex << std::endl;
+            std::cout << "textured: " << textured << std::endl;
 
             // expand the buffers if necessary
             if (numVertices > verts.size()) {
@@ -371,6 +377,7 @@ namespace Progression {
                 materials[i]->diffuseTexture = new Texture(new Image(PG_RESOURCE_DIR + diffuseTexNames[i]), true, true, true);
             }
         }
+        std::cout << "loaded pg model" << std::endl;
 
         return model;
     }
@@ -581,6 +588,8 @@ namespace Progression {
 
         unsigned int numMeshes = meshList.size();
         unsigned int numMaterials = usedMaterialMap.size();
+        std::cout << "num meshes: " << meshList.size() << std::endl;
+        std::cout << "num mats: " << usedMaterialMap.size() << std::endl;
         outFile.write((char*) &numMeshes, sizeof(unsigned int));
         outFile.write((char*) &numMaterials, sizeof(unsigned int));
 
@@ -591,7 +600,7 @@ namespace Progression {
             std::string diffuseTexName = "";
 
             if (matID.first == -1) {
-                Material mat = *ResourceManager::GetMaterial("default");
+                Material mat;
                 ambient = mat.ambient;
                 diffuse = mat.diffuse;
                 specular = mat.specular;
@@ -617,6 +626,7 @@ namespace Progression {
                 outFile.write((char*) &diffuseTexName[0], sizeof(char) * diffuseNameLength);
         }
 
+        std::cout << "writing meshes" << std::endl;
         for (int i = 0; i < meshList.size(); ++i) {
             const auto& mesh = meshList[i];
             outFile.write((char*) &mesh.numVertices, sizeof(unsigned int));
@@ -632,6 +642,7 @@ namespace Progression {
         }
 
         outFile.close();
+        std::cout << "done converting" << std::endl;
 
         return true;
     }
