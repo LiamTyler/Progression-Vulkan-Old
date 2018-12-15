@@ -51,6 +51,7 @@ typedef struct RTMaterial {
     float ior;
 } RTMaterial;
 
+/*
 typedef struct Triangle {
     Triangle() : Triangle(0,0,0) {}
 
@@ -66,6 +67,38 @@ typedef struct Triangle {
 
     int v1, v2, v3;
 } Triangle;
+*/
+typedef struct Triangle {
+    Triangle() {}
+
+    Triangle(const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& v3,
+             const glm::vec3& n1, const glm::vec3& n2, const glm::vec3& n3)
+    {
+        f1.x = v1.x; f1.y = v1.y; f1.z = v1.z;
+        f1.w = v2.x; f2.x = v2.y; f2.y = v2.z;
+        f2.z = v3.x; f2.w = v3.y; f3.x = v3.z;
+
+        f3.y = n1.x; f3.z = n1.y; f3.w = n1.z;
+        f4.x = n2.x; f4.y = n2.y; f4.z = n2.z;
+        f4.w = n3.x; f5.x = n3.y; f5.y = n3.z;
+    }
+
+    glm::vec3 getCenter() const {
+        glm::vec3 v1, v2, v3;
+        v1 = glm::vec3(f1.x, f1.y, f1.z);
+        v2 = glm::vec3(f1.w, f2.x, f2.y);
+        v3 = glm::vec3(f2.z, f2.w, f3.x);
+        return (v1 + v2 + v3) / 3.0f;
+    }
+
+    void getVerts(glm::vec3& v1, glm::vec3& v2, glm::vec3& v3) const {
+        v1 = glm::vec3(f1.x, f1.y, f1.z);
+        v2 = glm::vec3(f1.w, f2.x, f2.y);
+        v3 = glm::vec3(f2.z, f2.w, f3.x);
+    }
+
+    glm::vec4 f1, f2, f3, f4, f5;
+} Triangle;
 
 typedef struct BoundingBox {
     BoundingBox() {}
@@ -76,21 +109,15 @@ typedef struct BoundingBox {
 } BoundingBox;
 
 typedef struct RTMesh {
-    RTMesh(const std::vector<glm::vec3>& verts,
-            const std::vector<glm::vec3>& norms,
-            const std::vector<Triangle>& tris,
+    RTMesh(const std::vector<Triangle>& tris,
             const std::vector<BoundingBox>& bbs,
             unsigned short m) :
-        vertices(verts),
-        normals(norms),
         triangles(tris),
         boxes(bbs),
         matID(m)
     {
     }
 
-    std::vector<glm::vec3> vertices;
-    std::vector<glm::vec3> normals;
     std::vector<Triangle> triangles;
     std::vector<BoundingBox> boxes;
     unsigned short matID;
@@ -105,7 +132,6 @@ class RBVH {
             max = glm::vec3(0);
         }
         void Partition(
-                glm::vec3* verts,
                 const std::vector<BoundingBox>& boxes,
                 const std::vector<Triangle>& triangles,
                 const std::vector<int>& currShapes)
@@ -125,7 +151,7 @@ class RBVH {
             minY = curr_min.y; maxY = curr_max.y;
             minZ = curr_min.z; maxZ = curr_max.z;
             glm::vec3 minC, maxC;
-            minC = maxC = triangles[currShapes[0]].getCenter(verts);
+            minC = maxC = triangles[currShapes[0]].getCenter();
 
             for (int i = 1; i < currShapes.size(); ++i) {
                 // get bounding box for shape
@@ -140,7 +166,7 @@ class RBVH {
 
                 // find the min / max components of all of the shape centers
                 // auto c = triangles[currShapes[i]].getCenter(verts);
-                auto c = triangles[currShapes[i]].getCenter(verts);
+                auto c = triangles[currShapes[i]].getCenter();
                 minC.x = std::min(minC.x, c.x);
                 minC.y = std::min(minC.y, c.y);
                 minC.z = std::min(minC.z, c.z);
@@ -169,7 +195,7 @@ class RBVH {
             std::vector<int> right_tris;
             // std::vector<BoundingBox> right_boxes;
             for (int i = 0; i < currShapes.size(); ++i) {
-                if (cmp(mid, triangles[currShapes[i]].getCenter(verts))) {
+                if (cmp(mid, triangles[currShapes[i]].getCenter())) {
                     left_tris.push_back(currShapes[i]);
                     // left_boxes.push_back(boxes[i]);
                 } else {
@@ -186,8 +212,8 @@ class RBVH {
                 right = new RBVH;
                 // left->Partition(verts, left_boxes, triangles, left_tris);
                 // right->Partition(verts, right_boxes, triangles, right_tris);
-                left->Partition(verts, boxes, triangles, left_tris);
-                right->Partition(verts, boxes, triangles, right_tris);
+                left->Partition(boxes, triangles, left_tris);
+                right->Partition(boxes, triangles, right_tris);
             }
         }
 
@@ -217,11 +243,9 @@ class IBVH {
         }
         IBVH(RBVH* node) {
             node->getBB(min, max);
-            // numShapes = node->getNumShapes();
             left = right = 0;
         }
         int getNumShapes() { left < 0 + right < 0; }
-        // bool isLeaf() { return numShapes != 0; }
         bool isLeaf() { return left < 0; }
         void getBB(glm::vec3& mi, glm::vec3& ma) { mi = min; ma = max; }
 
@@ -308,13 +332,13 @@ void writeToFile(
     // now write meshes
     for (int i = 0; i < list.size(); ++i) {
         const auto& mesh = list[i].first;
-        unsigned int numVerts = mesh.vertices.size();
         unsigned int numTris  = mesh.triangles.size();
-        outFile.write((char*) &numVerts, sizeof(unsigned int));
+        // unsigned int numVerts = mesh.vertices.size();
+        // outFile.write((char*) &numVerts, sizeof(unsigned int));
         outFile.write((char*) &numTris, sizeof(unsigned int));
         outFile.write((char*) &bvh_sizes[i], sizeof(int));
-        outFile.write((char*) &mesh.vertices[0], sizeof(glm::vec3) * numVerts);
-        outFile.write((char*) &mesh.normals[0], sizeof(glm::vec3) * numVerts);
+        // outFile.write((char*) &mesh.vertices[0], sizeof(glm::vec3) * numVerts);
+        // outFile.write((char*) &mesh.normals[0], sizeof(glm::vec3) * numVerts);
         outFile.write((char*) &mesh.triangles[0], sizeof(Triangle) * numTris);
         outFile.write((char*) bvhs[i], sizeof(IBVH) * bvh_sizes[i]);
     }
@@ -382,12 +406,12 @@ int main(int argc, char* argv[]) {
                         tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index + 0];
                         tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
                         tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
-                        //verts.emplace_back(vx, vy, vz);
+                        verts.emplace_back(vx, vy, vz);
 
                         tinyobj::real_t nx = attrib.normals[3 * idx.normal_index + 0];
                         tinyobj::real_t ny = attrib.normals[3 * idx.normal_index + 1];
                         tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
-                        //normals.emplace_back(nx, ny, nz);
+                        normals.emplace_back(nx, ny, nz);
 
                         tinyobj::real_t tx = 0, ty = 0;
                         if (idx.texcoord_index != -1) {
@@ -397,6 +421,7 @@ int main(int argc, char* argv[]) {
                         }
 
 
+                        /*
                         Vertex vertex(glm::vec3(vx, vy, vz), glm::vec3(nx, ny, nz), glm::vec2(ty, ty));
                         if (uniqueVertices.count(vertex) == 0) {
                             uniqueVertices[vertex] = static_cast<uint32_t>(verts.size());
@@ -408,12 +433,17 @@ int main(int argc, char* argv[]) {
 
 
                         indices.push_back(uniqueVertices[vertex]);                            
+                        */
                     }
-                    tris.emplace_back(indices[indices.size() - 1], indices[indices.size() - 2], indices[indices.size() - 3]);
+                    // tris.emplace_back(indices[indices.size() - 1], indices[indices.size() - 2], indices[indices.size() - 3]);
+                    int i = verts.size() - 3;
+                    tris.emplace_back(verts[i], verts[i+1], verts[i+2], normals[i], normals[i+1], normals[i+2]);
 
                     // calculate BB for triangle
                     const auto& tri = tris[tris.size() - 1];
-                    const glm::vec3 v1 = verts[tri.v1], v2 = verts[tri.v2], v3 = verts[tri.v3];
+                    // const glm::vec3 v1 = verts[tri.v1], v2 = verts[tri.v2], v3 = verts[tri.v3];
+                    glm::vec3 v1, v2, v3;
+                    tri.getVerts(v1, v2, v3);
                     glm::vec3 bbmin, bbmax;
                     bbmin.x = std::min(v1.x, std::min(v2.x, v3.x));
                     bbmin.y = std::min(v1.y, std::min(v2.y, v3.y));
@@ -427,7 +457,8 @@ int main(int argc, char* argv[]) {
         }
 
         if (verts.size()) {
-            RTMesh currentMesh(verts, normals, tris, boxes, 0);
+            // RTMesh currentMesh(verts, normals, tris, boxes, 0);
+            RTMesh currentMesh(tris, boxes, 0);
             retList.emplace_back(currentMesh, currentMat);
         }
     }
@@ -444,7 +475,7 @@ int main(int argc, char* argv[]) {
     std::cout << "num meshes: " << retList.size() << std::endl;
     for (const auto& pair : retList) {
         auto mesh = pair.first;
-        std::cout << "num verts = " << mesh.vertices.size() << std::endl;
+        // std::cout << "num verts = " << mesh.vertices.size() << std::endl;
         std::cout << "num tris  = " << mesh.triangles.size() << std::endl;
         RBVH rbvh;
         std::vector<int> shapeIdxs;
@@ -453,7 +484,8 @@ int main(int argc, char* argv[]) {
             shapeIdxs[i] = i;
 
         std::cout << "creating RBVH" << std::endl;
-        rbvh.Partition(&mesh.vertices[0], mesh.boxes, mesh.triangles, shapeIdxs);
+        // rbvh.Partition(&mesh.vertices[0], mesh.boxes, mesh.triangles, shapeIdxs);
+        rbvh.Partition(mesh.boxes, mesh.triangles, shapeIdxs);
         std::cout << "bvh count: " << rbvh.count() << std::endl;
         IBVH* ibvh = CreateFromBVH(&rbvh, mesh.triangles);
         bvhs.push_back(ibvh);
