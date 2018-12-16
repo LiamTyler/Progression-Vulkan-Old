@@ -6,6 +6,7 @@
 #include <fstream>
 #include "tinyobjloader/tiny_obj_loader.h"
 #include <algorithm>
+#include <limits>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
@@ -51,23 +52,6 @@ typedef struct RTMaterial {
     float ior;
 } RTMaterial;
 
-/*
-typedef struct Triangle {
-    Triangle() : Triangle(0,0,0) {}
-
-    Triangle(int a, int b, int c) : v1(a), v2(b), v3(c) {}
-
-    glm::vec3 getCenter(glm::vec3* verts) const {
-        return (verts[v1] + verts[v2] + verts[v3]) / 3.0f;
-    }
-
-    friend bool operator==(const Triangle& t1, const Triangle& t2) {
-        return t1.v1 == t2.v1 && t1.v2 == t2.v2 && t1.v3 == t2.v3;
-    }
-
-    int v1, v2, v3;
-} Triangle;
-*/
 typedef struct Triangle {
     Triangle() {}
 
@@ -100,9 +84,27 @@ typedef struct Triangle {
     glm::vec4 f1, f2, f3, f4, f5;
 } Triangle;
 
+glm::vec3 min3(const glm::vec3& a, const glm::vec3& b) {
+    return glm::vec3(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z));
+}
+
+glm::vec3 max3(const glm::vec3& a, const glm::vec3& b) {
+    return glm::vec3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
+}
+
 typedef struct BoundingBox {
     BoundingBox() {}
     BoundingBox(const glm::vec3& _min, const glm::vec3& _max) : min(_min), max(_max) {}
+
+    float SA() const {
+        glm::vec3 D = max - min;
+        return 2.0f * (D.x * D.y + D.x * D.z + D.y * D.z);
+    }
+
+    void grow(const BoundingBox& b) {
+        min = min3(min, b.min);
+        max = max3(max, b.max);
+    }
 
     glm::vec3 min;
     glm::vec3 max;
@@ -123,6 +125,8 @@ typedef struct RTMesh {
     unsigned short matID;
 } RTMesh;
 
+int* bvhCounts;
+
 class RBVH {
     public:
         RBVH() {
@@ -134,7 +138,7 @@ class RBVH {
         void Partition(
                 const std::vector<BoundingBox>& boxes,
                 const std::vector<Triangle>& triangles,
-                const std::vector<int>& currShapes)
+                const std::vector<int>& currShapes, int depth = 0)
         {
             if (currShapes.size() == 0) {
                 std::cout << "ERROR, TRYING TO PARTITION 0 SHAPES" << std::endl;
@@ -142,67 +146,101 @@ class RBVH {
             }
 
             // find the bounding box for all shapes combined
-            glm::vec3 curr_min, curr_max;
-            float minX, maxX, minY, maxY, minZ, maxZ;
-            // curr_min = boxes[0].min; curr_max = boxes[0].max;
-            curr_min = boxes[currShapes[0]].min; curr_max = boxes[currShapes[0]].max;
-
-            minX = curr_min.x; maxX = curr_max.x;
-            minY = curr_min.y; maxY = curr_max.y;
-            minZ = curr_min.z; maxZ = curr_max.z;
-            glm::vec3 minC, maxC;
-            minC = maxC = triangles[currShapes[0]].getCenter();
+            BoundingBox bb(boxes[currShapes[0]].min, boxes[currShapes[0]].max);
+            BoundingBox bbCenters(triangles[currShapes[0]].getCenter(), triangles[currShapes[0]].getCenter());
 
             for (int i = 1; i < currShapes.size(); ++i) {
-                // get bounding box for shape
-                // curr_min = boxes[i].min; curr_max = boxes[i].max;
-                curr_min = boxes[currShapes[i]].min; curr_max = boxes[currShapes[i]].max;
-                minX = std::min(minX, curr_min.x);
-                minY = std::min(minY, curr_min.y);
-                minZ = std::min(minZ, curr_min.z);
-                maxX = std::max(maxX, curr_max.x);
-                maxY = std::max(maxY, curr_max.y);
-                maxZ = std::max(maxZ, curr_max.z);
+                // expand bounding box to enclose current shape
+                bb.grow(boxes[currShapes[i]]);
 
-                // find the min / max components of all of the shape centers
-                // auto c = triangles[currShapes[i]].getCenter(verts);
+                // find the min / max of all of the shape centroids 
                 auto c = triangles[currShapes[i]].getCenter();
-                minC.x = std::min(minC.x, c.x);
-                minC.y = std::min(minC.y, c.y);
-                minC.z = std::min(minC.z, c.z);
-                maxC.x = std::max(maxC.x, c.x);
-                maxC.y = std::max(maxC.y, c.y);
-                maxC.z = std::max(maxC.z, c.z);
-
+                bbCenters.grow(BoundingBox(c, c));
             }
-            min = glm::vec3(minX, minY, minZ);
-            max = glm::vec3(maxX, maxY, maxZ);
+            min = bb.min;
+            max = bb.max;
 
-            glm::vec3 mid = (minC + maxC) / 2.0f;
-            glm::vec3 d = maxC - minC;
-            std::function<bool(const glm::vec3&, const glm::vec3&)> cmp;
-            // split on largest axis
-            if (d.x >= d.y && d.x >= d.z) {
-                cmp = [&](glm::vec3 mid, glm::vec3 center) { return mid.x >= center.x; };
-            } else if (d.y >= d.x && d.y >= d.z) {
-                cmp = [&](glm::vec3 mid, glm::vec3 center) { return mid.y >= center.y; };
-            } else {
-                cmp = [&](glm::vec3 mid, glm::vec3 center) { return mid.z >= center.z; };
-            }
+            int bestAxis = -1;
+            float bestCost = currShapes.size() * bb.SA();
+            float bestSplitVal;
+            for (int axis = 0; axis < 3; ++axis) {
+                float start, stop;
+                if (axis == 0) { start = min.x; stop = max.x; }
+                else if (axis == 1) { start = min.y; stop = max.y; }
+                else { start = min.z; stop = max.z; }
 
-            std::vector<int> left_tris;
-            // std::vector<BoundingBox> left_boxes;
-            std::vector<int> right_tris;
-            // std::vector<BoundingBox> right_boxes;
-            for (int i = 0; i < currShapes.size(); ++i) {
-                if (cmp(mid, triangles[currShapes[i]].getCenter())) {
-                    left_tris.push_back(currShapes[i]);
-                    // left_boxes.push_back(boxes[i]);
-                } else {
-                    right_tris.push_back(currShapes[i]);
-                    // right_boxes.push_back(boxes[i]);
+                if (stop - start < 0.0001f)
+                    continue;
+
+                float step = (stop - start) / (1024.0f / (depth + 1));
+
+                for (float splitVal = start + step; splitVal < stop - step; splitVal += step) {
+                    int numLeft = 0;
+                    int numRight = 0;
+                    BoundingBox leftBB(glm::vec3(FLT_MAX), -glm::vec3(FLT_MAX));
+                    BoundingBox rightBB(glm::vec3(FLT_MAX), -glm::vec3(FLT_MAX));
+                    for (int i = 0; i < currShapes.size(); ++i) {
+                        const auto& b = boxes[currShapes[i]];
+                        float v;
+                        if (axis == 0) v = 0.5f * (b.min.x + b.max.x);
+                        else if (axis == 1) v = 0.5f * (b.min.y + b.max.y);
+                        else v = 0.5f * (b.min.z + b.max.z);
+
+                        if (v <= splitVal) {
+                            numLeft++;
+                            leftBB.grow(b);
+                        } else {
+                            numRight++;
+                            rightBB.grow(b);
+                        }
+                    }
+
+                    if (numLeft < 1 || numRight < 1)
+                        continue;
+
+                    float cost = numLeft * leftBB.SA() + numRight * rightBB.SA();
+                    if (cost < bestCost) {
+                        bestCost = cost;
+                        bestAxis = axis;
+                        bestSplitVal = splitVal;
+                    }
                 }
             }
+
+            // see if the original was best cost
+            if (bestAxis == -1) {
+                if (currShapes.size() > 2) {
+                    std::cout << "best cost was box with " << currShapes.size() << " shapes" << std::endl;
+                    // exit(EXIT_FAILURE);
+                }
+                shapes_ = currShapes;
+                for (const auto& s : shapes_)
+                    bvhCounts[s]++;
+                return;
+            }
+
+            int numLeft = 0;
+            int numRight = 0;
+            BoundingBox leftBB(glm::vec3(FLT_MAX), -glm::vec3(FLT_MAX));
+            BoundingBox rightBB(glm::vec3(FLT_MAX), -glm::vec3(FLT_MAX));
+            std::vector<int> left_tris;
+            std::vector<int> right_tris;
+            for (int i = 0; i < currShapes.size(); ++i) {
+                const auto& b = boxes[currShapes[i]];
+                float v;
+                if (bestAxis == 0) v = 0.5f * (b.min.x + b.max.x);
+                else if (bestAxis == 1) v = 0.5f * (b.min.y + b.max.y);
+                else v = 0.5f * (b.min.z + b.max.z);
+
+                if (v <= bestSplitVal) {
+                    leftBB.grow(b);
+                    left_tris.push_back(currShapes[i]);
+                } else {
+                    rightBB.grow(b);
+                    right_tris.push_back(currShapes[i]);
+                }
+            }
+
             if (left_tris.size() == 0 || right_tris.size() == 0) {
                 shapes_ = currShapes;
                 if (left_tris.size() > 1 || right_tris.size() > 1)
@@ -210,10 +248,8 @@ class RBVH {
             } else {
                 left = new RBVH;
                 right = new RBVH;
-                // left->Partition(verts, left_boxes, triangles, left_tris);
-                // right->Partition(verts, right_boxes, triangles, right_tris);
-                left->Partition(boxes, triangles, left_tris);
-                right->Partition(boxes, triangles, right_tris);
+                left->Partition(boxes, triangles, left_tris, depth + 1);
+                right->Partition(boxes, triangles, right_tris, depth + 1);
             }
         }
 
@@ -249,6 +285,10 @@ class IBVH {
         bool isLeaf() { return left < 0; }
         void getBB(glm::vec3& mi, glm::vec3& ma) { mi = min; ma = max; }
 
+        friend std::ostream& operator<<(std::ostream& out, const IBVH& node) {
+            return out << node.left << " -> " << node.right;
+        }
+
         // int numShapes;
         glm::vec3 min;
         int left;
@@ -256,7 +296,7 @@ class IBVH {
         int right;
 };
 
-int insertChildren(IBVH* arr, RBVH* node, const std::vector<Triangle>& shapes, int parent, int size) {
+int insertChildren(IBVH* arr, RBVH* node, const std::vector<Triangle>& shapes, int parent, int size, std::vector<Triangle>& triList) {
     RBVH* l = node->left, *r = node->right;
     int numS = node->getNumShapes();
 
@@ -265,11 +305,18 @@ int insertChildren(IBVH* arr, RBVH* node, const std::vector<Triangle>& shapes, i
             std::cout << "more than 2 shapes in this bin, error" << std::endl;
             // exit(EXIT_FAILURE);
         }
+        arr[parent].left = -(triList.size() + 1);
+        for (int i = 0; i < numS; ++i)
+            triList.push_back(shapes[node->shapes_[i]]);
+        arr[parent].right = triList.size();
 
+
+        /*
         arr[parent].left = -node->shapes_[0];
         if (numS >= 2) {
             arr[parent].right = -node->shapes_[1];
         }
+        */
 
         return size;
     }
@@ -284,19 +331,19 @@ int insertChildren(IBVH* arr, RBVH* node, const std::vector<Triangle>& shapes, i
     }
 
     if (l)
-        size = insertChildren(arr, l, shapes, arr[parent].left, size);
+        size = insertChildren(arr, l, shapes, arr[parent].left, size, triList);
     if (r)
-        size = insertChildren(arr, r, shapes, arr[parent].right, size);
+        size = insertChildren(arr, r, shapes, arr[parent].right, size, triList);
 
     return size;
 }
 
-IBVH* CreateFromBVH(RBVH* root, const std::vector<Triangle>& shapes) {
+IBVH* CreateFromBVH(RBVH* root, const std::vector<Triangle>& shapes, std::vector<Triangle>& triList) {
     int nodes = root->count();
     std::cout << "nodes: " << nodes << std::endl;
     IBVH* list = new IBVH[nodes];
     list[0] = IBVH(root);
-    int inserted = insertChildren(list, root, shapes, 0, 1);
+    int inserted = insertChildren(list, root, shapes, 0, 1, triList);
     std::cout << "inserted nodes: " << inserted << std::endl;
 
     return list;
@@ -473,23 +520,40 @@ int main(int argc, char* argv[]) {
     std::vector<IBVH*> bvhs;
     std::vector<int> bvh_sizes;
     std::cout << "num meshes: " << retList.size() << std::endl;
-    for (const auto& pair : retList) {
-        auto mesh = pair.first;
+    for (auto& pair : retList) {
+        auto& mesh = pair.first;
         // std::cout << "num verts = " << mesh.vertices.size() << std::endl;
         std::cout << "num tris  = " << mesh.triangles.size() << std::endl;
         RBVH rbvh;
         std::vector<int> shapeIdxs;
         shapeIdxs.resize(mesh.triangles.size());
-        for (int i = 0; i < shapeIdxs.size(); ++i)
+        bvhCounts = new int[mesh.triangles.size()];
+        for (int i = 0; i < shapeIdxs.size(); ++i) {
             shapeIdxs[i] = i;
+            bvhCounts[i] = 0;
+        }
 
         std::cout << "creating RBVH" << std::endl;
         // rbvh.Partition(&mesh.vertices[0], mesh.boxes, mesh.triangles, shapeIdxs);
         rbvh.Partition(mesh.boxes, mesh.triangles, shapeIdxs);
-        std::cout << "bvh count: " << rbvh.count() << std::endl;
-        IBVH* ibvh = CreateFromBVH(&rbvh, mesh.triangles);
+        int total = 0;
+        for (int i = 0; i < mesh.triangles.size(); ++i) {
+            if (bvhCounts[i] > 1) {
+                std::cout << "triangle " << i << " used in " << bvhCounts[i] << " nodes" << std::endl;
+            }
+            total += bvhCounts[i];
+        }
+        std::cout << "num triangles in bvh: " << total << std::endl;
+        int numNodes = rbvh.count();
+        std::cout << "bvh count: " << numNodes << std::endl;
+        std::vector<Triangle> newTriList;
+        IBVH* ibvh = CreateFromBVH(&rbvh, mesh.triangles, newTriList);
+        // for (int i = 0; i < numNodes; ++i)
+        //     std::cout << ibvh[i] << std::endl;
+        mesh.triangles = newTriList;
         bvhs.push_back(ibvh);
-        bvh_sizes.push_back(rbvh.count());
+        bvh_sizes.push_back(numNodes);
+        delete[] bvhCounts;
     }
 
     std::cout << "writing to file" << std::endl;
