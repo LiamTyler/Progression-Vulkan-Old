@@ -301,10 +301,6 @@ int insertChildren(IBVH* arr, RBVH* node, const std::vector<Triangle>& shapes, i
     int numS = node->getNumShapes();
 
     if (numS) {
-        if (numS > 2) {
-            std::cout << "more than 2 shapes in this bin, error" << std::endl;
-            // exit(EXIT_FAILURE);
-        }
         arr[parent].left = -(triList.size() + 1);
         for (int i = 0; i < numS; ++i)
             triList.push_back(shapes[node->shapes_[i]]);
