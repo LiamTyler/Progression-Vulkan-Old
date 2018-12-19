@@ -10,7 +10,7 @@
 
 [renderSystem]
     maxNumLights = 10001
-    lightIntensityCutoff = 0.03
+    lightIntensityCutoff = 0.001
 
 [app]
     numBalls = 1000

@@ -328,7 +328,7 @@ int main(int argc, char* argv[]) {
 		for (const auto& light : pointLights) {
 
 			// calculate light volume model matrix
-			float cutOffIntensity = 0.03;
+			float cutOffIntensity = 0.003;
 			float lightRadius = std::sqrtf(light->intensity / cutOffIntensity);
 			//lightRadius = 4;
 			glm::mat4 lightModelMatrix(1);

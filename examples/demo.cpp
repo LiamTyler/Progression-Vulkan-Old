@@ -30,7 +30,7 @@ glm::vec2 dE(const glm::vec2& pa, const glm::vec2& pb, const glm::vec2& va,
 	float c = glm::dot(pDiff, pDiff) - radius * radius;
 
 	float disc = b * b - a * c;
-	if (disc < 0 || abs(a) < 0.001)
+	if (disc <= 0 || abs(a) < 0.001)
 		return glm::vec2(0);
 
 	disc = sqrt(disc);
@@ -38,7 +38,7 @@ glm::vec2 dE(const glm::vec2& pa, const glm::vec2& pb, const glm::vec2& va,
 	if (t < 0 || t > maxt)
 		return glm::vec2(0);
 
-	float k = 8.5;
+	float k = 11.5;
 	float m = 2.0;
 	float t0 = 3;
 	return k * exp(-t / t0)*(vDiff - (vDiff*b - pDiff * a) / disc) / (a*pow(t, m))*(m / t + 1.0f / t0);
@@ -119,6 +119,9 @@ public:
 		goalSphere = SPHERES[sphere];
 		goal = glm::vec2(goalSphere->transform.position.x, goalSphere->transform.position.z);
 		memset(spheresReached, 0, sizeof(spheresReached));
+		orientations.resize(8);
+		for (int i = 0; i < orientations.size(); ++i)
+			orientations[i] = glm::vec2(0);
 	}
 
 	~TTCcomponent() = default;
@@ -154,24 +157,40 @@ public:
 				force += FAvoid;
 			}
 		}
-		//cout << force << endl;
 	}
 
 	void PostUpdate() {
-		float dt = .001;
+		auto xzPos = glm::vec2(gameObject->transform.position.x, gameObject->transform.position.z);
+		if (spheres == NUM_SPHERES && glm::length(goal - xzPos) < 0.5f) {
+			gameObject->transform.position = endPositions[id];
+			gameObject->transform.rotation.y = 0;
+			return;
+		}
+		float dt = .015;
 		// float dt = Time::deltaTime();
 		velocity += force * dt;
 		auto dP = velocity * dt;
 		gameObject->transform.position += glm::vec3(dP.x, 0, dP.y);
-		gameObject->transform.rotation.y += 1*dt * ((-atan2(velocity.y, velocity.x) + M_PI / 2.0f) - gameObject->transform.rotation.y);
-		/*if (glm::length(gameObject->transform.position) > 200) {
-			cout << gameObject->transform.position << endl;
-		}*/
 
-		auto xzPos = glm::vec2(gameObject->transform.position.x, gameObject->transform.position.z);
-		if (glm::length(goal - xzPos) < 6) {
+		for (int i = 0; i < orientations.size() - 1; ++i)
+			orientations[i] = orientations[i + 1];
+		orientations[orientations.size() - 1] = velocity;
+		auto sum = glm::vec2(0);
+		for (int i = 0; i < orientations.size(); ++i)
+			sum += orientations[i];
+		auto avg = sum / (float) orientations.size();
+		float desiredOrientation = -atan2(avg.y, avg.x) + M_PI / 2.0f;
+		gameObject->transform.rotation.y = desiredOrientation;
+
+		xzPos = glm::vec2(gameObject->transform.position.x, gameObject->transform.position.z);
+		if (spheres < NUM_SPHERES && glm::length(goal - xzPos) < 6) {
 			gameObject->GetComponent<RotatingSpheres>()->AddSphere(goalSphere->GetComponent<ModelRenderer>()->model);
 			spheres++;
+			if (spheres == NUM_SPHERES) {
+				goal = glm::vec2(endPositions[id].x, endPositions[id].z);
+				velocity = 6.0f * glm::normalize(goal - xzPos);
+				return;
+			}
 			for (int i = 0; i < NUM_SPHERES; ++i)
 				if (goalSphere == SPHERES[i])
 					spheresReached[i] = true;
@@ -182,8 +201,6 @@ public:
 			goalSphere = SPHERES[i];
 			goal = glm::vec2(goalSphere->transform.position.x, goalSphere->transform.position.z);
 			velocity = 6.0f * glm::normalize(goal - xzPos);
-
-
 		}
 	}
 
@@ -198,6 +215,7 @@ public:
 	bool spheresReached[NUM_SPHERES];
 	int spheres;
 	int id;
+	std::vector<glm::vec2> orientations;
 };
 
 
@@ -222,7 +240,7 @@ int main(int argc, char* argv[]) {
 	for (int r = 0; r < SIZE; ++r) {
 		for (int c = 0; c < SIZE; ++c) {
 			//Transform t(3.0f * glm::vec3(-SIZE + 4 * c, .1, SIZE - 4 * r), glm::vec3(0), glm::vec3(2));
-			Transform t(3.0f * glm::vec3(40 + 4 * (SIZE / 2 - c), .1, 4 * (SIZE / 2 - r)), glm::vec3(0), glm::vec3(2));
+			Transform t(3.0f * glm::vec3(50 + 5 * (SIZE / 2 - c), .1, 5 * (SIZE / 2 - r)), glm::vec3(0), glm::vec3(2));
 			auto g = new GameObject(t);
 			g->AddComponent<ModelRenderer>(new ModelRenderer(g, robotModel.get()));
 			g->AddComponent<RotatingSpheres>(new RotatingSpheres(g, scene));
@@ -235,6 +253,7 @@ int main(int argc, char* argv[]) {
 	auto skybox = scene->getSkybox();
 
 	//RenderSystem::EnableOption(RenderOptions::BLOOM);
+	camera->SetRenderingPipeline(RenderingPipeline::TILED_DEFERRED);
 	Window::SetRelativeMouse(true);
 	PG::Input::PollEvents();
 	bool pause = false;
@@ -251,11 +270,12 @@ int main(int argc, char* argv[]) {
 		if (!pause) {
 			scene->Update();
 			auto& gameObjects = scene->GetGameObjects();
-			for (auto& obj : gameObjects) {
-				auto ttc = obj->GetComponent<TTCcomponent>();
-				if (ttc)
-					ttc->PostUpdate();
-			}
+			for (int i = 0 ; i < 5; ++i)
+				for (auto& obj : gameObjects) {
+					auto ttc = obj->GetComponent<TTCcomponent>();
+					if (ttc)
+						ttc->PostUpdate();
+				}
 		} else {
 			camera->Update();
 		}

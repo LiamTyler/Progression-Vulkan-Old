@@ -56,7 +56,6 @@ namespace Progression {
 		maxNumLights_ = rsConfig->get_as<int>("maxNumLights").value_or(10001);
 		lightIntensityCutoff_ = rsConfig->get_as<float>("lightIntensityCutoff").value_or(0.03f);
 
-		/*
 		tdCombineShader_ = new Shader(PG_RESOURCE_DIR "shaders/deferred_combine.vert", PG_RESOURCE_DIR "shaders/deferred_combine.frag");
 
 		float quadVerts[] = {
@@ -98,14 +97,14 @@ namespace Progression {
 
 		glBindImageTexture(0, postProcessingData_.mainBuffer, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
 		glBindImageTexture(1, postProcessingData_.glowBuffer, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
-		*/
+		
 
 		glGenBuffers(1, &lightSSBO_);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSSBO_);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, lightSSBO_);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, 2 * sizeof(glm::vec4) * maxNumLights_, NULL, GL_DYNAMIC_COPY);
 
-		/*
+		
 		postProcessingData_.bloomCombineShader = new Shader(PG_RESOURCE_DIR "shaders/bloomCombine.vert", PG_RESOURCE_DIR "shaders/bloomCombine.frag");
 		postProcessingData_.blurShader = new Shader(PG_RESOURCE_DIR "shaders/blur.vert", PG_RESOURCE_DIR "shaders/blur.frag");
 		postProcessingData_.blurShader->AddUniform("kernel");
@@ -142,7 +141,6 @@ namespace Progression {
 			postProcessingData_.bloomKernels[i] = genKernel(sizes[i], stddev[i]);
 			postProcessingData_.bloomKernelSizes[i] = sizes[i];
 		}
-		*/
     }
 
     // TODO: Actually release the openGL stuff!
@@ -163,7 +161,7 @@ namespace Progression {
         graphics::ToggleDepthTesting(true);
         //graphics::ToggleCulling(true);
 
-		/*
+		
 		glBindFramebuffer(GL_FRAMEBUFFER, postProcessingData_.FBO);
 		graphics::SetClearColor(glm::vec4(0));
 		graphics::Clear();
@@ -173,14 +171,14 @@ namespace Progression {
             graphics::SetClearColor(glm::vec4(0));
             graphics::Clear();
         }
-		*/
+		
 
         UpdateLights(scene, camera);
 
         for (const auto& subsys : subSystems_)
             subsys.second->Render(scene, *camera);
 
-		/*
+		
         if (camera->GetRenderingPipeline() == RenderingPipeline::TILED_DEFERRED) {
             glBindFramebuffer(GL_READ_FRAMEBUFFER, tdGbuffer_);
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, postProcessingData_.FBO);
@@ -284,7 +282,6 @@ namespace Progression {
 
 		graphics::ToggleDepthTesting(true);
 		graphics::ToggleDepthBufferWriting(true);
-		*/
 	}
 
 	void RenderSystem::EnableOption(uint64_t option) {

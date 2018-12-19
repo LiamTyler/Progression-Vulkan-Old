@@ -6,7 +6,6 @@
 namespace Progression {
 
     MeshRenderSubSystem::MeshRenderSubSystem() {
-		/*
         auto forward = ResourceManager::GetShader("mesh-forward");
         auto tiled_deferred = ResourceManager::GetShader("mesh-tiled-deferred");
         if (!forward) {
@@ -23,8 +22,6 @@ namespace Progression {
 
         pipelineShaders[RenderingPipeline::FORWARD] = forward.get();
         pipelineShaders[RenderingPipeline::TILED_DEFERRED] = tiled_deferred.get();
-		*/
-		pipelineShaders[RenderingPipeline::FORWARD] = new Shader(PG_RESOURCE_DIR "shaders/phong.vert", PG_RESOURCE_DIR "shaders/phong_forward.frag");
     }
 
     void MeshRenderSubSystem::AddRenderComponent(RenderComponent* rc) {
@@ -69,10 +66,9 @@ namespace Progression {
     }
 
     void MeshRenderSubSystem::Render(Scene* scene, Camera& camera) {
-		// auto& shader = *pipelineShaders[camera.GetRenderingPipeline()];
-		auto& shader = *pipelineShaders[RenderingPipeline::FORWARD];
+		auto& shader = *pipelineShaders[camera.GetRenderingPipeline()];
 		shader.Enable();
-		//if (camera.GetRenderingPipeline() == RenderingPipeline::FORWARD)
+		if (camera.GetRenderingPipeline() == RenderingPipeline::FORWARD)
 			RenderSystem::UploadLights(shader);
         RenderSystem::UploadCameraProjection(shader, camera);
         for (const auto& mr : meshRenderers) {
