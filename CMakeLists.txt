@@ -3,18 +3,19 @@ cmake_minimum_required (VERSION 3.8)
 project(Progression)
 
 option(PROGRESSION_BUILD_EXAMPLES "Build the example programs" ON)
-
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+option(PROGRESSION_BUILD_TOOLS "Build the tools, such as the OBJ converter" ON)
 option(PROGRESSION_AUDIO "Enable the progression audio system" OFF)
+
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if (UNIX AND NOT APPLE)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CPP_VERSION} -g")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CPP_VERSION} -O3")
     #option(PROGRESSION_AUDIO "Enable the progression audio system" ON)
 elseif (MSVC)
-    add_compile_options("/std:c++17")
+    add_compile_options("/std:c++14")
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -41,7 +42,9 @@ add_subdirectory(progression)
 
 if (PROGRESSION_BUILD_EXAMPLES)
     add_subdirectory(examples/)
-    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT demo)
+    #set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT demo)
 endif()
 
-add_subdirectory(tools/)
+if (PROGRESSION_BUILD_TOOLS)
+    add_subdirectory(tools/)
+endif()
