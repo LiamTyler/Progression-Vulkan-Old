@@ -329,7 +329,7 @@ int main(int argc, char* argv[]) {
 
 			// calculate light volume model matrix
 			float cutOffIntensity = 0.003;
-			float lightRadius = std::sqrtf(light->intensity / cutOffIntensity);
+			float lightRadius = sqrtf(light->intensity / cutOffIntensity);
 			//lightRadius = 4;
 			glm::mat4 lightModelMatrix(1);
 			lightModelMatrix = glm::translate(lightModelMatrix, light->transform.position);

@@ -286,16 +286,6 @@ int main(int argc, char* argv[]) {
 		PG::Window::EndFrame();
 		std::string title = "Light Gathering -- " + std::to_string(Time::getFPS()) + " FPS";
 		Window::setTitle(title);
-		GLenum err;
-		while ((err = glGetError()) != GL_NO_ERROR) {
-			std::cout << "gl error: " << err << std::endl;
-		}
-
-		if (lightAdded) {
-			// std::cout << "Added " << lightAdded << " lights" << std::endl;
-			//while (!PG::Input::GetKeyDown(PG::PG_K_SPACE))
-			//	PG::Input::PollEvents();
-		}
 	}
 
 	PG::EngineQuit();

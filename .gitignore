@@ -1,7 +1,6 @@
 build/
 *.swp
 a.out
-configs/default.toml
 progression/core/configuration.h
 
 # Prerequisites

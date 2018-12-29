@@ -8,7 +8,7 @@ using namespace std;
 int main(int argc, char* argv[]) {
     srand(time(NULL));
 
-    auto& conf = PG::config::Config(PG_ROOT_DIR "configs/default.toml");
+    auto conf = PG::config::Config(PG_ROOT_DIR "configs/default.toml");
     PG::EngineInitialize(conf);
 
 	auto scene = Scene::Load(PG_RESOURCE_DIR "scenes/test.pgscn");
