@@ -1,9 +1,9 @@
-#include "core/scene.h"
+#include "core/scene.hpp"
 #include <fstream>
 #include <sstream>
 // #include <filesystem>
-#include "core/resource_manager.h"
-#include "graphics/model_render_component.h"
+#include "core/resource_manager.hpp"
+#include "graphics/model_render_component.hpp"
 
 namespace Progression {
 

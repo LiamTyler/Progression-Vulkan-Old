@@ -1,12 +1,12 @@
 #pragma once
 
-#include "core/game_object.h"
-#include "types/lights.h"
-#include "core/camera.h"
-#include "graphics/skybox.h"
-#include "graphics/material.h"
-#include "graphics/shader.h"
-#include "graphics/model.h"
+#include "core/game_object.hpp"
+#include "graphics/lights.hpp"
+#include "core/camera.hpp"
+#include "graphics/skybox.hpp"
+#include "graphics/material.hpp"
+#include "graphics/shader.hpp"
+#include "graphics/model.hpp"
 #include <mutex>
 
 namespace Progression {

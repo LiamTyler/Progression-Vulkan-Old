@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/common.h"
+#include "core/common.hpp"
 
 namespace Progression { namespace graphics {
 

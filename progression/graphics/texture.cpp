@@ -1,4 +1,4 @@
-#include "types/texture.h"
+#include "graphics/texture.hpp"
 
 namespace Progression {
 

@@ -9,7 +9,7 @@ if (PROGRESSION_AUDIO)
     set(PG_AUDIO_ENABLED 1)
 endif()
 
-configure_file(${PROGRESSION_DIR}/cmake/configuration.h.in ../../progression/core/configuration.h)
+configure_file(${PROGRESSION_DIR}/cmake/configuration.h.in ../../progression/core/configuration.hpp)
 
 set(
     SRCS
@@ -27,8 +27,8 @@ set(
     core/bounding_box.cpp
     core/frustum.cpp
 
-    types/lights.cpp
-    types/texture.cpp
+    graphics/lights.cpp
+    graphics/texture.cpp
     
     graphics/material.cpp
     graphics/mesh.cpp
@@ -52,39 +52,41 @@ set(
 
 set(
     HEADERS
-    core/camera.h
-    core/common.h
-    core/component.h
-    core/config.h
-    core/game_object.h
-    core/image.h
-    core/input.h
-    core/input_types.h
-    core/time.h
-    core/transform.h
-    core/window.h
-    core/scene.h
-    core/resource_manager.h
-    core/bounding_box.h
-    core/frustum.h
+    core/camera.hpp
+    core/common.hpp
+    core/component.hpp
+    core/config.hpp
+    core/game_object.hpp
+    core/image.hpp
+    core/input.hpp
+    core/input_types.hpp
+    core/time.hpp
+    core/transform.hpp
+    core/window.hpp
+    core/scene.hpp
+    core/resource_manager.hpp
+    core/bounding_box.hpp
+    core/frustum.hpp
     
-    types/lights.h
-    types/texture.h
+    graphics/lights.hpp
+    graphics/texture.hpp
 
-    graphics/material.h
-    graphics/mesh.h
-    graphics/model.h
-    graphics/shader.h
-    graphics/render_component.h
-    graphics/render_system.h
-    graphics/render_subsystem.h
-    graphics/mesh_render_subsystem.h
-    graphics/mesh_render_component.h
-    graphics/model_render_component.h
-    graphics/skybox.h
-    graphics/graphics_api.h
+    graphics/material.hpp
+    graphics/mesh.hpp
+    graphics/model.hpp
+    graphics/shader.hpp
+    graphics/render_component.hpp
+    graphics/render_system.hpp
+    graphics/render_subsystem.hpp
+    graphics/mesh_render_subsystem.hpp
+    graphics/mesh_render_component.hpp
+    graphics/model_render_component.hpp
+    graphics/skybox.hpp
+    graphics/graphics_api.hpp
 
-    components/user_camera_component.h
+    components/user_camera_component.hpp
+    
+    utils/noncopyable.hpp
     
     ${CMAKE_SOURCE_DIR}/ext/tinyobjloader/tiny_obj_loader.h
     ${CMAKE_SOURCE_DIR}/ext/stb_image/stb_image.h
@@ -94,7 +96,7 @@ set(
     
     ${CMAKE_SOURCE_DIR}/ext/memory_map/MemoryMapped.h
 
-    progression.h
+    progression.hpp
 )
 
 set(AUDIO_SRCS

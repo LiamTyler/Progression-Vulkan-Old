@@ -1,4 +1,4 @@
-#include "core/config.h"
+#include "core/config.hpp"
 #include <iostream>
 
 namespace Progression { namespace config {

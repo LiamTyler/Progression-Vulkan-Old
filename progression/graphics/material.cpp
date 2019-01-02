@@ -1,4 +1,4 @@
-#include "graphics/material.h"
+#include "graphics/material.hpp"
 
 namespace Progression {
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "core/common.h"
-#include "core/config.h"
-#include "core/input_types.h"
+#include "core/common.hpp"
+#include "core/config.hpp"
+#include "core/input_types.hpp"
 
 namespace Progression {
 

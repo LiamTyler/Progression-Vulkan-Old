@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/common.h"
-#include "types/texture.h"
+#include "core/common.hpp"
+#include "graphics/texture.hpp"
 
 namespace Progression {
 

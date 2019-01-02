@@ -1,5 +1,5 @@
-#include "core/time.h"
-#include "core/common.h"
+#include "core/time.hpp"
+#include "core/common.hpp"
 
 namespace Progression {
 

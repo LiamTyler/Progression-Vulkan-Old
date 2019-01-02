@@ -1,4 +1,4 @@
-#include "types/lights.h"
+#include "graphics/lights.hpp"
 
 namespace Progression {
 

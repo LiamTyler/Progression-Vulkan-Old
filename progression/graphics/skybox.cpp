@@ -1,6 +1,6 @@
-#include "graphics/skybox.h"
-#include "core/image.h"
-#include "core/resource_manager.h"
+#include "graphics/skybox.hpp"
+#include "core/image.hpp"
+#include "core/resource_manager.hpp"
 
 namespace Progression {
 

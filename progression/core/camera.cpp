@@ -1,4 +1,4 @@
-#include "core/camera.h"
+#include "core/camera.hpp"
 
 namespace Progression {
 

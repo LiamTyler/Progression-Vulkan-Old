@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/camera.h"
-#include "core/bounding_box.h"
+#include "core/camera.hpp"
+#include "core/bounding_box.hpp"
 
 namespace Progression {
 

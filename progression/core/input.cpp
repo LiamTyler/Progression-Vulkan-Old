@@ -1,5 +1,5 @@
-#include "core/input.h"
-#include "core/window.h"
+#include "core/input.hpp"
+#include "core/window.hpp"
 
 namespace Progression {
 

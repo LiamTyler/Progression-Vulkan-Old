@@ -1,4 +1,4 @@
-#include "progression.h"
+#include "progression.hpp"
 #include <iomanip>
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -235,8 +235,8 @@ int main(int argc, char* argv[]) {
 
 	auto robotModel = ResourceManager::GetModel("robot");
 	cout << "robot meshes: " << robotModel->meshes.size() << endl;
-	for (auto& mesh : robotModel->meshes)
-		cout << "triangles: " << mesh->numTriangles << endl;
+	//for (auto& mesh : robotModel->meshes)
+	//	cout << "triangles: " << mesh->getNumVertices() << endl;
 	for (int r = 0; r < SIZE; ++r) {
 		for (int c = 0; c < SIZE; ++c) {
 			//Transform t(3.0f * glm::vec3(-SIZE + 4 * c, .1, SIZE - 4 * r), glm::vec3(0), glm::vec3(2));
@@ -252,8 +252,6 @@ int main(int argc, char* argv[]) {
 
 	auto skybox = scene->getSkybox();
 
-	//RenderSystem::EnableOption(RenderOptions::BLOOM);
-	camera->SetRenderingPipeline(RenderingPipeline::TILED_DEFERRED);
 	Window::SetRelativeMouse(true);
 	PG::Input::PollEvents();
 	bool pause = false;

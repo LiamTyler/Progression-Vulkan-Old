@@ -1,4 +1,4 @@
-#include "core/frustum.h"
+#include "core/frustum.hpp"
 #include <math.h>
 
 namespace Progression {

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "core/config.h"
-#include "graphics/shader.h"
-#include "core/camera.h"
-#include "graphics/material.h"
+#include "core/config.hpp"
+#include "graphics/shader.hpp"
+#include "core/camera.hpp"
+#include "graphics/material.hpp"
 
 #include <typeindex>
 #include <typeinfo>

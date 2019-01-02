@@ -1,8 +1,8 @@
 #pragma once
 
-#include "core/common.h"
-#include "graphics/shader.h"
-#include "core/camera.h"
+#include "core/common.hpp"
+#include "graphics/shader.hpp"
+#include "core/camera.hpp"
 
 namespace Progression {
 

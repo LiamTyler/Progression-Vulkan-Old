@@ -1,5 +1,5 @@
-#include "graphics/model.h"
-#include "core/common.h"
+#include "graphics/model.hpp"
+#include "core/common.hpp"
 
 
 namespace Progression {

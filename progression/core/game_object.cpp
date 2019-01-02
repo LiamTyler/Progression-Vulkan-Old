@@ -1,4 +1,4 @@
-#include "core/game_object.h"
+#include "core/game_object.hpp"
 
 namespace Progression {
 

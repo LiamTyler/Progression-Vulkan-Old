@@ -1,7 +1,7 @@
-#include "graphics/model_render_component.h"
-#include "graphics/render_system.h"
-#include "graphics/mesh_render_subsystem.h"
-#include "graphics/mesh_render_component.h"
+#include "graphics/model_render_component.hpp"
+#include "graphics/render_system.hpp"
+#include "graphics/mesh_render_subsystem.hpp"
+#include "graphics/mesh_render_component.hpp"
 
 namespace Progression {
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/common.h"
-#include "core/config.h"
+#include "core/common.hpp"
+#include "core/config.hpp"
 
 namespace Progression {
 

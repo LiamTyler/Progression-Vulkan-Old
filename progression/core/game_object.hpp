@@ -4,9 +4,9 @@
 #include <typeinfo>
 #include <unordered_map>
 
-#include "core/transform.h"
-#include "core/component.h"
-#include "core/bounding_box.h"
+#include "core/transform.hpp"
+#include "core/component.hpp"
+#include "core/bounding_box.hpp"
 
 namespace Progression {
 

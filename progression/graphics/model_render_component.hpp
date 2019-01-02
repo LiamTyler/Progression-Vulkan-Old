@@ -1,8 +1,8 @@
 #pragma once
 
-#include "graphics/render_component.h"
-#include "graphics/mesh_render_component.h"
-#include "graphics/model.h"
+#include "graphics/render_component.hpp"
+#include "graphics/mesh_render_component.hpp"
+#include "graphics/model.hpp"
 
 namespace Progression {
 

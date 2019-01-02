@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/config.h"
+#include "core/config.hpp"
 #include "audio/audio_file.hpp"
 #include "audio/audio_source.hpp"
 

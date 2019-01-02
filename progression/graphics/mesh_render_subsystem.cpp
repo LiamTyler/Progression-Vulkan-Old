@@ -1,7 +1,7 @@
-#include "graphics/mesh_render_subsystem.h"
-#include "graphics/shader.h"
-#include "graphics/render_system.h"
-#include "core/resource_manager.h"
+#include "graphics/mesh_render_subsystem.hpp"
+#include "graphics/shader.hpp"
+#include "graphics/render_system.hpp"
+#include "core/resource_manager.hpp"
 
 namespace Progression {
 
@@ -79,7 +79,7 @@ namespace Progression {
             glm::mat4 normalMatrix = glm::transpose(glm::inverse(MV));
             glUniformMatrix4fv(shader["modelViewMatrix"], 1, GL_FALSE, glm::value_ptr(MV));
             glUniformMatrix4fv(shader["normalMatrix"], 1, GL_FALSE, glm::value_ptr(normalMatrix));
-            glDrawElements(GL_TRIANGLES, mr->mesh->numTriangles * 3, GL_UNSIGNED_INT, 0);
+            glDrawElements(GL_TRIANGLES, mr->mesh->getNumIndices(), GL_UNSIGNED_INT, 0);
         }
     }
 

@@ -1,4 +1,4 @@
-#include "graphics/render_component.h"
+#include "graphics/render_component.hpp"
 
 namespace Progression {
 

@@ -1,4 +1,4 @@
-#include "core/bounding_box.h"
+#include "core/bounding_box.hpp"
 
 namespace Progression {
 

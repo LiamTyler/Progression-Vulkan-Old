@@ -1,4 +1,4 @@
-#include "graphics/mesh_render_component.h"
+#include "graphics/mesh_render_component.hpp"
 
 namespace Progression {
 

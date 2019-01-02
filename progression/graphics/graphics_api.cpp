@@ -1,4 +1,4 @@
-#include "graphics/graphics_api.h"
+#include "graphics/graphics_api.hpp"
 #include <vector>
 
 namespace Progression { namespace graphics {

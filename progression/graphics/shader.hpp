@@ -3,7 +3,7 @@
 #include <vector>
 #include <unordered_map>
 
-#include "core/common.h"
+#include "core/common.hpp"
 
 namespace Progression {
 

@@ -4,7 +4,7 @@
 #include "GLFW/glfw3.h"
 #include "glm/glm.hpp"
 #include "glm/ext.hpp"
-#include "core/configuration.h"
+#include "core/configuration.hpp"
 #include <string>
 #include <iostream>
 #include <memory>

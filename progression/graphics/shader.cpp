@@ -1,4 +1,4 @@
-#include "graphics/shader.h"
+#include "graphics/shader.hpp"
 #include <fstream>
 
 namespace Progression {

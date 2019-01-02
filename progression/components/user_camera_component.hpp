@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/component.h"
-#include "core/camera.h"
+#include "core/component.hpp"
+#include "core/camera.hpp"
 
 namespace Progression {
 

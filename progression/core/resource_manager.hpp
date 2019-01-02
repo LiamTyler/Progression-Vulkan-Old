@@ -1,12 +1,12 @@
 #pragma once
 
-#include "core/config.h"
-#include "core/game_object.h"
-#include "graphics/model.h"
-#include "graphics/material.h"
-#include "graphics/shader.h"
-#include "graphics/skybox.h"
-#include "types/texture.h"
+#include "core/config.hpp"
+#include "core/game_object.hpp"
+#include "graphics/model.hpp"
+#include "graphics/material.hpp"
+#include "graphics/shader.hpp"
+#include "graphics/skybox.hpp"
+#include "graphics/texture.hpp"
 #include <unordered_set>
 
 namespace Progression {

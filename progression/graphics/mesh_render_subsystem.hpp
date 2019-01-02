@@ -1,7 +1,7 @@
 #pragma once
 
-#include "graphics/render_subsystem.h"
-#include "graphics/mesh_render_component.h"
+#include "graphics/render_subsystem.hpp"
+#include "graphics/mesh_render_component.hpp"
 #include <vector>
 
 namespace Progression {

@@ -1,6 +1,6 @@
-#include "components/user_camera_component.h"
-#include "core/input.h"
-#include "core/time.h"
+#include "components/user_camera_component.hpp"
+#include "core/input.hpp"
+#include "core/time.hpp"
 
 namespace Progression {
 

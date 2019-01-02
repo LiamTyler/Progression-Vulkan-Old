@@ -1,8 +1,8 @@
-#include "core/resource_manager.h"
-#include "graphics/mesh.h"
+#include "core/resource_manager.hpp"
+#include "graphics/mesh.hpp"
 #include "tinyobjloader/tiny_obj_loader.h"
-#include "core/time.h"
-#include "core/common.h"
+#include "core/time.hpp"
+#include "core/common.hpp"
 
 #include <functional>
 #include <fstream>
@@ -233,34 +233,6 @@ namespace Progression {
 
     }
 
-    /*
-    std::shared_ptr<Model> ResourceManager::LoadModel(const std::string& relativePath, bool addToManager) {
-        if (models_.find(relativePath) != models_.end())
-            return models_[relativePath];
-
-        std::string fullFileName = PG_RESOURCE_DIR + relativePath;
-        std::filesystem::path file(fullFileName);
-        if (!std::filesystem::exists(file)) {
-            std::cout << "File: " << fullFileName << " not found" << std::endl;
-            return nullptr;
-        }
-        std::shared_ptr<Model> model;
-        if (file.extension() == ".obj") {
-            model = LoadOBJ(fullFileName);
-        } else if (file.extension() == ".pgModel") {
-            model = LoadPGModel(fullFileName);
-        } else {
-            std::cout << "Trying to load model from unsupported file: " << file.extension() << std::endl;
-            return nullptr;
-        }
-
-        if (addToManager && model != nullptr)
-            models_[relativePath] = model;
-
-        return model;
-    }
-    */
-
     std::shared_ptr<Model> ResourceManager::LoadModel(const std::string& relativePath, bool addToManager) {
         if (models_.find(relativePath) != models_.end())
             return models_[relativePath];
@@ -327,45 +299,38 @@ namespace Progression {
             materials[i] = mat;
         }
 
-        std::vector<glm::vec3> verts;
-        std::vector<glm::vec3> normals;
-        std::vector<glm::vec2> uvs;
-        std::vector<unsigned int> indices;
         // parse all of the meshes
         for (int i = 0; i < numMeshes; ++i) {
-            unsigned int numVertices, numTriangles, materialIndex;
+            auto mesh = std::make_shared<Mesh>();
+            unsigned int numVertices, numIndices, materialIndex;
             bool textured;
 
             in.read((char*)&numVertices, sizeof(unsigned int));
-            in.read((char*)&numTriangles, sizeof(unsigned int));
+            in.read((char*)&numIndices, sizeof(unsigned int));
             in.read((char*)&materialIndex, sizeof(unsigned int));
             in.read((char*)&textured, sizeof(bool));
             std::cout << "num verts: " << numVertices << std::endl;
-            std::cout << "num triangles: " << numTriangles << std::endl;
+            std::cout << "num indices: " << numIndices << std::endl;
             std::cout << "mat index: " << materialIndex << std::endl;
             std::cout << "textured: " << textured << std::endl;
 
-            // expand the buffers if necessary
-            if (numVertices > verts.size()) {
-                verts.resize(numVertices);
-                normals.resize(numVertices);
-            }
-            if (textured && uvs.size() < numVertices)
-                uvs.resize(numVertices);
-            if (indices.size() < 3 * numTriangles)
-                indices.resize(3 * numTriangles);
+            mesh->vertices.resize(numVertices);
+            mesh->normals.resize(numVertices);
+            if (textured)
+                mesh->uvs.resize(numVertices);
+            if (numIndices)
+                mesh->indices.resize(numIndices);
 
             // read in the mesh data
-            in.read((char*)&verts[0], numVertices * sizeof(glm::vec3));
-            in.read((char*)&normals[0], numVertices * sizeof(glm::vec3));
+            in.read((char*)&mesh->vertices[0], numVertices * sizeof(glm::vec3));
+            in.read((char*)&mesh->normals[0], numVertices * sizeof(glm::vec3));
             if (textured)
-                in.read((char*)&uvs[0], numVertices * sizeof(glm::vec2));
-            in.read((char*)&indices[0], 3 * numTriangles * sizeof(unsigned int));
+                in.read((char*)&mesh->uvs[0], numVertices * sizeof(glm::vec2));
+            if (numIndices)
+                in.read((char*)&mesh->indices[0], numIndices * sizeof(unsigned int));
 
             // create and upload the mesh
-            glm::vec2* texCoords = textured ? &uvs[0] : nullptr;
-            auto mesh = std::make_shared<Mesh>(numVertices, numTriangles, &verts[0], &normals[0], texCoords, &indices[0]);
-            mesh->UploadToGPU(true, false);
+            mesh->UploadToGPU(true);
 
             model->meshes[i] = mesh;
             model->materials[i] = materials[materialIndex];
@@ -419,10 +384,7 @@ namespace Progression {
                 currentMaterial = std::make_shared<Material>(ambient, diffuse, specular, emissive, shininess, diffuseTex);
             }
 
-            std::vector<glm::vec3> verts;
-            std::vector<glm::vec3> normals;
-            std::vector<glm::vec2> uvs;
-            std::vector<unsigned int> indices;
+            auto mesh = std::make_shared<Mesh>();
             std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
             for (const auto& shape : shapes) {
                 // Loop over faces(polygon)
@@ -451,30 +413,24 @@ namespace Progression {
 
                             Vertex vertex(glm::vec3(vx, vy, vz), glm::vec3(nx, ny, nz), glm::vec2(ty, ty));
                             if (uniqueVertices.count(vertex) == 0) {
-                                uniqueVertices[vertex] = static_cast<uint32_t>(verts.size());
-                                verts.emplace_back(vx, vy, vz);
-                                normals.emplace_back(nx, ny, nz);
+                                uniqueVertices[vertex] = static_cast<uint32_t>(mesh->vertices.size());
+                                mesh->vertices.emplace_back(vx, vy, vz);
+                                mesh->normals.emplace_back(nx, ny, nz);
                                 if (idx.texcoord_index != -1)
-                                    uvs.emplace_back(tx, ty);
+                                    mesh->uvs.emplace_back(tx, ty);
                             }
 
-
-                            indices.push_back(uniqueVertices[vertex]);                            
+                            mesh->indices.push_back(uniqueVertices[vertex]);
                         }
                     }
                 }
             }
 
             // create mesh and upload to GPU
-            if (verts.size()) {
-                // TODO: make this work for meshes that dont have UVS
-                glm::vec2* texCoords = nullptr;
-                if (uvs.size())
-                    texCoords = &uvs[0];
-                auto currentMesh = std::make_shared<Mesh>(verts.size(), indices.size() / 3, &verts[0], &normals[0], texCoords, &indices[0]);
-                currentMesh->UploadToGPU(true, false);
+            if (mesh->vertices.size()) {
+                mesh->UploadToGPU(true);
 
-                model->meshes.push_back(currentMesh);
+                model->meshes.push_back(mesh);
                 model->materials.push_back(currentMaterial);
             }
         }
@@ -483,14 +439,7 @@ namespace Progression {
     }
 
     bool ResourceManager::ConvertOBJToPGModel(const std::string& fullPathToOBJ, const std::string& fullPathToMaterialDir, const std::string& fullOutputPath) {
-
         /*
-        std::filesystem::path file(fullOutputPath);
-        if (file.extension() != ".pgModel") {
-            std::cout << "Output filename has to have extension '.pgModel'" << std::endl;
-            return false;
-        }
-        */
         std::ofstream outFile(fullOutputPath, std::ios::binary);
         if (!outFile) {
             std::cout << "Could not open output file: " << fullOutputPath << std::endl;
@@ -643,7 +592,7 @@ namespace Progression {
 
         outFile.close();
         std::cout << "done converting" << std::endl;
-
+        */
         return true;
     }
 
@@ -651,7 +600,7 @@ namespace Progression {
         if (skyboxes_.find(name) == skyboxes_.end()) {
             std::vector<std::string> fullTexturePaths; 
             for (const auto& tex : textures)
-                fullTexturePaths.push_back(PG_RESOURCE_DIR "skybox/" + tex);
+                fullTexturePaths.push_back(PG_RESOURCE_DIR + tex);
             auto sp = std::make_shared<Skybox>(
                     fullTexturePaths[0],
                     fullTexturePaths[1],

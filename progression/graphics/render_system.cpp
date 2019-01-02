@@ -1,10 +1,10 @@
-#include "graphics/render_system.h"
-#include "graphics/render_subsystem.h"
-#include "graphics/graphics_api.h"
-#include "core/scene.h"
-#include "core/camera.h"
-#include "graphics/mesh_render_subsystem.h"
-#include "core/window.h"
+#include "graphics/render_system.hpp"
+#include "graphics/render_subsystem.hpp"
+#include "graphics/graphics_api.hpp"
+#include "core/scene.hpp"
+#include "core/camera.hpp"
+#include "graphics/mesh_render_subsystem.hpp"
+#include "core/window.hpp"
 
 static float* genKernel(int size, float sigma) {
 	float* kernel = new float[size];
