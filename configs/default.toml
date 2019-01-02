@@ -10,3 +10,6 @@
 [renderSystem]
     maxNumLights = 10001
     lightIntensityCutoff = 0.03
+
+[logger]
+    file = "test.txt"

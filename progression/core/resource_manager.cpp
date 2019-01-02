@@ -44,7 +44,7 @@ namespace Progression {
     std::unordered_map<std::string, std::shared_ptr<Model>> ResourceManager::models_ = {};
     std::unordered_map<std::string, std::shared_ptr<Material>> ResourceManager::materials_ = {};
     std::unordered_map<std::string, std::shared_ptr<Shader>> ResourceManager::shaders_ = {};
-    std::unordered_map<std::string, std::shared_ptr<Texture>> ResourceManager::textures_ = {};
+    std::unordered_map<std::string, std::shared_ptr<Texture2D>> ResourceManager::textures2D_ = {};
     std::unordered_map<std::string, std::shared_ptr<Skybox>> ResourceManager::skyboxes_ = {};
 
     void ResourceManager::Init(const config::Config& config) {
@@ -152,10 +152,10 @@ namespace Progression {
                     } else if (first == "diffuseTex") {
                         std::string filename;
                         ss >> filename;
-                        auto tex = ResourceManager::LoadTexture(filename);
+                        auto tex = ResourceManager::LoadTexture2D(filename);
                         if (!tex)
                             std::cout << "Warning: Material '" << name << "'s diffuse texture: " << filename << " not yet loaded. Setting to nullptr" << std::endl;
-                        material->diffuseTexture = tex.get();
+                        material->diffuseTexture = tex;
                     }
                 }
 
@@ -204,7 +204,7 @@ namespace Progression {
                         ss >> filename;
                     }
                 }
-                LoadTexture(filename);
+                LoadTexture2D(filename);
             } else if (line == "Shader") {
                 std::string name, vertex, frag;
                 line = " ";
@@ -339,7 +339,7 @@ namespace Progression {
 
         for (int i = 0; i < numMaterials; ++i) {
             if (diffuseTexNames[i] != "") {
-                materials[i]->diffuseTexture = new Texture(new Image(PG_RESOURCE_DIR + diffuseTexNames[i]), true, true, true);
+                materials[i]->diffuseTexture = std::make_shared<Texture2D>(new Image(PG_RESOURCE_DIR + diffuseTexNames[i]));
             }
         }
         std::cout << "loaded pg model" << std::endl;
@@ -376,9 +376,9 @@ namespace Progression {
                 glm::vec3 specular(mat.specular[0], mat.specular[1], mat.specular[2]);
                 glm::vec3 emissive(mat.emission[0], mat.emission[1], mat.emission[2]);
                 float shininess = mat.shininess;
-                Texture* diffuseTex = nullptr;
+                std::shared_ptr<Texture2D> diffuseTex = nullptr;
                 if (mat.diffuse_texname != "") {
-                    diffuseTex = new Texture(new Image(PG_RESOURCE_DIR + mat.diffuse_texname), true, true, true);
+                    diffuseTex = std::make_shared<Texture2D>(new Image(PG_RESOURCE_DIR + mat.diffuse_texname));
                 }
 
                 currentMaterial = std::make_shared<Material>(ambient, diffuse, specular, emissive, shininess, diffuseTex);
@@ -618,15 +618,15 @@ namespace Progression {
         return skyboxes_[name];
     }
 
-    std::shared_ptr<Texture> ResourceManager::LoadTexture(const std::string& relativePath, bool addToManager) {
-        if (textures_.find(relativePath) == textures_.end()) {
-            auto sp = std::make_shared<Texture>(new Image(PG_RESOURCE_DIR + relativePath));
+    std::shared_ptr<Texture2D> ResourceManager::LoadTexture2D(const std::string& relativePath, bool addToManager) {
+        if (textures2D_.find(relativePath) == textures2D_.end()) {
+            auto sp = std::make_shared<Texture2D>(new Image(PG_RESOURCE_DIR + relativePath));
             if (addToManager)
-                textures_[relativePath] = sp;
+                textures2D_[relativePath] = sp;
             else
                 return sp;
         }
-        return textures_[relativePath];
+        return textures2D_[relativePath];
     }
 
     std::shared_ptr<Material> ResourceManager::AddMaterial(Material& material, const std::string& name) {

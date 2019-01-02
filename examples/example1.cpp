@@ -1,4 +1,4 @@
-#include "progression.h"
+#include "progression.hpp"
 #include <iomanip>
 
 using namespace Progression;
@@ -12,7 +12,13 @@ int main(int argc, char* argv[]) {
 		exit(0);
 	}
 
+    std::cout << "about to init" << std::endl;
 	PG::EngineInitialize(conf);
+
+    std::cout << "about to log " << std::endl;
+    LOG("debug message");
+
+    /*
 
 	auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/scene1.pgscn");
 	auto camera = scene->GetCamera();
@@ -38,6 +44,7 @@ int main(int argc, char* argv[]) {
 
         PG::Window::EndFrame();
     }
+    */
 
     PG::EngineQuit();
 

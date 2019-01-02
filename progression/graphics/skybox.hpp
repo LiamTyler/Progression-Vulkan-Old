@@ -3,10 +3,11 @@
 #include "core/common.hpp"
 #include "graphics/shader.hpp"
 #include "core/camera.hpp"
+#include "utils/noncopyable.hpp"
 
 namespace Progression {
 
-	class Skybox {
+	class Skybox : public NonCopyable {
 	public:
         Skybox();
 		Skybox(
@@ -18,9 +19,6 @@ namespace Progression {
             const std::string& back);
 		~Skybox();
 
-        // TODO: consider copy / move pattern for all resources like this
-        Skybox(const Skybox& skybox) = delete;
-        Skybox& operator=(const Skybox& skybox) = delete;
         Skybox(Skybox&& skybox);
         Skybox& operator=(Skybox&& skybox);
 

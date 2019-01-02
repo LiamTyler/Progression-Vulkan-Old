@@ -28,7 +28,7 @@ set(
     core/frustum.cpp
 
     graphics/lights.cpp
-    graphics/texture.cpp
+    graphics/texture2D.cpp
     
     graphics/material.cpp
     graphics/mesh.cpp
@@ -69,7 +69,7 @@ set(
     core/frustum.hpp
     
     graphics/lights.hpp
-    graphics/texture.hpp
+    graphics/texture2D.hpp
 
     graphics/material.hpp
     graphics/mesh.hpp
@@ -87,6 +87,7 @@ set(
     components/user_camera_component.hpp
     
     utils/noncopyable.hpp
+    utils/logger.hpp
     
     ${CMAKE_SOURCE_DIR}/ext/tinyobjloader/tiny_obj_loader.h
     ${CMAKE_SOURCE_DIR}/ext/stb_image/stb_image.h

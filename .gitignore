@@ -1,7 +1,7 @@
 build/
 *.swp
 a.out
-progression/core/configuration.h
+progression/core/configuration.hpp
 
 # Prerequisites
 *.d

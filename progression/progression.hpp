@@ -31,7 +31,8 @@
 #include "graphics/graphics_api.hpp"
 
 #include "graphics/lights.hpp"
-#include "graphics/texture.hpp"
+#include "graphics/texture2D.hpp"
+#include "utils/logger.hpp"
 
 #include "components/user_camera_component.hpp"
 
@@ -47,6 +48,16 @@ namespace Progression {
     bool EngineShutdown = false;
 
     inline void EngineInitialize(const config::Config& conf) {
+		auto logConfig = conf->get_table("logger");
+        std::string logFilename = "";
+		if (logConfig) {
+		    logFilename = logConfig->get_as<std::string>("file").value_or("");
+            if (logFilename != "")
+                logFilename = PG_ROOT_DIR + logFilename;
+        }
+        std::cout << "log file name = \"" << logFilename << "\"" << std::endl;
+
+        Logger::Init(logFilename);
         Window::Init(conf);
         Time::Init(conf);
         Input::Init(conf);
@@ -66,6 +77,7 @@ namespace Progression {
         Input::Free();
         Time::Free();
         Window::Free();
+        Logger::Free();
     }
 
 } // namespace Progression

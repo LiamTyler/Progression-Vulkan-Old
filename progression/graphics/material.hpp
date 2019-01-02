@@ -1,11 +1,10 @@
 #pragma once
 
 #include "core/common.hpp"
-#include "graphics/texture.hpp"
+#include "graphics/texture2D.hpp"
 
 namespace Progression {
 
-    class Shader;
     class Material {
     public:
 		Material(
@@ -14,18 +13,14 @@ namespace Progression {
 			const glm::vec3& s = glm::vec3(0),
 			const glm::vec3& e = glm::vec3(0),
 			float ns = 0,
-			Texture* diffuseTex = nullptr);
+			std::shared_ptr<Texture2D> diffuseTex = nullptr);
 
-        ~Material() = default;
-        Material(const Material& material) = default;
-        Material& operator=(const Material& material) = default;
-        
         glm::vec3 ambient;
         glm::vec3 diffuse;
         glm::vec3 specular;
 		glm::vec3 emissive;
         float shininess;
-        Texture* diffuseTexture;
+        std::shared_ptr<Texture2D> diffuseTexture;
     };
 
 } // namespace Progression

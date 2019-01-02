@@ -39,10 +39,6 @@ namespace Progression {
         }
 		void SetPixel(int r, int c, const Pixel& p) { memcpy(pixels_ + r*width_ + c, &p, sizeof(p)); }
 		unsigned char* GetData() const { return pixels_; }
-		
-        //static glm::vec4 ClampPixel(Pixel p);
-		//static float ClampFloat(float f);
-		//static float Luminance(glm::vec4 p);
 
 	protected:
 		int width_;

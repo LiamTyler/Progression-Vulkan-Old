@@ -6,7 +6,8 @@ namespace Progression { namespace config {
 	Config::Config(const std::string& path)	{
 		try {
 			handle_ = cpptoml::parse_file(path);
-		} catch (...) {
+		} catch (std::exception& e) {
+            std::cout << "config exception: " << e.what() << std::endl;
 			handle_ = nullptr;
 		}
 	}

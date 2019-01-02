@@ -1,6 +1,6 @@
+#include "core/image.hpp"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image/stb_image.h"
-#include "core/image.hpp"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image/stb_image_write.h"
 
@@ -106,23 +106,5 @@ namespace Progression {
 			std::cout << "Invalid image file name: " << fname << std::endl;
 		}
 	}
-
-    /*
-	glm::vec4 Image::ClampPixel(glm::vec4 p) {
-		return glm::vec4(
-			ClampFloat(p.r),
-			ClampFloat(p.g),
-			ClampFloat(p.b),
-			ClampFloat(p.a));
-	}
-
-	float Image::ClampFloat(float f) {
-		return std::fmax(0.0f, std::fmin(1.0f, f));
-	}
-
-	float Image::Luminance(glm::vec4 p) {
-		return .2126f * p.r + .7152f * p.g + .0722f * p.b;
-	}
-    */
 
 } // namespace Progression

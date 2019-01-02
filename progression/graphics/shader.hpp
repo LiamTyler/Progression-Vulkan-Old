@@ -4,17 +4,16 @@
 #include <unordered_map>
 
 #include "core/common.hpp"
+#include "utils/noncopyable.hpp"
 
 namespace Progression {
 
-	class Shader {
+	class Shader : public NonCopyable {
 	public:
 		Shader();
 		Shader(const std::string& vertex_file, const std::string& frag_file);
 		~Shader();
         
-        Shader(const Shader& shader) = delete;
-        Shader& operator=(const Shader& shader) = delete;
         Shader(Shader&& shader);
         Shader& operator=(Shader&& shader);
 

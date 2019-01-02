@@ -6,12 +6,10 @@
 #include "graphics/material.hpp"
 #include "graphics/shader.hpp"
 #include "graphics/skybox.hpp"
-#include "graphics/texture.hpp"
+#include "graphics/texture2D.hpp"
 #include <unordered_set>
 
 namespace Progression {
-
-
 
     class ResourceManager {
     public:
@@ -44,9 +42,9 @@ namespace Progression {
                 return nullptr;
         }
 
-        static std::shared_ptr<Texture> GetTexture(const std::string& name) {
-            if (textures_.find(name) != textures_.end())
-                return textures_[name];
+        static std::shared_ptr<Texture2D> GetTexture2D(const std::string& name) {
+            if (textures2D_.find(name) != textures2D_.end())
+                return textures2D_[name];
             else
                 return nullptr;
         }
@@ -59,7 +57,7 @@ namespace Progression {
         }
 
         static std::shared_ptr<Model> LoadModel(const std::string& relativePath, bool addToManager=true);
-        static std::shared_ptr<Texture> LoadTexture(const std::string& relativePath, bool addToManager=true);
+        static std::shared_ptr<Texture2D> LoadTexture2D(const std::string& relativePath, bool addToManager=true);
         static std::shared_ptr<Skybox> LoadSkybox(const std::string& name, const std::vector<std::string>& textures, bool addToManager=true);
 
         static std::shared_ptr<Shader> AddShader(Shader&& shader, const std::string& name);
@@ -72,7 +70,7 @@ namespace Progression {
     private:
         static std::unordered_map<std::string, std::shared_ptr<Model>> models_;
         static std::unordered_map<std::string, std::shared_ptr<Material>> materials_;
-        static std::unordered_map<std::string, std::shared_ptr<Texture>> textures_;
+        static std::unordered_map<std::string, std::shared_ptr<Texture2D>> textures2D_;
         static std::unordered_map<std::string, std::shared_ptr<Shader>> shaders_;
         static std::unordered_map<std::string, std::shared_ptr<Skybox>> skyboxes_;
     };
