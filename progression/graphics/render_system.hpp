@@ -60,7 +60,6 @@ namespace Progression {
         static GLuint quadVAO_;
         static GLuint quadVBO_;
         static uint64_t options_;
-        static Shader* drawTexShader_;
 
         // lighting data
         static unsigned int numDirectionalLights_;
@@ -71,10 +70,10 @@ namespace Progression {
         static float lightIntensityCutoff_;
 
         // tiled deferred data
+        static bool tdEnabled_;
         static GLuint tdGbuffer_;
         static GLuint tdGBufferTextures_[6]; // 5 color, 1 depth
-        static Shader* tdLightingShader_;
-        static GLuint tdLightingOutput_;
+        static Shader tdComputeShader_;
 
         // post process data
         static struct PostProcessing postProcess_;

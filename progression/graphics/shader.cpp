@@ -142,22 +142,6 @@ namespace Progression {
 			AddUniform(sName);
 		}
 		delete[] uniformName;
-
-		// bindings (cant get? only indices?)
-		/*
-		glGetProgramiv(prgm, GL_ACTIVE_UNIFORM_BLOCKS, &count);
-		cout << "Active uniform blocks: " << count << endl;
-		for (i = 0; i < count; i++) {
-			GLint nameLen;
-			glGetActiveUniformBlockiv(prgm, i, GL_UNIFORM_BLOCK_NAME_LENGTH, &nameLen);
-			std::vector<GLchar> name(nameLen);
-			glGetActiveUniformBlockName(prgm, i, nameLen, NULL, &name[0]);
-			std::string sName;
-			sName.assign(name.begin(), name.end() - 1);
-
-			cout << "\t: Uniform Block: " << i << ", name: " << sName << endl;
-		}
-		*/
 	}
 
 	void Shader::Enable() {
