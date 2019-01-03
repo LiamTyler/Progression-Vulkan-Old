@@ -22,8 +22,6 @@ int main(int argc, char* argv[]) {
 
     std::cout << "done logging" << std::endl;
 
-    /*
-
 	auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/scene1.pgscn");
 	auto camera = scene->GetCamera();
 	camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera, 3));
@@ -48,7 +46,6 @@ int main(int argc, char* argv[]) {
 
         PG::Window::EndFrame();
     }
-    */
 
     PG::EngineQuit();
 

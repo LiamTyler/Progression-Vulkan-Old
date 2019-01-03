@@ -10,13 +10,13 @@ namespace Progression {
         auto tiled_deferred = ResourceManager::GetShader("mesh-tiled-deferred");
         if (!forward) {
             forward = ResourceManager::AddShader(
-                    Shader(PG_RESOURCE_DIR "shaders/phong.vert", PG_RESOURCE_DIR "shaders/phong_forward.frag"),
+                    Shader(PG_RESOURCE_DIR "shaders/default.vert", PG_RESOURCE_DIR "shaders/phong_forward.frag"),
                     "mesh-forward");
             // forward->AddUniform("lights");
         }
         if (!tiled_deferred) {
             tiled_deferred = ResourceManager::AddShader(
-                    Shader(PG_RESOURCE_DIR "shaders/phong.vert", PG_RESOURCE_DIR "shaders/phong_tiled_deferred.frag"),
+                    Shader(PG_RESOURCE_DIR "shaders/default.vert", PG_RESOURCE_DIR "shaders/deferred_save_gbuffer.frag"),
                     "mesh-tiled-deferred");
         }
 

@@ -11,7 +11,7 @@ aspect 16:9
 near-plane .1
 far-plane 300
 primary-camera true
-rendering-pipeline tiled-deferred
+#rendering-pipeline tiled-deferred
 
 Light
 name mainDirectional
@@ -28,7 +28,7 @@ model metalFloor
 
 GameObject
 name robot
-position 0 2 0
+position 0 0 0
 scale 1 1 1
 model model
 

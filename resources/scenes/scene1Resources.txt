@@ -31,6 +31,5 @@ material metalFloor
 
 Model
 name model 
-#filename ../../../Downloads/buddha3.obj
-filename ../buddha.pgModel
+filename models/cube.obj
 material red

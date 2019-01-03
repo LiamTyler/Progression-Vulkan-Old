@@ -30,7 +30,7 @@ namespace Progression { namespace graphics {
 
     void SetClearColor(const glm::vec4& color);
     void SetClearColor(float r, float g, float b, float a);
-    void Clear(GLbitfield mask = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    void Clear(GLbitfield mask = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
 } } // namespace Progression::graphics

@@ -22,10 +22,10 @@ namespace Progression {
 
 		struct PostProcessing {
 			GLuint FBO;
-			GLuint mainBuffer;
-			GLuint depthBuffer;
+			GLuint colorTex;
+			GLuint depthTex;
 			float exposure;
-            Shader* shader;
+            Shader shader;
 		};
 
     public:

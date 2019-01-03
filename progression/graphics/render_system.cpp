@@ -66,8 +66,8 @@ namespace Progression {
 		glVertexAttribPointer((*drawTexShader_)["vertex"], 2, GL_FLOAT, GL_FALSE, 0, 0);
 
         // setup the tiled deferred stuff
-
 		tdGbuffer_ = graphics::CreateFrameBuffer();
+        // [0] = pos, [1] = normals, [2] = diffuse, [3] = spec+exp, [4] = emissive, [5] = depth
         tdGBufferTextures_[0] = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA32F);
         tdGBufferTextures_[1] = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA32F);
         tdGBufferTextures_[2] = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA);
@@ -81,19 +81,19 @@ namespace Progression {
 		graphics::BindFrameBuffer();
 
 		tdLightingShader_ = new Shader;
-		tdLightingShader_->AttachShaderFromFile(GL_COMPUTE_SHADER, PG_RESOURCE_DIR "shaders/compute.glsl");
+		tdLightingShader_->AttachShaderFromFile(GL_COMPUTE_SHADER, PG_RESOURCE_DIR "shaders/tiled_deferred_compute.glsl");
 		tdLightingShader_->CreateAndLinkProgram();
 		tdLightingShader_->AutoDetectVariables();
 
-		glBindImageTexture(0, postProcess_.mainBuffer, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
+		glBindImageTexture(0, postProcess_.colorTex , 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
 
         // setup the post processing stuff
+        postProcess_.shader = Shader(PG_RESOURCE_DIR "shaders/post_process.vert", PG_RESOURCE_DIR "shaders/post_process.frag");
         postProcess_.FBO = graphics::CreateFrameBuffer();
-        postProcess_.mainBuffer = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA16F, GL_LINEAR, GL_LINEAR);
-        postProcess_.depthBuffer = graphics::CreateRenderBuffer(Window::getWindowSize().x, Window::getWindowSize().y);
-		graphics::AttachRenderBufferToFBO(postProcess_.depthBuffer);
-		graphics::FinalizeFBO();
-
+        postProcess_.colorTex = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA16F, GL_LINEAR, GL_LINEAR);
+		graphics::AttachColorTexturesToFBO({ postProcess_.colorTex });
+        postProcess_.depthTex = graphics::CreateRenderBuffer(Window::getWindowSize().x, Window::getWindowSize().y);
+		graphics::AttachRenderBufferToFBO(postProcess_.depthTex);
 		graphics::FinalizeFBO();
 
         postProcess_.exposure = 1;
@@ -113,22 +113,21 @@ namespace Progression {
             camera = scene->GetCamera(0);
         }
 
-		graphics::BindFrameBuffer();
-		graphics::SetClearColor(glm::vec4(0));
-		graphics::Clear();
         graphics::ToggleDepthTesting(true);
         //graphics::ToggleCulling(true);
 
 		
-		glBindFramebuffer(GL_FRAMEBUFFER, postProcessingData_.FBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, postProcess_.FBO);
 		graphics::SetClearColor(glm::vec4(0));
 		graphics::Clear();
 		
+        /*
         if (camera->GetRenderingPipeline() == RenderingPipeline::TILED_DEFERRED) {
             graphics::BindFrameBuffer(tdGbuffer_);
             graphics::SetClearColor(glm::vec4(0));
             graphics::Clear();
         }
+        */
 		
 
         UpdateLights(scene, camera);
@@ -136,16 +135,16 @@ namespace Progression {
         for (const auto& subsys : subSystems_)
             subsys.second->Render(scene, *camera);
 
-		
+        /*
         if (camera->GetRenderingPipeline() == RenderingPipeline::TILED_DEFERRED) {
             glBindFramebuffer(GL_READ_FRAMEBUFFER, tdGbuffer_);
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, postProcessingData_.FBO);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, postProcess_.FBO);
             glBlitFramebuffer(0, 0, Window::getWindowSize().x, Window::getWindowSize().y, 0, 0, Window::getWindowSize().x, Window::getWindowSize().y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-            glBindFramebuffer(GL_FRAMEBUFFER, postProcessingData_.FBO);
+            glBindFramebuffer(GL_FRAMEBUFFER, postProcess_.FBO);
 
             auto& computeShader = *tdLightingShader_;
             computeShader.Enable();
-			glBindImageTexture(0, postProcessingData_.mainBuffer, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
+			glBindImageTexture(0, postProcess_.mainBuffer, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
 			//glBindImageTexture(1, tdLightingOutput_, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 			glBindImageTexture(2, tdTextures_[2], 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
             glBindImageTexture(3, tdTextures_[3], 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
@@ -163,24 +162,28 @@ namespace Progression {
 
             glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         }
+        */
 		
+        // Bind and clear the main screen
 		graphics::BindFrameBuffer(0);
 		glViewport(0, 0, Window::getWindowSize().x, Window::getWindowSize().y);
+		graphics::SetClearColor(glm::vec4(0));
+		graphics::Clear();
 
-		glClearColor(0, 0, 0, 1);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+        // Copy the post processing depth buffer to the main screen
 		graphics::ToggleDepthBufferWriting(false);
 		graphics::ToggleDepthTesting(false);
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, postProcessingData_.FBO);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, postProcess_.FBO);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 		glBlitFramebuffer(0, 0, Window::getWindowSize().x, Window::getWindowSize().y, 0, 0, Window::getWindowSize().x, Window::getWindowSize().y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 
-		glUniform1f(bloomCombineShader["exposure"], postProcessingData_.exposure);
-		graphics::Bind2DTexture(postProcessingData_.mainBuffer, bloomCombineShader["originalColor"], 0);
+        // Draw the post processing color texture to screen, while performing
+        // post processing effects, tone mapping, and gamma correction
+
+        postProcess_.shader.Enable();
+		glUniform1f(postProcess_.shader["exposure"], postProcess_.exposure);
+		graphics::Bind2DTexture(postProcess_.colorTex, postProcess_.shader["originalColor"], 0);
 		glBindVertexArray(quadVAO_);
-
-
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		graphics::ToggleDepthTesting(true);
@@ -214,51 +217,17 @@ namespace Progression {
 			rot = glm::rotate(rot, dirLights[i]->transform.rotation.z, glm::vec3(0, 0, 1));
 			rot = glm::rotate(rot, dirLights[i]->transform.rotation.y, glm::vec3(0, 1, 0));
 			rot = glm::rotate(rot, dirLights[i]->transform.rotation.x, glm::vec3(1, 0, 0));
-			globalLights[2 * i + 0] = V * rot * glm::vec4(dir, 0);
-			globalLights[2 * i + 1] = glm::vec4(dirLights[i]->intensity * dirLights[i]->color, 1);
+			cpuLightBuffer_[2 * i + 0] = V * rot * glm::vec4(dir, 0);
+			cpuLightBuffer_[2 * i + 1] = glm::vec4(dirLights[i]->intensity * dirLights[i]->color, 1);
 		}
 
 		for (int i = 0; i < pointLights.size(); ++i) {
 			float lightRadius = sqrtf(pointLights[i]->intensity / lightIntensityCutoff_);
-			globalLights[2 * (numDirectionalLights_ + i) + 0] = V * glm::vec4(pointLights[i]->transform.position, 1);
-			globalLights[2 * (numDirectionalLights_ + i) + 0].w = lightRadius;
-			globalLights[2 * (numDirectionalLights_ + i) + 1] = glm::vec4(pointLights[i]->intensity * pointLights[i]->color, 1);
+			cpuLightBuffer_[2 * (numDirectionalLights_ + i) + 0] = V * glm::vec4(pointLights[i]->transform.position, 1);
+			cpuLightBuffer_[2 * (numDirectionalLights_ + i) + 0].w = lightRadius;
+			cpuLightBuffer_[2 * (numDirectionalLights_ + i) + 1] = glm::vec4(pointLights[i]->intensity * pointLights[i]->color, 1);
 		}
-		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, 2 * (numDirectionalLights_ + numPointLights_) * sizeof(glm::vec4), globalLights);
-		
-		/*
-        numPointLights_ = 0;
-        numDirectionalLights_ = 0;
-
-        const auto& dirLights = scene->GetDirectionalLights();
-        const auto& pointLights = scene->GetPointLights();
-        glm::mat4 V = camera->GetV();
-
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSSBO_);
-		glm::vec4* lightBuffer = (glm::vec4*) glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
-
-        int i = 0;
-        for (i = 0; i < dirLights.size() && i < maxNumLights_; ++i) {
-            glm::vec3 dir(0, 0, -1);
-            glm::mat4 rot(1);
-            rot = glm::rotate(rot, dirLights[i]->transform.rotation.z, glm::vec3(0, 0, 1));
-            rot = glm::rotate(rot, dirLights[i]->transform.rotation.y, glm::vec3(0, 1, 0));
-            rot = glm::rotate(rot, dirLights[i]->transform.rotation.x, glm::vec3(1, 0, 0));
-            lightBuffer[2 * i + 0] = V * rot * glm::vec4(dir, 0);
-            lightBuffer[2 * i + 1] = glm::vec4(dirLights[i]->intensity * dirLights[i]->color, 1);
-        }
-        numDirectionalLights_ = i;
-
-        for (i = 0; i < pointLights.size() && (i + dirLights.size()) < maxNumLights_; ++i) {
-            float lightRadius = sqrtf(pointLights[i]->intensity / lightIntensityCutoff_);
-            lightBuffer[2 * (numDirectionalLights_ + i) + 0] = V * glm::vec4(pointLights[i]->transform.position, 1);
-            lightBuffer[2 * (numDirectionalLights_ + i) + 0].w = lightRadius;
-            lightBuffer[2 * (numDirectionalLights_ + i) + 1] = glm::vec4(pointLights[i]->intensity * pointLights[i]->color, 1);
-        }
-        numPointLights_ = i;
-
-		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-		*/
+		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, 2 * (numDirectionalLights_ + numPointLights_) * sizeof(glm::vec4), cpuLightBuffer_);
 	}
 
 
