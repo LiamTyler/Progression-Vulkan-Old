@@ -48,16 +48,7 @@ namespace Progression {
     bool EngineShutdown = false;
 
     inline void EngineInitialize(const config::Config& conf) {
-		auto logConfig = conf->get_table("logger");
-        std::string logFilename = "";
-		if (logConfig) {
-		    logFilename = logConfig->get_as<std::string>("file").value_or("");
-            if (logFilename != "")
-                logFilename = PG_ROOT_DIR + logFilename;
-        }
-        std::cout << "log file name = \"" << logFilename << "\"" << std::endl;
-
-        Logger::Init(logFilename);
+		Logger::Init(conf);
         Window::Init(conf);
         Time::Init(conf);
         Input::Init(conf);

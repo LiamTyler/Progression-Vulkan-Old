@@ -17,6 +17,10 @@ int main(int argc, char* argv[]) {
 
     std::cout << "about to log " << std::endl;
     LOG("debug message");
+    LOG_WARN("warn message");
+    LOG_ERR("error message");
+
+    std::cout << "done logging" << std::endl;
 
     /*
 

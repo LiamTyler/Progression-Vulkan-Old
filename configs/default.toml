@@ -12,4 +12,5 @@
     lightIntensityCutoff = 0.03
 
 [logger]
-    file = "test.txt"
+    file = ""
+    useColors = true
