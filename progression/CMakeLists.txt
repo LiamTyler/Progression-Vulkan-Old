@@ -36,7 +36,6 @@ set(
     graphics/shader.cpp
     graphics/render_component.cpp
     graphics/render_system.cpp
-    graphics/render_subsystem.cpp
     graphics/mesh_render_subsystem.cpp
     graphics/mesh_render_component.cpp
     graphics/model_render_component.cpp

@@ -12,7 +12,7 @@
 namespace Progression {
 
 	enum RenderOptions : uint64_t {
-		BLOOM = 0x1,
+		// BLOOM = 0x1,
 	};
 
     class Scene;
@@ -23,19 +23,9 @@ namespace Progression {
 		struct PostProcessing {
 			GLuint FBO;
 			GLuint mainBuffer;
-			GLuint glowBuffer;
 			GLuint depthBuffer;
-			GLuint subGlowBuffers[5][2];
-			float* bloomKernels[5];
-			unsigned int bloomKernelSizes[5];
-			int bloomLevels;
-			GLuint pingPongFBO;
-			GLuint glowBlurredBuffer;
 			float exposure;
-			float bloomIntensity;
-			Shader* copyShader;
-			Shader* blurShader;
-			Shader* bloomCombineShader;
+            Shader* shader;
 		};
 
     public:
@@ -65,22 +55,29 @@ namespace Progression {
         static void UploadMaterial(Shader& shader, Material& material);
 
     private:
+        // general data
         static std::unordered_map<std::type_index, RenderSubSystem*> subSystems_;
+        static GLuint quadVAO_;
+        static GLuint quadVBO_;
+        static uint64_t options_;
+        static Shader* drawTexShader_;
+
+        // lighting data
         static unsigned int numDirectionalLights_;
         static unsigned int numPointLights_;
         static unsigned int maxNumLights_;
         static GLuint lightSSBO_;
+        static glm::vec4* cpuLightBuffer_;
         static float lightIntensityCutoff_;
+
+        // tiled deferred data
         static GLuint tdGbuffer_;
-        static GLuint tdTextures_[6];
-        static GLuint tdDepth_;
+        static GLuint tdGBufferTextures_[6]; // 5 color, 1 depth
         static Shader* tdLightingShader_;
         static GLuint tdLightingOutput_;
-        static Shader* tdCombineShader_;
-        static GLuint quadVAO_;
-        static GLuint quadVBO_;
-		static struct PostProcessing postProcessingData_;
-		static uint64_t options_;
+
+        // post process data
+        static struct PostProcessing postProcess_;
     };
 
 } // namespace Progression

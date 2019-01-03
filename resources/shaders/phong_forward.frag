@@ -26,7 +26,6 @@ layout(std430, binding=10) buffer point_light_list
 uniform float bloomThreshold;
 
 layout (location = 0) out vec4 finalColor;
-layout (location = 1) out vec4 glowColor;
 
 void main() {
     vec3 n = normalize(normalInEyeSpace);
@@ -60,18 +59,8 @@ void main() {
         outColor += lightColor * ka;
         outColor += attenuation * lightColor * diffuseColor * max(0.0, dot(l, n));
         if (dot(l, n) > EPSILON)
-            outColor += lightColor * ks * pow(max(dot(h, n), 0.0), 4*specular);
+            outColor += attenuation * lightColor * ks * pow(max(dot(h, n), 0.0), 4*specular);
     }
     
-    
-    finalColor.rgb = outColor;
-    finalColor.a   = 1.0;
-	
-	vec3 brightnessVec = vec3(0.2126, 0.7152, 0.0722);
-	// vec3 brightnessVec = vec3(0.299, 0.587, 0.114);
-	float cutoff = 1;
-	if (dot(brightnessVec, outColor) > cutoff)
-		glowColor = vec4(outColor, finalColor.a);
-	else
-		glowColor = vec4(0, 0, 0, finalColor.a);
+    finalColor = vec4(outColor, 1.0);
 }

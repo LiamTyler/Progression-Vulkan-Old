@@ -2,11 +2,10 @@
 #define WORK_GROUP_SIZE 16
 layout(local_size_x = WORK_GROUP_SIZE, local_size_y = WORK_GROUP_SIZE) in;
 layout(rgba16f, binding = 0) writeonly uniform image2D imgOutput;
-layout(rgba16f, binding = 1) writeonly uniform image2D bloomOutput;
 
 layout(rgba32f, binding = 2) readonly uniform image2D gPosition;
 layout(rgba32f, binding = 3) readonly uniform image2D gNormal;
-layout(rgba8, binding = 4) readonly uniform image2D gDiffuse;
+layout(rgba8,   binding = 4) readonly uniform image2D gDiffuse;
 layout(rgba32f, binding = 5) readonly uniform image2D gSpecularExp;
 layout(rgba16f, binding = 6) readonly uniform image2D gEmissive;
 
@@ -140,12 +139,4 @@ void main() {
     }
     
     imageStore(imgOutput, coords, vec4(color, 1));
-    
-    vec3 brightnessVec = vec3(0.2126, 0.7152, 0.0722);
-	// vec3 brightnessVec = vec3(0.299, 0.587, 0.114);
-    vec4 glowColor = vec4(0, 0, 0, 1);
-	if (dot(brightnessVec, color) > 1)
-		glowColor = vec4(color, 1);
-
-    imageStore(bloomOutput, coords, glowColor);
 }

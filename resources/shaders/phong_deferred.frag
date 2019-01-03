@@ -1,5 +1,7 @@
 #version 430 core
 
+#define EPSILON 0.000001
+
 in vec2 UV;
 
 uniform sampler2D gPosition;
@@ -22,7 +24,6 @@ void main() {
     vec3 n            = texture(gNormal, UV).rgb;
     vec3 diffuseColor = texture(gDiffuse, UV).rgb;
     vec4 specExp      = texture(gSpecularExp, UV);
-    // specExp.a = 96.078431;
     vec3 e = normalize(-fragPos);
 
     vec3 outColor = vec3(0, 0, 0);
@@ -32,9 +33,10 @@ void main() {
         vec3 lightColor = lights[2 * i + 1].rgb;
         vec3 l = normalize(-lightDir);
         vec3 h = normalize(l + e);
-        // outColor += lightColor * ka;
+        outColor += lightColor * ka;
         outColor += lightColor * diffuseColor * max(0.0, dot(l, n));
-        outColor += lightColor * specExp.rgb * pow(max(dot(h, n), 0.0), specExp.a);        
+        if (dot(l, n) > EPSILON)
+            outColor += lightColor * specExp.rgb * pow(max(dot(h, n), 0.0), specExp.a);        
     }
     
     for (int i = 0; i < numPointLights; ++i) {
@@ -46,7 +48,8 @@ void main() {
         float attenuation = 1.0 / pow(length(lightPos - fragPos), 2.0);
         // outColor += lightColor * ka;
         outColor += attenuation * lightColor * diffuseColor * max(0.0, dot(l, n));
-        outColor += attenuation * lightColor * specExp.rgb * pow(max(dot(h, n), 0.0), specExp.a);        
+        if (dot(l, n) > EPSILON)
+            outColor += attenuation * lightColor * specExp.rgb * pow(max(dot(h, n), 0.0), specExp.a);        
     }
     
     
