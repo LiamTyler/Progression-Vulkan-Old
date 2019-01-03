@@ -70,14 +70,14 @@ namespace Progression {
         if (tdEnabled_) {
             tdGbuffer_ = graphics::CreateFrameBuffer();
             // [0] = pos, [1] = normals, [2] = diffuse, [3] = spec+exp, [4] = emissive, [5] = depth
-            tdGBufferTextures_[0] = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA32F);
-            tdGBufferTextures_[1] = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA32F);
-            tdGBufferTextures_[2] = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA);
-            tdGBufferTextures_[3] = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA32F);
-            tdGBufferTextures_[4] = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA16F);
+            tdGBufferTextures_[0] = graphics::Create2DTexture(Window::width(), Window::height(), GL_RGBA32F);
+            tdGBufferTextures_[1] = graphics::Create2DTexture(Window::width(), Window::height(), GL_RGBA32F);
+            tdGBufferTextures_[2] = graphics::Create2DTexture(Window::width(), Window::height(), GL_RGBA);
+            tdGBufferTextures_[3] = graphics::Create2DTexture(Window::width(), Window::height(), GL_RGBA32F);
+            tdGBufferTextures_[4] = graphics::Create2DTexture(Window::width(), Window::height(), GL_RGBA16F);
             graphics::AttachColorTexturesToFBO({ tdGBufferTextures_[0], tdGBufferTextures_[1], tdGBufferTextures_[2], tdGBufferTextures_[3], tdGBufferTextures_[4] });
 
-            tdGBufferTextures_[5] = graphics::CreateRenderBuffer(Window::getWindowSize().x, Window::getWindowSize().y);
+            tdGBufferTextures_[5] = graphics::CreateRenderBuffer(Window::width(), Window::height());
             graphics::AttachRenderBufferToFBO(tdGBufferTextures_[5]);
             graphics::FinalizeFBO();
             graphics::BindFrameBuffer();
@@ -90,9 +90,9 @@ namespace Progression {
         // setup the post processing stuff
         postProcess_.shader = Shader(PG_RESOURCE_DIR "shaders/post_process.vert", PG_RESOURCE_DIR "shaders/post_process.frag");
         postProcess_.FBO = graphics::CreateFrameBuffer();
-        postProcess_.colorTex = graphics::Create2DTexture(Window::getWindowSize().x, Window::getWindowSize().y, GL_RGBA16F, GL_LINEAR, GL_LINEAR);
+        postProcess_.colorTex = graphics::Create2DTexture(Window::width(), Window::height(), GL_RGBA16F, GL_LINEAR, GL_LINEAR);
         graphics::AttachColorTexturesToFBO({ postProcess_.colorTex });
-        postProcess_.depthTex = graphics::CreateRenderBuffer(Window::getWindowSize().x, Window::getWindowSize().y);
+        postProcess_.depthTex = graphics::CreateRenderBuffer(Window::width(), Window::height());
         graphics::AttachRenderBufferToFBO(postProcess_.depthTex);
         graphics::FinalizeFBO();
 
@@ -133,7 +133,7 @@ namespace Progression {
         if (camera->GetRenderingPipeline() == RenderingPipeline::TILED_DEFERRED) {
             glBindFramebuffer(GL_READ_FRAMEBUFFER, tdGbuffer_);
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, postProcess_.FBO);
-            glBlitFramebuffer(0, 0, Window::getWindowSize().x, Window::getWindowSize().y, 0, 0, Window::getWindowSize().x, Window::getWindowSize().y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+            glBlitFramebuffer(0, 0, Window::width(), Window::height(), 0, 0, Window::width(), Window::height(), GL_DEPTH_BUFFER_BIT, GL_NEAREST);
             glBindFramebuffer(GL_FRAMEBUFFER, postProcess_.FBO);
 
             tdComputeShader_.Enable();
@@ -144,20 +144,20 @@ namespace Progression {
             glBindImageTexture(5, tdGBufferTextures_[3], 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
             glBindImageTexture(6, tdGBufferTextures_[4], 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA16F);
 
-            glUniform2i(tdComputeShader_["screenSize"], Window::getWindowSize().x, Window::getWindowSize().y);
+            glUniform2i(tdComputeShader_["screenSize"], Window::width(), Window::height());
             glUniform1i(tdComputeShader_["numPointLights"], numPointLights_);
             glUniform1i(tdComputeShader_["numDirectionalLights"], numDirectionalLights_);
             glUniformMatrix4fv(tdComputeShader_["invProjMatrix"], 1, GL_FALSE, glm::value_ptr(glm::inverse(camera->GetP())));
 
             const int BLOCK_SIZE = 16;
-            glDispatchCompute(Window::getWindowSize().x / BLOCK_SIZE, Window::getWindowSize().y / BLOCK_SIZE, 1);
+            glDispatchCompute(Window::width() / BLOCK_SIZE, Window::height() / BLOCK_SIZE, 1);
 
             glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         }
 
         // Bind and clear the main screen
         graphics::BindFrameBuffer(0);
-        glViewport(0, 0, Window::getWindowSize().x, Window::getWindowSize().y);
+        glViewport(0, 0, Window::width(), Window::height());
         graphics::SetClearColor(glm::vec4(0));
         graphics::Clear();
 
@@ -166,7 +166,7 @@ namespace Progression {
         graphics::ToggleDepthTesting(false);
         glBindFramebuffer(GL_READ_FRAMEBUFFER, postProcess_.FBO);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-        glBlitFramebuffer(0, 0, Window::getWindowSize().x, Window::getWindowSize().y, 0, 0, Window::getWindowSize().x, Window::getWindowSize().y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+        glBlitFramebuffer(0, 0, Window::width(), Window::height(), 0, 0, Window::width(), Window::height(), GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 
         // Draw the post processing color texture to screen, while performing
         // post processing effects, tone mapping, and gamma correction

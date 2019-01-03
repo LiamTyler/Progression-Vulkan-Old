@@ -206,7 +206,7 @@ int main(int argc, char* argv[]) {
         // blit the deferred depth buffer to the main screen
         glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-        glBlitFramebuffer(0, 0, Window::getWindowSize().x, Window::getWindowSize().y, 0, 0, Window::getWindowSize().x, Window::getWindowSize().y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+        glBlitFramebuffer(0, 0, Window::width(), Window::height(), 0, 0, Window::width(), Window::height(), GL_DEPTH_BUFFER_BIT, GL_NEAREST);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         glm::mat4 VP = camera->GetP() * camera->GetV();
@@ -230,11 +230,11 @@ int main(int argc, char* argv[]) {
         glBindImageTexture(3, gDiffuse, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8);
         glBindImageTexture(4, gSpecularExp, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
 
-        glUniform2i(computeShader["screenSize"], Window::getWindowSize().x, Window::getWindowSize().y);
+        glUniform2i(computeShader["screenSize"], Window::width(), Window::height());
         glUniform1i(computeShader["numPointLights"], scene->GetNumPointLights());
         glUniformMatrix4fv(computeShader["invProjMatrix"], 1, GL_FALSE, glm::value_ptr(glm::inverse(camera->GetP())));
 
-        glDispatchCompute(Window::getWindowSize().x / BLOCK_SIZE, Window::getWindowSize().y / BLOCK_SIZE, 1);
+        glDispatchCompute(Window::width() / BLOCK_SIZE, Window::height() / BLOCK_SIZE, 1);
 
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
