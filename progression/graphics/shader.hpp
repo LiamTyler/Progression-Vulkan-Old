@@ -21,6 +21,7 @@ namespace Progression {
 		bool AttachShaderFromFile(GLenum shaderType, const std::string& fname);
 		bool CreateAndLinkProgram();
 		void AutoDetectVariables();
+        void Free();
 		void Enable();
 		void Disable();
 		void AddAttribute(const std::string& attribute);

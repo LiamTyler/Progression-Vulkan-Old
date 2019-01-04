@@ -18,16 +18,15 @@ namespace Progression {
     Scene::~Scene() {
         for (const auto& o : gameObjects_)
             delete o;
+        for (const auto& l : directionalLights_)
+            delete l;
+        for (const auto& l : pointLights_)
+            delete l;
+        for (const auto& c : cameras_)
+            delete c;
     }
 
-	// TODO: Fix the need for a newline at the end of a file (if this is still a problem)
     Scene* Scene::Load(const std::string& filename) {
-        // std::filesystem::path path(filename);
-        // if (!std::filesystem::exists(path)) {
-        //     std::cout << "File does not exist: " << path << std::endl;
-        //     return nullptr;
-        // }
-
         Scene* scene = new Scene;
 
         std::ifstream in(filename);
@@ -128,8 +127,9 @@ namespace Progression {
     void Scene::RemoveLight(Light* light) {
         if (light->type == Light::Type::DIRECTIONAL) {
             const auto& iter = std::find(directionalLights_.begin(), directionalLights_.end(), light);
-            if (iter != directionalLights_.end())
+            if (iter != directionalLights_.end()) {
                 directionalLights_.erase(iter);
+            }
                 
         } else if (light->type == Light::Type::POINT) {
             const auto& iter = std::find(pointLights_.begin(), pointLights_.end(), light);

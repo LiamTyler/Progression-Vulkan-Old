@@ -6,7 +6,6 @@
 
 #include <functional>
 #include <fstream>
-// #include <filesystem>
 
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -38,7 +37,6 @@ namespace std {
     };
 }        
 
-
 namespace Progression {
 
     std::unordered_map<std::string, std::shared_ptr<Model>> ResourceManager::models_ = {};
@@ -60,18 +58,14 @@ namespace Progression {
 
     // TODO: implement
     void ResourceManager::Free() {
+        shaders_.clear();
+        skyboxes_.clear();
+        models_.clear();
+        materials_.clear();
+        textures2D_.clear();
     }
 
     void ResourceManager::LoadResourceFile(const std::string& relativePath) {
-        /*
-        std::filesystem::path path(PG_RESOURCE_DIR + relativePath);
-        if (!std::filesystem::exists(path)) {
-            std::cout << "File does not exist: " << path << std::endl;
-            return;
-        }
-
-        std::ifstream in(path);
-        */
         std::ifstream in(PG_RESOURCE_DIR + relativePath);
         if (!in) {
             std::cout << "File does not exist: " << PG_RESOURCE_DIR + relativePath << std::endl;

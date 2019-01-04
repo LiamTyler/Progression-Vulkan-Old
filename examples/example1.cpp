@@ -47,6 +47,9 @@ int main(int argc, char* argv[]) {
         PG::Window::EndFrame();
     }
 
+    skybox.reset();
+    delete scene;
+
     PG::EngineQuit();
 
     return 0;

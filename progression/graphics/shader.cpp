@@ -22,8 +22,7 @@ namespace Progression {
 	}
 
 	Shader::~Shader() {
-        if (program_ != -1)
-            glDeleteProgram(program_);
+        Free();
 	}
 
     Shader::Shader(Shader&& shader) {
@@ -143,6 +142,11 @@ namespace Progression {
 		}
 		delete[] uniformName;
 	}
+
+    void Shader::Free() {
+        if (program_ != -1)
+            glDeleteProgram(program_);
+    }
 
 	void Shader::Enable() {
 		glUseProgram(program_);
