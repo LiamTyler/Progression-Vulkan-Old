@@ -110,6 +110,8 @@ namespace Progression {
             delete subsys.second;
         if (cpuLightBuffer_)
             delete[] cpuLightBuffer_;
+        tdComputeShader_.Free();
+        postProcess_.shader.Free();
     }
 
     void RenderSystem::Render(Scene* scene, Camera* camera) {

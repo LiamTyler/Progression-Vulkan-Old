@@ -153,8 +153,10 @@ namespace Progression {
             glDeleteShader(shaders_[i]);
         }
         shaders_.clear();
-        if (program_ != -1)
+        if (program_ != -1) {
             glDeleteProgram(program_);
+            program_ = -1;
+        }
     }
 
 	void Shader::Enable() {
