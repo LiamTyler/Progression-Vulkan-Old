@@ -12,28 +12,8 @@ namespace Progression {
         shader_ = ResourceManager::GetShader("skybox");
     }
 
-    Skybox::Skybox(
-        const std::string& right,
-        const std::string& left,
-        const std::string& top,
-        const std::string& bottom,
-        const std::string& front,
-        const std::string& back) :
-        skyboxTextureID_(-1),
-        cubeVao_(-1),
-        cubeVbo_(-1)
-    {
-        shader_ = ResourceManager::GetShader("skybox");
-        Load({ right, left, top, bottom, front, back });
-    }
-
 	Skybox::~Skybox() {
-        if (skyboxTextureID_ != -1)
-			glDeleteTextures(1, &skyboxTextureID_);
-        if (cubeVbo_ != -1)
-			glDeleteBuffers(1, &cubeVbo_);
-        if (cubeVao_ != -1)
-			glDeleteVertexArrays(1, &cubeVao_);
+        Free();
 	}
 
     Skybox::Skybox(Skybox&& skybox) {
@@ -101,8 +81,7 @@ namespace Progression {
 		glBindVertexArray(cubeVao_);
 		glGenBuffers(1, &cubeVbo_);
 		glBindBuffer(GL_ARRAY_BUFFER, cubeVbo_);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices),
-			skyboxVertices, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), skyboxVertices, GL_STATIC_DRAW);
 		glEnableVertexAttribArray((*shader_)["vertex"]);
 		glVertexAttribPointer((*shader_)["vertex"], 3, GL_FLOAT, GL_FALSE, 0, 0);
 
@@ -113,10 +92,10 @@ namespace Progression {
 
 		for (int i = 0; i < 6; i++) {
 			Image img;
-			if (!img.LoadImage(faces[i])) {
-				std::cout << "Failed to load skybox texture: " << faces[i] << std::endl;
-				return false;
-			}
+            if (!img.Load(faces[i])) {
+                Free();
+                return false;
+            }
 
 			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA,
 				img.Width(), img.Height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, img.GetData());
@@ -131,6 +110,16 @@ namespace Progression {
 
 		return true;
 	}
+
+    void Skybox::Free() {
+        if (skyboxTextureID_ != -1)
+            glDeleteTextures(1, &skyboxTextureID_);
+        if (cubeVbo_ != -1)
+            glDeleteBuffers(1, &cubeVbo_);
+        if (cubeVao_ != -1)
+            glDeleteVertexArrays(1, &cubeVao_);
+        shader_.reset();
+    }
 
 	void Skybox::Render(const Camera& camera) {
         shader_->Enable();

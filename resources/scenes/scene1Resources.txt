@@ -31,5 +31,5 @@ material metalFloor
 
 Model
 name model 
-filename models/cube.obj
-material red
+filename models/robot.obj
+#material red

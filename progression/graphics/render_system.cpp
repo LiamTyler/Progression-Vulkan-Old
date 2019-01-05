@@ -5,6 +5,7 @@
 #include "core/camera.hpp"
 #include "graphics/mesh_render_subsystem.hpp"
 #include "core/window.hpp"
+#include "utils/logger.hpp"
 
 namespace Progression {
 
@@ -32,8 +33,8 @@ namespace Progression {
 
         auto rsConfig = config->get_table("renderSystem");
         if (!rsConfig) {
-            std::cout << "Need to specify the 'renderSystem' in the config file!" << std::endl;
-            exit(0);
+            LOG_ERR("Need to specify the 'renderSystem' in the config file");
+            exit(EXIT_FAILURE);
         }
 
         // parse the config file options
@@ -82,13 +83,17 @@ namespace Progression {
             graphics::FinalizeFBO();
             graphics::BindFrameBuffer();
 
-            tdComputeShader_.AttachShaderFromFile(GL_COMPUTE_SHADER, PG_RESOURCE_DIR "shaders/tiled_deferred_compute.glsl");
-            tdComputeShader_.CreateAndLinkProgram();
-            tdComputeShader_.AutoDetectVariables();
+            if (!tdComputeShader_.Load(PG_RESOURCE_DIR "shaders/tiled_deferred_compute.glsl")) {
+                LOG_ERR("Tiled deferred pipeline enabled, but cant load the shaders. Exiting");
+                exit(EXIT_FAILURE);
+            }
         }
 
         // setup the post processing stuff
-        postProcess_.shader = Shader(PG_RESOURCE_DIR "shaders/post_process.vert", PG_RESOURCE_DIR "shaders/post_process.frag");
+        if (!postProcess_.shader.Load(PG_RESOURCE_DIR "shaders/post_process.vert", PG_RESOURCE_DIR "shaders/post_process.frag")) {
+            LOG_ERR("Cant load the post processing shader. Exiting");
+            exit(EXIT_FAILURE);
+        }
         postProcess_.FBO = graphics::CreateFrameBuffer();
         postProcess_.colorTex = graphics::Create2DTexture(Window::width(), Window::height(), GL_RGBA16F, GL_LINEAR, GL_LINEAR);
         graphics::AttachColorTexturesToFBO({ postProcess_.colorTex });

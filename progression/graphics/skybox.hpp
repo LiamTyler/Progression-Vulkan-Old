@@ -10,24 +10,16 @@ namespace Progression {
 	class Skybox : public NonCopyable {
 	public:
         Skybox();
-		Skybox(
-            const std::string& right,
-            const std::string& left,
-            const std::string& top,
-            const std::string& bottom,
-            const std::string& front,
-            const std::string& back);
 		~Skybox();
-
         Skybox(Skybox&& skybox);
         Skybox& operator=(Skybox&& skybox);
 
+        bool Load(const std::vector<std::string>& faces);
+        void Free();
 		void Render(const Camera& camera);
 
 		GLuint getGPUHandle() const { return skyboxTextureID_; }
 		std::shared_ptr<Shader> GetShader() const { return shader_; }
-
-        bool Load(const std::vector<std::string>& faces);
 
 	private:
 		GLuint skyboxTextureID_;

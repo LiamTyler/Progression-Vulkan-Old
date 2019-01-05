@@ -2,26 +2,19 @@
 #include "graphics/shader.hpp"
 #include "graphics/render_system.hpp"
 #include "core/resource_manager.hpp"
+#include "utils/logger.hpp"
 
 namespace Progression {
 
     MeshRenderSubSystem::MeshRenderSubSystem() {
-        auto forward = ResourceManager::GetShader("mesh-forward");
-        auto tiled_deferred = ResourceManager::GetShader("mesh-tiled-deferred");
-        if (!forward) {
-            forward = ResourceManager::AddShader(
-                    Shader(PG_RESOURCE_DIR "shaders/default.vert", PG_RESOURCE_DIR "shaders/phong_forward.frag"),
-                    "mesh-forward");
-            // forward->AddUniform("lights");
+        if (!pipelineShaders[RenderingPipeline::FORWARD].Load(PG_RESOURCE_DIR "shaders/default.vert", PG_RESOURCE_DIR "shaders/phong_forward.frag")) {
+            LOG_ERR("Could not load the mesh renderer forward shader");
+            exit(EXIT_FAILURE);
         }
-        if (!tiled_deferred) {
-            tiled_deferred = ResourceManager::AddShader(
-                    Shader(PG_RESOURCE_DIR "shaders/default.vert", PG_RESOURCE_DIR "shaders/deferred_save_gbuffer.frag"),
-                    "mesh-tiled-deferred");
+        if (!pipelineShaders[RenderingPipeline::TILED_DEFERRED].Load(PG_RESOURCE_DIR "shaders/default.vert", PG_RESOURCE_DIR "shaders/deferred_save_gbuffer.frag")) {
+            LOG_ERR("Could not load the mesh renderer tiled deferred shader");
+            exit(EXIT_FAILURE);
         }
-
-        pipelineShaders[RenderingPipeline::FORWARD] = forward.get();
-        pipelineShaders[RenderingPipeline::TILED_DEFERRED] = tiled_deferred.get();
     }
 
     void MeshRenderSubSystem::AddRenderComponent(RenderComponent* rc) {
@@ -35,7 +28,7 @@ namespace Progression {
             glGenVertexArrays(1, &vao);
             glBindVertexArray(vao);
             GLuint* vbos_ = &mr->mesh->vbos[0];
-            Shader& shader = *pipelineShaders[RenderingPipeline::FORWARD];
+            Shader& shader = pipelineShaders[RenderingPipeline::FORWARD];
 
             glBindBuffer(GL_ARRAY_BUFFER, vbos_[Mesh::vboName::VERTEX]);
             glEnableVertexAttribArray(shader["vertex"]);
@@ -66,7 +59,7 @@ namespace Progression {
     }
 
     void MeshRenderSubSystem::Render(Scene* scene, Camera& camera) {
-		auto& shader = *pipelineShaders[camera.GetRenderingPipeline()];
+		auto& shader = pipelineShaders[camera.GetRenderingPipeline()];
 		shader.Enable();
 		if (camera.GetRenderingPipeline() == RenderingPipeline::FORWARD)
 			RenderSystem::UploadLights(shader);

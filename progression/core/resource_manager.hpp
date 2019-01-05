@@ -19,7 +19,7 @@ namespace Progression {
         static void Init(const config::Config& config);
         static void Free();
 
-        static void LoadResourceFile(const std::string& relativePath);
+        static bool LoadResourceFile(const std::string& relativePath);
         
         static std::shared_ptr<Model> GetModel(const std::string& name, bool shallowCopy = false) {
             if (models_.find(name) == models_.end()) {

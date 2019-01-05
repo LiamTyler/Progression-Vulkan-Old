@@ -8,21 +8,21 @@ int main(int argc, char* argv[]) {
 
 	auto conf = PG::config::Config(PG_ROOT_DIR "configs/default.toml");
 	if (!conf) {
-		std::cout << "could not parse config file" << std::endl;
-		exit(0);
-	}
+        LOG_ERR("Failed to load the config file");
+        exit(EXIT_FAILURE);
+    }
 
-    std::cout << "about to init" << std::endl;
 	PG::EngineInitialize(conf);
 
-    std::cout << "about to log " << std::endl;
     LOG("debug message");
-    LOG_WARN("warn message");
+    LOG_WARN("warn message p1", " p2", " p3");
     LOG_ERR("error message");
 
-    std::cout << "done logging" << std::endl;
-
 	auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/scene1.pgscn");
+    if (!scene) {
+        LOG_ERR("Failed to load scene:");
+        exit(EXIT_FAILURE);
+    }
 	auto camera = scene->GetCamera();
 	camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera, 3));
 

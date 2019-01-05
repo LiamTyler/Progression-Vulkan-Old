@@ -1,24 +1,10 @@
 #include "graphics/shader.hpp"
+#include "utils/logger.hpp"
 #include <fstream>
 
 namespace Progression {
 
-	Shader::Shader() :
-		program_(-1),
-		loaded_(false)
-	{
-	}
-
-	Shader::Shader(const std::string& vertex_file, const std::string& frag_file) :
-		program_(-1),
-		loaded_(false)
-	{
-		if (AttachShaderFromFile(GL_VERTEX_SHADER, vertex_file) && AttachShaderFromFile(GL_FRAGMENT_SHADER, frag_file)) {
-			CreateAndLinkProgram();
-			AutoDetectVariables();
-		} else {
-			std::cout << "failed to attach shaders" << std::endl;
-		}
+	Shader::Shader() : program_(-1) {
 	}
 
 	Shader::~Shader() {
@@ -34,11 +20,27 @@ namespace Progression {
         shaders_ = std::move(shader.shaders_);
         attributeList_ = std::move(shader.attributeList_);
         uniformList_ = std::move(shader.uniformList_);
-        loaded_ = std::move(shader.loaded_);
 
         shader.program_ = -1;
 
         return *this;
+    }
+
+    bool Shader::Load(const std::string& vertex_or_compute_fname, const std::string& frag_name) {
+        if (frag_name == "") {
+            if (AttachShaderFromFile(GL_COMPUTE_SHADER, vertex_or_compute_fname) &&
+                CreateAndLinkProgram())
+                AutoDetectVariables();
+            else
+                return false;
+        } else {
+            if (AttachShaderFromFile(GL_VERTEX_SHADER, vertex_or_compute_fname) && AttachShaderFromFile(GL_FRAGMENT_SHADER, frag_name) && CreateAndLinkProgram())
+                AutoDetectVariables();
+            else
+                return false;
+        }
+
+        return true;
     }
 
 	bool Shader::AttachShaderFromString(GLenum shaderType, const std::string& source) {
@@ -55,7 +57,8 @@ namespace Progression {
 		if (!Result) {
 			std::vector<char> ErrorMessage(InfoLogLength + 1);
 			glGetShaderInfoLog(newShader, InfoLogLength, NULL, &ErrorMessage[0]);
-			printf("Error while loading shader:\n%s\n\n", &ErrorMessage[0]);
+            std::string err(&ErrorMessage[0]);
+            LOG_ERR("Error while loading shader:\n", err, '\n');
 			return false;
 		}
 
@@ -66,7 +69,7 @@ namespace Progression {
 	bool Shader::AttachShaderFromFile(GLenum shaderType, const std::string& filename) {
 		std::ifstream in(filename);
 		if (in.fail()) {
-			std::cerr << "Failed to open the shader file: " << filename << std::endl;
+            LOG_ERR("Failed to open the shader file:", filename);
 			return false;
 		}
 		std::string file, line;
@@ -76,6 +79,7 @@ namespace Progression {
 		return AttachShaderFromString(shaderType, file);
 	}
 
+    // Note: technically, if 
 	bool Shader::CreateAndLinkProgram() {
 		program_ = glCreateProgram();
 		for (int i = 0; i < shaders_.size(); i++)
@@ -90,7 +94,8 @@ namespace Progression {
 		if (!Result) {
 			std::vector<char> ErrorMessage(InfoLogLength + 1);
 			glGetProgramInfoLog(program_, InfoLogLength, NULL, &ErrorMessage[0]);
-			printf("Error while compiling and linking program:\n%s\n\n", &ErrorMessage[0]);
+            std::string err(&ErrorMessage[0]);
+            LOG_ERR("Error while compiling and linking the shader:\n", err, '\n');
 			return false;
 		}
 
@@ -99,7 +104,6 @@ namespace Progression {
 			glDeleteShader(shaders_[i]);
 		}
 		shaders_.clear();
-		loaded_ = true;
 		return true;
 	}
 
@@ -144,6 +148,11 @@ namespace Progression {
 	}
 
     void Shader::Free() {
+        for (int i = 0; i < shaders_.size(); i++) {
+            glDetachShader(program_, shaders_[i]);
+            glDeleteShader(shaders_[i]);
+        }
+        shaders_.clear();
         if (program_ != -1)
             glDeleteProgram(program_);
     }

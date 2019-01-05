@@ -1,5 +1,6 @@
 #include "core/window.hpp"
 #include "core/time.hpp"
+#include "utils/logger.hpp"
 
 namespace Progression {
 
@@ -18,7 +19,7 @@ namespace Progression {
 
 	void Window::Init(const config::Config& config) {
         if (!glfwInit()) {
-            std::cout << "Could not initialize GLFW" << std::endl;
+            LOG_ERR("Could not initialize GLFW");
             exit(EXIT_FAILURE);
         }
 
@@ -41,11 +42,16 @@ namespace Progression {
 
         // Grab the specified values in the config if available
 		auto winConfig = config->get_table("window");
-		if (!winConfig)
-			std::cout << "Need to specify the window subsystem in the config file!" << std::endl;
+        if (!winConfig) {
+            LOG_ERR("Need to specify the 'window' in the config file");
+            exit(EXIT_FAILURE);
+        }
 
 		glMajor = winConfig->get_as<int>("glMajor").value_or(4);
         glMinor = winConfig->get_as<int>("glMinor").value_or(3);
+        if (glMajor * 10 + glMinor < 43)
+            LOG_WARN("Using a version of OpenGL less that 4.3. Tiled deferred rendering relies on compute shaders, which is version 4.3 and up");
+
 		resizeable = winConfig->get_as<bool>("resizeable").value_or(false);
 		_mTitle = winConfig->get_as<std::string>("title").value_or("untitled");
 		_mWindowSize.x = winConfig->get_as<int>("width").value_or(640);
@@ -59,7 +65,7 @@ namespace Progression {
 
         _mWindow = glfwCreateWindow(_mWindowSize.x, _mWindowSize.y, _mTitle.c_str(), NULL, NULL);
         if (!_mWindow) {
-            std::cout << "Window or context creation failed" << std::endl;
+            LOG_ERR("Window or context creation failed");
             glfwTerminate();
             exit(EXIT_FAILURE);
         }
@@ -67,14 +73,14 @@ namespace Progression {
         glfwMakeContextCurrent(_mWindow);
 
         if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
-            std::cout << "Failed to gladLoadGLLoader" << std::endl;
+            LOG_ERR("Failed to gladLoadGLLoader");
             glfwTerminate();
             exit(EXIT_FAILURE);
         }
 		
-		std::cout << "Vendor: " << glGetString(GL_VENDOR) << std::endl;
-		std::cout << "Renderer: " << glGetString(GL_RENDERER) << std::endl;
-		std::cout << "Version: " << glGetString(GL_VERSION) << std::endl;
+        LOG("Vendor:", glGetString(GL_VENDOR));
+        LOG("Renderer:", glGetString(GL_RENDERER));
+        LOG("Version:", glGetString(GL_VERSION));
 
         if (vsync) {
             glfwSwapInterval(1);
@@ -87,7 +93,6 @@ namespace Progression {
         glfwGetWindowSize(_mWindow, &wW, &wH);
 
         glViewport(0, 0, fbW, fbH);
-        // glBindSampler(0, 0);
 	}
 
 	void Window::SwapWindow() {

@@ -11,12 +11,12 @@ namespace Progression {
 	class Shader : public NonCopyable {
 	public:
 		Shader();
-		Shader(const std::string& vertex_file, const std::string& frag_file);
 		~Shader();
         
         Shader(Shader&& shader);
         Shader& operator=(Shader&& shader);
 
+        bool Load(const std::string& vertex_or_compute_fname, const std::string& frag_name = "");
 		bool AttachShaderFromString(GLenum shaderType, const std::string& source);
 		bool AttachShaderFromFile(GLenum shaderType, const std::string& fname);
 		bool CreateAndLinkProgram();
@@ -31,14 +31,12 @@ namespace Progression {
 		GLuint operator[] (const std::string& name) const;
 
 		GLuint getProgram() { return program_; }
-		bool isLoaded() { return loaded_; }
 
 	protected:
 		GLuint program_;
 		std::vector<GLuint> shaders_;
 		std::unordered_map<std::string, GLuint> attributeList_;
 		std::unordered_map<std::string, GLuint> uniformList_;
-		bool loaded_;
 	};
 
 } // namespace Progression

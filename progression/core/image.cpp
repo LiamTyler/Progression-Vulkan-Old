@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <iomanip>
+#include "utils/logger.hpp"
 
 namespace Progression {
 
@@ -25,10 +26,6 @@ namespace Progression {
 		height_(h),
         pixels_((unsigned char*) malloc(4*w*h))
     {
-	}
-
-	Image::Image(const std::string fname) {
-		LoadImage(fname);
 	}
 
     Image::~Image() {
@@ -70,41 +67,47 @@ namespace Progression {
         return *this;
     }
 
-	bool Image::LoadImage(const std::string& fname) {
+	bool Image::Load(const std::string& fname) {
 		int nC;
         pixels_ = stbi_load(fname.c_str(), &width_, &height_, &nC, 4);
 
         if (!pixels_) {
-            std::cout << "Failed to load : " << fname << std::endl;
+            LOG_ERR("Failed to load image:", fname);
             return false;
         }
         return true;
 	}
 
-	void Image::SaveImage(const std::string& fname) {
+	bool Image::Save(const std::string& fname) {
 		int i = fname.length();
 		while (fname[--i] != '.' && i >= 0);
 		if (i < 0) {
-			std::cout << "Invalid image file name: " << fname << std::endl;
-			return;
+            LOG_ERR("Image filename \"", fname, "\" has no extension");
+			return false;
 		}
 
+        int ret;
 		switch (fname[i + 1]) {
 		case 'p':
-			stbi_write_png(fname.c_str(), width_, height_, 4, pixels_, width_ * 4);
+			ret = stbi_write_png(fname.c_str(), width_, height_, 4, pixels_, width_ * 4);
 			break;
 		case 'j':
-			stbi_write_jpg(fname.c_str(), width_, height_, 4, pixels_, 95);
+            ret = stbi_write_jpg(fname.c_str(), width_, height_, 4, pixels_, 95);
 			break;
 		case 'b':
-			stbi_write_bmp(fname.c_str(), width_, height_, 4, pixels_);
+            ret = stbi_write_bmp(fname.c_str(), width_, height_, 4, pixels_);
 			break;
 		case 't':
-			stbi_write_tga(fname.c_str(), width_, height_, 4, pixels_);
+            ret = stbi_write_tga(fname.c_str(), width_, height_, 4, pixels_);
 			break;
 		default:
-			std::cout << "Invalid image file name: " << fname << std::endl;
+            LOG_ERR("Cant save image with filename (unrecognized extension):", fname)
+            return false;
 		}
+        if (!ret)
+            LOG_ERR("failed to write image:", fname);
+
+        return ret;
 	}
 
 } // namespace Progression

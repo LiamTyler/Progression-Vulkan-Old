@@ -1,9 +1,9 @@
 #include "core/scene.hpp"
 #include <fstream>
 #include <sstream>
-// #include <filesystem>
 #include "core/resource_manager.hpp"
 #include "graphics/model_render_component.hpp"
+#include "utils/logger.hpp"
 
 namespace Progression {
 
@@ -31,7 +31,7 @@ namespace Progression {
 
         std::ifstream in(filename);
         if (!in) {
-            std::cout << "File does not exist: " << filename << std::endl;
+            LOG_ERR("Could not open scene:", filename);
             return nullptr;
         }
         std::string line;

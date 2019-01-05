@@ -11,9 +11,11 @@ namespace Progression {
         Texture2D(Image* image, bool free = true);
         ~Texture2D();
 
+
         Texture2D(Texture2D&& texture);
         Texture2D& operator=(Texture2D&& texture);
 
+        bool Load(const std::string& fname, bool free = true);
         void UploadToGPU(bool free = true);
         void UpdateParameters();
         

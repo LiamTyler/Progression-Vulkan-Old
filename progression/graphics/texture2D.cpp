@@ -1,4 +1,5 @@
 #include "graphics/texture2D.hpp"
+#include "utils/logger.hpp"
 
 namespace Progression {
 
@@ -39,6 +40,19 @@ namespace Progression {
         texture.gpuHandle_ = -1;
 
         return *this;
+    }
+
+    bool Texture2D::Load(const std::string& fname, bool free) {
+        auto img = new Image;
+        if (!img->Load(fname)) {
+            delete img;
+            LOG_ERR("Failed to load the image for texture:", fname);
+            return false;
+        }
+        image = img;
+        UploadToGPU(free);
+
+        return true;
     }
 
     // TODO: Find out if mipmaps need to be regenerated

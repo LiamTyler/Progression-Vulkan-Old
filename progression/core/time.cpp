@@ -1,5 +1,6 @@
 #include "core/time.hpp"
 #include "core/common.hpp"
+#include "utils/logger.hpp"
 
 namespace Progression {
 
@@ -21,8 +22,10 @@ namespace Progression {
         _mTotalFrameCount = 0;
 		
         auto timeConf = config->get_table("time");
-		if (!timeConf)
-			std::cout << "Need to specify the time subsystem in the config file!" << std::endl;
+        if (!timeConf) {
+            LOG_ERR("Need to specify the time subsystem in the config file");
+            exit(EXIT_FAILURE);
+        }
 
 	    _mDisplay = timeConf->get_as<bool>("displayFPS").value_or(true);
     }

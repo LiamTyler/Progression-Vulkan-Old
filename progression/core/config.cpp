@@ -1,4 +1,5 @@
 #include "core/config.hpp"
+#include "utils/logger.hpp"
 #include <iostream>
 
 namespace Progression { namespace config {
@@ -7,7 +8,7 @@ namespace Progression { namespace config {
 		try {
 			handle_ = cpptoml::parse_file(path);
 		} catch (std::exception& e) {
-            std::cout << "config exception: " << e.what() << std::endl;
+            LOG_ERR("config exception:", e.what());
 			handle_ = nullptr;
 		}
 	}

@@ -1,4 +1,5 @@
 #include "graphics/graphics_api.hpp"
+#include "utils/logger.hpp"
 #include <vector>
 
 namespace Progression { namespace graphics {
@@ -88,7 +89,7 @@ namespace Progression { namespace graphics {
 
     void FinalizeFBO() {
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-            std::cout << "frame buffer incomplete" << std::endl;
+            LOG_ERR("Frame buffer incomplete");
     }
 
     void BindFrameBuffer(GLuint fbo) {

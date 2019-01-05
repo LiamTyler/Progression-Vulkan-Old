@@ -19,7 +19,6 @@ namespace Progression {
 	public:
 		Image();
 		Image(int w, int h);
-		Image(const std::string filename);
 		~Image();
 
         Image(const Image& src);
@@ -27,8 +26,8 @@ namespace Progression {
         Image(Image&& src);
         Image& operator=(Image&& src);
 
-		bool LoadImage(const std::string& filename);
-		void SaveImage(const std::string& filename);
+		bool Load(const std::string& filename);
+		bool Save(const std::string& filename);
 
 		int Width() const { return width_; }
 		int Height() const { return height_; }

@@ -1,13 +1,13 @@
 #pragma once
 
-#include <ostream>
+#include <iostream>
 #include <fstream>
 #include "core/config.hpp"
 #include "core/configuration.hpp"
 
-#define LOG(s)      Logger::Write(Logger::DEBUG, s);
-#define LOG_WARN(s) Logger::Write(Logger::WARN, s);
-#define LOG_ERR(s)  Logger::Write(Logger::ERR, s);
+#define LOG(...)      Logger::Write(Logger::DEBUG, __VA_ARGS__);
+#define LOG_WARN(...) Logger::Write(Logger::WARN, __VA_ARGS__);
+#define LOG_ERR(...)  Logger::Write(Logger::ERR, __VA_ARGS__);
 
 class Modifier {
 public:
@@ -65,7 +65,21 @@ class Logger {
             }
         }
 
-        static void Write(Severity sev, const std::string& msg) {
+        template <typename T>
+        static void printArgs(std::ostream& out, T t)
+        {
+            out << t << std::endl;
+        }
+
+        template <typename T, typename U, typename... Args>
+        static void printArgs(std::ostream& out, T t, U u, Args... args)
+        {
+            out << t << " ";
+            printArgs(out, u, args...);
+        }
+
+        template <typename...Args>
+        static void Write(Severity sev, Args... args) {
             std::string severity;
             Modifier mod;
             switch (sev) {
@@ -82,14 +96,17 @@ class Logger {
                     mod = Modifier(Modifier::RED, Modifier::NONE);
                     break;
             }
-
             if (out_) {
-                (*out_) << severity << msg << std::endl;
-            } else {
-                if (useColors_)
-                    std::cout << mod << severity << msg << Modifier() << std::endl;
-                else
-                    std::cout << severity << msg << std::endl;
+                printArgs(*out_, severity, args...);
+            }
+            else {
+                if (useColors_) {
+                    std::cout << mod << severity;
+                    printArgs(std::cout, args...);
+                    std::cout << Modifier();
+                } else {
+                    printArgs(std::cout, severity, args...);
+                }
             }
         }
 
@@ -104,6 +121,3 @@ class Logger {
         static bool useColors_;
         static std::unique_ptr<std::ofstream> out_;
 };
-
-bool Logger::useColors_ = true;
-std::unique_ptr<std::ofstream> Logger::out_ = {};

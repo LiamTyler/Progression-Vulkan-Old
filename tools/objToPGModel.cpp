@@ -1,4 +1,4 @@
-#include "progression.h"
+#include "progression.hpp"
 
 using namespace Progression;
 

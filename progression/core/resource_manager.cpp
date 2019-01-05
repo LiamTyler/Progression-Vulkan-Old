@@ -3,7 +3,7 @@
 #include "tinyobjloader/tiny_obj_loader.h"
 #include "core/time.hpp"
 #include "core/common.hpp"
-
+#include "utils/logger.hpp"
 #include <functional>
 #include <fstream>
 
@@ -51,7 +51,12 @@ namespace Progression {
         // }
 
         // load defaults
-        shaders_["skybox"] = std::make_shared<Shader>(PG_RESOURCE_DIR "shaders/skybox.vert", PG_RESOURCE_DIR "shaders/skybox.frag");
+        auto skyboxShader = std::make_shared<Shader>();
+        if (!skyboxShader->Load(PG_RESOURCE_DIR "shaders/skybox.vert", PG_RESOURCE_DIR "shaders/skybox.frag")) {
+            LOG_WARN("Failed to load the skybox shader");
+        } else {
+            shaders_["skybox"] = skyboxShader;
+        }
         materials_["default"] = std::make_shared<Material>();
         models_["plane"] = LoadModel("models/plane.obj");	
     }
@@ -65,11 +70,11 @@ namespace Progression {
         textures2D_.clear();
     }
 
-    void ResourceManager::LoadResourceFile(const std::string& relativePath) {
+    bool ResourceManager::LoadResourceFile(const std::string& relativePath) {
         std::ifstream in(PG_RESOURCE_DIR + relativePath);
         if (!in) {
-            std::cout << "File does not exist: " << PG_RESOURCE_DIR + relativePath << std::endl;
-            return;
+            LOG_ERR("Could not open resource file:", PG_RESOURCE_DIR + relativePath);
+            return false;
         }
 
         std::string line;
@@ -110,8 +115,13 @@ namespace Progression {
                 front = PG_RESOURCE_DIR + front;
                 back = PG_RESOURCE_DIR + back;
                 if (skyboxes_.find(name) != skyboxes_.end())
-                    std::cout << "warning: resource manager already contains a skybox with the name '" << name << "'. Overriding with the new skybox" << std::endl;
-                skyboxes_[name] = std::make_shared<Skybox>(right, left, top, bottom, front, back);
+                    LOG_WARN("resource manager already contains a skybox with the name '", name, "'. Overriding with the new skybox");
+                 auto sb = std::make_shared<Skybox>();
+                 if (!sb->Load({ right, left, top, bottom, front, back })) {
+                     LOG_ERR("Failed to load skybox");
+                     continue;
+                 }
+                 skyboxes_[name] = sb;
             } else if (line == "Material") {
                 auto material = std::make_shared<Material>();
                 std::string name = "";
@@ -148,13 +158,13 @@ namespace Progression {
                         ss >> filename;
                         auto tex = ResourceManager::LoadTexture2D(filename);
                         if (!tex)
-                            std::cout << "Warning: Material '" << name << "'s diffuse texture: " << filename << " not yet loaded. Setting to nullptr" << std::endl;
+                            LOG_WARN("Warning: Material '", name, "'s diffuse texture : ", filename, " not yet loaded.Setting to nullptr");
                         material->diffuseTexture = tex;
                     }
                 }
 
                 if (materials_.find(name) != materials_.end())
-                    std::cout << "warning: resource manager already contains a material with the name '" << name << "'. Overriding with the new material" << std::endl;
+                    LOG_WARN("resource manager already contains a material with the name '", name, "'. Overriding with the new material");
                 materials_[name] = material;
             } else if (line == "Model") {
                 std::string filename, material, name;
@@ -179,7 +189,7 @@ namespace Progression {
                 }
                 if (material != "") {
                     if (materials_.find(material) == materials_.end()) {
-                        std::cout << "warning: resource manager has no material with name '" << material << "'. Sticking with the model's default materials." << std::endl;
+                        LOG_WARN("warning: resource manager has no material with name '", material, "'. Sticking with the model's default materials.");
                         continue;
                     }
                     auto mat = GetMaterial(material, false);
@@ -216,15 +226,16 @@ namespace Progression {
                     }
                 }
                 if (shaders_.find(name) != shaders_.end()) {
-                    std::cout << "warning: resource manager already contains a shader with name '" << name << "'. Skipping this one" << std::endl;
+                    LOG_WARN("resource manager already contains a shader with the name '", name, "'. Ignoring this one");
                     continue;
                 }
-                shaders_[name] = std::make_shared<Shader>(vertex, frag);
+                shaders_[name] = std::make_shared<Shader>();
+                shaders_[name]->Load(vertex, frag);
             }
         }
 
         in.close();
-
+        return true;
     }
 
     std::shared_ptr<Model> ResourceManager::LoadModel(const std::string& relativePath, bool addToManager) {
@@ -240,7 +251,7 @@ namespace Progression {
         } else if (ext == ".pgModel") {
             model = LoadPGModel(fullFileName);
         } else {
-            std::cout << "Trying to load model from unsupported file: " << fullFileName << std::endl;
+            LOG_ERR("Trying to load model from unsupported file extension:", fullFileName);
             return nullptr;
         }
 
@@ -253,7 +264,7 @@ namespace Progression {
     std::shared_ptr<Model> ResourceManager::LoadPGModel(const std::string& fullPath) {
         std::ifstream in(fullPath, std::ios::binary);
         if (!in) {
-            std::cout << "Failed to load the input file: " << fullPath << std::endl;
+            LOG_ERR("Failed to load the pgModel file: ", fullPath);
             return nullptr;
         }
 
@@ -262,8 +273,6 @@ namespace Progression {
         int numMeshes, numMaterials;
         in.read((char*)&numMeshes, sizeof(int));
         in.read((char*)&numMaterials, sizeof(int));
-        std::cout << "num meshes: " << numMeshes << std::endl;
-        std::cout << "num materials: " << numMaterials << std::endl;
         model->meshes.resize(numMeshes);
         model->materials.resize(numMeshes);
 
@@ -303,10 +312,6 @@ namespace Progression {
             in.read((char*)&numIndices, sizeof(unsigned int));
             in.read((char*)&materialIndex, sizeof(unsigned int));
             in.read((char*)&textured, sizeof(bool));
-            std::cout << "num verts: " << numVertices << std::endl;
-            std::cout << "num indices: " << numIndices << std::endl;
-            std::cout << "mat index: " << materialIndex << std::endl;
-            std::cout << "textured: " << textured << std::endl;
 
             mesh->vertices.resize(numVertices);
             mesh->normals.resize(numVertices);
@@ -333,10 +338,11 @@ namespace Progression {
 
         for (int i = 0; i < numMaterials; ++i) {
             if (diffuseTexNames[i] != "") {
-                materials[i]->diffuseTexture = std::make_shared<Texture2D>(new Image(PG_RESOURCE_DIR + diffuseTexNames[i]));
+                materials[i]->diffuseTexture = std::make_shared<Texture2D>();
+                if (!materials[i]->diffuseTexture->Load(PG_RESOURCE_DIR + diffuseTexNames[i]))
+                    materials[i]->diffuseTexture = nullptr;
             }
         }
-        std::cout << "loaded pg model" << std::endl;
 
         return model;
     }
@@ -349,11 +355,11 @@ namespace Progression {
         bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, fullPath.c_str(), std::string(PG_RESOURCE_DIR).c_str(), true);
 
         if (!err.empty()) {
-            std::cerr << err << std::endl;
+            LOG_WARN("TinyObj loader warning: ", err);
         }
 
         if (!ret) {
-            std::cout << "Failed to load the input file: " << fullPath << std::endl;
+            LOG_ERR("Failed to load the obj file: ", fullPath);
             return nullptr;
         }
 
@@ -372,7 +378,9 @@ namespace Progression {
                 float shininess = mat.shininess;
                 std::shared_ptr<Texture2D> diffuseTex = nullptr;
                 if (mat.diffuse_texname != "") {
-                    diffuseTex = std::make_shared<Texture2D>(new Image(PG_RESOURCE_DIR + mat.diffuse_texname));
+                    diffuseTex = std::make_shared<Texture2D>();
+                    if (!diffuseTex->Load(PG_RESOURCE_DIR + mat.diffuse_texname))
+                        diffuseTex = nullptr;
                 }
 
                 currentMaterial = std::make_shared<Material>(ambient, diffuse, specular, emissive, shininess, diffuseTex);
@@ -433,10 +441,9 @@ namespace Progression {
     }
 
     bool ResourceManager::ConvertOBJToPGModel(const std::string& fullPathToOBJ, const std::string& fullPathToMaterialDir, const std::string& fullOutputPath) {
-        /*
         std::ofstream outFile(fullOutputPath, std::ios::binary);
         if (!outFile) {
-            std::cout << "Could not open output file: " << fullOutputPath << std::endl;
+            LOG_ERR("Could not open output file:", fullOutputPath);
             return false;
         }
         tinyobj::attrib_t attrib;
@@ -446,11 +453,11 @@ namespace Progression {
         bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, fullPathToOBJ.c_str(), fullPathToMaterialDir.c_str(), true);
 
         if (!err.empty()) {
-            std::cerr << err << std::endl;
+            LOG_WARN("Tinyobj warning:", err);
         }
 
         if (!ret) {
-            std::cout << "Failed to load the input OBJ: " << fullPathToOBJ << std::endl;
+            LOG_ERR("Failed to load the input OBJ:", fullPathToOBJ);
             outFile.close();
             return false;
         }
@@ -502,22 +509,16 @@ namespace Progression {
                 }
             }
 
-            // create mesh and upload to GPU
+            // create mesh
             if (verts.size()) {
                 Mesh m;
 
-                m.numVertices = verts.size();
-                m.numTriangles = indices.size() / 3;
-                m.vertices = new glm::vec3[verts.size()];
-                memcpy(m.vertices, &verts[0].x, sizeof(glm::vec3) * verts.size());
-                m.normals = new glm::vec3[verts.size()];
-                memcpy(m.normals, &normals[0], sizeof(glm::vec3) * verts.size());
+                m.vertices = std::move(verts);
+                m.normals = std::move(normals);
                 if (uvs.size()) {
-                    m.uvs = new glm::vec2[verts.size()];
-                    memcpy(m.uvs, &uvs[0], sizeof(glm::vec2) * verts.size());
+                    m.uvs = std::move(uvs);
                 }
-                m.indices = new unsigned int[indices.size()];
-                memcpy(m.indices, &indices[0], sizeof(unsigned int) * indices.size());
+                m.indices = std::move(indices);
                 meshList.emplace_back(std::move(m));
                 materialList.push_back(currentMaterialID);
             }
@@ -531,8 +532,6 @@ namespace Progression {
 
         unsigned int numMeshes = meshList.size();
         unsigned int numMaterials = usedMaterialMap.size();
-        std::cout << "num meshes: " << meshList.size() << std::endl;
-        std::cout << "num mats: " << usedMaterialMap.size() << std::endl;
         outFile.write((char*) &numMeshes, sizeof(unsigned int));
         outFile.write((char*) &numMaterials, sizeof(unsigned int));
 
@@ -569,24 +568,24 @@ namespace Progression {
                 outFile.write((char*) &diffuseTexName[0], sizeof(char) * diffuseNameLength);
         }
 
-        std::cout << "writing meshes" << std::endl;
         for (int i = 0; i < meshList.size(); ++i) {
             const auto& mesh = meshList[i];
-            outFile.write((char*) &mesh.numVertices, sizeof(unsigned int));
-            outFile.write((char*) &mesh.numTriangles, sizeof(unsigned int));
+            unsigned int numVerts = mesh.vertices.size();
+            unsigned int numIndices = mesh.indices.size();
+            outFile.write((char*) &numVerts, sizeof(unsigned int));
+            outFile.write((char*) &numIndices, sizeof(unsigned int));
             outFile.write((char*) &usedMaterialMap[materialList[i]], sizeof(unsigned int));
-            bool textured = mesh.uvs != nullptr;
+            bool textured = mesh.uvs.size() != 0;
             outFile.write((char*) &textured, sizeof(bool));
-            outFile.write((char*) mesh.vertices, sizeof(glm::vec3) * mesh.numVertices);
-            outFile.write((char*) mesh.normals, sizeof(glm::vec3) * mesh.numVertices);
+            outFile.write((char*) &mesh.vertices[0], sizeof(glm::vec3) * numVerts);
+            outFile.write((char*) &mesh.normals[0], sizeof(glm::vec3) * numVerts);
             if (textured)
-                outFile.write((char*) mesh.uvs, sizeof(glm::vec2) * mesh.numVertices);
-            outFile.write((char*) mesh.indices, sizeof(unsigned int) * 3 * mesh.numTriangles);
+                outFile.write((char*) &mesh.uvs[0], sizeof(glm::vec2) * numVerts);
+            outFile.write((char*) &mesh.indices[0], sizeof(unsigned int) * numIndices);
         }
 
         outFile.close();
-        std::cout << "done converting" << std::endl;
-        */
+
         return true;
     }
 
@@ -595,26 +594,34 @@ namespace Progression {
             std::vector<std::string> fullTexturePaths; 
             for (const auto& tex : textures)
                 fullTexturePaths.push_back(PG_RESOURCE_DIR + tex);
-            auto sp = std::make_shared<Skybox>(
-                    fullTexturePaths[0],
-                    fullTexturePaths[1],
-                    fullTexturePaths[2],
-                    fullTexturePaths[3],
-                    fullTexturePaths[4],
-                    fullTexturePaths[5]
-                    );
+            auto sp = std::make_shared<Skybox>();
+            if (!sp->Load({
+                    fullTexturePaths[0], // right
+                    fullTexturePaths[1], // left
+                    fullTexturePaths[2], // top
+                    fullTexturePaths[3], // bottom
+                    fullTexturePaths[4], // front
+                    fullTexturePaths[5] // back
+                }))
+            {
+                return nullptr;
+            }
+
             if (addToManager)
                 skyboxes_[name] = sp;
             else
                 return sp;
-
         }
+
         return skyboxes_[name];
     }
 
     std::shared_ptr<Texture2D> ResourceManager::LoadTexture2D(const std::string& relativePath, bool addToManager) {
         if (textures2D_.find(relativePath) == textures2D_.end()) {
-            auto sp = std::make_shared<Texture2D>(new Image(PG_RESOURCE_DIR + relativePath));
+            auto sp = std::make_shared<Texture2D>();
+            if (!sp->Load(PG_RESOURCE_DIR + relativePath))
+                return nullptr;
+
             if (addToManager)
                 textures2D_[relativePath] = sp;
             else
