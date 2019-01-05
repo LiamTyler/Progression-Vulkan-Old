@@ -9,7 +9,7 @@ namespace Progression {
     class MeshRenderSubSystem : public RenderSubSystem {
     public:
         MeshRenderSubSystem();
-        virtual ~MeshRenderSubSystem() = default;
+        virtual ~MeshRenderSubSystem();
 
         virtual void AddRenderComponent(RenderComponent* rc);
         virtual void RemoveRenderComponent(RenderComponent* rc);

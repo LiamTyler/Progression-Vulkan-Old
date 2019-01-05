@@ -104,13 +104,26 @@ namespace Progression {
         postProcess_.exposure = 1;
     }
 
-    // TODO: Actually release the openGL stuff!
     void RenderSystem::Free() {
         for (auto& subsys : subSystems_)
             delete subsys.second;
-        if (cpuLightBuffer_)
-            delete[] cpuLightBuffer_;
-        tdComputeShader_.Free();
+        delete[] cpuLightBuffer_;
+        glDeleteVertexArrays(1, &quadVAO_);
+        glDeleteBuffers(1, &quadVBO_);
+        glDeleteBuffers(1, &lightSSBO_);
+        if (tdEnabled_) {
+            glDeleteFramebuffers(1, &tdGbuffer_);
+            tdComputeShader_.Free();
+            if (tdGBufferTextures_[0] != -1) {
+                glDeleteTextures(5, tdGBufferTextures_);
+                glDeleteRenderbuffers(1, &tdGBufferTextures_[5]);
+                for (int i = 0; i < 6; ++i)
+                    tdGBufferTextures_[i] = -1;
+            }
+        }
+        glDeleteFramebuffers(1, &postProcess_.FBO);
+        glDeleteTextures(1, &postProcess_.colorTex);
+        glDeleteRenderbuffers(1, &postProcess_.depthTex);
         postProcess_.shader.Free();
     }
 

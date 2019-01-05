@@ -15,9 +15,10 @@ namespace Progression {
         }
     }
 
-    // TODO: clean up
     ModelRenderer::~ModelRenderer() {
-            
+        for (auto& mr : meshRenderers) {
+            delete mr;
+        }
     }
 
     void ModelRenderer::Start() {

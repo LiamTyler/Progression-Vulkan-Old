@@ -10,7 +10,7 @@ namespace Progression {
     {
     }
 
-    // TODO: Clean up
+    // TODO: Clean up ?
     MeshRenderer::~MeshRenderer() {
 
     }

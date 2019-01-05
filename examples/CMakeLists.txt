@@ -15,9 +15,6 @@ set_target_properties(
     DEBUG_POSTFIX _debug
 )
 
-#target_link_libraries(example1 ${EXTERNAL_LIBS} debug ${PROGRESSION_LIB_NAME_DEBUG} optimized ${PROGRESSION_LIB_NAME})
-#target_link_libraries(example2 ${EXTERNAL_LIBS} debug ${PROGRESSION_LIB_NAME_DEBUG} optimized ${PROGRESSION_LIB_NAME})
-#target_link_libraries(example3 ${EXTERNAL_LIBS} debug ${PROGRESSION_LIB_NAME_DEBUG} optimized ${PROGRESSION_LIB_NAME})
 target_link_libraries(example1 ${PROGRESSION_LIBS})
 target_link_libraries(example2 ${PROGRESSION_LIBS})
 target_link_libraries(example3 ${PROGRESSION_LIBS})

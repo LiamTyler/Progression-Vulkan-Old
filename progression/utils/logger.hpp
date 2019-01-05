@@ -68,7 +68,7 @@ class Logger {
         template <typename T>
         static void printArgs(std::ostream& out, T t)
         {
-            out << t << std::endl;
+            out << t;
         }
 
         template <typename T, typename U, typename... Args>
@@ -98,14 +98,16 @@ class Logger {
             }
             if (out_) {
                 printArgs(*out_, severity, args...);
+                (*out_) << std::endl;
             }
             else {
                 if (useColors_) {
                     std::cout << mod << severity;
                     printArgs(std::cout, args...);
-                    std::cout << Modifier();
+                    std::cout << Modifier() << std::endl;
                 } else {
                     printArgs(std::cout, severity, args...);
+                    std::cout << std::endl;
                 }
             }
         }

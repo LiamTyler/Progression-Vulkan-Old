@@ -17,6 +17,12 @@ namespace Progression {
         }
     }
 
+
+    MeshRenderSubSystem::~MeshRenderSubSystem() {
+        for (auto& pair : vaos_)
+            glDeleteVertexArrays(1, &pair.second);
+    }
+
     void MeshRenderSubSystem::AddRenderComponent(RenderComponent* rc) {
         MeshRenderer* mr = static_cast<MeshRenderer*>(rc);
         meshRenderers.push_back(mr);

@@ -17,4 +17,5 @@ namespace Progression {
         Model* model;
         std::vector<MeshRenderer*> meshRenderers;
     };
+
 } // namespace Progression
