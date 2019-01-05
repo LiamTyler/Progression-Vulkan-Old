@@ -89,6 +89,7 @@ set(
     
     utils/noncopyable.hpp
     utils/logger.hpp
+    utils/random.hpp
     
     ${CMAKE_SOURCE_DIR}/ext/tinyobjloader/tiny_obj_loader.h
     ${CMAKE_SOURCE_DIR}/ext/stb_image/stb_image.h

@@ -33,6 +33,7 @@
 #include "graphics/lights.hpp"
 #include "graphics/texture2D.hpp"
 #include "utils/logger.hpp"
+#include "utils/random.hpp"
 
 #include "components/user_camera_component.hpp"
 
@@ -49,6 +50,7 @@ namespace Progression {
 
     inline void EngineInitialize(const config::Config& conf) {
 		Logger::Init(conf);
+        random::setSeed();
         Window::Init(conf);
         Time::Init(conf);
         Input::Init(conf);

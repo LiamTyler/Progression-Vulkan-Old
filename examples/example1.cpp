@@ -4,8 +4,6 @@
 using namespace Progression;
 
 int main(int argc, char* argv[]) {
-	srand(time(NULL));
-
 	auto conf = PG::config::Config(PG_ROOT_DIR "configs/default.toml");
 	if (!conf) {
         LOG_ERR("Failed to load the config file");
@@ -15,7 +13,7 @@ int main(int argc, char* argv[]) {
 	PG::EngineInitialize(conf);
 
     LOG("debug message");
-    LOG_WARN("warn message p1", " p2", " p3");
+    LOG_WARN("warn message p1", "p2", "p3");
     LOG_ERR("error message");
 
 	auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/scene1.pgscn");
