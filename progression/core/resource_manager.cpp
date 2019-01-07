@@ -52,7 +52,11 @@ namespace Progression {
 
         // load defaults
         materials_["default"] = std::make_shared<Material>();
-        models_["plane"] = LoadModel("models/plane.obj");	
+        models_["plane"] = LoadModel("models/plane.obj");
+        models_["cube"] = LoadModel("models/cube.obj");
+        models_["sphere"] = LoadModel("models/sphereHigh.obj");
+        models_["sphereLow"] = LoadModel("models/sphereLow.obj");
+        models_["cylinder"] = LoadModel("models/cylinder.obj");
     }
 
     // TODO: implement
