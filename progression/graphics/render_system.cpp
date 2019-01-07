@@ -10,6 +10,13 @@
 namespace Progression {
 
     std::unordered_map<std::type_index, RenderSubSystem*> RenderSystem::subSystems_ = {};
+    GLuint RenderSystem::quadVAO_ = 0;
+    GLuint RenderSystem::quadVBO_ = 0;
+    GLuint RenderSystem::cubeVAO_ = 0;
+    GLuint RenderSystem::cubeVBO_ = 0;
+    Shader RenderSystem::skyboxShader_ = {};
+    uint64_t RenderSystem::options_ = 0;
+
     unsigned int RenderSystem::numDirectionalLights_ = 0;
     unsigned int RenderSystem::numPointLights_ = 0;
     GLuint RenderSystem::lightSSBO_ = 0;
@@ -22,10 +29,7 @@ namespace Progression {
     GLuint RenderSystem::tdGBufferTextures_[6] = {0, 0, 0, 0, 0, 0};
     Shader RenderSystem::tdComputeShader_ = {};
 
-    GLuint RenderSystem::quadVAO_ = 0;
-    GLuint RenderSystem::quadVBO_ = 0;
     RenderSystem::PostProcessing RenderSystem::postProcess_;
-    uint64_t RenderSystem::options_ = 0;
 
     void RenderSystem::Init(const config::Config& config) {
         // auto load the mesh renderer subsystem
@@ -66,6 +70,63 @@ namespace Progression {
         glBufferData(GL_ARRAY_BUFFER, sizeof(quadVerts), quadVerts, GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
+        float skyboxVertices[] = {
+            // positions          
+            -1.0f,  1.0f, -1.0f,
+            -1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f, -1.0f,
+             1.0f,  1.0f, -1.0f,
+            -1.0f,  1.0f, -1.0f,
+
+            -1.0f, -1.0f,  1.0f,
+            -1.0f, -1.0f, -1.0f,
+            -1.0f,  1.0f, -1.0f,
+            -1.0f,  1.0f, -1.0f,
+            -1.0f,  1.0f,  1.0f,
+            -1.0f, -1.0f,  1.0f,
+
+             1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f, -1.0f,
+             1.0f, -1.0f, -1.0f,
+
+            -1.0f, -1.0f,  1.0f,
+            -1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+             1.0f, -1.0f,  1.0f,
+            -1.0f, -1.0f,  1.0f,
+
+            -1.0f,  1.0f, -1.0f,
+             1.0f,  1.0f, -1.0f,
+             1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,
+            -1.0f,  1.0f,  1.0f,
+            -1.0f,  1.0f, -1.0f,
+
+            -1.0f, -1.0f, -1.0f,
+            -1.0f, -1.0f,  1.0f,
+             1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f, -1.0f,
+            -1.0f, -1.0f,  1.0f,
+             1.0f, -1.0f,  1.0f
+        };
+
+        glGenVertexArrays(1, &cubeVAO_);
+        glBindVertexArray(cubeVAO_);
+        glGenBuffers(1, &cubeVBO_);
+        glBindBuffer(GL_ARRAY_BUFFER, cubeVBO_);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), skyboxVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        if (!skyboxShader_.Load(PG_RESOURCE_DIR "shaders/skybox.vert", PG_RESOURCE_DIR "shaders/skybox.frag")) {
+            LOG_ERR("Could not load the skybox shader");
+            exit(EXIT_FAILURE);
+        }
 
         // setup the tiled deferred stuff
         if (tdEnabled_) {
@@ -110,6 +171,9 @@ namespace Progression {
         delete[] cpuLightBuffer_;
         glDeleteVertexArrays(1, &quadVAO_);
         glDeleteBuffers(1, &quadVBO_);
+        glDeleteVertexArrays(1, &cubeVAO_);
+        glDeleteBuffers(1, &cubeVBO_);
+        skyboxShader_.Free();
         glDeleteBuffers(1, &lightSSBO_);
         if (tdEnabled_) {
             glDeleteFramebuffers(1, &tdGbuffer_);
@@ -198,6 +262,9 @@ namespace Progression {
 
         graphics::ToggleDepthTesting(true);
         graphics::ToggleDepthBufferWriting(true);
+
+        if (scene->getSkybox())
+            RenderSkybox(*scene->getSkybox(), *camera);
     }
 
     void RenderSystem::EnableOption(uint64_t option) {
@@ -211,7 +278,6 @@ namespace Progression {
     bool RenderSystem::GetOption(uint64_t option) {
         return options_ & option;
     }
-
 
     void RenderSystem::UpdateLights(Scene* scene, Camera* camera) {
         const auto& dirLights = scene->GetDirectionalLights();
@@ -265,6 +331,19 @@ namespace Progression {
         } else {
             glUniform1i(shader["textured"], false);
         }
+    }
+
+    void RenderSystem::RenderSkybox(const Skybox& skybox, const Camera& camera) {
+        skyboxShader_.Enable();
+        glm::mat4 P = camera.GetP();
+        glm::mat4 RV = glm::mat4(glm::mat3(camera.GetV()));
+        glUniformMatrix4fv(skyboxShader_["VP"], 1, GL_FALSE, glm::value_ptr(P * RV));
+        glDepthMask(GL_FALSE);
+        glBindVertexArray(cubeVAO_);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skybox.getGPUHandle());
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glDepthMask(GL_TRUE);
     }
 
 } // namespace Progression

@@ -16,16 +16,11 @@ namespace Progression {
 
         bool Load(const std::vector<std::string>& faces);
         void Free();
-		void Render(const Camera& camera);
 
 		GLuint getGPUHandle() const { return skyboxTextureID_; }
-		std::shared_ptr<Shader> GetShader() const { return shader_; }
 
 	private:
 		GLuint skyboxTextureID_;
-		GLuint cubeVao_;
-		GLuint cubeVbo_;
-        std::shared_ptr<Shader> shader_;
 	};
 
 } // namespace Progression

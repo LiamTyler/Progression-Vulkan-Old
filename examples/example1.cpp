@@ -24,8 +24,6 @@ int main(int argc, char* argv[]) {
 	auto camera = scene->GetCamera();
 	camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera, 3));
 
-	auto skybox = scene->getSkybox();
-
 	Window::SetRelativeMouse(true);
 	PG::Input::PollEvents();
 
@@ -40,12 +38,10 @@ int main(int argc, char* argv[]) {
 
         scene->Update();
 		RenderSystem::Render(scene);
-		skybox->Render(*camera);
 
         PG::Window::EndFrame();
     }
 
-    skybox.reset();
     delete scene;
 
     PG::EngineQuit();

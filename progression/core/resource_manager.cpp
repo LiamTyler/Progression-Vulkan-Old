@@ -51,12 +51,6 @@ namespace Progression {
         // }
 
         // load defaults
-        auto skyboxShader = std::make_shared<Shader>();
-        if (!skyboxShader->Load(PG_RESOURCE_DIR "shaders/skybox.vert", PG_RESOURCE_DIR "shaders/skybox.frag")) {
-            LOG_WARN("Failed to load the skybox shader");
-        } else {
-            shaders_["skybox"] = skyboxShader;
-        }
         materials_["default"] = std::make_shared<Material>();
         models_["plane"] = LoadModel("models/plane.obj");	
     }

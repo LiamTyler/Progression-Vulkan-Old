@@ -4,6 +4,7 @@
 #include "graphics/shader.hpp"
 #include "core/camera.hpp"
 #include "graphics/material.hpp"
+#include "graphics/skybox.hpp"
 
 #include <typeindex>
 #include <typeinfo>
@@ -53,12 +54,16 @@ namespace Progression {
         static void UploadLights(Shader& shader);
         static void UploadCameraProjection(Shader& shader, Camera& camera);
         static void UploadMaterial(Shader& shader, Material& material);
+        static void RenderSkybox(const Skybox& skybox, const Camera& camera);
 
     private:
         // general data
         static std::unordered_map<std::type_index, RenderSubSystem*> subSystems_;
         static GLuint quadVAO_;
         static GLuint quadVBO_;
+        static GLuint cubeVAO_;
+        static GLuint cubeVBO_;
+        static Shader skyboxShader_;
         static uint64_t options_;
 
         // lighting data
