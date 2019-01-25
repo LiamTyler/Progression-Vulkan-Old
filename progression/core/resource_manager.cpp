@@ -115,7 +115,7 @@ namespace Progression {
                 if (skyboxes_.find(name) != skyboxes_.end())
                     LOG_WARN("resource manager already contains a skybox with the name '", name, "'. Overriding with the new skybox");
                  auto sb = std::make_shared<Skybox>();
-                 if (!sb->Load({ right, left, top, bottom, front, back })) {
+                 if (!sb->Load({ right, left, top, bottom, back, front })) {
                      LOG_ERR("Failed to load skybox");
                      continue;
                  }
@@ -598,8 +598,8 @@ namespace Progression {
                     fullTexturePaths[1], // left
                     fullTexturePaths[2], // top
                     fullTexturePaths[3], // bottom
-                    fullTexturePaths[4], // front
-                    fullTexturePaths[5] // back
+                    fullTexturePaths[4], // back
+                    fullTexturePaths[5] // front
                 }))
             {
                 return nullptr;

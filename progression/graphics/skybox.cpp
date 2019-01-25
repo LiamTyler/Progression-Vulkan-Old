@@ -30,7 +30,7 @@ namespace Progression {
 
 		for (int i = 0; i < 6; i++) {
 			Image img;
-            if (!img.Load(faces[i])) {
+            if (!img.Load(faces[i], false)) {
                 Free();
                 return false;
             }

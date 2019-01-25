@@ -67,9 +67,9 @@ namespace Progression {
         return *this;
     }
 
-	bool Image::Load(const std::string& fname) {
+	bool Image::Load(const std::string& fname, bool flip_vertically) {
 		int nC;
-        stbi_set_flip_vertically_on_load(true);
+        stbi_set_flip_vertically_on_load(flip_vertically);
         pixels_ = stbi_load(fname.c_str(), &width_, &height_, &nC, 4);
 
         if (!pixels_) {

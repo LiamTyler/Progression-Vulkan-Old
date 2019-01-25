@@ -4,8 +4,8 @@ right skybox/water/right.jpg
 left skybox/water/left.jpg
 top skybox/water/top.jpg
 bottom skybox/water/bottom.jpg
-front skybox/water/front.jpg
 back skybox/water/back.jpg
+front skybox/water/front.jpg
 
 Material
 name metalFloor

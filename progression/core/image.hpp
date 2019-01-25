@@ -26,7 +26,7 @@ namespace Progression {
         Image(Image&& src);
         Image& operator=(Image&& src);
 
-		bool Load(const std::string& filename);
+		bool Load(const std::string& filename, bool flip_vertically = true);
 		bool Save(const std::string& filename);
 
 		int Width() const { return width_; }
