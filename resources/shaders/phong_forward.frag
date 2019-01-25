@@ -33,7 +33,7 @@ void main() {
     
     vec3 diffuseColor = kd;
     if (textured) {
-        diffuseColor *= texture(diffuseTex, vec2(texCoord.x, 1 - texCoord.y)).xyz;
+        diffuseColor *= texture(diffuseTex, texCoord).xyz;
     }
 
     vec3 outColor = ke;

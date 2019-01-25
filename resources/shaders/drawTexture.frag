@@ -6,6 +6,6 @@ uniform sampler2D tex;
 
 out vec4 finalColor;
 
-void main() {	
+void main() {
 	finalColor = texture(tex, UV);
 }

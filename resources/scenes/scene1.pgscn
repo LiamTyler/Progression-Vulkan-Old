@@ -11,12 +11,17 @@ aspect 16:9
 near-plane .1
 far-plane 300
 primary-camera true
-rendering-pipeline tiled-deferred
+#rendering-pipeline tiled-deferred
 
 Light
 name mainDirectional
 type directional
 rotation -35 -40 0
+
+Light
+name mainDirectional2
+type directional
+rotation -215 -220 0
 
 Skybox
 name water
@@ -32,3 +37,9 @@ position 0 2 0
 scale 1 1 1
 model model
 
+GameObject
+name plane
+position -5 2 0
+rotation 0 0 0
+scale 1 1 1
+model plane2

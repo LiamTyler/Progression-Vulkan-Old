@@ -27,6 +27,6 @@ void main() {
     gEmissive = ke;
     
     if (textured) {
-        gDiffuse *= texture(diffuseTex, vec2(texCoord.x, 1 - texCoord.y)).xyz;
+        gDiffuse *= texture(diffuseTex, texCoord).xyz;
     }
 }

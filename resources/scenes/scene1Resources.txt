@@ -19,9 +19,10 @@ shader default-mesh
 Material
 name red 
 ka 0 0 0
-kd 1 0 0
+kd 1 1 1
 ks .5 .5 .5
 ns 50
+diffuseTex textures/cockatoo.jpg
 shader default-mesh
 
 Model
@@ -32,4 +33,9 @@ material metalFloor
 Model
 name model 
 filename models/cube.obj
+material red
+
+Model
+name plane2 
+filename models/plane.obj
 material red
