@@ -80,6 +80,13 @@ int main(int argc, char* argv[]) {
         LOG_ERR("Could not load draw shadow shader");
         exit(EXIT_FAILURE);
     }
+    
+    Shader shadowPhongShader;
+    if (!shadowPhongShader.Load(PG_RESOURCE_DIR "shaders/phong_shadow.vert", PG_RESOURCE_DIR "shaders/phong_forward_shadow.frag")) {
+        LOG_ERR("Could not load draw shadow shader");
+        exit(EXIT_FAILURE);
+    }
+   
 
 	Window::SetRelativeMouse(true);
 	PG::Input::PollEvents();
@@ -94,13 +101,14 @@ int main(int argc, char* argv[]) {
             PG::EngineShutdown = true;
 
         scene->Update();
+        RenderSystem::UpdateLights(scene, camera);
 
         // render scene from light's POV
 	    graphics::BindFrameBuffer(depthFBO);
         graphics::Clear(GL_DEPTH_BUFFER_BIT);
         glm::vec3 lightDir = getDirection(light->transform.rotation);
-        glm::mat4 lightView = camera->GetV();
-        // glm::mat4 lightView = glm::lookAt(-5.0f * lightDir, glm::vec3(0), glm::vec3(0, 1, 0));
+        //glm::mat4 lightView = camera->GetV();
+        glm::mat4 lightView = glm::lookAt(-lightDir, glm::vec3(0), glm::vec3(0, 1, 0));
         glm::mat4 lightProj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, camera->GetNearPlane(), camera->GetFarPlane());
 
         glm::mat4 lightSpaceMatrix = lightProj * lightView;
@@ -109,6 +117,7 @@ int main(int argc, char* argv[]) {
         auto meshRenderer = RenderSystem::GetSubSystem<MeshRenderSubSystem>();
         meshRenderer->DepthRender(depthWriteShader, lightSpaceMatrix);
 
+        /*
         // Render the scene normally, but with the shadow map texture
 	    graphics::BindFrameBuffer();
         displayShadowShader.Enable();
@@ -117,6 +126,23 @@ int main(int argc, char* argv[]) {
         graphics::Bind2DTexture(depthTex, displayShadowShader["tex"], 0);
         glBindVertexArray(quadVAO);
         glDrawArrays(GL_TRIANGLES, 0, 6);
+        */
+        
+
+        graphics::BindFrameBuffer();
+        shadowPhongShader.Enable();
+        graphics::SetClearColor(glm::vec4(0));
+        graphics::Clear();
+        // graphics::Bind2DTexture(depthTex, shadowPhongShader["tex"], 0);
+
+        glUniform3fv(shadowPhongShader["lightDir"], 1, glm::value_ptr(lightDir));
+        glUniform3fv(shadowPhongShader["cameraPos"], 1, glm::value_ptr(camera->transform.position));
+        glm::mat4 VP = camera->GetP() * camera->GetV();
+        glUniformMatrix4fv(shadowPhongShader["VP"], 1, GL_FALSE, glm::value_ptr(VP));
+        glUniformMatrix4fv(shadowPhongShader["lightSpaceMatrix"], 1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
+        graphics::Bind2DTexture(depthTex, shadowPhongShader["depthTex"], 1);
+        meshRenderer->ShadowRender(scene, shadowPhongShader, *camera);
+        
 
 		// RenderSystem::Render(scene);
 

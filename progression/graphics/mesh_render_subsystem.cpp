@@ -74,6 +74,20 @@ namespace Progression {
         }
     }
 
+    void MeshRenderSubSystem::ShadowRender(Scene* scene, Shader& shader, Camera& camera) {
+        RenderSystem::UploadLights(shader);
+        // RenderSystem::UploadCameraProjection(shader, camera);
+        for (const auto& mr : meshRenderers) {
+            glBindVertexArray(mr->vao);
+            RenderSystem::UploadMaterial(shader, *mr->material);
+            glm::mat4 M = mr->gameObject->transform.GetModelMatrix();
+            glm::mat4 normalMatrix = glm::transpose(glm::inverse(M));
+            glUniformMatrix4fv(shader["model"], 1, GL_FALSE, glm::value_ptr(M));
+            glUniformMatrix4fv(shader["normalMatrix"], 1, GL_FALSE, glm::value_ptr(normalMatrix));
+            glDrawElements(GL_TRIANGLES, mr->mesh->getNumIndices(), GL_UNSIGNED_INT, 0);
+        }
+    }
+
     void MeshRenderSubSystem::Render(Scene* scene, Camera& camera) {
 		auto& shader = pipelineShaders[camera.GetRenderingPipeline()];
 		shader.Enable();
