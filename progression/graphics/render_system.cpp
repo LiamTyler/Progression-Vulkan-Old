@@ -53,6 +53,8 @@ namespace Progression {
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, lightSSBO_);
         glBufferData(GL_SHADER_STORAGE_BUFFER, 2 * sizeof(glm::vec4) * maxNumLights_, NULL, GL_DYNAMIC_COPY);
 
+        glEnable(GL_DEPTH_TEST);
+
         // setup the general data stuff
         float quadVerts[] = {
             -1, 1,

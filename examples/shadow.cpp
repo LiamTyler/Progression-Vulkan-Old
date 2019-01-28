@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
     GLuint depthTex;
     glGenTextures(1, &depthTex);
     glBindTexture(GL_TEXTURE_2D, depthTex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, Window::width(), Window::height(), 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, Window::width(), Window::height(), 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -47,11 +47,7 @@ int main(int argc, char* argv[]) {
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
 
-    Shader depthWriteShader;
-    if (!depthWriteShader.Load(PG_RESOURCE_DIR "shaders/shadow.vert", PG_RESOURCE_DIR "shaders/shadow.frag")) {
-        LOG_ERR("Could not load shadow shader");
-        exit(EXIT_FAILURE);
-    }
+    
 
     // setup the general data stuff
     float quadVerts[] = {
@@ -71,6 +67,13 @@ int main(int argc, char* argv[]) {
     glBufferData(GL_ARRAY_BUFFER, sizeof(quadVerts), quadVerts, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
+
+    Shader depthWriteShader;
+    if (!depthWriteShader.Load(PG_RESOURCE_DIR "shaders/shadow.vert", PG_RESOURCE_DIR "shaders/shadow.frag")) {
+        LOG_ERR("Could not load shadow shader");
+        exit(EXIT_FAILURE);
+    }
 
     Shader displayShadowShader;
     if (!displayShadowShader.Load(PG_RESOURCE_DIR "shaders/draw_shadow.vert", PG_RESOURCE_DIR "shaders/draw_shadow.frag")) {
@@ -96,7 +99,8 @@ int main(int argc, char* argv[]) {
 	    graphics::BindFrameBuffer(depthFBO);
         graphics::Clear(GL_DEPTH_BUFFER_BIT);
         glm::vec3 lightDir = getDirection(light->transform.rotation);
-        glm::mat4 lightView = glm::lookAt(light->transform.position, lightDir, light->transform.position + lightDir);
+        glm::mat4 lightView = camera->GetV();
+        // glm::mat4 lightView = glm::lookAt(-5.0f * lightDir, glm::vec3(0), glm::vec3(0, 1, 0));
         glm::mat4 lightProj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, camera->GetNearPlane(), camera->GetFarPlane());
 
         glm::mat4 lightSpaceMatrix = lightProj * lightView;
@@ -108,7 +112,9 @@ int main(int argc, char* argv[]) {
         // Render the scene normally, but with the shadow map texture
 	    graphics::BindFrameBuffer();
         displayShadowShader.Enable();
-        graphics::Bind2DTexture(depthTex, displayShadowShader["tex"]);
+        graphics::SetClearColor(glm::vec4(0));
+        graphics::Clear();
+        graphics::Bind2DTexture(depthTex, displayShadowShader["tex"], 0);
         glBindVertexArray(quadVAO);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 

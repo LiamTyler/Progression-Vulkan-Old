@@ -18,7 +18,7 @@ name mainDirectional
 type directional
 rotation -35 -40 0
 
-Light
+#Light
 name mainDirectional2
 type directional
 rotation -215 -220 0

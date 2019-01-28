@@ -7,5 +7,6 @@ uniform sampler2D tex;
 out vec4 finalColor;
 
 void main() {
-	finalColor = vec4(vec3(texture(tex, UV).r), 1);
+    float depthValue = texture(tex, UV).r;
+	finalColor = vec4(vec3(depthValue), 1);
 }
