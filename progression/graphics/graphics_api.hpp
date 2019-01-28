@@ -9,7 +9,7 @@ namespace Progression { namespace graphics {
     void ToggleCulling(bool b, GLenum mode = GL_BACK);
     void ToggleDepthTesting(bool b);
 
-    void Bind2DTexture(GLuint tex, GLuint uniformLocation, int unit);
+    void Bind2DTexture(GLuint tex, GLuint uniformLocation, int unit = 0);
 
     GLuint CreateVAO();
 
@@ -31,12 +31,5 @@ namespace Progression { namespace graphics {
     void SetClearColor(const glm::vec4& color);
     void SetClearColor(float r, float g, float b, float a);
     void Clear(GLbitfield mask = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    void SafeDeleteVAO(GLuint& vao);
-    void SafeDeleteBuffer(GLuint& buff);
-    void SafeDeleteFBO(GLuint& fbo);
-    void SafeDeleteTex(GLuint& tex);
-    void SafeDeleteRBO(GLuint& rbo);
-
 
 } } // namespace Progression::graphics

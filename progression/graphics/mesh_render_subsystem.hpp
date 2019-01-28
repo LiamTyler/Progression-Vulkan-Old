@@ -15,6 +15,7 @@ namespace Progression {
         virtual void RemoveRenderComponent(RenderComponent* rc);
 
         virtual void Render(Scene* scene, Camera& camera);
+        void DepthRender(Shader& shader, const glm::mat4& lightVP);
     
     private:
         std::vector<MeshRenderer*> meshRenderers;

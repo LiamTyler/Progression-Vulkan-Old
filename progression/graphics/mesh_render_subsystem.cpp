@@ -64,6 +64,16 @@ namespace Progression {
 
     }
 
+    void MeshRenderSubSystem::DepthRender(Shader& shader, const glm::mat4& lightVP) {
+        for (const auto& mr : meshRenderers) {
+            glBindVertexArray(mr->vao);
+            glm::mat4 M = mr->gameObject->transform.GetModelMatrix();
+            glm::mat4 MVP = lightVP * M;
+            glUniformMatrix4fv(shader["MVP"], 1, GL_FALSE, glm::value_ptr(MVP));
+            glDrawElements(GL_TRIANGLES, mr->mesh->getNumIndices(), GL_UNSIGNED_INT, 0);
+        }
+    }
+
     void MeshRenderSubSystem::Render(Scene* scene, Camera& camera) {
 		auto& shader = pipelineShaders[camera.GetRenderingPipeline()];
 		shader.Enable();

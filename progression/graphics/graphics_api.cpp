@@ -32,41 +32,6 @@ namespace Progression { namespace graphics {
             glDisable(GL_DEPTH_TEST);
     }
 
-    void SafeDeleteVAO(GLuint& vao) {
-        if (vao != -1) {
-            glDeleteVertexArrays(1, &vao);
-            vao = -1;
-        }
-    }
-
-    void SafeDeleteBuffer(GLuint& buff) {
-        if (buff != -1) {
-            glDeleteBuffers(1, &buff);
-            buff = -1;
-        }
-    }
-
-    void SafeDeleteFBO(GLuint& fbo) {
-        if (fbo != -1) {
-            glDeleteFramebuffers(1, &fbo);
-            fbo = -1;
-        }
-    }
-
-    void SafeDeleteTex(GLuint& tex) {
-        if (tex != -1) {
-            glDeleteTextures(1, &tex);
-            tex = -1;
-        }
-    }
-
-    void SafeDeleteRBO(GLuint& rbo) {
-        if (rbo != -1) {
-            glDeleteRenderbuffers(1, &rbo);
-            rbo = -1;
-        }
-    }
-
     GLuint CreateVAO() {
         GLuint vao;
         glGenVertexArrays(1, &vao);
