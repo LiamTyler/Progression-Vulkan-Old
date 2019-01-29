@@ -39,7 +39,7 @@ float ShadowCalculation() {
     vec3 projCoords = 0.5 * ndc + vec3(0.5);
     float currentDepth = projCoords.z;
     float shadowDepth = texture(depthTex, projCoords.xy).r;
-    return currentDepth > shadowDepth ? 0.0 : 1.0;
+    return currentDepth - 0.005 > shadowDepth ? 0.0 : 1.0;
 }
 
 void main() {
