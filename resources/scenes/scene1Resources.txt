@@ -27,7 +27,7 @@ shader default-mesh
 
 Model
 name metalFloor
-filename models/plane.obj
+filename models/cube.obj
 material metalFloor
 
 Model

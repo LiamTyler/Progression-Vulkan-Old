@@ -44,8 +44,11 @@ float ShadowCalculation(in const vec4 fragPosInLS, in const vec3 n, in const vec
     if (currentDepth > 1.0)
         return 1.0;
 
-    // const float BIAS = 0.010;
-    float bias = max(0.05 * (1.0 - dot(n, lightDir)), 0.005);
+    float cosTheta = clamp(dot(n, lightDir), 0.0, 1.0);
+    // const float bias = 0.020;
+    // float bias = max(0.05 * (1.0 - dot(n, lightDir)), 0.005);
+    float bias = 0.001*tan(acos(cosTheta)); // cosTheta is dot( n,l ), clamped between 0 and 1
+    bias = clamp(bias, 0.0, 0.01);
     float shadowDepth = texture(depthTex, projCoords.xy).r;
     return currentDepth - bias > shadowDepth ? 0.0 : 1.0;
 }

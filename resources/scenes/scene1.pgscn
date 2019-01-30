@@ -16,7 +16,7 @@ primary-camera true
 Light
 name mainDirectional
 type directional
-rotation -35 -40 0
+rotation -25 -45 0
 
 Skybox
 name water
@@ -26,7 +26,7 @@ name floor
 scale 100 1 100
 model metalFloor
 
-GameObject
+#GameObject
 name robot
 position 0 2 0
 scale 1 1 1

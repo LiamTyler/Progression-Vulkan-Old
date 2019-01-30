@@ -21,7 +21,10 @@ int main(int argc, char* argv[]) {
 
 	PG::EngineInitialize(conf);
 
-	auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/shadow.pgscn");
+    const std::string sceneName = "scene1.pgscn";
+    // const std::string sceneName = "shadow.pgscn";
+
+	auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/" + sceneName);
     if (!scene) {
         LOG_ERR("Failed to load scene:");
         exit(EXIT_FAILURE);
@@ -29,18 +32,18 @@ int main(int argc, char* argv[]) {
 	auto camera = scene->GetCamera();
 	camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera, 3));
 
-    /*
-    auto cube = ResourceManager::GetModel("model");
-	for (float x = 0; x < 10; x++) {
-		for (float z = 0; z < 10; z++) {
-			float randHeight = 2 + 4 * (rand() / static_cast<float>(RAND_MAX));
-			glm::vec3 pos = glm::vec3(-80 + 20*x, randHeight, -80 + 20*z);
-			GameObject* obj = new GameObject(Transform(pos, glm::vec3(0), glm::vec3(1, randHeight, 1)));
-			obj->AddComponent<ModelRenderer>(new ModelRenderer(obj, cube.get()));
-			scene->AddGameObject(obj);
-		}
-	}
-    */
+    if (sceneName == "scene1.pgscn") {
+        auto cube = ResourceManager::GetModel("model");
+        for (float x = 0; x < 10; x++) {
+            for (float z = 0; z < 10; z++) {
+                float randHeight = 2 + 4 * (rand() / static_cast<float>(RAND_MAX));
+                glm::vec3 pos = glm::vec3(-80 + 20*x, randHeight, -80 + 20*z);
+                GameObject* obj = new GameObject(Transform(pos, glm::vec3(0), glm::vec3(1, randHeight, 1)));
+                obj->AddComponent<ModelRenderer>(new ModelRenderer(obj, cube.get()));
+                scene->AddGameObject(obj);
+            }
+        }
+    }
 
     auto light = scene->GetDirectionalLights()[0];
 
@@ -63,6 +66,7 @@ int main(int argc, char* argv[]) {
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTex, 0);
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
+
 
     
 
@@ -108,6 +112,9 @@ int main(int argc, char* argv[]) {
 	PG::Input::PollEvents();
 
 	graphics::BindFrameBuffer();
+    // glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+
 	// Game loop
     while (!PG::EngineShutdown) {
         PG::Window::StartFrame();
@@ -123,6 +130,7 @@ int main(int argc, char* argv[]) {
         glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
 	    graphics::BindFrameBuffer(depthFBO);
         graphics::Clear(GL_DEPTH_BUFFER_BIT);
+        // glCullFace(GL_FRONT);
 
         Frustum frustum = camera->GetFrustum();
         float np = camera->GetNearPlane();
@@ -144,8 +152,9 @@ int main(int argc, char* argv[]) {
         lsmBB.Encompass(LSCorners + 1, 7);
 
         // glm::mat4 lightProj = glm::ortho(lsmBB.min.x, lsmBB.max.x, lsmBB.min.y, lsmBB.max.y, np, fp);
-        // glm::mat4 lightProj = glm::ortho<float>(lsmBB.min.x, lsmBB.max.x, lsmBB.min.y, lsmBB.max.y, -20.0f, 1.0f);
-        glm::mat4 lightProj = glm::ortho<float>(-20.0f, 20.0f, -20.0f, 20.0f, -50, 50);
+        // glm::mat4 lightProj = glm::ortho<float>(lsmBB.min.x, lsmBB.max.x, lsmBB.min.y, lsmBB.max.y, -30.0f, 20.0f);
+        glm::mat4 lightProj = glm::ortho<float>(-100, 100, -100, 100, -100, 100);
+        // glm::mat4 lightProj = glm::ortho<float>(-20.0f, 20.0f, -20.0f, 20.0f, -100, 100);
 
         glm::mat4 lightSpaceMatrix = lightProj * lightView;
 
@@ -168,6 +177,7 @@ int main(int argc, char* argv[]) {
 
         glViewport(0, 0, Window::width(), Window::height());
         graphics::BindFrameBuffer();
+        // glCullFace(GL_BACK);
         shadowPhongShader.Enable();
         graphics::SetClearColor(glm::vec4(1));
         graphics::Clear();
