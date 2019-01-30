@@ -14,7 +14,7 @@ namespace Progression {
         void getPoints(glm::vec3* data) const;
         void setCenter(const glm::vec3& point);
         void Encompass(const BoundingBox& aabb, const Transform& transform);
-        void Render() const;
+        void Encompass(glm::vec3* points, int numPoints);
         glm::mat4 GetModelMatrix() const;
         glm::vec3 GetP(const glm::vec3& planeNormal) const;
         glm::vec3 GetN(const glm::vec3& planeNormal) const;

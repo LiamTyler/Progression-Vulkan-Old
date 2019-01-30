@@ -9,7 +9,7 @@ glm::vec3 getDirection(const glm::vec3& rotation) {
     rot = glm::rotate(rot, rotation.z, glm::vec3(0, 0, 1));
     rot = glm::rotate(rot, rotation.y, glm::vec3(0, 1, 0));
     rot = glm::rotate(rot, rotation.x, glm::vec3(1, 0, 0));
-    return glm::vec3(rot * glm::vec4(dir, 0));
+    return glm::normalize(glm::vec3(rot * glm::vec4(dir, 0)));
 }
 
 int main(int argc, char* argv[]) {
@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
 
 	PG::EngineInitialize(conf);
 
-	auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/scene1.pgscn");
+	auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/shadow.pgscn");
     if (!scene) {
         LOG_ERR("Failed to load scene:");
         exit(EXIT_FAILURE);
@@ -29,22 +29,35 @@ int main(int argc, char* argv[]) {
 	auto camera = scene->GetCamera();
 	camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera, 3));
 
+    /*
+    auto cube = ResourceManager::GetModel("model");
+	for (float x = 0; x < 10; x++) {
+		for (float z = 0; z < 10; z++) {
+			float randHeight = 2 + 4 * (rand() / static_cast<float>(RAND_MAX));
+			glm::vec3 pos = glm::vec3(-80 + 20*x, randHeight, -80 + 20*z);
+			GameObject* obj = new GameObject(Transform(pos, glm::vec3(0), glm::vec3(1, randHeight, 1)));
+			obj->AddComponent<ModelRenderer>(new ModelRenderer(obj, cube.get()));
+			scene->AddGameObject(obj);
+		}
+	}
+    */
+
     auto light = scene->GetDirectionalLights()[0];
 
     auto depthFBO = graphics::CreateFrameBuffer();
 
     GLuint depthTex;
+    const int SHADOW_WIDTH  = 1024;
+    const int SHADOW_HEIGHT = 1024;
     glGenTextures(1, &depthTex);
     glBindTexture(GL_TEXTURE_2D, depthTex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, Window::width(), Window::height(), 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
+    float borderColor[] = { 1.0, 1.0, 1.0, 0.0 };
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
     glBindFramebuffer(GL_FRAMEBUFFER, depthFBO);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTex, 0);
@@ -90,7 +103,6 @@ int main(int argc, char* argv[]) {
         LOG_ERR("Could not load draw shadow shader");
         exit(EXIT_FAILURE);
     }
-   
 
 	Window::SetRelativeMouse(true);
 	PG::Input::PollEvents();
@@ -108,12 +120,32 @@ int main(int argc, char* argv[]) {
         RenderSystem::UpdateLights(scene, camera);
 
         // render scene from light's POV
+        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
 	    graphics::BindFrameBuffer(depthFBO);
         graphics::Clear(GL_DEPTH_BUFFER_BIT);
+
+        Frustum frustum = camera->GetFrustum();
+        float np = camera->GetNearPlane();
+        float fp = camera->GetFarPlane();
+        glm::vec3 frustCenter = 0.5f*(camera->GetFarPlane() - camera->GetNearPlane()) * camera->GetForwardDir() + camera->transform.position;
         glm::vec3 lightDir = getDirection(light->transform.rotation);
+        glm::vec3 lightPos = glm::vec3(0.0f, camera->GetFarPlane() - camera->GetNearPlane(), 0.0f);
+        // glm::vec3 lightPos = frustCenter;
+        // glm::mat4 lightView = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0, 1, 0));
+        glm::mat4 lightView = glm::lookAt(glm::vec3(0), lightDir, glm::vec3(0, 1, 0));
+        // glm::mat4 lightView = glm::lookAt(-10.0f * lightDir, glm::vec3(0), glm::vec3(0, 1, 0));
         //glm::mat4 lightView = camera->GetV();
-        glm::mat4 lightView = glm::lookAt(-50.0f * lightDir, glm::vec3(0), glm::vec3(0, 1, 0));
-        glm::mat4 lightProj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, camera->GetNearPlane(), camera->GetFarPlane());
+
+        glm::vec3 LSCorners[8];
+        for (int i = 0; i < 8; ++i) {
+            LSCorners[i] = glm::vec3(lightView * glm::vec4(frustum.corners[i], 1));
+        }
+        BoundingBox lsmBB(LSCorners[0], LSCorners[0]);
+        lsmBB.Encompass(LSCorners + 1, 7);
+
+        // glm::mat4 lightProj = glm::ortho(lsmBB.min.x, lsmBB.max.x, lsmBB.min.y, lsmBB.max.y, np, fp);
+        // glm::mat4 lightProj = glm::ortho<float>(lsmBB.min.x, lsmBB.max.x, lsmBB.min.y, lsmBB.max.y, -20.0f, 1.0f);
+        glm::mat4 lightProj = glm::ortho<float>(-20.0f, 20.0f, -20.0f, 20.0f, -50, 50);
 
         glm::mat4 lightSpaceMatrix = lightProj * lightView;
 
@@ -123,6 +155,7 @@ int main(int argc, char* argv[]) {
 
         /*
         // Render the scene normally, but with the shadow map texture
+        glViewport(0, 0, Window::width(), Window::height());
 	    graphics::BindFrameBuffer();
         displayShadowShader.Enable();
         graphics::SetClearColor(glm::vec4(0));
@@ -133,11 +166,11 @@ int main(int argc, char* argv[]) {
         */
         
 
+        glViewport(0, 0, Window::width(), Window::height());
         graphics::BindFrameBuffer();
         shadowPhongShader.Enable();
-        graphics::SetClearColor(glm::vec4(0));
+        graphics::SetClearColor(glm::vec4(1));
         graphics::Clear();
-        // graphics::Bind2DTexture(depthTex, shadowPhongShader["tex"], 0);
 
         glUniform3fv(shadowPhongShader["lightDir"], 1, glm::value_ptr(lightDir));
         glUniform3fv(shadowPhongShader["cameraPos"], 1, glm::value_ptr(camera->transform.position));

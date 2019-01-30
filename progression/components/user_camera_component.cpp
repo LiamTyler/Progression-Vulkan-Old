@@ -49,13 +49,12 @@ namespace Progression {
         glm::ivec2 dMouse = -Input::GetMouseChange();
         glm::vec3 dRotation(glm::vec3(dMouse.y, dMouse.x, 0));
 
-        camera.transform.rotation += dRotation * turnSpeed;
-        camera.transform.rotation.x = std::fmax(-maxAngle, std::fmin(maxAngle, camera.transform.rotation.x));
-        camera.UpdateOrientationVectors();
-        
-        camera.transform.position += dt * moveSpeed *
+        glm::vec3 rot = camera.transform.rotation + dRotation * turnSpeed;
+        rot.x = std::fmax(-maxAngle, std::fmin(maxAngle, rot.x));
+        glm::vec3 pos = camera.transform.position + dt * moveSpeed *
             (velocity.x * camera.GetRightDir() + velocity.y * camera.GetUpDir() + velocity.z * camera.GetForwardDir());
-        camera.UpdateViewMatrix();
+
+        camera.UpdateFrustum(pos, rot);
     }
 
     void UserCameraComponent::Stop() {

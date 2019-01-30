@@ -3,8 +3,7 @@
 
 namespace Progression {
 
-    Frustum::Frustum(const Camera& camera, int row, int col, int tile_size) {
-        UpdateFrustum(camera);
+    Frustum::Frustum() {
     }
 
     bool Frustum::boxInFrustum(const BoundingBox& aabb) const {
@@ -15,24 +14,24 @@ namespace Progression {
         return true;
     }
 
-    void Frustum::UpdateFrustum(const Camera& camera, int row, int col, int tile_size) {
+    void Frustum::Update(float fov, float nearPlane, float farPlane, float aspect, const glm::vec3& pos,
+            const glm::vec3& forward, const glm::vec3& up, const glm::vec3& right)
+    {
         glm::vec3 ntl, ntr, nbl, nbr, ftl, ftr, fbr, fbl;
         float nearHeight, nearWidth, farHeight, farWidth;
 
-        float angle = 0.5 * camera.GetFOV();
-        float nearDist = camera.GetNearPlane();
-        float farDist = camera.GetFarPlane();
+        float angle = 0.5 * fov;
 
-        nearHeight = nearDist * tanf(angle);
-        farHeight = farDist * tanf(angle);
-        nearWidth = camera.GetAspectRatio() * nearHeight;
-        farWidth = camera.GetAspectRatio() * farHeight;
+        nearHeight = nearPlane * tanf(angle);
+        farHeight  = farPlane* tanf(angle);
+        nearWidth  = aspect * nearHeight;
+        farWidth   = aspect * farHeight;
 
-        glm::vec3 nc = camera.transform.position + nearDist * camera.GetForwardDir();
-        glm::vec3 fc = camera.transform.position + farDist * camera.GetForwardDir();
+        glm::vec3 nc = pos + nearPlane * forward;
+        glm::vec3 fc = pos + farPlane * forward;
         
-        glm::vec3 Y = camera.GetUpDir();
-        glm::vec3 X = camera.GetRightDir();
+        glm::vec3 Y = up;
+        glm::vec3 X = right; 
         ntl = nc + Y * nearHeight - X * nearWidth;
         ntr = nc + Y * nearHeight + X * nearWidth;
         nbl = nc - Y * nearHeight - X * nearWidth;
@@ -48,6 +47,14 @@ namespace Progression {
         SetPlane(3, nbr, ntr, fbr); // right
         SetPlane(4, ntr, ntl, ftl); // top
         SetPlane(5, nbl, nbr, fbr); // bottom
+        corners[0] = ntl;
+        corners[1] = ntr;
+        corners[2] = nbl;
+        corners[3] = nbr;
+        corners[4] = ftl;
+        corners[5] = ftr;
+        corners[6] = fbl;
+        corners[7] = fbr;
     }
 
     bool Frustum::SameSide(const glm::vec3& point, const glm::vec4& plane) const {

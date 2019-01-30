@@ -29,6 +29,14 @@ namespace Progression {
         max = point + extent / 2.0f;
     }
 
+    void BoundingBox::Encompass(glm::vec3* points, int numPoints) {
+        for (int i = 0; i < numPoints; ++i) {
+            min = glm::min(min, points[i]);
+            max = glm::max(max, points[i]);
+        }
+        extent = max - min;
+    }
+
     void BoundingBox::Encompass(const BoundingBox& aabb, const Transform& transform) {
         glm::vec3 he = aabb.extent / 2.0f;
         glm::vec3 points[8] = {

@@ -34,12 +34,20 @@ uniform float bloomThreshold;
 
 layout (location = 0) out vec4 finalColor;
 
-float ShadowCalculation() {
-    vec3 ndc = fragPosInLightSpace.xyz / fragPosInLightSpace.w;
+float ShadowCalculation(in const vec4 fragPosInLS, in const vec3 n, in const vec3 lightDir) {
+    vec3 ndc = fragPosInLS.xyz / fragPosInLS.w;
     vec3 projCoords = 0.5 * ndc + vec3(0.5);
     float currentDepth = projCoords.z;
+
+    // To account for when the fragment is shadow's projection matrix doesn't reach far enough
+    // so the depth would be > 1 and always be in shadow
+    if (currentDepth > 1.0)
+        return 1.0;
+
+    // const float BIAS = 0.010;
+    float bias = max(0.05 * (1.0 - dot(n, lightDir)), 0.005);
     float shadowDepth = texture(depthTex, projCoords.xy).r;
-    return currentDepth - 0.005 > shadowDepth ? 0.0 : 1.0;
+    return currentDepth - bias > shadowDepth ? 0.0 : 1.0;
 }
 
 void main() {
@@ -62,8 +70,11 @@ void main() {
     if (dot(l, n) > EPSILON)
         shadowColor += lightColor * ks * pow(max(dot(h, n), 0.0), 4*specular);
     
-    float shadow = ShadowCalculation();
-    outColor += shadow * shadowColor;
+    float shadow = ShadowCalculation(fragPosInLightSpace, n, l);
+    if (shadow > 2.0)
+        outColor = shadowColor;
+    else
+        outColor += shadow * shadowColor;
     /*
     for (int i = 0; i < numDirectionalLights; ++i) {
         vec3 lightDir   = lights[2 * i + 0].xyz;

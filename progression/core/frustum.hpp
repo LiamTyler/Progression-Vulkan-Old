@@ -1,20 +1,21 @@
 #pragma once
 
-#include "core/camera.hpp"
 #include "core/bounding_box.hpp"
 
 namespace Progression {
 
     class Frustum {
     public:
-        Frustum(const Camera& camera, int row = -1, int col = -1, int tile_size = 32);
+        Frustum();
+
+        void Update(float fov, float np, float fp, float aspect, const glm::vec3& pos,
+            const glm::vec3& forward, const glm::vec3& up, const glm::vec3& right);
 
         bool boxInFrustum(const BoundingBox& aabb) const;
-        void UpdateFrustum(const Camera& camera, int row = -1, int col = -1, int tile_size = 32);
-
         bool SameSide(const glm::vec3& point, const glm::vec4& plane) const;
 
         glm::vec4 planes[6];
+        glm::vec3 corners[8];
 
     private:
         void SetPlane(int i, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3);

@@ -281,8 +281,12 @@ namespace Progression {
 				std::string modelName;
 				ss >> modelName;
 				auto model = ResourceManager::GetModel(modelName);
+                if (!model) {
+                    LOG_ERR("There is no model with the name: '" + modelName + "' in the resource manager!");
+                }
 				obj->AddComponent<ModelRenderer>(new ModelRenderer(obj, model.get()));
             }
+            // TODO: Specify material from here, which will help with built in shapes
         }
         scene->AddGameObject(obj);
     }

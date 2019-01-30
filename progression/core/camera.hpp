@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/game_object.hpp"
+#include "core/frustum.hpp"
 
 namespace Progression {
 
@@ -19,6 +20,10 @@ namespace Progression {
 				float np = .1f,
 				float fp = 100.0f);
 
+            void UpdateFrustum(const glm::vec3& position, const glm::vec3& rotation);
+			void UpdateOrientationVectors();
+			void UpdateViewMatrix();
+
 			float GetFOV() const;
 			float GetAspectRatio() const;
 			float GetNearPlane() const;
@@ -29,14 +34,13 @@ namespace Progression {
 			glm::vec3 GetUpDir() const;
 			glm::vec3 GetRightDir() const;
 			RenderingPipeline GetRenderingPipeline() const;
+			Frustum GetFrustum() const;
 
 			void SetFOV(float f);
 			void SetAspectRatio(float a);
 			void SetNearPlane(float p);
 			void SetFarPlane(float p);
 			void SetRenderingPipeline(RenderingPipeline p);
-			void UpdateOrientationVectors();
-			void UpdateViewMatrix();
 
 		protected:
 			void UpdateProjectionMatrix();
@@ -49,6 +53,7 @@ namespace Progression {
 			glm::vec3 currDir_;
 			glm::vec3 currUp_;
 			glm::vec3 currRight_;
+            Frustum frustum_;
 			RenderingPipeline renderingPipeline_;
 	};
 
