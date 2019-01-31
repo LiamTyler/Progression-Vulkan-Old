@@ -54,8 +54,8 @@ int main(int argc, char* argv[]) {
     const int SHADOW_HEIGHT = 1024;
     glGenTextures(1, &depthTex);
     glBindTexture(GL_TEXTURE_2D, depthTex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
     float borderColor[] = { 1.0, 1.0, 1.0, 0.0 };
@@ -89,6 +89,35 @@ int main(int argc, char* argv[]) {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
+    float cubeVerts[] = {
+        -1, -1, 1,
+        1, -1, 1,
+        1, 1, 1,
+        -1, 1, 1,
+        -1, -1, -1,
+        1, -1, -1,
+        1, 1, -1,
+        -1, 1, -1
+    };
+
+
+    Shader lineShader;
+    if (!lineShader.Load(PG_RESOURCE_DIR "shaders/line.vert", PG_RESOURCE_DIR "shaders/line.frag")) {
+        LOG_ERR("Could not load line shader");
+        exit(EXIT_FAILURE);
+    }
+
+    auto cubeModel = ResourceManager::GetModel("cube");
+    GLuint* vbos = &cubeModel->meshes[0]->vbos[0];
+    GLuint cubeVAO;
+    glGenVertexArrays(1, &cubeVAO);
+    glBindVertexArray(cubeVAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbos[Mesh::vboName::VERTEX]);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos[Mesh::vboName::INDEX]);
 
     Shader depthWriteShader;
     if (!depthWriteShader.Load(PG_RESOURCE_DIR "shaders/shadow.vert", PG_RESOURCE_DIR "shaders/shadow.frag")) {
@@ -154,7 +183,13 @@ int main(int argc, char* argv[]) {
         // glm::mat4 lightProj = glm::ortho(lsmBB.min.x, lsmBB.max.x, lsmBB.min.y, lsmBB.max.y, np, fp);
         // glm::mat4 lightProj = glm::ortho<float>(lsmBB.min.x, lsmBB.max.x, lsmBB.min.y, lsmBB.max.y, -30.0f, 20.0f);
         // glm::mat4 lightProj = glm::ortho<float>(-30, 30, -30, 30, -50, 50);
-        glm::mat4 lightProj = glm::ortho<float>(-140, 140, -100, 100, -100, 100);
+        
+        // glm::vec3 pMin(-140, -100, -100);
+        // glm::vec3 pMax(140, 100, 100);
+        glm::vec3 pMin(-70, 0, -50);
+        glm::vec3 pMax(70, 70, 50);
+        glm::mat4 lightProj = glm::ortho<float>(pMin.x, pMax.x, pMin.y, pMax.y, pMin.z, pMax.z);
+        // glm::mat4 lightProj = glm::ortho<float>(-140, 140, -100, 100, -100, 100);
         // glm::mat4 lightProj = glm::ortho<float>(-20.0f, 20.0f, -20.0f, 20.0f, -100, 100);
 
         glm::mat4 lightSpaceMatrix = lightProj * lightView;
@@ -190,6 +225,19 @@ int main(int argc, char* argv[]) {
         glUniformMatrix4fv(shadowPhongShader["lightSpaceMatrix"], 1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
         graphics::Bind2DTexture(depthTex, shadowPhongShader["depthTex"], 1);
         meshRenderer->ShadowRender(scene, shadowPhongShader, *camera);
+
+        lineShader.Enable();
+        // glm::mat4 invLSV = glm::inverse(lightView)
+        // glm::vec3 wsPMin = glm::vec3(
+        glm::mat4 model = glm::inverse(lightSpaceMatrix);
+        // model = glm::scale(model, glm::vec3(5));
+        glm::mat4 MVP = camera->GetP() * camera->GetV() * model;
+        glUniformMatrix4fv(lineShader["MVP"], 1, GL_FALSE, glm::value_ptr(MVP));
+        glUniform3fv(lineShader["color"], 1, glm::value_ptr(glm::vec3(0, 1, 0)));
+        glBindVertexArray(cubeVAO);
+        glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+        glPolygonMode( GL_FRONT_AND_BACK, GL_FILL);
         
 
 		// RenderSystem::Render(scene);

@@ -63,8 +63,8 @@ float ShadowCalculation(in const vec4 fragPosInLS, in const vec3 n, in const vec
     shadow /= 9.0;
 
     // float shadowDepth = texture(depthTex, projCoords.xy).r;
-    // return currentDepth - bias > shadowDepth ? 0.3 : 1.0;
-    return 1.0 - shadow;
+    return currentDepth - bias > texture(depthTex, projCoords.xy).r ? 0.3 : 1.0;
+    // return 1.0 - shadow;
 }
 
 void main() {
