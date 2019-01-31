@@ -54,8 +54,8 @@ int main(int argc, char* argv[]) {
     const int SHADOW_HEIGHT = 1024;
     glGenTextures(1, &depthTex);
     glBindTexture(GL_TEXTURE_2D, depthTex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
     float borderColor[] = { 1.0, 1.0, 1.0, 0.0 };
@@ -153,7 +153,8 @@ int main(int argc, char* argv[]) {
 
         // glm::mat4 lightProj = glm::ortho(lsmBB.min.x, lsmBB.max.x, lsmBB.min.y, lsmBB.max.y, np, fp);
         // glm::mat4 lightProj = glm::ortho<float>(lsmBB.min.x, lsmBB.max.x, lsmBB.min.y, lsmBB.max.y, -30.0f, 20.0f);
-        glm::mat4 lightProj = glm::ortho<float>(-100, 100, -100, 100, -100, 100);
+        // glm::mat4 lightProj = glm::ortho<float>(-30, 30, -30, 30, -50, 50);
+        glm::mat4 lightProj = glm::ortho<float>(-140, 140, -100, 100, -100, 100);
         // glm::mat4 lightProj = glm::ortho<float>(-20.0f, 20.0f, -20.0f, 20.0f, -100, 100);
 
         glm::mat4 lightSpaceMatrix = lightProj * lightView;

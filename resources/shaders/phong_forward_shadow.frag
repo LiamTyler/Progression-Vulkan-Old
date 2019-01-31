@@ -38,19 +38,33 @@ float ShadowCalculation(in const vec4 fragPosInLS, in const vec3 n, in const vec
     vec3 ndc = fragPosInLS.xyz / fragPosInLS.w;
     vec3 projCoords = 0.5 * ndc + vec3(0.5);
     float currentDepth = projCoords.z;
-
     // To account for when the fragment is shadow's projection matrix doesn't reach far enough
     // so the depth would be > 1 and always be in shadow
     if (currentDepth > 1.0)
         return 1.0;
 
-    float cosTheta = clamp(dot(n, lightDir), 0.0, 1.0);
-    // const float bias = 0.020;
-    // float bias = max(0.05 * (1.0 - dot(n, lightDir)), 0.005);
-    float bias = 0.001*tan(acos(cosTheta)); // cosTheta is dot( n,l ), clamped between 0 and 1
+
+    float cosTheta = max(0.0, dot(n, lightDir));
+    float bias = max(0.005 * (1.0 - cosTheta), 0.0005);
+    // float bias = 0.0008*tan(acos(cosTheta));
     bias = clamp(bias, 0.0, 0.01);
-    float shadowDepth = texture(depthTex, projCoords.xy).r;
-    return currentDepth - bias > shadowDepth ? 0.0 : 1.0;
+
+    // PCF
+    float shadow = 0.0;
+    vec2 texelSize = 1.0 / textureSize(depthTex, 0);
+    for(int x = -1; x <= 1; ++x)
+    {
+        for(int y = -1; y <= 1; ++y)
+        {
+            float pcfDepth = texture(depthTex, projCoords.xy + vec2(x, y) * texelSize).r;
+            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+        }
+    }
+    shadow /= 9.0;
+
+    // float shadowDepth = texture(depthTex, projCoords.xy).r;
+    // return currentDepth - bias > shadowDepth ? 0.3 : 1.0;
+    return 1.0 - shadow;
 }
 
 void main() {
@@ -74,10 +88,7 @@ void main() {
         shadowColor += lightColor * ks * pow(max(dot(h, n), 0.0), 4*specular);
     
     float shadow = ShadowCalculation(fragPosInLightSpace, n, l);
-    if (shadow > 2.0)
-        outColor = shadowColor;
-    else
-        outColor += shadow * shadowColor;
+    outColor += shadow * shadowColor;
     /*
     for (int i = 0; i < numDirectionalLights; ++i) {
         vec3 lightDir   = lights[2 * i + 0].xyz;
