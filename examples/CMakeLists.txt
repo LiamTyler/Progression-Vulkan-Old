@@ -8,9 +8,10 @@ add_executable(deferred deferred.cpp)
 add_executable(deferred_light_vols deferred_light_vols.cpp)
 add_executable(tiled tiled.cpp)
 add_executable(demo demo.cpp)
+add_executable(lightDemo lightDemo.cpp)
 
 set_target_properties(
-    example1 example2 example3 forward deferred deferred_light_vols tiled demo
+    example1 example2 example3 forward deferred deferred_light_vols tiled demo lightDemo
     PROPERTIES
     DEBUG_POSTFIX _debug
 )
@@ -23,6 +24,7 @@ target_link_libraries(deferred ${PROGRESSION_LIBS})
 target_link_libraries(deferred_light_vols ${PROGRESSION_LIBS})
 target_link_libraries(tiled ${PROGRESSION_LIBS})
 target_link_libraries(demo ${PROGRESSION_LIBS})
+target_link_libraries(lightDemo ${PROGRESSION_LIBS})
 
 if (PROGRESSION_AUDIO)
     add_executable(audio audio_example.cpp)

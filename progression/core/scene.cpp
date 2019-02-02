@@ -4,6 +4,7 @@
 #include "core/resource_manager.hpp"
 #include "graphics/model_render_component.hpp"
 #include "utils/logger.hpp"
+#include "graphics/render_system.hpp"
 
 namespace Progression {
 
@@ -60,6 +61,20 @@ namespace Progression {
                 ss >> name;
                 ss >> name;
                 scene->skybox_ = ResourceManager::GetSkybox(name);
+            } else if (line == "AmbientLight") {
+                // next line should be "color _ _ _"
+                std::getline(in, line);
+                std::stringstream ss(line);
+                std::string name;
+                ss >> name;
+                ss >> RenderSystem::ambientLight;
+            } else if (line == "BackgroundColor") {
+                // next line should be "color _ _ _"
+                std::getline(in, line);
+                std::stringstream ss(line);
+                std::string name;
+                ss >> name;
+                ss >> scene->backgroundColor_;
             }
         }
 
@@ -232,8 +247,12 @@ namespace Progression {
                 ss >> type;
                 if (type == "directional")
                     light->type = Light::Type::DIRECTIONAL;
+                else
+                    light->type = Light::Type::POINT;
             } else if (first == "intensity") {
                 ss >> light->intensity;
+            } else if (first == "radius") {
+                ss >> light->radius;
             } else if (first == "color") {
                 float x, y, z;
                 ss >> x >> y >> z;

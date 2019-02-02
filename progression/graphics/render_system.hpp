@@ -56,6 +56,8 @@ namespace Progression {
         static void UploadMaterial(Shader& shader, Material& material);
         static void RenderSkybox(const Skybox& skybox, const Camera& camera);
 
+        static glm::vec3 ambientLight;
+
     private:
         // general data
         static std::unordered_map<std::type_index, RenderSubSystem*> subSystems_;
@@ -63,7 +65,7 @@ namespace Progression {
         static GLuint quadVBO_;
         static GLuint cubeVAO_;
         static GLuint cubeVBO_;
-        static Shader skyboxShader_;
+        static Shader backgroundShader_;
         static uint64_t options_;
 
         // lighting data

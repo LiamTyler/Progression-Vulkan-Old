@@ -14,7 +14,7 @@ namespace Progression {
     GLuint RenderSystem::quadVBO_ = 0;
     GLuint RenderSystem::cubeVAO_ = 0;
     GLuint RenderSystem::cubeVBO_ = 0;
-    Shader RenderSystem::skyboxShader_ = {};
+    Shader RenderSystem::backgroundShader_ = {};
     uint64_t RenderSystem::options_ = 0;
 
     unsigned int RenderSystem::numDirectionalLights_ = 0;
@@ -30,6 +30,7 @@ namespace Progression {
     Shader RenderSystem::tdComputeShader_ = {};
 
     RenderSystem::PostProcessing RenderSystem::postProcess_;
+    glm::vec3 RenderSystem::ambientLight = glm::vec3(.1);
 
     void RenderSystem::Init(const config::Config& config) {
         // auto load the mesh renderer subsystem
@@ -123,8 +124,8 @@ namespace Progression {
         glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), skyboxVertices, GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        if (!skyboxShader_.Load(PG_RESOURCE_DIR "shaders/skybox.vert", PG_RESOURCE_DIR "shaders/skybox.frag")) {
-            LOG_ERR("Could not load the skybox shader");
+        if (!backgroundShader_.Load(PG_RESOURCE_DIR "shaders/background.vert", PG_RESOURCE_DIR "shaders/background.frag")) {
+            LOG_ERR("Could not load the background shader");
             exit(EXIT_FAILURE);
         }
 
@@ -173,7 +174,7 @@ namespace Progression {
         glDeleteBuffers(1, &quadVBO_);
         glDeleteVertexArrays(1, &cubeVAO_);
         glDeleteBuffers(1, &cubeVBO_);
-        skyboxShader_.Free();
+        backgroundShader_.Free();
         glDeleteBuffers(1, &lightSSBO_);
         if (tdEnabled_) {
             glDeleteFramebuffers(1, &tdGbuffer_);
@@ -263,8 +264,18 @@ namespace Progression {
         graphics::ToggleDepthTesting(true);
         graphics::ToggleDepthBufferWriting(true);
 
-        if (scene->getSkybox())
+        if (scene->getSkybox()) {
             RenderSkybox(*scene->getSkybox(), *camera);
+        } else {
+            backgroundShader_.Enable();
+            glUniformMatrix4fv(backgroundShader_["MVP"], 1, GL_FALSE, glm::value_ptr(glm::mat4(1)));
+            glUniform1i(backgroundShader_["skybox"], false);
+            glUniform3fv(backgroundShader_["color"], 1, glm::value_ptr(scene->GetBackgroundColor()));
+            glDepthMask(GL_FALSE);
+            glBindVertexArray(quadVAO_);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+            glDepthMask(GL_TRUE);
+        }
     }
 
     void RenderSystem::EnableOption(uint64_t option) {
@@ -298,10 +309,10 @@ namespace Progression {
         }
 
         for (int i = 0; i < pointLights.size(); ++i) {
-            float lightRadius = sqrtf(pointLights[i]->intensity / lightIntensityCutoff_);
-            cpuLightBuffer_[2 * (numDirectionalLights_ + i) + 0] = V * glm::vec4(pointLights[i]->transform.position, 1);
-            cpuLightBuffer_[2 * (numDirectionalLights_ + i) + 0].w = lightRadius;
-            cpuLightBuffer_[2 * (numDirectionalLights_ + i) + 1] = glm::vec4(pointLights[i]->intensity * pointLights[i]->color, 1);
+            const auto& pl = pointLights[i];
+            cpuLightBuffer_[2 * (numDirectionalLights_ + i) + 0] = V * glm::vec4(pl->transform.position, 1);
+            cpuLightBuffer_[2 * (numDirectionalLights_ + i) + 0].w = pl->radius * pl->radius;
+            cpuLightBuffer_[2 * (numDirectionalLights_ + i) + 1] = glm::vec4(pl->intensity * pl->color, 1);
         }
         glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, 2 * (numDirectionalLights_ + numPointLights_) * sizeof(glm::vec4), cpuLightBuffer_);
     }
@@ -311,6 +322,7 @@ namespace Progression {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSSBO_);
         glUniform1i(shader["numDirectionalLights"], numDirectionalLights_);
         glUniform1i(shader["numPointLights"], numPointLights_);
+        glUniform3fv(shader["ambientLight"], 1, glm::value_ptr(ambientLight));
     }
 
     void RenderSystem::UploadCameraProjection(Shader& shader, Camera& camera) {
@@ -334,10 +346,11 @@ namespace Progression {
     }
 
     void RenderSystem::RenderSkybox(const Skybox& skybox, const Camera& camera) {
-        skyboxShader_.Enable();
+        backgroundShader_.Enable();
         glm::mat4 P = camera.GetP();
         glm::mat4 RV = glm::mat4(glm::mat3(camera.GetV()));
-        glUniformMatrix4fv(skyboxShader_["VP"], 1, GL_FALSE, glm::value_ptr(P * RV));
+        glUniformMatrix4fv(backgroundShader_["MVP"], 1, GL_FALSE, glm::value_ptr(P * RV));
+        glUniform1i(backgroundShader_["skybox"], true);
         glDepthMask(GL_FALSE);
         glBindVertexArray(cubeVAO_);
         glActiveTexture(GL_TEXTURE0);

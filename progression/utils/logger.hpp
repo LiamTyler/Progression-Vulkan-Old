@@ -54,7 +54,7 @@ class Logger {
                 useColors_ = logConfig->get_as<bool>("useColors").value_or(true);
             }
 
-            if (filename == PG_ROOT_DIR)
+            if (filename == PG_ROOT_DIR || filename == "")
                 return;
 
             out_ = std::make_unique<std::ofstream>();

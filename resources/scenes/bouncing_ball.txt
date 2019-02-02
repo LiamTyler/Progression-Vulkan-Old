@@ -9,9 +9,8 @@ back skybox/water/back.jpg
 
 Material
 name metalBall
-ka 0 0 0
+ka 1 1 1
 kd 1 1 1
-#ks .1 .1 .1
 ks 0 0 0
 ns 50
 diffuseTex textures/metal.jpg
@@ -28,7 +27,7 @@ shader default-mesh
 
 Model
 name metalBall
-filename models/sphere2.obj
+filename models/sphereLow.obj
 material metalBall
 
 Model

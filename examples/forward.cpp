@@ -1,4 +1,4 @@
-#include "progression.h"
+#include "progression.hpp"
 
 using namespace Progression;
 
@@ -77,7 +77,15 @@ int main(int argc, char* argv[]) {
 	auto val = conf->get_table("app");
 	numBalls = *val->get_as<int>("numBalls");
 	std::cout << "num balls" << numBalls << std::endl;
-	if (numBalls == 9) {
+    if (numBalls == 1) {
+        X = 1;
+        Z = 1;
+        startX = 0;
+        startZ = 0;
+        DX = 1;
+        DZ = 1;
+    }
+    else if (numBalls == 9) {
 		X = 3;
 		Z = 3;
 		startX = 0;
@@ -158,8 +166,8 @@ int main(int argc, char* argv[]) {
 
 	glEnable(GL_DEPTH_TEST);
 
-	while (!PG::Input::GetKeyDown(PG::PG_K_P))
-		PG::Input::PollEvents();
+	//while (!PG::Input::GetKeyDown(PG::PG_K_P))
+	//	PG::Input::PollEvents();
 
 	// Game loop
 	while (!PG::EngineShutdown) {
@@ -172,7 +180,7 @@ int main(int argc, char* argv[]) {
 		scene->Update();
 
 		RenderSystem::Render(scene);
-		skybox->Render(*camera);
+		// skybox->Render(*camera);
 
 		PG::Window::EndFrame();
 	}

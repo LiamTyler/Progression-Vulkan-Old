@@ -66,7 +66,7 @@ namespace Progression {
         if (width_ != image->Width() || height_ != image->Height()) {
             width_ = image->Width();
             height_ = image->Height();
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image->Width(), image->Height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, image->GetData());
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB, image->Width(), image->Height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, image->GetData());
             if (mipMapped)
                 glGenerateMipmap(GL_TEXTURE_2D);
             UpdateParameters();

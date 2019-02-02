@@ -27,7 +27,6 @@ set(
     core/bounding_box.cpp
     core/frustum.cpp
 
-    graphics/lights.cpp
     graphics/texture2D.cpp
     
     graphics/material.cpp
