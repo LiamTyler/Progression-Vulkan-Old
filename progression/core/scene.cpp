@@ -23,6 +23,8 @@ namespace Progression {
             delete l;
         for (const auto& l : pointLights_)
             delete l;
+        for (const auto& l : spotLights_)
+            delete l;
         for (const auto& c : cameras_)
             delete c;
     }
@@ -95,6 +97,8 @@ namespace Progression {
             l->Update();
         for (const auto& l : pointLights_)
             l->Update();
+        for (const auto& l : spotLights_)
+            l->Update();
         for (const auto& c : cameras_)
             c->Update();
     }
@@ -128,12 +132,14 @@ namespace Progression {
     }
 
     bool Scene::AddLight(Light* light) {
-        if (directionalLights_.size() + pointLights_.size() == maxLights_)
+        if (directionalLights_.size() + pointLights_.size() + spotLights_.size() == maxLights_)
             return false;
         if (light->type == Light::Type::DIRECTIONAL) {
             directionalLights_.push_back(light);
         } else if (light->type == Light::Type::POINT) {
             pointLights_.push_back(light);
+        } else if (light->type == Light::Type::SPOT) {
+            spotLights_.push_back(light);
         }
         return true;
     }
@@ -150,6 +156,10 @@ namespace Progression {
             const auto& iter = std::find(pointLights_.begin(), pointLights_.end(), light);
             if (iter != pointLights_.end())
                 pointLights_.erase(iter);
+        } else if (light->type == Light::Type::SPOT) {
+            const auto& iter = std::find(spotLights_.begin(), spotLights_.end(), light);
+            if (iter != spotLights_.end())
+                spotLights_.erase(iter);
         }
     }
 
@@ -245,14 +255,25 @@ namespace Progression {
             } else if (first == "type") {
                 std::string type;
                 ss >> type;
-                if (type == "directional")
+                if (type == "directional") {
                     light->type = Light::Type::DIRECTIONAL;
-                else
+                } else if (type == "spot") {
+                    light->type = Light::Type::SPOT;
+                } else {
                     light->type = Light::Type::POINT;
+                }
             } else if (first == "intensity") {
                 ss >> light->intensity;
             } else if (first == "radius") {
                 ss >> light->radius;
+            } else if (first == "innerCutoff") {
+                float degrees;
+                ss >> degrees;
+                light->innerCutoff = glm::radians(degrees);
+            } else if (first == "outterCutoff") {
+                float degrees;
+                ss >> degrees;
+                light->outterCutoff = glm::radians(degrees);
             } else if (first == "color") {
                 float x, y, z;
                 ss >> x >> y >> z;

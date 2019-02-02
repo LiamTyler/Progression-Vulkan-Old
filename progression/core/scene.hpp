@@ -37,6 +37,7 @@ namespace Progression {
 
         std::vector<Light*>& GetPointLights() { return pointLights_; }
         std::vector<Light*>& GetDirectionalLights() { return directionalLights_; }
+        std::vector<Light*>& GetSpotLights() { return spotLights_; }
         unsigned int GetNumPointLights() const { return pointLights_.size(); }
         unsigned int GetNumDirectionalLights() const { return directionalLights_.size(); }
         const std::vector<GameObject*>& GetGameObjects() const { return gameObjects_; }
@@ -52,6 +53,7 @@ namespace Progression {
         std::vector<GameObject*> gameObjects_;
         std::vector<Light*> directionalLights_;
         std::vector<Light*> pointLights_;
+        std::vector<Light*> spotLights_;
         std::vector<Camera*> cameras_;
 
         glm::vec3 backgroundColor_;

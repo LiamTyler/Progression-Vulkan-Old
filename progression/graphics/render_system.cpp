@@ -19,6 +19,7 @@ namespace Progression {
 
     unsigned int RenderSystem::numDirectionalLights_ = 0;
     unsigned int RenderSystem::numPointLights_ = 0;
+    unsigned int RenderSystem::numSpotLights_ = 0;
     GLuint RenderSystem::lightSSBO_ = 0;
     unsigned int RenderSystem::maxNumLights_ = 0;
     float RenderSystem::lightIntensityCutoff_ = 0;
@@ -48,11 +49,11 @@ namespace Progression {
         tdEnabled_            = rsConfig->get_as<bool>("enableTiledDeferredPipeline").value_or(true);
 
         // setup the lighting data
-        cpuLightBuffer_ = new glm::vec4[2 * maxNumLights_];
+        cpuLightBuffer_ = new glm::vec4[3 * maxNumLights_];
         glGenBuffers(1, &lightSSBO_);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSSBO_);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, lightSSBO_);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, 2 * sizeof(glm::vec4) * maxNumLights_, NULL, GL_DYNAMIC_COPY);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, 3 * sizeof(glm::vec4) * maxNumLights_, NULL, GL_DYNAMIC_COPY);
 
         // setup the general data stuff
         float quadVerts[] = {
@@ -215,6 +216,7 @@ namespace Progression {
         for (const auto& subsys : subSystems_)
             subsys.second->Render(scene, *camera);
 
+        // TODO: SPOT LIGHTS
         if (camera->GetRenderingPipeline() == RenderingPipeline::TILED_DEFERRED) {
             glBindFramebuffer(GL_READ_FRAMEBUFFER, tdGbuffer_);
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, postProcess_.FBO);
@@ -293,28 +295,39 @@ namespace Progression {
     void RenderSystem::UpdateLights(Scene* scene, Camera* camera) {
         const auto& dirLights = scene->GetDirectionalLights();
         const auto& pointLights = scene->GetPointLights();
+        const auto& spotLights = scene->GetSpotLights();
         numDirectionalLights_ = dirLights.size();
         numPointLights_ = pointLights.size();
+        numSpotLights_ = spotLights.size();
         glm::mat4 V = camera->GetV();
 
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSSBO_);
         for (int i = 0; i < dirLights.size(); ++i) {
-            glm::vec3 dir(0, 0, -1);
-            glm::mat4 rot(1);
-            rot = glm::rotate(rot, dirLights[i]->transform.rotation.z, glm::vec3(0, 0, 1));
-            rot = glm::rotate(rot, dirLights[i]->transform.rotation.y, glm::vec3(0, 1, 0));
-            rot = glm::rotate(rot, dirLights[i]->transform.rotation.x, glm::vec3(1, 0, 0));
-            cpuLightBuffer_[2 * i + 0] = V * rot * glm::vec4(dir, 0);
-            cpuLightBuffer_[2 * i + 1] = glm::vec4(dirLights[i]->intensity * dirLights[i]->color, 1);
+            cpuLightBuffer_[3 * i + 0] = V * glm::vec4(rotationToDirection(dirLights[i]->transform.rotation), 0);
+            cpuLightBuffer_[3 * i + 1] = glm::vec4(dirLights[i]->intensity * dirLights[i]->color, 1);
         }
 
+        int numLights = numDirectionalLights_;
         for (int i = 0; i < pointLights.size(); ++i) {
             const auto& pl = pointLights[i];
-            cpuLightBuffer_[2 * (numDirectionalLights_ + i) + 0] = V * glm::vec4(pl->transform.position, 1);
-            cpuLightBuffer_[2 * (numDirectionalLights_ + i) + 0].w = pl->radius * pl->radius;
-            cpuLightBuffer_[2 * (numDirectionalLights_ + i) + 1] = glm::vec4(pl->intensity * pl->color, 1);
+            cpuLightBuffer_[3 * (numLights + i) + 0]   = V * glm::vec4(pl->transform.position, 1);
+            cpuLightBuffer_[3 * (numLights + i) + 0].w = pl->radius * pl->radius;
+            cpuLightBuffer_[3 * (numLights + i) + 1]   = glm::vec4(pl->intensity * pl->color, 1);
         }
-        glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, 2 * (numDirectionalLights_ + numPointLights_) * sizeof(glm::vec4), cpuLightBuffer_);
+
+        numLights += numPointLights_;
+        for (int i = 0; i < spotLights.size(); ++i) {
+            const auto& sl = spotLights[i];
+            cpuLightBuffer_[3 * (numLights + i) + 0]   = V * glm::vec4(sl->transform.position, 1);
+            cpuLightBuffer_[3 * (numLights + i) + 0].w = sl->radius * sl->radius;
+            cpuLightBuffer_[3 * (numLights + i) + 1]   = glm::vec4(sl->intensity * sl->color, 1);
+            cpuLightBuffer_[3 * (numLights + i) + 1].w = glm::cos(sl->innerCutoff);
+            cpuLightBuffer_[3 * (numLights + i) + 2]   = V * glm::vec4(rotationToDirection(sl->transform.rotation), 0);
+            cpuLightBuffer_[3 * (numLights + i) + 2].w = glm::cos(sl->outterCutoff);
+        }
+        numLights += numSpotLights_;
+
+        glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, 3 * numLights * sizeof(glm::vec4), cpuLightBuffer_);
     }
 
 
@@ -322,6 +335,7 @@ namespace Progression {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSSBO_);
         glUniform1i(shader["numDirectionalLights"], numDirectionalLights_);
         glUniform1i(shader["numPointLights"], numPointLights_);
+        glUniform1i(shader["numSpotLights"], numSpotLights_);
         glUniform3fv(shader["ambientLight"], 1, glm::value_ptr(ambientLight));
     }
 

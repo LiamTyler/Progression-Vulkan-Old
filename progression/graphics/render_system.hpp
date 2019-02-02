@@ -71,6 +71,7 @@ namespace Progression {
         // lighting data
         static unsigned int numDirectionalLights_;
         static unsigned int numPointLights_;
+        static unsigned int numSpotLights_;
         static unsigned int maxNumLights_;
         static GLuint lightSSBO_;
         static glm::vec4* cpuLightBuffer_;
