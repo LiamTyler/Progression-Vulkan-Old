@@ -1,8 +1,8 @@
 set(PROGRESSION_INCLUDE_DIRS
-    ${PROGRESSION_DIR}/ext
-    ${PROGRESSION_DIR}/ext/glfw/include
-    ${PROGRESSION_DIR}/progression
-    ${PROGRESSION_DIR}/progression/src
+    ${PROGRESSION_DIR}ext
+    ${PROGRESSION_DIR}ext/glfw/include
+    ${PROGRESSION_DIR}progression
+    ${PROGRESSION_DIR}progression/src
 )
 
 set(SYSTEM_LIBS "")
@@ -23,11 +23,11 @@ if (PROGRESSION_AUDIO)
 endif()
 
 if (NOT PROGRESSION_LIB_DIR)
-    set(PROGRESSION_LIB_DIR ${CMAKE_BINARY_DIR}/lib)
+    set(PROGRESSION_LIB_DIR ${PROGRESSION_DIR}/build/lib)
 endif()
 
 if (NOT PROGRESSION_BIN_DIR)
-    set(PROGRESSION_BIN_DIR ${CMAKE_BINARY_DIR}/bin)
+    set(PROGRESSION_BIN_DIR ${PROGRESSION_DIR}/build/bin)
 endif()
 
 link_directories(${PROGRESSION_LIB_DIR})

@@ -3,15 +3,7 @@
 using namespace Progression;
 
 int main(int argc, char* argv[]) {
-	srand(time(NULL));
-
-	auto conf = PG::config::Config(PG_ROOT_DIR "configs/default.toml");
-	if (!conf) {
-		std::cout << "could not parse config file" << std::endl;
-		exit(0);
-	}
-
-	PG::EngineInitialize(conf);
+	PG::EngineInitialize();
 
 	auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/lightDemo.pgscn");
     std::cout << "done loading scene" << std::endl;

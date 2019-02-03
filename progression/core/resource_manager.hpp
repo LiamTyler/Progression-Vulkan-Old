@@ -67,6 +67,8 @@ namespace Progression {
         static std::shared_ptr<Model> LoadPGModel(const std::string& fullPath);
         static bool ConvertOBJToPGModel(const std::string& fullPathToOBJ, const std::string& fullPathToMaterialDir, const std::string& fullOutputPath);
 
+        static std::string rootResourceDir;
+
     private:
         static std::unordered_map<std::string, std::shared_ptr<Model>> models_;
         static std::unordered_map<std::string, std::shared_ptr<Material>> materials_;

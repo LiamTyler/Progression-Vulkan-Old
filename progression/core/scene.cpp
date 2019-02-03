@@ -50,6 +50,10 @@ namespace Progression {
                 ss >> filename;
                 ss >> filename;
                 ResourceManager::LoadResourceFile(filename);
+            } else if (line == "RootResourceDir") {
+                std::getline(in, line);
+                std::stringstream ss(line);
+                ss >> ResourceManager::rootResourceDir;
             } else if (line == "Camera") {
                 ParseCamera(scene, in);
             } else if (line == "Light") {

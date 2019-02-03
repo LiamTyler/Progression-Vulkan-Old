@@ -39,6 +39,7 @@ namespace std {
 
 namespace Progression {
 
+    std::string ResourceManager::rootResourceDir = PG_RESOURCE_DIR;
     std::unordered_map<std::string, std::shared_ptr<Model>> ResourceManager::models_ = {};
     std::unordered_map<std::string, std::shared_ptr<Material>> ResourceManager::materials_ = {};
     std::unordered_map<std::string, std::shared_ptr<Shader>> ResourceManager::shaders_ = {};
@@ -69,19 +70,24 @@ namespace Progression {
     }
 
     bool ResourceManager::LoadResourceFile(const std::string& relativePath) {
-        std::ifstream in(PG_RESOURCE_DIR + relativePath);
+        std::ifstream in(rootResourceDir + relativePath);
         if (!in) {
-            LOG_ERR("Could not open resource file:", PG_RESOURCE_DIR + relativePath);
+            LOG_ERR("Could not open resource file:", rootResourceDir + relativePath);
             return false;
         }
 
         std::string line;
+        std::string tmpRootDir = "";
         while (std::getline(in, line)) {
             if (line == "")
                 continue;
             if (line[0] == '#')
                 continue;
-            if (line == "Skybox") {
+            if (line == "RootResourceDir") {
+                std::getline(in, line);
+                std::stringstream ss(line);
+                ss >> rootResourceDir;
+            } else if (line == "Skybox") {
                 std::string name = "";
                 line = " ";
                 std::string right, left, top, bottom, front, back;
@@ -106,12 +112,13 @@ namespace Progression {
                         ss >> back;
                     }
                 }
-                right = PG_RESOURCE_DIR + right;
-                left = PG_RESOURCE_DIR + left;
-                top = PG_RESOURCE_DIR + top;
-                bottom = PG_RESOURCE_DIR + bottom;
-                front = PG_RESOURCE_DIR + front;
-                back = PG_RESOURCE_DIR + back;
+
+                right  = rootResourceDir + right;
+                left   = rootResourceDir + left;
+                front  = rootResourceDir + front;
+                bottom = rootResourceDir + bottom;
+                top    = rootResourceDir + top;
+                back   = rootResourceDir + back;
                 if (skyboxes_.find(name) != skyboxes_.end())
                     LOG_WARN("resource manager already contains a skybox with the name '", name, "'. Overriding with the new skybox");
                  auto sb = std::make_shared<Skybox>();
@@ -242,14 +249,13 @@ namespace Progression {
 
         auto pos = relativePath.find_last_of('.');
         std::string ext = relativePath.substr(pos);
-        std::string fullFileName = PG_RESOURCE_DIR + relativePath;
         std::shared_ptr<Model> model;
         if (ext == ".obj") {
-            model = LoadOBJ(fullFileName);
+            model = LoadOBJ(relativePath);
         } else if (ext == ".pgModel") {
-            model = LoadPGModel(fullFileName);
+            model = LoadPGModel(relativePath);
         } else {
-            LOG_ERR("Trying to load model from unsupported file extension:", fullFileName);
+            LOG_ERR("Trying to load model from unsupported file extension:", rootResourceDir + relativePath);
             return nullptr;
         }
 
@@ -259,7 +265,8 @@ namespace Progression {
         return model;
     }
 
-    std::shared_ptr<Model> ResourceManager::LoadPGModel(const std::string& fullPath) {
+    std::shared_ptr<Model> ResourceManager::LoadPGModel(const std::string& relativePath) {
+        std::string fullPath = rootResourceDir + relativePath;
         std::ifstream in(fullPath, std::ios::binary);
         if (!in) {
             LOG_ERR("Failed to load the pgModel file: ", fullPath);
@@ -337,7 +344,7 @@ namespace Progression {
         for (int i = 0; i < numMaterials; ++i) {
             if (diffuseTexNames[i] != "") {
                 materials[i]->diffuseTexture = std::make_shared<Texture2D>();
-                if (!materials[i]->diffuseTexture->Load(PG_RESOURCE_DIR + diffuseTexNames[i]))
+                if (!materials[i]->diffuseTexture->Load(rootResourceDir + diffuseTexNames[i]))
                     materials[i]->diffuseTexture = nullptr;
             }
         }
@@ -345,12 +352,13 @@ namespace Progression {
         return model;
     }
 
-    std::shared_ptr<Model> ResourceManager::LoadOBJ(const std::string& fullPath) {
+    std::shared_ptr<Model> ResourceManager::LoadOBJ(const std::string& relativePath) {
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
         std::vector<tinyobj::material_t> materials;
         std::string err;
-        bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, fullPath.c_str(), std::string(PG_RESOURCE_DIR).c_str(), true);
+        std::string fullPath = rootResourceDir + relativePath;
+        bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, fullPath.c_str(), rootResourceDir.c_str(), true);
 
         if (!err.empty()) {
             LOG_WARN("TinyObj loader warning: ", err);
@@ -377,7 +385,7 @@ namespace Progression {
                 std::shared_ptr<Texture2D> diffuseTex = nullptr;
                 if (mat.diffuse_texname != "") {
                     diffuseTex = std::make_shared<Texture2D>();
-                    if (!diffuseTex->Load(PG_RESOURCE_DIR + mat.diffuse_texname))
+                    if (!diffuseTex->Load(rootResourceDir + mat.diffuse_texname))
                         diffuseTex = nullptr;
                 }
 
@@ -591,7 +599,7 @@ namespace Progression {
         if (skyboxes_.find(name) == skyboxes_.end()) {
             std::vector<std::string> fullTexturePaths; 
             for (const auto& tex : textures)
-                fullTexturePaths.push_back(PG_RESOURCE_DIR + tex);
+                fullTexturePaths.push_back(rootResourceDir + tex);
             auto sp = std::make_shared<Skybox>();
             if (!sp->Load({
                     fullTexturePaths[0], // right
@@ -617,7 +625,7 @@ namespace Progression {
     std::shared_ptr<Texture2D> ResourceManager::LoadTexture2D(const std::string& relativePath, bool addToManager) {
         if (textures2D_.find(relativePath) == textures2D_.end()) {
             auto sp = std::make_shared<Texture2D>();
-            if (!sp->Load(PG_RESOURCE_DIR + relativePath))
+            if (!sp->Load(rootResourceDir + relativePath))
                 return nullptr;
 
             if (addToManager)
