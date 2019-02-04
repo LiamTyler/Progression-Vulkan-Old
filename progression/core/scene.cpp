@@ -46,10 +46,10 @@ namespace Progression {
             if (line == "Resource-file") {
                 std::getline(in, line);
                 std::stringstream ss(line);
-                std::string filename;
-                ss >> filename;
-                ss >> filename;
-                ResourceManager::LoadResourceFile(filename);
+                std::string fname;
+                ss >> fname;
+                ss >> fname;
+                ResourceManager::LoadResourceFile(fname);
             } else if (line == "RootResourceDir") {
                 std::getline(in, line);
                 std::stringstream ss(line);

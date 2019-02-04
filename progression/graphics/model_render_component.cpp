@@ -5,8 +5,8 @@
 
 namespace Progression {
 
-    ModelRenderer::ModelRenderer(GameObject* go, Model* mod, bool active) :
-        RenderComponent(go, active),
+    ModelRenderer::ModelRenderer(GameObject* go, Model* mod, bool _active) :
+        RenderComponent(go, _active),
         model(mod)
     {
         for (size_t i = 0; i < model->meshes.size(); i++) {
