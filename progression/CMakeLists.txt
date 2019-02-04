@@ -28,6 +28,7 @@ set(
     core/frustum.cpp
 
     graphics/texture2D.cpp
+    graphics/lights.cpp
     
     graphics/material.cpp
     graphics/mesh.cpp
@@ -39,6 +40,7 @@ set(
     graphics/mesh_render_component.cpp
     graphics/model_render_component.cpp
     graphics/skybox.cpp
+    graphics/shadow_map.cpp
     graphics/graphics_api.cpp
 
     components/user_camera_component.cpp
@@ -84,6 +86,7 @@ set(
     graphics/mesh_render_component.hpp
     graphics/model_render_component.hpp
     graphics/skybox.hpp
+    graphics/shadow_map.hpp
     graphics/graphics_api.hpp
 
     components/user_camera_component.hpp

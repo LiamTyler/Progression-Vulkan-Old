@@ -44,28 +44,8 @@ int main(int argc, char* argv[]) {
 
     auto light = scene->GetDirectionalLights()[0];
 
-    auto depthFBO = graphics::CreateFrameBuffer();
-
-    GLuint depthTex;
-    const int SHADOW_WIDTH  = 1024;
-    const int SHADOW_HEIGHT = 1024;
-    glGenTextures(1, &depthTex);
-    glBindTexture(GL_TEXTURE_2D, depthTex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    float borderColor[] = { 1.0, 1.0, 1.0, 0.0 };
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, depthFBO);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTex, 0);
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-
-
     
+    auto shadowMap = ShadowMap();
 
     // setup the general data stuff
     float quadVerts[] = {
@@ -155,10 +135,7 @@ int main(int argc, char* argv[]) {
         RenderSystem::UpdateLights(scene, camera);
 
         // render scene from light's POV
-        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-	    graphics::BindFrameBuffer(depthFBO);
-        graphics::Clear(GL_DEPTH_BUFFER_BIT);
-        // glCullFace(GL_FRONT);
+        shadowMap.BindForWriting();
 
         Frustum frustum = camera->GetFrustum();
         float np = camera->GetNearPlane();
@@ -198,7 +175,7 @@ int main(int argc, char* argv[]) {
         meshRenderer->DepthRender(depthWriteShader, lightSpaceMatrix);
 
         /*
-        // Render the scene normally, but with the shadow map texture
+        // Render the shadow map texture, just for debugging purposes
         glViewport(0, 0, Window::width(), Window::height());
 	    graphics::BindFrameBuffer();
         displayShadowShader.Enable();
@@ -222,9 +199,10 @@ int main(int argc, char* argv[]) {
         glm::mat4 VP = camera->GetP() * camera->GetV();
         glUniformMatrix4fv(shadowPhongShader["VP"], 1, GL_FALSE, glm::value_ptr(VP));
         glUniformMatrix4fv(shadowPhongShader["lightSpaceMatrix"], 1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
-        graphics::Bind2DTexture(depthTex, shadowPhongShader["depthTex"], 1);
+        graphics::Bind2DTexture(shadowMap.texture(), shadowPhongShader["depthTex"], 1);
         meshRenderer->ShadowRender(scene, shadowPhongShader, *camera);
 
+        // Render the projection bounding box
         lineShader.Enable();
         // glm::mat4 invLSV = glm::inverse(lightView)
         // glm::vec3 wsPMin = glm::vec3(

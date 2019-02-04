@@ -26,6 +26,10 @@ namespace Progression {
 		return out << v.x << " " << v.y << " " << v.z << " " << v.w;
 	}
 
+    inline std::istream& operator >>(std::istream& in, glm::vec2& v) {
+        return in >> v.x >> v.y;
+    }
+
 	inline std::istream& operator >>(std::istream& in, glm::vec3& v) {
 		return in >> v.x >> v.y >> v.z;
 	}

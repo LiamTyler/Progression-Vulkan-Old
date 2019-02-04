@@ -36,6 +36,7 @@ namespace Progression {
         static void Init(const config::Config& config);
         static void Free();
 
+        static void ShadowPass(Scene* scene, Camera* camera);
         static void Render(Scene* scene, Camera* camera = nullptr);
 
         template<typename T>

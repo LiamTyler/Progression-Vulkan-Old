@@ -9,6 +9,18 @@
 
 namespace Progression {
 
+    namespace {
+
+        Light* shadowLight = nullptr;
+        glm::mat4 LMS;
+        Shader depthWriteShader;
+        if (!depthWriteShader.Load(PG_RESOURCE_DIR "shaders/shadow.vert", PG_RESOURCE_DIR "shaders/shadow.frag")) {
+            LOG_ERR("Could not load shadow shader");
+            exit(EXIT_FAILURE);
+        }
+
+    } // namespace anonymous
+
     std::unordered_map<std::type_index, RenderSubSystem*> RenderSystem::subSystems_ = {};
     GLuint RenderSystem::quadVAO_ = 0;
     GLuint RenderSystem::quadVBO_ = 0;
@@ -305,29 +317,48 @@ namespace Progression {
 
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSSBO_);
         for (size_t i = 0; i < dirLights.size(); ++i) {
-            cpuLightBuffer_[3 * i + 0] = V * glm::vec4(rotationToDirection(dirLights[i]->transform.rotation), 0);
-            cpuLightBuffer_[3 * i + 1] = glm::vec4(dirLights[i]->intensity * dirLights[i]->color, 1);
+            const auto& dl = dirLights[i];
+            if (dl->shadowMap) {
+                shadowLight = dl;
+                --numDirectionalLights_;
+            } else {
+                cpuLightBuffer_[3 * i + 0] = V * glm::vec4(rotationToDirection(dl->transform.rotation), 0);
+                cpuLightBuffer_[3 * i + 1] = glm::vec4(dl->intensity * dl->color, 1);
+            }
         }
 
         int numLights = numDirectionalLights_;
         for (size_t i = 0; i < pointLights.size(); ++i) {
             const auto& pl = pointLights[i];
-            cpuLightBuffer_[3 * (numLights + i) + 0]   = V * glm::vec4(pl->transform.position, 1);
-            cpuLightBuffer_[3 * (numLights + i) + 0].w = pl->radius * pl->radius;
-            cpuLightBuffer_[3 * (numLights + i) + 1]   = glm::vec4(pl->intensity * pl->color, 1);
+            if (pl->shadowMap) {
+                shadowLight = pl;
+                --numPointLights_;
+            } else {
+                cpuLightBuffer_[3 * (numLights + i) + 0]   = V * glm::vec4(pl->transform.position, 1);
+                cpuLightBuffer_[3 * (numLights + i) + 0].w = pl->radius * pl->radius;
+                cpuLightBuffer_[3 * (numLights + i) + 1]   = glm::vec4(pl->intensity * pl->color, 1);
+                ++numLights;
+            }
         }
 
         numLights += numPointLights_;
         for (size_t i = 0; i < spotLights.size(); ++i) {
             const auto& sl = spotLights[i];
-            cpuLightBuffer_[3 * (numLights + i) + 0]   = V * glm::vec4(sl->transform.position, 1);
-            cpuLightBuffer_[3 * (numLights + i) + 0].w = sl->radius * sl->radius;
-            cpuLightBuffer_[3 * (numLights + i) + 1]   = glm::vec4(sl->intensity * sl->color, 1);
-            cpuLightBuffer_[3 * (numLights + i) + 1].w = glm::cos(sl->innerCutoff);
-            cpuLightBuffer_[3 * (numLights + i) + 2]   = V * glm::vec4(rotationToDirection(sl->transform.rotation), 0);
-            cpuLightBuffer_[3 * (numLights + i) + 2].w = glm::cos(sl->outterCutoff);
+            if (sl->shadowMap) {
+                shadowLight = sl;
+                --numSpotLights_;
+            } else {
+                cpuLightBuffer_[3 * (numLights + i) + 0]   = V * glm::vec4(sl->transform.position, 1);
+                cpuLightBuffer_[3 * (numLights + i) + 0].w = sl->radius * sl->radius;
+                cpuLightBuffer_[3 * (numLights + i) + 1]   = glm::vec4(sl->intensity * sl->color, 1);
+                cpuLightBuffer_[3 * (numLights + i) + 1].w = glm::cos(sl->innerCutoff);
+                cpuLightBuffer_[3 * (numLights + i) + 2]   = V * glm::vec4(rotationToDirection(sl->transform.rotation), 0);
+                cpuLightBuffer_[3 * (numLights + i) + 2].w = glm::cos(sl->outterCutoff);
+            }
         }
-        numLights += numSpotLights_;
+        if (numLights < (numDirectionalLights_ + numPointLights_ + numSpotLights_ - 2)) {
+            LOG_WARN("More than 2 lights are supposed to be casting shadows, but only 1 is supported");
+        }
 
         glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, 3 * numLights * sizeof(glm::vec4), cpuLightBuffer_);
     }
@@ -339,6 +370,7 @@ namespace Progression {
         glUniform1i(shader["numPointLights"], numPointLights_);
         glUniform1i(shader["numSpotLights"], numSpotLights_);
         glUniform3fv(shader["ambientLight"], 1, glm::value_ptr(ambientLight));
+        
     }
 
     void RenderSystem::UploadCameraProjection(Shader& shader, Camera& camera) {

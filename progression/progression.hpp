@@ -28,6 +28,7 @@
 #include "graphics/mesh_render_subsystem.hpp"
 #include "graphics/mesh_render_component.hpp"
 #include "graphics/skybox.hpp"
+#include "graphics/shadow_map.hpp"
 #include "graphics/graphics_api.hpp"
 
 #include "graphics/lights.hpp"

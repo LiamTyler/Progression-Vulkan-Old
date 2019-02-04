@@ -5,6 +5,7 @@
 #include "graphics/model_render_component.hpp"
 #include "utils/logger.hpp"
 #include "graphics/render_system.hpp"
+#include "graphics/shadow_map.hpp"
 
 namespace Progression {
 
@@ -250,6 +251,8 @@ namespace Progression {
     void Scene::ParseLight(Scene* scene, std::ifstream& in) {
         Light* light = new Light;
         std::string line = " ";
+        glm::ivec2 shadowResolution(-1, -1);
+        bool shadows = false;
         while (line != "" && !in.eof()) {
             std::getline(in, line);
             std::stringstream ss(line);
@@ -267,6 +270,12 @@ namespace Progression {
                 } else {
                     light->type = Light::Type::POINT;
                 }
+            } else if (first == "shadows") {
+                std::string tmp;
+                ss >> tmp;
+                shadows = tmp == "true";
+            } else if (first == "shadowMapResolution") {
+                ss >> shadowResolution.x >> shadowResolution.y;
             } else if (first == "intensity") {
                 ss >> light->intensity;
             } else if (first == "radius") {
@@ -296,6 +305,13 @@ namespace Progression {
                 ss >> x >> y >> z;
                 light->transform.scale = glm::vec3(x, y, z);
             }
+        }
+
+        if (shadows) {
+            if (shadowResolution.x != -1)
+                light->shadowMap = new ShadowMap(shadowResolution.x, shadowResolution.y);
+            else
+                light->shadowMap = new ShadowMap;
         }
         scene->AddLight(light);
     }
