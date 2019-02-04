@@ -1,8 +1,8 @@
 set(PROGRESSION_INCLUDE_DIRS
-    ${PROGRESSION_DIR}ext
-    ${PROGRESSION_DIR}ext/glfw/include
-    ${PROGRESSION_DIR}progression
-    ${PROGRESSION_DIR}progression/src
+    ${PROGRESSION_DIR}/ext
+    ${PROGRESSION_DIR}/ext/glfw/include
+    ${PROGRESSION_DIR}/progression
+    ${PROGRESSION_DIR}/progression/src
 )
 
 set(SYSTEM_LIBS "")

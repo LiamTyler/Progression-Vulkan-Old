@@ -1,0 +1,18 @@
+[window]
+    title = "untitled"
+    width = 1280
+    height = 720
+    vsync = false
+    glMajor = 4
+    glMinor = 3
+
+[time]
+    displayFPS = true
+
+[renderSystem]
+    maxNumLights = 10001
+    enableTiledDeferredPipeline = false
+
+[logger]
+    file = ""
+    useColors = true

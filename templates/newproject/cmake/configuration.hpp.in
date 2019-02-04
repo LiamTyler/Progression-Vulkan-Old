@@ -1,0 +1,4 @@
+#pragma once
+
+#define ROOT_DIR "${CMAKE_SOURCE_DIR}/"
+#define RESOURCE_DIR "${CMAKE_SOURCE_DIR}/resources/"

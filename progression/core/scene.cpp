@@ -302,6 +302,7 @@ namespace Progression {
     void Scene::ParseGameObject(Scene* scene, std::ifstream& in) {
         GameObject* obj = new GameObject;
         std::string line = " ";
+        std::shared_ptr<Material> material;
         while (line != "" && !in.eof()) {
             std::getline(in, line);
             std::stringstream ss(line);
@@ -325,7 +326,25 @@ namespace Progression {
 				std::string modelName;
 				ss >> modelName;
 				auto model = ResourceManager::GetModel(modelName);
+                if (!model) {
+                    LOG_ERR("No model found with name: ", modelName);
+                    exit(EXIT_FAILURE);
+                }
 				obj->AddComponent<ModelRenderer>(new ModelRenderer(obj, model.get()));
+            } else if (first == "material") {
+                std::string materialName;
+                ss >> materialName;
+                material = ResourceManager::GetMaterial(materialName);
+                if (!material) {
+                    LOG_WARN("No match for material", materialName, "in the resource manager");
+                }
+            }
+        }
+        auto modelRenderer = obj->GetComponent<ModelRenderer>();
+        if (modelRenderer && material) {
+            auto model = modelRenderer->model;
+            for (int i = 0; i < modelRenderer->meshRenderers.size(); ++i) {
+                modelRenderer->meshRenderers[i]->material = material.get();
             }
         }
         scene->AddGameObject(obj);

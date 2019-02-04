@@ -1,0 +1,31 @@
+RootResourceDir
+##PROGRESSION_DIR##/resources/
+
+Skybox
+name water
+right skybox/water/right.jpg
+left skybox/water/left.jpg
+top skybox/water/top.jpg
+bottom skybox/water/bottom.jpg
+back skybox/water/back.jpg
+front skybox/water/front.jpg
+
+Material
+name floor
+ka 0 0 0
+kd 1 1 1
+ks .1 .1 .1
+ns 50
+diffuseTex textures/wood.png
+
+Material
+name red 
+ka 0 0 0
+kd 1 0 0
+ks .5 .5 .5
+ns 50
+
+Model
+name floor
+filename models/plane.obj
+material floor

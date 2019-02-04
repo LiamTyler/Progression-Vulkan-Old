@@ -17,7 +17,6 @@ elseif (MSVC)
     add_compile_options("/std:c++14")
 endif()
 
-message("
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 if (NOT PROGRESSION_DIR)
