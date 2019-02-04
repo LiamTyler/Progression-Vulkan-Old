@@ -36,6 +36,8 @@
 #endif
 #endif
 
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+
 namespace cpptoml
 {
 class writer; // forward declaration

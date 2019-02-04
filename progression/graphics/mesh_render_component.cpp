@@ -2,11 +2,11 @@
 
 namespace Progression {
 
-    MeshRenderer::MeshRenderer(GameObject* go, Mesh* _mesh, Material* mat, bool active) :
-        RenderComponent(go, active),
+    MeshRenderer::MeshRenderer(GameObject* go, Mesh* _mesh, Material* mat, bool _active) :
+        RenderComponent(go, _active),
         mesh(_mesh),
         material(mat),
-        vao(-1)
+        vao((GLuint) -1)
     {
     }
 

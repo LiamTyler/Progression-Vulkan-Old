@@ -3,8 +3,8 @@
 namespace Progression {
 
     Mesh::Mesh() {
-        for (int i = 0; i < vboName::TOTAL_VBOS; ++i)
-            vbos[i] = -1;
+        for (GLuint i = 0; i < vboName::TOTAL_VBOS; ++i)
+            vbos[i] = (GLuint) -1;
     }
 
     Mesh::~Mesh() {
@@ -33,9 +33,9 @@ namespace Progression {
         maxVertices_ = std::move(mesh.maxVertices_);
         maxIndices_ = std::move(mesh.maxIndices_);
 
-        for (int i = 0; i < vboName::TOTAL_VBOS; ++i) {
+        for (GLuint i = 0; i < vboName::TOTAL_VBOS; ++i) {
             vbos[i] = mesh.vbos[i];
-            mesh.vbos[i] = -1;
+            mesh.vbos[i] = (GLuint) -1;
         }
 
         return *this;
@@ -47,12 +47,12 @@ namespace Progression {
             if (uvs.size())
                 ++numBuffers;
             else
-                vbos[vboName::UV] = -1;
+                vbos[vboName::UV] = (GLuint) -1;
 
             if (indices.size())
                 ++numBuffers;
             else
-                vbos[vboName::INDEX] = -1;
+                vbos[vboName::INDEX] = (GLuint) -1;
 
             glGenBuffers(numBuffers, vbos);
         }

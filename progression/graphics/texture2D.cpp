@@ -16,7 +16,7 @@ namespace Progression {
     Texture2D::~Texture2D() {
         if (image)
             delete image;
-        if (gpuHandle_ != -1)
+        if (gpuHandle_ != (GLuint) -1)
             glDeleteTextures(1, &gpuHandle_);
     }
 
@@ -37,7 +37,7 @@ namespace Progression {
         height_        = std::move(texture.height_);
 
         texture.image  = nullptr;
-        texture.gpuHandle_ = -1;
+        texture.gpuHandle_ = (GLuint) -1;
 
         return *this;
     }
@@ -66,7 +66,7 @@ namespace Progression {
         if (width_ != image->Width() || height_ != image->Height()) {
             width_ = image->Width();
             height_ = image->Height();
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image->Width(), image->Height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, image->GetData());
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB, image->Width(), image->Height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, image->GetData());
             if (mipMapped)
                 glGenerateMipmap(GL_TEXTURE_2D);
             UpdateParameters();

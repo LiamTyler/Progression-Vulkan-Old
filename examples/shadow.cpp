@@ -13,13 +13,10 @@ glm::vec3 getDirection(const glm::vec3& rotation) {
 }
 
 int main(int argc, char* argv[]) {
-	auto conf = PG::config::Config(PG_ROOT_DIR "configs/default.toml");
-	if (!conf) {
-        LOG_ERR("Failed to load the config file");
-        exit(EXIT_FAILURE);
-    }
+    (void)argc;
+    (void)argv;
 
-	PG::EngineInitialize(conf);
+	PG::EngineInitialize();
 
     const std::string sceneName = "scene1.pgscn";
     // const std::string sceneName = "shadow.pgscn";
@@ -89,6 +86,7 @@ int main(int argc, char* argv[]) {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
+    /*
     float cubeVerts[] = {
         -1, -1, 1,
         1, -1, 1,
@@ -99,6 +97,7 @@ int main(int argc, char* argv[]) {
         1, 1, -1,
         -1, 1, -1
     };
+    */
 
 
     Shader lineShader;
@@ -164,9 +163,9 @@ int main(int argc, char* argv[]) {
         Frustum frustum = camera->GetFrustum();
         float np = camera->GetNearPlane();
         float fp = camera->GetFarPlane();
-        glm::vec3 frustCenter = 0.5f*(camera->GetFarPlane() - camera->GetNearPlane()) * camera->GetForwardDir() + camera->transform.position;
+        glm::vec3 frustCenter = 0.5f*(fp - np) * camera->GetForwardDir() + camera->transform.position;
         glm::vec3 lightDir = getDirection(light->transform.rotation);
-        glm::vec3 lightPos = glm::vec3(0.0f, camera->GetFarPlane() - camera->GetNearPlane(), 0.0f);
+        glm::vec3 lightPos = glm::vec3(0.0f, fp - np, 0.0f);
         // glm::vec3 lightPos = frustCenter;
         // glm::mat4 lightView = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0, 1, 0));
         glm::mat4 lightView = glm::lookAt(glm::vec3(0), lightDir, glm::vec3(0, 1, 0));

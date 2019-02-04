@@ -44,7 +44,7 @@ namespace Progression {
             glEnableVertexAttribArray(shader["normal"]);
             glVertexAttribPointer(shader["normal"], 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-            if (mr->mesh->vbos[Mesh::vboName::UV] != -1) {
+            if (mr->mesh->vbos[Mesh::vboName::UV] != (GLuint) -1) {
                 glBindBuffer(GL_ARRAY_BUFFER, vbos_[Mesh::vboName::UV]);
                 glEnableVertexAttribArray(shader["inTexCoord"]);
                 glVertexAttribPointer(shader["inTexCoord"], 2, GL_FLOAT, GL_FALSE, 0, 0);
@@ -61,7 +61,7 @@ namespace Progression {
     
     // TODO: Implement
     void MeshRenderSubSystem::RemoveRenderComponent(RenderComponent* rc) {
-
+        (void)rc;
     }
 
     void MeshRenderSubSystem::DepthRender(Shader& shader, const glm::mat4& lightVP) {
@@ -75,6 +75,8 @@ namespace Progression {
     }
 
     void MeshRenderSubSystem::ShadowRender(Scene* scene, Shader& shader, Camera& camera) {
+        (void)scene;
+        (void)camera;
         RenderSystem::UploadLights(shader);
         // RenderSystem::UploadCameraProjection(shader, camera);
         for (const auto& mr : meshRenderers) {
@@ -89,6 +91,7 @@ namespace Progression {
     }
 
     void MeshRenderSubSystem::Render(Scene* scene, Camera& camera) {
+        (void)scene;
 		auto& shader = pipelineShaders[camera.GetRenderingPipeline()];
 		shader.Enable();
 		if (camera.GetRenderingPipeline() == RenderingPipeline::FORWARD)

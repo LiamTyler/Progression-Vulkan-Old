@@ -4,6 +4,7 @@
 #include "core/resource_manager.hpp"
 #include "graphics/model_render_component.hpp"
 #include "utils/logger.hpp"
+#include "graphics/render_system.hpp"
 
 namespace Progression {
 
@@ -21,6 +22,8 @@ namespace Progression {
         for (const auto& l : directionalLights_)
             delete l;
         for (const auto& l : pointLights_)
+            delete l;
+        for (const auto& l : spotLights_)
             delete l;
         for (const auto& c : cameras_)
             delete c;
@@ -43,10 +46,14 @@ namespace Progression {
             if (line == "Resource-file") {
                 std::getline(in, line);
                 std::stringstream ss(line);
-                std::string filename;
-                ss >> filename;
-                ss >> filename;
-                ResourceManager::LoadResourceFile(filename);
+                std::string fname;
+                ss >> fname;
+                ss >> fname;
+                ResourceManager::LoadResourceFile(fname);
+            } else if (line == "RootResourceDir") {
+                std::getline(in, line);
+                std::stringstream ss(line);
+                ss >> ResourceManager::rootResourceDir;
             } else if (line == "Camera") {
                 ParseCamera(scene, in);
             } else if (line == "Light") {
@@ -60,6 +67,20 @@ namespace Progression {
                 ss >> name;
                 ss >> name;
                 scene->skybox_ = ResourceManager::GetSkybox(name);
+            } else if (line == "AmbientLight") {
+                // next line should be "color _ _ _"
+                std::getline(in, line);
+                std::stringstream ss(line);
+                std::string name;
+                ss >> name;
+                ss >> RenderSystem::ambientLight;
+            } else if (line == "BackgroundColor") {
+                // next line should be "color _ _ _"
+                std::getline(in, line);
+                std::stringstream ss(line);
+                std::string name;
+                ss >> name;
+                ss >> scene->backgroundColor_;
             }
         }
 
@@ -70,6 +91,7 @@ namespace Progression {
 
     // TODO: implement the scene saving to a file
     bool Scene::Save(const std::string& filename) {
+        (void)filename;
         return false;
     }
 
@@ -79,6 +101,8 @@ namespace Progression {
         for (const auto& l : directionalLights_)
             l->Update();
         for (const auto& l : pointLights_)
+            l->Update();
+        for (const auto& l : spotLights_)
             l->Update();
         for (const auto& c : cameras_)
             c->Update();
@@ -113,12 +137,14 @@ namespace Progression {
     }
 
     bool Scene::AddLight(Light* light) {
-        if (directionalLights_.size() + pointLights_.size() == maxLights_)
+        if (directionalLights_.size() + pointLights_.size() + spotLights_.size() == maxLights_)
             return false;
         if (light->type == Light::Type::DIRECTIONAL) {
             directionalLights_.push_back(light);
         } else if (light->type == Light::Type::POINT) {
             pointLights_.push_back(light);
+        } else if (light->type == Light::Type::SPOT) {
+            spotLights_.push_back(light);
         }
         return true;
     }
@@ -135,6 +161,10 @@ namespace Progression {
             const auto& iter = std::find(pointLights_.begin(), pointLights_.end(), light);
             if (iter != pointLights_.end())
                 pointLights_.erase(iter);
+        } else if (light->type == Light::Type::SPOT) {
+            const auto& iter = std::find(spotLights_.begin(), spotLights_.end(), light);
+            if (iter != spotLights_.end())
+                spotLights_.erase(iter);
         }
     }
 
@@ -230,10 +260,25 @@ namespace Progression {
             } else if (first == "type") {
                 std::string type;
                 ss >> type;
-                if (type == "directional")
+                if (type == "directional") {
                     light->type = Light::Type::DIRECTIONAL;
+                } else if (type == "spot") {
+                    light->type = Light::Type::SPOT;
+                } else {
+                    light->type = Light::Type::POINT;
+                }
             } else if (first == "intensity") {
                 ss >> light->intensity;
+            } else if (first == "radius") {
+                ss >> light->radius;
+            } else if (first == "innerCutoff") {
+                float degrees;
+                ss >> degrees;
+                light->innerCutoff = glm::radians(degrees);
+            } else if (first == "outterCutoff") {
+                float degrees;
+                ss >> degrees;
+                light->outterCutoff = glm::radians(degrees);
             } else if (first == "color") {
                 float x, y, z;
                 ss >> x >> y >> z;
@@ -258,6 +303,7 @@ namespace Progression {
     void Scene::ParseGameObject(Scene* scene, std::ifstream& in) {
         GameObject* obj = new GameObject;
         std::string line = " ";
+        std::shared_ptr<Material> material;
         while (line != "" && !in.eof()) {
             std::getline(in, line);
             std::stringstream ss(line);
@@ -282,11 +328,24 @@ namespace Progression {
 				ss >> modelName;
 				auto model = ResourceManager::GetModel(modelName);
                 if (!model) {
-                    LOG_ERR("There is no model with the name: '" + modelName + "' in the resource manager!");
+                    LOG_ERR("No model found with name: ", modelName);
+                    exit(EXIT_FAILURE);
                 }
 				obj->AddComponent<ModelRenderer>(new ModelRenderer(obj, model.get()));
+            } else if (first == "material") {
+                std::string materialName;
+                ss >> materialName;
+                material = ResourceManager::GetMaterial(materialName);
+                if (!material) {
+                    LOG_WARN("No match for material", materialName, "in the resource manager");
+                }
             }
             // TODO: Specify material from here, which will help with built in shapes
+        }
+        auto modelRenderer = obj->GetComponent<ModelRenderer>();
+        if (modelRenderer && material) {
+            for (size_t i = 0; i < modelRenderer->meshRenderers.size(); ++i)
+                modelRenderer->meshRenderers[i]->material = material.get();
         }
         scene->AddGameObject(obj);
     }

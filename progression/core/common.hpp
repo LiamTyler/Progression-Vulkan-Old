@@ -34,4 +34,12 @@ namespace Progression {
 		return in >> v.x >> v.y >> v.z >> v.w;
 	}
 
+    inline glm::vec3 rotationToDirection(const glm::vec3& rotation, const glm::vec3& forward = glm::vec3(0, 0, -1)) {
+        glm::mat4 rot(1);
+        rot = glm::rotate(rot, rotation.z, glm::vec3(0, 0, 1));
+        rot = glm::rotate(rot, rotation.y, glm::vec3(0, 1, 0));
+        rot = glm::rotate(rot, rotation.x, glm::vec3(1, 0, 0));
+        return glm::normalize(glm::vec3(rot * glm::vec4(forward, 0)));
+    }
+
 } // namespace Progression

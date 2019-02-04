@@ -14,11 +14,12 @@ namespace Progression {
     GLuint RenderSystem::quadVBO_ = 0;
     GLuint RenderSystem::cubeVAO_ = 0;
     GLuint RenderSystem::cubeVBO_ = 0;
-    Shader RenderSystem::skyboxShader_ = {};
+    Shader RenderSystem::backgroundShader_ = {};
     uint64_t RenderSystem::options_ = 0;
 
     unsigned int RenderSystem::numDirectionalLights_ = 0;
     unsigned int RenderSystem::numPointLights_ = 0;
+    unsigned int RenderSystem::numSpotLights_ = 0;
     GLuint RenderSystem::lightSSBO_ = 0;
     unsigned int RenderSystem::maxNumLights_ = 0;
     float RenderSystem::lightIntensityCutoff_ = 0;
@@ -30,6 +31,7 @@ namespace Progression {
     Shader RenderSystem::tdComputeShader_ = {};
 
     RenderSystem::PostProcessing RenderSystem::postProcess_;
+    glm::vec3 RenderSystem::ambientLight = glm::vec3(.1);
 
     void RenderSystem::Init(const config::Config& config) {
         // auto load the mesh renderer subsystem
@@ -47,11 +49,11 @@ namespace Progression {
         tdEnabled_            = rsConfig->get_as<bool>("enableTiledDeferredPipeline").value_or(true);
 
         // setup the lighting data
-        cpuLightBuffer_ = new glm::vec4[2 * maxNumLights_];
+        cpuLightBuffer_ = new glm::vec4[3 * maxNumLights_];
         glGenBuffers(1, &lightSSBO_);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSSBO_);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, lightSSBO_);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, 2 * sizeof(glm::vec4) * maxNumLights_, NULL, GL_DYNAMIC_COPY);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, 3 * sizeof(glm::vec4) * maxNumLights_, NULL, GL_DYNAMIC_COPY);
 
         glEnable(GL_DEPTH_TEST);
 
@@ -125,8 +127,8 @@ namespace Progression {
         glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), skyboxVertices, GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        if (!skyboxShader_.Load(PG_RESOURCE_DIR "shaders/skybox.vert", PG_RESOURCE_DIR "shaders/skybox.frag")) {
-            LOG_ERR("Could not load the skybox shader");
+        if (!backgroundShader_.Load(PG_RESOURCE_DIR "shaders/background.vert", PG_RESOURCE_DIR "shaders/background.frag")) {
+            LOG_ERR("Could not load the background shader");
             exit(EXIT_FAILURE);
         }
 
@@ -175,16 +177,16 @@ namespace Progression {
         glDeleteBuffers(1, &quadVBO_);
         glDeleteVertexArrays(1, &cubeVAO_);
         glDeleteBuffers(1, &cubeVBO_);
-        skyboxShader_.Free();
+        backgroundShader_.Free();
         glDeleteBuffers(1, &lightSSBO_);
         if (tdEnabled_) {
             glDeleteFramebuffers(1, &tdGbuffer_);
             tdComputeShader_.Free();
-            if (tdGBufferTextures_[0] != -1) {
+            if (tdGBufferTextures_[0] != (GLuint) -1) {
                 glDeleteTextures(5, tdGBufferTextures_);
                 glDeleteRenderbuffers(1, &tdGBufferTextures_[5]);
                 for (int i = 0; i < 6; ++i)
-                    tdGBufferTextures_[i] = -1;
+                    tdGBufferTextures_[i] = (GLuint) -1;
             }
         }
         glDeleteFramebuffers(1, &postProcess_.FBO);
@@ -216,6 +218,7 @@ namespace Progression {
         for (const auto& subsys : subSystems_)
             subsys.second->Render(scene, *camera);
 
+        // TODO: SPOT LIGHTS
         if (camera->GetRenderingPipeline() == RenderingPipeline::TILED_DEFERRED) {
             glBindFramebuffer(GL_READ_FRAMEBUFFER, tdGbuffer_);
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, postProcess_.FBO);
@@ -265,8 +268,18 @@ namespace Progression {
         graphics::ToggleDepthTesting(true);
         graphics::ToggleDepthBufferWriting(true);
 
-        if (scene->getSkybox())
+        if (scene->getSkybox()) {
             RenderSkybox(*scene->getSkybox(), *camera);
+        } else {
+            backgroundShader_.Enable();
+            glUniformMatrix4fv(backgroundShader_["MVP"], 1, GL_FALSE, glm::value_ptr(glm::mat4(1)));
+            glUniform1i(backgroundShader_["skybox"], false);
+            glUniform3fv(backgroundShader_["color"], 1, glm::value_ptr(scene->GetBackgroundColor()));
+            glDepthMask(GL_FALSE);
+            glBindVertexArray(quadVAO_);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+            glDepthMask(GL_TRUE);
+        }
     }
 
     void RenderSystem::EnableOption(uint64_t option) {
@@ -284,28 +297,39 @@ namespace Progression {
     void RenderSystem::UpdateLights(Scene* scene, Camera* camera) {
         const auto& dirLights = scene->GetDirectionalLights();
         const auto& pointLights = scene->GetPointLights();
+        const auto& spotLights = scene->GetSpotLights();
         numDirectionalLights_ = dirLights.size();
         numPointLights_ = pointLights.size();
+        numSpotLights_ = spotLights.size();
         glm::mat4 V = camera->GetV();
 
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSSBO_);
-        for (int i = 0; i < dirLights.size(); ++i) {
-            glm::vec3 dir(0, 0, -1);
-            glm::mat4 rot(1);
-            rot = glm::rotate(rot, dirLights[i]->transform.rotation.z, glm::vec3(0, 0, 1));
-            rot = glm::rotate(rot, dirLights[i]->transform.rotation.y, glm::vec3(0, 1, 0));
-            rot = glm::rotate(rot, dirLights[i]->transform.rotation.x, glm::vec3(1, 0, 0));
-            cpuLightBuffer_[2 * i + 0] = V * rot * glm::vec4(dir, 0);
-            cpuLightBuffer_[2 * i + 1] = glm::vec4(dirLights[i]->intensity * dirLights[i]->color, 1);
+        for (size_t i = 0; i < dirLights.size(); ++i) {
+            cpuLightBuffer_[3 * i + 0] = V * glm::vec4(rotationToDirection(dirLights[i]->transform.rotation), 0);
+            cpuLightBuffer_[3 * i + 1] = glm::vec4(dirLights[i]->intensity * dirLights[i]->color, 1);
         }
 
-        for (int i = 0; i < pointLights.size(); ++i) {
-            float lightRadius = sqrtf(pointLights[i]->intensity / lightIntensityCutoff_);
-            cpuLightBuffer_[2 * (numDirectionalLights_ + i) + 0] = V * glm::vec4(pointLights[i]->transform.position, 1);
-            cpuLightBuffer_[2 * (numDirectionalLights_ + i) + 0].w = lightRadius;
-            cpuLightBuffer_[2 * (numDirectionalLights_ + i) + 1] = glm::vec4(pointLights[i]->intensity * pointLights[i]->color, 1);
+        int numLights = numDirectionalLights_;
+        for (size_t i = 0; i < pointLights.size(); ++i) {
+            const auto& pl = pointLights[i];
+            cpuLightBuffer_[3 * (numLights + i) + 0]   = V * glm::vec4(pl->transform.position, 1);
+            cpuLightBuffer_[3 * (numLights + i) + 0].w = pl->radius * pl->radius;
+            cpuLightBuffer_[3 * (numLights + i) + 1]   = glm::vec4(pl->intensity * pl->color, 1);
         }
-        glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, 2 * (numDirectionalLights_ + numPointLights_) * sizeof(glm::vec4), cpuLightBuffer_);
+
+        numLights += numPointLights_;
+        for (size_t i = 0; i < spotLights.size(); ++i) {
+            const auto& sl = spotLights[i];
+            cpuLightBuffer_[3 * (numLights + i) + 0]   = V * glm::vec4(sl->transform.position, 1);
+            cpuLightBuffer_[3 * (numLights + i) + 0].w = sl->radius * sl->radius;
+            cpuLightBuffer_[3 * (numLights + i) + 1]   = glm::vec4(sl->intensity * sl->color, 1);
+            cpuLightBuffer_[3 * (numLights + i) + 1].w = glm::cos(sl->innerCutoff);
+            cpuLightBuffer_[3 * (numLights + i) + 2]   = V * glm::vec4(rotationToDirection(sl->transform.rotation), 0);
+            cpuLightBuffer_[3 * (numLights + i) + 2].w = glm::cos(sl->outterCutoff);
+        }
+        numLights += numSpotLights_;
+
+        glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, 3 * numLights * sizeof(glm::vec4), cpuLightBuffer_);
     }
 
 
@@ -313,6 +337,8 @@ namespace Progression {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSSBO_);
         glUniform1i(shader["numDirectionalLights"], numDirectionalLights_);
         glUniform1i(shader["numPointLights"], numPointLights_);
+        glUniform1i(shader["numSpotLights"], numSpotLights_);
+        glUniform3fv(shader["ambientLight"], 1, glm::value_ptr(ambientLight));
     }
 
     void RenderSystem::UploadCameraProjection(Shader& shader, Camera& camera) {
@@ -336,10 +362,11 @@ namespace Progression {
     }
 
     void RenderSystem::RenderSkybox(const Skybox& skybox, const Camera& camera) {
-        skyboxShader_.Enable();
+        backgroundShader_.Enable();
         glm::mat4 P = camera.GetP();
         glm::mat4 RV = glm::mat4(glm::mat3(camera.GetV()));
-        glUniformMatrix4fv(skyboxShader_["VP"], 1, GL_FALSE, glm::value_ptr(P * RV));
+        glUniformMatrix4fv(backgroundShader_["MVP"], 1, GL_FALSE, glm::value_ptr(P * RV));
+        glUniform1i(backgroundShader_["skybox"], true);
         glDepthMask(GL_FALSE);
         glBindVertexArray(cubeVAO_);
         glActiveTexture(GL_TEXTURE0);

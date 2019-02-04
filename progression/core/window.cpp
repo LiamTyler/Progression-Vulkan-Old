@@ -37,7 +37,6 @@ namespace Progression {
         // default configurable settings
 		int glMajor;
 		int glMinor;
-		bool resizeable;
 		bool vsync;
 
         // Grab the specified values in the config if available
@@ -52,7 +51,7 @@ namespace Progression {
         if (glMajor * 10 + glMinor < 43)
             LOG_WARN("Using a version of OpenGL less that 4.3. Tiled deferred rendering relies on compute shaders, which is version 4.3 and up");
 
-		resizeable = winConfig->get_as<bool>("resizeable").value_or(false);
+		// resizeable = winConfig->get_as<bool>("resizeable").value_or(false);
 		_mTitle = winConfig->get_as<std::string>("title").value_or("untitled");
 		_mWindowSize.x = winConfig->get_as<int>("width").value_or(640);
 		_mWindowSize.y = winConfig->get_as<int>("height").value_or(480);
@@ -61,7 +60,7 @@ namespace Progression {
 
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, glMajor);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, glMinor);        
-        glfwWindowHint(GLFW_RESIZABLE, resizeable);
+        glfwWindowHint(GLFW_RESIZABLE, false);
 
         _mWindow = glfwCreateWindow(_mWindowSize.x, _mWindowSize.y, _mTitle.c_str(), NULL, NULL);
         if (!_mWindow) {

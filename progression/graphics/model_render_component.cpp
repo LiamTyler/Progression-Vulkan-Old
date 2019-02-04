@@ -5,11 +5,11 @@
 
 namespace Progression {
 
-    ModelRenderer::ModelRenderer(GameObject* go, Model* mod, bool active) :
-        RenderComponent(go, active),
+    ModelRenderer::ModelRenderer(GameObject* go, Model* mod, bool _active) :
+        RenderComponent(go, _active),
         model(mod)
     {
-        for (int i = 0; i < model->meshes.size(); i++) {
+        for (size_t i = 0; i < model->meshes.size(); i++) {
             MeshRenderer* mr = new MeshRenderer(go, model->meshes[i].get(), model->materials[i].get());
             meshRenderers.push_back(mr);
         }

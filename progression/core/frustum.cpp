@@ -19,7 +19,6 @@ namespace Progression {
     {
         glm::vec3 ntl, ntr, nbl, nbr, ftl, ftr, fbr, fbl;
         float nearHeight, nearWidth, farHeight, farWidth;
-
         float angle = 0.5 * fov;
 
         nearHeight = nearPlane * tanf(angle);

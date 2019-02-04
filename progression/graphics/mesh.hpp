@@ -25,9 +25,9 @@ namespace Progression {
 		void UploadToGPU(bool freeCPUCopy = true);
 		void Free(bool gpuCopy = true, bool cpuCopy = true);
 
-        bool gpuCopyCreated() const { return vbos[vboName::VERTEX] != -1; }
-        bool hasUVBuffer() const { return vbos[vboName::UV] != -1; }
-        bool hasIndexBuffer() const { return vbos[vboName::INDEX] != -1; }
+        bool gpuCopyCreated() const { return vbos[vboName::VERTEX] != (unsigned int) -1; }
+        bool hasUVBuffer() const { return vbos[vboName::UV] != (unsigned int) -1; }
+        bool hasIndexBuffer() const { return vbos[vboName::INDEX] != (unsigned int) -1; }
         unsigned int getNumVertices() const { return vertices.size() ? vertices.size() : numVertices_; }
         unsigned int getNumIndices() const { return indices.size() ? indices.size() : numIndices_; }
 

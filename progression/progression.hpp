@@ -46,31 +46,10 @@ namespace PG = Progression;
 
 namespace Progression {
 
-    bool EngineShutdown = false;
+    extern bool EngineShutdown;
 
-    inline void EngineInitialize(const config::Config& conf) {
-		Logger::Init(conf);
-        random::setSeed();
-        Window::Init(conf);
-        Time::Init(conf);
-        Input::Init(conf);
-        ResourceManager::Init(conf);
-        RenderSystem::Init(conf);
-        #if PG_AUDIO_ENABLED
-            AudioSystem::Init(conf);
-        #endif
-    }
+    void EngineInitialize(std::string config_name = "");
 
-    inline void EngineQuit() {
-        #if PG_AUDIO_ENABLED
-            AudioSystem::Free();
-        #endif
-        RenderSystem::Free();
-        ResourceManager::Free();
-        Input::Free();
-        Time::Free();
-        Window::Free();
-        Logger::Free();
-    }
+    void EngineQuit();
 
 } // namespace Progression

@@ -37,11 +37,12 @@ namespace Progression {
 
         std::vector<Light*>& GetPointLights() { return pointLights_; }
         std::vector<Light*>& GetDirectionalLights() { return directionalLights_; }
+        std::vector<Light*>& GetSpotLights() { return spotLights_; }
         unsigned int GetNumPointLights() const { return pointLights_.size(); }
         unsigned int GetNumDirectionalLights() const { return directionalLights_.size(); }
         const std::vector<GameObject*>& GetGameObjects() const { return gameObjects_; }
-        glm::vec4 GetBackgroundColor() const { return backgroundColor_; }
-        void SetBackgroundColor(const glm::vec4& color) { backgroundColor_ = color; }
+        glm::vec3 GetBackgroundColor() const { return backgroundColor_; }
+        void SetBackgroundColor(const glm::vec3& color) { backgroundColor_ = color; }
         std::shared_ptr<Skybox> getSkybox() const { return skybox_; }
         void setSkybox(std::shared_ptr<Skybox> skybox) { skybox_ = skybox; }
 
@@ -52,9 +53,10 @@ namespace Progression {
         std::vector<GameObject*> gameObjects_;
         std::vector<Light*> directionalLights_;
         std::vector<Light*> pointLights_;
+        std::vector<Light*> spotLights_;
         std::vector<Camera*> cameras_;
 
-        glm::vec4 backgroundColor_;
+        glm::vec3 backgroundColor_;
         std::shared_ptr<Skybox> skybox_;
 
         // scene file parser helpers

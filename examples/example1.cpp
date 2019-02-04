@@ -4,13 +4,7 @@
 using namespace Progression;
 
 int main(int argc, char* argv[]) {
-	auto conf = PG::config::Config(PG_ROOT_DIR "configs/default.toml");
-	if (!conf) {
-        LOG_ERR("Failed to load the config file");
-        exit(EXIT_FAILURE);
-    }
-
-	PG::EngineInitialize(conf);
+	PG::EngineInitialize(PG_ROOT_DIR "configs/default.toml");
 
     LOG("debug message");
     LOG_WARN("warn message p1", "p2", "p3");

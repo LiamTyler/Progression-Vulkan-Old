@@ -13,7 +13,7 @@ namespace Progression {
 	class GameObject {
 	public:
 		GameObject(const Transform& t = Transform(), const std::string& name = "");
-		~GameObject();
+		virtual ~GameObject();
 
 		virtual void Update();
 

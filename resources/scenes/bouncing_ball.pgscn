@@ -1,6 +1,9 @@
 Resource-file
 filename scenes/bouncing_ball.txt
 
+AmbientLight
+color .1 .1 .1
+
 Camera
 name main-camera
 position -20 15 -25

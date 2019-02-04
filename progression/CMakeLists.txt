@@ -27,7 +27,6 @@ set(
     core/bounding_box.cpp
     core/frustum.cpp
 
-    graphics/lights.cpp
     graphics/texture2D.cpp
     
     graphics/material.cpp
@@ -46,9 +45,11 @@ set(
 
     utils/logger.cpp
 
-    ${CMAKE_SOURCE_DIR}/ext/tinyobjloader/tiny_obj_loader.cc
-    ${CMAKE_SOURCE_DIR}/ext/memory_map/MemoryMapped.cpp    
-    ${CMAKE_SOURCE_DIR}/ext/glad/glad.c
+    ${PROGRESSION_DIR}/ext/tinyobjloader/tiny_obj_loader.cc
+    ${PROGRESSION_DIR}/ext/memory_map/MemoryMapped.cpp    
+    ${PROGRESSION_DIR}/ext/glad/glad.c
+
+    progression.cpp
 )
 
 set(
@@ -91,13 +92,13 @@ set(
     utils/logger.hpp
     utils/random.hpp
     
-    ${CMAKE_SOURCE_DIR}/ext/tinyobjloader/tiny_obj_loader.h
-    ${CMAKE_SOURCE_DIR}/ext/stb_image/stb_image.h
-    ${CMAKE_SOURCE_DIR}/ext/stb_image/stb_image_write.h
-    ${CMAKE_SOURCE_DIR}/ext/cpptoml.h
-    ${CMAKE_SOURCE_DIR}/ext/glad/glad.h
+    ${PROGRESSION_DIR}/ext/tinyobjloader/tiny_obj_loader.h
+    ${PROGRESSION_DIR}/ext/stb_image/stb_image.h
+    ${PROGRESSION_DIR}/ext/stb_image/stb_image_write.h
+    ${PROGRESSION_DIR}/ext/cpptoml.h
+    ${PROGRESSION_DIR}/ext/glad/glad.h
     
-    ${CMAKE_SOURCE_DIR}/ext/memory_map/MemoryMapped.h
+    ${PROGRESSION_DIR}/ext/memory_map/MemoryMapped.h
 
     progression.hpp
 )
