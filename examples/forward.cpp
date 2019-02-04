@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
 		exit(0);
 	}
 
-	PG::EngineInitialize(conf);
+	PG::EngineInitialize(PG_ROOT_DIR "configs/bouncing_ball.toml");
 
 	std::cout << "about to laod scene" << std::endl;
 	auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/bouncing_ball.pgscn");
