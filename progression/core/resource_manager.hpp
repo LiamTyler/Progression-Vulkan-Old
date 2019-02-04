@@ -21,14 +21,14 @@ namespace Progression {
 
         static bool LoadResourceFile(const std::string& relativePath);
         
-        static std::shared_ptr<Model> GetModel(const std::string& name, bool shallowCopy = false) {
+        static std::shared_ptr<Model> GetModel(const std::string& name) {
             if (models_.find(name) == models_.end()) {
                 return nullptr;
             }
 			return models_[name];
         }
 
-        static std::shared_ptr<Material> GetMaterial(const std::string& name, bool shallowCopy = false) {
+        static std::shared_ptr<Material> GetMaterial(const std::string& name) {
             if (materials_.find(name) == materials_.end()) {
                 return nullptr;
             }

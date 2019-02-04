@@ -180,11 +180,11 @@ namespace Progression {
         if (tdEnabled_) {
             glDeleteFramebuffers(1, &tdGbuffer_);
             tdComputeShader_.Free();
-            if (tdGBufferTextures_[0] != -1) {
+            if (tdGBufferTextures_[0] != (GLuint) -1) {
                 glDeleteTextures(5, tdGBufferTextures_);
                 glDeleteRenderbuffers(1, &tdGBufferTextures_[5]);
                 for (int i = 0; i < 6; ++i)
-                    tdGBufferTextures_[i] = -1;
+                    tdGBufferTextures_[i] = (GLuint) -1;
             }
         }
         glDeleteFramebuffers(1, &postProcess_.FBO);
@@ -302,13 +302,13 @@ namespace Progression {
         glm::mat4 V = camera->GetV();
 
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSSBO_);
-        for (int i = 0; i < dirLights.size(); ++i) {
+        for (size_t i = 0; i < dirLights.size(); ++i) {
             cpuLightBuffer_[3 * i + 0] = V * glm::vec4(rotationToDirection(dirLights[i]->transform.rotation), 0);
             cpuLightBuffer_[3 * i + 1] = glm::vec4(dirLights[i]->intensity * dirLights[i]->color, 1);
         }
 
         int numLights = numDirectionalLights_;
-        for (int i = 0; i < pointLights.size(); ++i) {
+        for (size_t i = 0; i < pointLights.size(); ++i) {
             const auto& pl = pointLights[i];
             cpuLightBuffer_[3 * (numLights + i) + 0]   = V * glm::vec4(pl->transform.position, 1);
             cpuLightBuffer_[3 * (numLights + i) + 0].w = pl->radius * pl->radius;
@@ -316,7 +316,7 @@ namespace Progression {
         }
 
         numLights += numPointLights_;
-        for (int i = 0; i < spotLights.size(); ++i) {
+        for (size_t i = 0; i < spotLights.size(); ++i) {
             const auto& sl = spotLights[i];
             cpuLightBuffer_[3 * (numLights + i) + 0]   = V * glm::vec4(sl->transform.position, 1);
             cpuLightBuffer_[3 * (numLights + i) + 0].w = sl->radius * sl->radius;

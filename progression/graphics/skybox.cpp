@@ -18,7 +18,7 @@ namespace Progression {
 
     Skybox& Skybox::operator=(Skybox&& skybox) {
         skyboxTextureID_ = skybox.skyboxTextureID_;
-        skybox.skyboxTextureID_ = -1;
+        skybox.skyboxTextureID_ = (GLuint) -1;
 
         return *this;
     }
@@ -50,7 +50,7 @@ namespace Progression {
 	}
 
     void Skybox::Free() {
-        if (skyboxTextureID_ != -1)
+        if (skyboxTextureID_ != (GLuint) -1)
             glDeleteTextures(1, &skyboxTextureID_);
     }
 

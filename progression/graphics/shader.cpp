@@ -4,7 +4,7 @@
 
 namespace Progression {
 
-	Shader::Shader() : program_(-1) {
+	Shader::Shader() : program_((GLuint) -1) {
 	}
 
 	Shader::~Shader() {
@@ -21,7 +21,7 @@ namespace Progression {
         attributeList_ = std::move(shader.attributeList_);
         uniformList_ = std::move(shader.uniformList_);
 
-        shader.program_ = -1;
+        shader.program_ = (GLuint) -1;
 
         return *this;
     }
@@ -82,7 +82,7 @@ namespace Progression {
     // Note: technically, if 
 	bool Shader::CreateAndLinkProgram() {
 		program_ = glCreateProgram();
-		for (int i = 0; i < shaders_.size(); i++)
+		for (size_t i = 0; i < shaders_.size(); i++)
 			glAttachShader(program_, shaders_[i]);
 
 		glLinkProgram(program_);
@@ -99,7 +99,7 @@ namespace Progression {
 			return false;
 		}
 
-		for (int i = 0; i < shaders_.size(); i++) {
+		for (size_t i = 0; i < shaders_.size(); i++) {
 			glDetachShader(program_, shaders_[i]);
 			glDeleteShader(shaders_[i]);
 		}
@@ -148,14 +148,14 @@ namespace Progression {
 	}
 
     void Shader::Free() {
-        for (int i = 0; i < shaders_.size(); i++) {
+        for (size_t i = 0; i < shaders_.size(); i++) {
             glDetachShader(program_, shaders_[i]);
             glDeleteShader(shaders_[i]);
         }
         shaders_.clear();
-        if (program_ != -1) {
+        if (program_ != (GLuint) -1) {
             glDeleteProgram(program_);
-            program_ = -1;
+            program_ = (GLuint) -1;
         }
     }
 
@@ -178,7 +178,7 @@ namespace Progression {
 	GLuint Shader::GetUniform(const std::string& name) const {
 		auto it = uniformList_.find(name);
 		if (it == uniformList_.end())
-			return -1;
+			return (GLuint) -1;
 		else
 			return it->second;
 	}
@@ -186,7 +186,7 @@ namespace Progression {
 	GLuint Shader::GetAttribute(const std::string& name) const {
 		auto it = attributeList_.find(name);
 		if (it == attributeList_.end())
-			return -1;
+			return (GLuint) -1;
 		else
 			return it->second;
 	}
@@ -202,7 +202,7 @@ namespace Progression {
 			return it->second;
 
 		// std::cout << "uniform '" << name << "' not found!" << std::endl;
-		return -1;
+		return (GLuint) -1;
 	}
 
 } // namespace Progression

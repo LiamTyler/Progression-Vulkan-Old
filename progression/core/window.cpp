@@ -37,7 +37,6 @@ namespace Progression {
         // default configurable settings
 		int glMajor;
 		int glMinor;
-		bool resizeable;
 		bool vsync;
 
         // Grab the specified values in the config if available
@@ -61,7 +60,7 @@ namespace Progression {
 
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, glMajor);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, glMinor);        
-        glfwWindowHint(GLFW_RESIZABLE, resizeable);
+        glfwWindowHint(GLFW_RESIZABLE, false);
 
         _mWindow = glfwCreateWindow(_mWindowSize.x, _mWindowSize.y, _mTitle.c_str(), NULL, NULL);
         if (!_mWindow) {

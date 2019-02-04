@@ -9,7 +9,7 @@ namespace Progression {
         RenderComponent(go, active),
         model(mod)
     {
-        for (int i = 0; i < model->meshes.size(); i++) {
+        for (size_t i = 0; i < model->meshes.size(); i++) {
             MeshRenderer* mr = new MeshRenderer(go, model->meshes[i].get(), model->materials[i].get());
             meshRenderers.push_back(mr);
         }

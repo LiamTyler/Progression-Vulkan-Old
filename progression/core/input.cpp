@@ -12,6 +12,7 @@ namespace Progression {
     glm::ivec2 Input::scrollOffset_ = glm::ivec2(0);
 
     void Input::Init(const config::Config& config) {
+        (void)config;
         GLFWwindow* window = Window::getGLFWHandle();
         double x, y;
         glfwGetCursorPos(window, &x, &y);
@@ -38,6 +39,9 @@ namespace Progression {
     }
 
     void Input::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+        (void)window;
+        (void)scancode;
+        (void)mods;
         if (action == GLFW_PRESS) {
             keysDown_[key] = true;
         } else if (action == GLFW_RELEASE) {
@@ -47,10 +51,13 @@ namespace Progression {
     }
 
     void Input::cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
+        (void)window;
         currentCursorPos_ = glm::ivec2(xpos, ypos);
     }
 
     void Input::mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+        (void)window;
+        (void)mods;
         if (action == GLFW_PRESS) {
             mouseButtonDown_[button] = true;
         }
@@ -61,6 +68,7 @@ namespace Progression {
     }
 
     void Input::scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
+        (void)window;
         scrollOffset_ += glm::ivec2(xoffset, yoffset);
     }
 

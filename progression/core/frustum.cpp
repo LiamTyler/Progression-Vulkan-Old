@@ -4,6 +4,9 @@
 namespace Progression {
 
     Frustum::Frustum(const Camera& camera, int row, int col, int tile_size) {
+        (void)row;
+        (void)col;
+        (void)tile_size;;
         UpdateFrustum(camera);
     }
 
@@ -18,6 +21,9 @@ namespace Progression {
     void Frustum::UpdateFrustum(const Camera& camera, int row, int col, int tile_size) {
         glm::vec3 ntl, ntr, nbl, nbr, ftl, ftr, fbr, fbl;
         float nearHeight, nearWidth, farHeight, farWidth;
+        (void)row;
+        (void)col;
+        (void)tile_size;;
 
         float angle = 0.5 * camera.GetFOV();
         float nearDist = camera.GetNearPlane();

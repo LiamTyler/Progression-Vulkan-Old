@@ -3,6 +3,8 @@
 using namespace Progression;
 
 int main(int argc, char* argv[]) {
+    (void)argc;
+    (void)argv;
 	PG::EngineInitialize();
 
 	auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/lightDemo.pgscn");

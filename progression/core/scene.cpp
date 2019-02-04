@@ -91,6 +91,7 @@ namespace Progression {
 
     // TODO: implement the scene saving to a file
     bool Scene::Save(const std::string& filename) {
+        (void)filename;
         return false;
     }
 
@@ -342,10 +343,8 @@ namespace Progression {
         }
         auto modelRenderer = obj->GetComponent<ModelRenderer>();
         if (modelRenderer && material) {
-            auto model = modelRenderer->model;
-            for (int i = 0; i < modelRenderer->meshRenderers.size(); ++i) {
+            for (size_t i = 0; i < modelRenderer->meshRenderers.size(); ++i)
                 modelRenderer->meshRenderers[i]->material = material.get();
-            }
         }
         scene->AddGameObject(obj);
     }

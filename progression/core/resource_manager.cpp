@@ -197,8 +197,8 @@ namespace Progression {
                         LOG_WARN("warning: resource manager has no material with name '", material, "'. Sticking with the model's default materials.");
                         continue;
                     }
-                    auto mat = GetMaterial(material, false);
-                    for (int i = 0; i < model->materials.size(); ++i)
+                    auto mat = GetMaterial(material);
+                    for (size_t i = 0; i < model->materials.size(); ++i)
                         model->materials[i] = mat;
                 }
             } else if (line == "Texture") {
@@ -574,7 +574,7 @@ namespace Progression {
                 outFile.write((char*) &diffuseTexName[0], sizeof(char) * diffuseNameLength);
         }
 
-        for (int i = 0; i < meshList.size(); ++i) {
+        for (size_t i = 0; i < meshList.size(); ++i) {
             const auto& mesh = meshList[i];
             unsigned int numVerts = mesh.vertices.size();
             unsigned int numIndices = mesh.indices.size();

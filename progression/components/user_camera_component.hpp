@@ -13,10 +13,10 @@ namespace Progression {
         virtual void Update();
         virtual void Stop();
 
-        glm::vec3 velocity;
         float moveSpeed;
         float turnSpeed;
         float maxAngle;
+        glm::vec3 velocity;
     };
     
 } // namespace Progression
