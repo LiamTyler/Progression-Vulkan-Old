@@ -6,18 +6,15 @@
 #include "graphics/mesh_render_subsystem.hpp"
 #include "core/window.hpp"
 #include "utils/logger.hpp"
+#include "graphics/shadow_map.hpp"
 
 namespace Progression {
 
     namespace {
 
         Light* shadowLight = nullptr;
-        glm::mat4 LMS;
-        Shader depthWriteShader;
-        if (!depthWriteShader.Load(PG_RESOURCE_DIR "shaders/shadow.vert", PG_RESOURCE_DIR "shaders/shadow.frag")) {
-            LOG_ERR("Could not load shadow shader");
-            exit(EXIT_FAILURE);
-        }
+        glm::mat4 LSM;
+        Shader depthShader;
 
     } // namespace anonymous
 
@@ -91,9 +88,9 @@ namespace Progression {
             // positions          
             -1.0f,  1.0f, -1.0f,
             -1.0f, -1.0f, -1.0f,
-             1.0f, -1.0f, -1.0f,
-             1.0f, -1.0f, -1.0f,
-             1.0f,  1.0f, -1.0f,
+            1.0f, -1.0f, -1.0f,
+            1.0f, -1.0f, -1.0f,
+            1.0f,  1.0f, -1.0f,
             -1.0f,  1.0f, -1.0f,
 
             -1.0f, -1.0f,  1.0f,
@@ -103,33 +100,33 @@ namespace Progression {
             -1.0f,  1.0f,  1.0f,
             -1.0f, -1.0f,  1.0f,
 
-             1.0f, -1.0f, -1.0f,
-             1.0f, -1.0f,  1.0f,
-             1.0f,  1.0f,  1.0f,
-             1.0f,  1.0f,  1.0f,
-             1.0f,  1.0f, -1.0f,
-             1.0f, -1.0f, -1.0f,
+            1.0f, -1.0f, -1.0f,
+            1.0f, -1.0f,  1.0f,
+            1.0f,  1.0f,  1.0f,
+            1.0f,  1.0f,  1.0f,
+            1.0f,  1.0f, -1.0f,
+            1.0f, -1.0f, -1.0f,
 
             -1.0f, -1.0f,  1.0f,
             -1.0f,  1.0f,  1.0f,
-             1.0f,  1.0f,  1.0f,
-             1.0f,  1.0f,  1.0f,
-             1.0f, -1.0f,  1.0f,
+            1.0f,  1.0f,  1.0f,
+            1.0f,  1.0f,  1.0f,
+            1.0f, -1.0f,  1.0f,
             -1.0f, -1.0f,  1.0f,
 
             -1.0f,  1.0f, -1.0f,
-             1.0f,  1.0f, -1.0f,
-             1.0f,  1.0f,  1.0f,
-             1.0f,  1.0f,  1.0f,
+            1.0f,  1.0f, -1.0f,
+            1.0f,  1.0f,  1.0f,
+            1.0f,  1.0f,  1.0f,
             -1.0f,  1.0f,  1.0f,
             -1.0f,  1.0f, -1.0f,
 
             -1.0f, -1.0f, -1.0f,
             -1.0f, -1.0f,  1.0f,
-             1.0f, -1.0f, -1.0f,
-             1.0f, -1.0f, -1.0f,
+            1.0f, -1.0f, -1.0f,
+            1.0f, -1.0f, -1.0f,
             -1.0f, -1.0f,  1.0f,
-             1.0f, -1.0f,  1.0f
+            1.0f, -1.0f,  1.0f
         };
 
         glGenVertexArrays(1, &cubeVAO_);
@@ -179,6 +176,11 @@ namespace Progression {
         graphics::FinalizeFBO();
 
         postProcess_.exposure = 1;
+
+        if (!depthShader.Load(PG_RESOURCE_DIR "shaders/shadow.vert", PG_RESOURCE_DIR "shaders/shadow.frag")) {
+            LOG_ERR("Could not load shadow shader");
+            exit(EXIT_FAILURE);
+        }
     }
 
     void RenderSystem::Free() {
@@ -205,6 +207,47 @@ namespace Progression {
         glDeleteTextures(1, &postProcess_.colorTex);
         glDeleteRenderbuffers(1, &postProcess_.depthTex);
         postProcess_.shader.Free();
+        depthShader.Free();
+    }
+
+    void RenderSystem::ShadowPass(const Camera& camera) {
+        // no need to do write depth if there is no light casting shadows
+        if (!shadowLight)
+            return;
+
+        LSM = glm::mat4(1);
+        Frustum frustum = camera.GetFrustum();
+        float np = camera.GetNearPlane();
+        float fp = camera.GetFarPlane();
+        glm::vec3 frustCenter = 0.5f*(fp - np) * camera.GetForwardDir() + camera.transform.position;
+
+        if (shadowLight->type == Light::Type::DIRECTIONAL) {
+            glm::vec3 lightDir = rotationToDirection(shadowLight->transform.rotation);
+            glm::mat4 lightView = glm::lookAt(glm::vec3(0), lightDir, glm::vec3(0, 1, 0));
+
+            glm::vec3 LSCorners[8];
+            for (int i = 0; i < 8; ++i) {
+                LSCorners[i] = glm::vec3(lightView * glm::vec4(frustum.corners[i], 1));
+            }
+            BoundingBox lsmBB(LSCorners[0], LSCorners[0]);
+            lsmBB.Encompass(LSCorners + 1, 7);
+
+            glm::vec3 pMin(-70, 0, -50);
+            glm::vec3 pMax(70, 70, 50);
+            glm::mat4 lightProj = glm::ortho<float>(pMin.x, pMax.x, pMin.y, pMax.y, pMin.z, pMax.z);
+            // glm::mat4 lightProj = glm::ortho(lsmBB.min.x, lsmBB.max.x, lsmBB.min.y, lsmBB.max.y, np, fp);
+
+            LSM = lightProj * lightView;
+        } else if (shadowLight->type == Light::Type::POINT) {
+            // TODO: point shadows
+        } else {
+            // TODO: spot shadows
+        }
+
+        shadowLight->shadowMap->BindForWriting();
+        depthShader.Enable();
+        for (const auto& subsys : subSystems_)
+            subsys.second->DepthPass(depthShader, LSM);
     }
 
     void RenderSystem::Render(Scene* scene, Camera* camera) {
@@ -213,9 +256,8 @@ namespace Progression {
         }
 
         graphics::ToggleDepthTesting(true);
-        //graphics::ToggleCulling(true);
 
-        glBindFramebuffer(GL_FRAMEBUFFER, postProcess_.FBO);
+        graphics::BindFrameBuffer(postProcess_.FBO);
         graphics::SetClearColor(glm::vec4(0));
         graphics::Clear();
 
@@ -227,8 +269,13 @@ namespace Progression {
 
         UpdateLights(scene, camera);
 
+        ShadowPass(*camera);
+
+        glViewport(0, 0, Window::width(), Window::height());
+        graphics::BindFrameBuffer(postProcess_.FBO);
+
         for (const auto& subsys : subSystems_)
-            subsys.second->Render(scene, *camera);
+            subsys.second->Render(*camera);
 
         // TODO: SPOT LIGHTS
         if (camera->GetRenderingPipeline() == RenderingPipeline::TILED_DEFERRED) {
@@ -315,6 +362,7 @@ namespace Progression {
         numSpotLights_ = spotLights.size();
         glm::mat4 V = camera->GetV();
 
+        int numLights = 0;
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSSBO_);
         for (size_t i = 0; i < dirLights.size(); ++i) {
             const auto& dl = dirLights[i];
@@ -322,41 +370,38 @@ namespace Progression {
                 shadowLight = dl;
                 --numDirectionalLights_;
             } else {
-                cpuLightBuffer_[3 * i + 0] = V * glm::vec4(rotationToDirection(dl->transform.rotation), 0);
-                cpuLightBuffer_[3 * i + 1] = glm::vec4(dl->intensity * dl->color, 1);
+                cpuLightBuffer_[3 * numLights + 0] = glm::vec4(rotationToDirection(dl->transform.rotation), 0);
+                cpuLightBuffer_[3 * numLights + 1] = glm::vec4(dl->intensity * dl->color, 1);
+                ++numLights;
             }
         }
 
-        int numLights = numDirectionalLights_;
         for (size_t i = 0; i < pointLights.size(); ++i) {
             const auto& pl = pointLights[i];
             if (pl->shadowMap) {
                 shadowLight = pl;
                 --numPointLights_;
             } else {
-                cpuLightBuffer_[3 * (numLights + i) + 0]   = V * glm::vec4(pl->transform.position, 1);
-                cpuLightBuffer_[3 * (numLights + i) + 0].w = pl->radius * pl->radius;
-                cpuLightBuffer_[3 * (numLights + i) + 1]   = glm::vec4(pl->intensity * pl->color, 1);
+                cpuLightBuffer_[3 * numLights + 0]   = glm::vec4(pl->transform.position, pl->radius * pl->radius);
+                cpuLightBuffer_[3 * numLights + 1]   = glm::vec4(pl->intensity * pl->color, 1);
                 ++numLights;
             }
         }
 
-        numLights += numPointLights_;
         for (size_t i = 0; i < spotLights.size(); ++i) {
             const auto& sl = spotLights[i];
             if (sl->shadowMap) {
                 shadowLight = sl;
                 --numSpotLights_;
             } else {
-                cpuLightBuffer_[3 * (numLights + i) + 0]   = V * glm::vec4(sl->transform.position, 1);
-                cpuLightBuffer_[3 * (numLights + i) + 0].w = sl->radius * sl->radius;
-                cpuLightBuffer_[3 * (numLights + i) + 1]   = glm::vec4(sl->intensity * sl->color, 1);
-                cpuLightBuffer_[3 * (numLights + i) + 1].w = glm::cos(sl->innerCutoff);
-                cpuLightBuffer_[3 * (numLights + i) + 2]   = V * glm::vec4(rotationToDirection(sl->transform.rotation), 0);
-                cpuLightBuffer_[3 * (numLights + i) + 2].w = glm::cos(sl->outterCutoff);
+                cpuLightBuffer_[3 * numLights + 0] = glm::vec4(sl->transform.position, sl->radius * sl->radius);
+                cpuLightBuffer_[3 * numLights + 1] = glm::vec4(sl->intensity * sl->color, glm::cos(sl->innerCutoff));
+                cpuLightBuffer_[3 * numLights + 2] = glm::vec4(rotationToDirection(sl->transform.rotation),
+                        glm::cos(sl->outerCutoff));
+                ++numLights;
             }
         }
-        if (numLights < (numDirectionalLights_ + numPointLights_ + numSpotLights_ - 2)) {
+        if (numLights < static_cast<int>(dirLights.size() + pointLights.size() + spotLights.size() - 2)) {
             LOG_WARN("More than 2 lights are supposed to be casting shadows, but only 1 is supported");
         }
 
@@ -370,11 +415,28 @@ namespace Progression {
         glUniform1i(shader["numPointLights"], numPointLights_);
         glUniform1i(shader["numSpotLights"], numSpotLights_);
         glUniform3fv(shader["ambientLight"], 1, glm::value_ptr(ambientLight));
-        
-    }
 
-    void RenderSystem::UploadCameraProjection(Shader& shader, Camera& camera) {
-        glUniformMatrix4fv(shader["projectionMatrix"], 1, GL_FALSE, glm::value_ptr(camera.GetP()));
+        int shadowLightType = 0;
+        if (shadowLight) {
+            glUniformMatrix4fv(shader["LSM"], 1, GL_FALSE, glm::value_ptr(LSM));
+            graphics::Bind2DTexture(shadowLight->shadowMap->texture(), shader["depthTex"], 1);
+            glUniform3fv(shader["shadowLight.color"], 1, glm::value_ptr(shadowLight->color * shadowLight->intensity));
+            glm::vec3 dir = -rotationToDirection(shadowLight->transform.rotation);
+            glUniform3fv(shader["shadowLight.dir"], 1, glm::value_ptr(dir));
+            glUniform3fv(shader["shadowLight.pos"], 1, glm::value_ptr(shadowLight->color * shadowLight->intensity));
+            glUniform1f(shader["shadowLight.rSquared"], shadowLight->radius * shadowLight->radius);
+            glUniform1f(shader["shadowLight.innerCutoff"], shadowLight->innerCutoff);
+            glUniform1f(shader["shadowLight.outerCutoff"], shadowLight->outerCutoff);
+
+            auto type = shadowLight->type;
+            if (type == Light::Type::DIRECTIONAL)
+                shadowLightType = 1;
+            else if (type == Light::Type::POINT)
+                shadowLightType = 2;
+            else
+                shadowLightType = 3;
+        }
+        glUniform1i(shader["shadowLightType"], shadowLightType);
     }
 
     void RenderSystem::UploadMaterial(Shader& shader, Material& material) {
@@ -385,9 +447,7 @@ namespace Progression {
         glUniform1f(shader["specular"], material.shininess);
         if (material.diffuseTexture) {
             glUniform1i(shader["textured"], true);
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, material.diffuseTexture->getGPUHandle());
-            glUniform1i(shader["diffuseTex"], 0);
+            graphics::Bind2DTexture(material.diffuseTexture->getGPUHandle(), shader["diffuseTex"], 0);
         } else {
             glUniform1i(shader["textured"], false);
         }

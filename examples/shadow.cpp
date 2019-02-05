@@ -1,6 +1,8 @@
 #include "progression.hpp"
 #include <iomanip>
 
+#pragma GCC diagnostic ignored "-Wunused-variable"
+
 using namespace Progression;
 
 glm::vec3 getDirection(const glm::vec3& rotation) {
@@ -43,7 +45,6 @@ int main(int argc, char* argv[]) {
     }
 
     auto light = scene->GetDirectionalLights()[0];
-
     
     auto shadowMap = ShadowMap();
 
@@ -65,20 +66,6 @@ int main(int argc, char* argv[]) {
     glBufferData(GL_ARRAY_BUFFER, sizeof(quadVerts), quadVerts, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
-
-    /*
-    float cubeVerts[] = {
-        -1, -1, 1,
-        1, -1, 1,
-        1, 1, 1,
-        -1, 1, 1,
-        -1, -1, -1,
-        1, -1, -1,
-        1, 1, -1,
-        -1, 1, -1
-    };
-    */
-
 
     Shader lineShader;
     if (!lineShader.Load(PG_RESOURCE_DIR "shaders/line.vert", PG_RESOURCE_DIR "shaders/line.frag")) {
@@ -132,6 +119,8 @@ int main(int argc, char* argv[]) {
             PG::EngineShutdown = true;
 
         scene->Update();
+
+        /*
         RenderSystem::UpdateLights(scene, camera);
 
         // render scene from light's POV
@@ -172,19 +161,18 @@ int main(int argc, char* argv[]) {
 
         depthWriteShader.Enable();
         auto meshRenderer = RenderSystem::GetSubSystem<MeshRenderSubSystem>();
-        meshRenderer->DepthRender(depthWriteShader, lightSpaceMatrix);
+        meshRenderer->DepthPass(depthWriteShader, lightSpaceMatrix);
 
-        /*
         // Render the shadow map texture, just for debugging purposes
-        glViewport(0, 0, Window::width(), Window::height());
-	    graphics::BindFrameBuffer();
-        displayShadowShader.Enable();
-        graphics::SetClearColor(glm::vec4(0));
-        graphics::Clear();
-        graphics::Bind2DTexture(depthTex, displayShadowShader["tex"], 0);
-        glBindVertexArray(quadVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-        */
+        
+        // glViewport(0, 0, Window::width(), Window::height());
+	    // graphics::BindFrameBuffer();
+        // displayShadowShader.Enable();
+        // graphics::SetClearColor(glm::vec4(0));
+        // graphics::Clear();
+        // graphics::Bind2DTexture(depthTex, displayShadowShader["tex"], 0);
+        // glBindVertexArray(quadVAO);
+        // glDrawArrays(GL_TRIANGLES, 0, 6);
         
 
         glViewport(0, 0, Window::width(), Window::height());
@@ -215,9 +203,10 @@ int main(int argc, char* argv[]) {
         glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
         glPolygonMode( GL_FRONT_AND_BACK, GL_FILL);
+        */
         
 
-		// RenderSystem::Render(scene);
+		RenderSystem::Render(scene);
 
         PG::Window::EndFrame();
     }

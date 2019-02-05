@@ -4,18 +4,21 @@ in vec3 vertex;
 in vec3 normal;
 in vec2 inTexCoord;
 
-uniform mat4 modelViewMatrix;
-uniform mat4 normalMatrix;
-uniform mat4 projectionMatrix;
+uniform mat4 M;
+uniform mat4 N;
+uniform mat4 MVP;
+uniform mat4 LSM;
 
-out vec3 vertexInEyeSpace;
-out vec3 normalInEyeSpace;
+out vec3 fragPosInWorldSpace;
+out vec3 normalInWorldSpace;
+out vec4 fragPosInLightSpace;
 out vec2 texCoord;
 
 void main() {
-    vertexInEyeSpace = (modelViewMatrix * vec4(vertex, 1)).xyz;
-    normalInEyeSpace = normalize((normalMatrix * vec4(normal, 0)).xyz);
+    fragPosInWorldSpace = (M * vec4(vertex, 1)).xyz;
+    normalInWorldSpace  = (N * vec4(normal, 0)).xyz;
+    fragPosInLightSpace = LSM * vec4(fragPosInWorldSpace, 1);
     texCoord = inTexCoord;
 
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(vertex, 1);
+    gl_Position = MVP * vec4(vertex, 1);
 }

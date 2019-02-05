@@ -22,6 +22,7 @@ namespace Progression {
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTex_, 0);
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
+        graphics::BindFrameBuffer();
     }
 
     ShadowMap::~ShadowMap() {

@@ -17,6 +17,9 @@ Light
 name mainDirectional
 type directional
 rotation -25 -45 0
+intensity 1
+shadows true
+shadowMapResolution 1024 1024
 
 Skybox
 name water

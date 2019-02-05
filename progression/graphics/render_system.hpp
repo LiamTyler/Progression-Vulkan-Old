@@ -36,7 +36,7 @@ namespace Progression {
         static void Init(const config::Config& config);
         static void Free();
 
-        static void ShadowPass(Scene* scene, Camera* camera);
+        static void ShadowPass(const Camera& camera);
         static void Render(Scene* scene, Camera* camera = nullptr);
 
         template<typename T>
@@ -53,7 +53,6 @@ namespace Progression {
 
         static void UpdateLights(Scene* scene, Camera* camera);
         static void UploadLights(Shader& shader);
-        static void UploadCameraProjection(Shader& shader, Camera& camera);
         static void UploadMaterial(Shader& shader, Material& material);
         static void RenderSkybox(const Skybox& skybox, const Camera& camera);
 

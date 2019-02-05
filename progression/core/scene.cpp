@@ -284,10 +284,10 @@ namespace Progression {
                 float degrees;
                 ss >> degrees;
                 light->innerCutoff = glm::radians(degrees);
-            } else if (first == "outterCutoff") {
+            } else if (first == "outerCutoff") {
                 float degrees;
                 ss >> degrees;
-                light->outterCutoff = glm::radians(degrees);
+                light->outerCutoff = glm::radians(degrees);
             } else if (first == "color") {
                 float x, y, z;
                 ss >> x >> y >> z;

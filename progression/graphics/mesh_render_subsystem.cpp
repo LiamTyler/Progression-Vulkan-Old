@@ -64,47 +64,31 @@ namespace Progression {
         (void)rc;
     }
 
-    void MeshRenderSubSystem::DepthRender(Shader& shader, const glm::mat4& lightVP) {
+    void MeshRenderSubSystem::DepthPass(Shader& shader, const glm::mat4& LSM) {
         for (const auto& mr : meshRenderers) {
             glBindVertexArray(mr->vao);
             glm::mat4 M = mr->gameObject->transform.GetModelMatrix();
-            glm::mat4 MVP = lightVP * M;
+            glm::mat4 MVP = LSM * M;
             glUniformMatrix4fv(shader["MVP"], 1, GL_FALSE, glm::value_ptr(MVP));
             glDrawElements(GL_TRIANGLES, mr->mesh->getNumIndices(), GL_UNSIGNED_INT, 0);
         }
     }
 
-    void MeshRenderSubSystem::ShadowRender(Scene* scene, Shader& shader, Camera& camera) {
-        (void)scene;
-        (void)camera;
-        RenderSystem::UploadLights(shader);
-        // RenderSystem::UploadCameraProjection(shader, camera);
-        for (const auto& mr : meshRenderers) {
-            glBindVertexArray(mr->vao);
-            RenderSystem::UploadMaterial(shader, *mr->material);
-            glm::mat4 M = mr->gameObject->transform.GetModelMatrix();
-            glm::mat4 normalMatrix = glm::transpose(glm::inverse(M));
-            glUniformMatrix4fv(shader["model"], 1, GL_FALSE, glm::value_ptr(M));
-            glUniformMatrix4fv(shader["normalMatrix"], 1, GL_FALSE, glm::value_ptr(normalMatrix));
-            glDrawElements(GL_TRIANGLES, mr->mesh->getNumIndices(), GL_UNSIGNED_INT, 0);
-        }
-    }
-
-    void MeshRenderSubSystem::Render(Scene* scene, Camera& camera) {
-        (void)scene;
+    void MeshRenderSubSystem::Render(const Camera& camera) {
 		auto& shader = pipelineShaders[camera.GetRenderingPipeline()];
 		shader.Enable();
-		if (camera.GetRenderingPipeline() == RenderingPipeline::FORWARD)
-			RenderSystem::UploadLights(shader);
-        RenderSystem::UploadCameraProjection(shader, camera);
+		RenderSystem::UploadLights(shader);
+        glUniform3fv(shader["cameraPos"], 1, glm::value_ptr(camera.transform.position));
+        auto VP = camera.GetP() * camera.GetV();
         for (const auto& mr : meshRenderers) {
             glBindVertexArray(mr->vao);
             RenderSystem::UploadMaterial(shader, *mr->material);
-            glm::mat4 M = mr->gameObject->transform.GetModelMatrix();
-            glm::mat4 MV = camera.GetV() * M;
-            glm::mat4 normalMatrix = glm::transpose(glm::inverse(MV));
-            glUniformMatrix4fv(shader["modelViewMatrix"], 1, GL_FALSE, glm::value_ptr(MV));
-            glUniformMatrix4fv(shader["normalMatrix"], 1, GL_FALSE, glm::value_ptr(normalMatrix));
+            glm::mat4 M   = mr->gameObject->transform.GetModelMatrix();
+            glm::mat4 N   = glm::transpose(glm::inverse(M));
+            glm::mat4 MVP = VP * M;
+            glUniformMatrix4fv(shader["M"], 1, GL_FALSE, glm::value_ptr(M));
+            glUniformMatrix4fv(shader["N"], 1, GL_FALSE, glm::value_ptr(N));
+            glUniformMatrix4fv(shader["MVP"], 1, GL_FALSE, glm::value_ptr(MVP));
             glDrawElements(GL_TRIANGLES, mr->mesh->getNumIndices(), GL_UNSIGNED_INT, 0);
         }
     }

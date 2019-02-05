@@ -1,4 +1,5 @@
 build/
+build_debug/
 *.swp
 a.out
 progression/core/configuration.hpp

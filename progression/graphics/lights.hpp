@@ -21,7 +21,7 @@ namespace Progression {
             float _intensity = 2.0f,
             float _radius = 15.0f,
             float _innerCutoff = glm::radians(25.0f),
-            float _outterCutoff = glm::radians(35.0f)
+            float _outerCutoff = glm::radians(35.0f)
         );
 
         ~Light();
@@ -31,7 +31,7 @@ namespace Progression {
         float intensity;
         float radius;
         float innerCutoff;
-        float outterCutoff;
+        float outerCutoff;
         ShadowMap* shadowMap;
     };
 
