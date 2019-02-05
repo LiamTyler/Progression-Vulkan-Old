@@ -9,7 +9,7 @@ front skybox/water/front.jpg
 
 Material
 name metalFloor
-ka 0 0 0
+ka 1 1 1
 kd 1 1 1
 ks .1 .1 .1
 ns 50
@@ -18,7 +18,7 @@ shader default-mesh
 
 Material
 name red 
-ka 0 0 0
+ka 1 1 1
 kd 1 1 1
 ks .5 .5 .5
 ns 50

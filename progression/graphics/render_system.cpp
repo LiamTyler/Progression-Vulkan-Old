@@ -223,6 +223,7 @@ namespace Progression {
 
         if (shadowLight->type == Light::Type::DIRECTIONAL) {
             glm::vec3 lightDir = rotationToDirection(shadowLight->transform.rotation);
+            glm::vec3 lightUp = rotationToDirection(shadowLight->transform.rotation, glm::vec3(0, 1, 0));
             glm::mat4 lightView = glm::lookAt(glm::vec3(0), lightDir, glm::vec3(0, 1, 0));
 
             glm::vec3 LSCorners[8];
@@ -241,7 +242,14 @@ namespace Progression {
         } else if (shadowLight->type == Light::Type::POINT) {
             // TODO: point shadows
         } else {
-            // TODO: spot shadows
+            const auto lightDir = rotationToDirection(shadowLight->transform.rotation);
+            const auto lightUp = rotationToDirection(shadowLight->transform.rotation, glm::vec3(0, 1, 0));
+            const auto& lightPos = shadowLight->transform.position;
+            glm::mat4 lightView = glm::lookAt(lightPos, lightPos + lightDir, lightUp);
+
+            float aspect = shadowLight->shadowMap->width() / (float)shadowLight->shadowMap->height();
+            glm::mat4 lightProj = glm::perspective(shadowLight->outerCutoff, aspect, 0.1f, shadowLight->radius);
+            LSM = lightProj * lightView;
         }
 
         shadowLight->shadowMap->BindForWriting();

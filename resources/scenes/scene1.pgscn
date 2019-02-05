@@ -1,6 +1,9 @@
 Resource-file
 filename scenes/scene1Resources.txt
 
+AmbientLight
+color 0 0 0
+
 Camera
 name main-camera
 position 0 5 15
@@ -13,11 +16,24 @@ far-plane 300
 primary-camera true
 #rendering-pipeline tiled-deferred
 
-Light
+#Light
 name mainDirectional
 type directional
 rotation -25 -45 0
 intensity 1
+shadows true
+shadowMapResolution 1024 1024
+
+Light
+name mainSpot
+type spot
+position -5 3 0
+rotation 0 -90 0
+#rotation -25 -45 0
+intensity 3
+radius 15
+innerCutoff 40
+outerCutoff 45
 shadows true
 shadowMapResolution 1024 1024
 
