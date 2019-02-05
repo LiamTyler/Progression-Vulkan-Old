@@ -421,7 +421,7 @@ namespace Progression {
             glUniformMatrix4fv(shader["LSM"], 1, GL_FALSE, glm::value_ptr(LSM));
             graphics::Bind2DTexture(shadowLight->shadowMap->texture(), shader["depthTex"], 1);
             glUniform3fv(shader["shadowLight.color"], 1, glm::value_ptr(shadowLight->color * shadowLight->intensity));
-            glm::vec3 dir = -rotationToDirection(shadowLight->transform.rotation);
+            glm::vec3 dir = rotationToDirection(shadowLight->transform.rotation);
             glUniform3fv(shader["shadowLight.dir"], 1, glm::value_ptr(dir));
             glUniform3fv(shader["shadowLight.pos"], 1, glm::value_ptr(shadowLight->color * shadowLight->intensity));
             glUniform1f(shader["shadowLight.rSquared"], shadowLight->radius * shadowLight->radius);

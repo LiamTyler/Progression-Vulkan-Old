@@ -8,7 +8,7 @@ struct Light {
     vec3 color;
     float innerCutoff;
     vec3 dir;
-    float outterCutoff;
+    float outerCutoff;
 };
 
 in vec3 fragPosInWorldSpace;
@@ -43,8 +43,14 @@ layout(std430, binding=10) buffer point_light_list
 
 layout (location = 0) out vec4 finalColor;
 
-float ShadowCalculation(in const vec4 fragPosInLS, in const vec3 n, in const vec3 lightDir) {
-    vec3 ndc = fragPosInLS.xyz / fragPosInLS.w;
+float attenuate(in const float distSquared, in const float radiusSquared) {
+    float frac = distSquared / radiusSquared;
+    float atten = max(0, 1 - frac * frac);
+    return (atten * atten) / (1.0 + distSquared);
+}
+
+float ShadowAmount(in const vec3 n, in const vec3 dirToLight) {
+    vec3 ndc = fragPosInLightSpace.xyz / fragPosInLightSpace.w;
     vec3 projCoords = 0.5 * ndc + vec3(0.5);
     float currentDepth = projCoords.z;
     // To account for when the fragment is shadow's projection matrix doesn't reach far enough
@@ -52,8 +58,7 @@ float ShadowCalculation(in const vec4 fragPosInLS, in const vec3 n, in const vec
     if (currentDepth > 1.0)
         return 1.0;
 
-
-    float cosTheta = max(0.0, dot(n, lightDir));
+    float cosTheta = max(0.0, dot(n, dirToLight));
     float bias = max(0.005 * (1.0 - cosTheta), 0.0005);
     // float bias = 0.0008*tan(acos(cosTheta));
     bias = clamp(bias, 0.0, 0.01);
@@ -77,10 +82,37 @@ float ShadowCalculation(in const vec4 fragPosInLS, in const vec3 n, in const vec
     return currentDepth - bias > texture(depthTex, projCoords.xy).r ? 0.3 : 1.0;
 }
 
-float attenuate(in const float distSquared, in const float radiusSquared) {
-    float frac = distSquared / radiusSquared;
-    float atten = max(0, 1 - frac * frac);
-    return (atten * atten) / (1.0 + distSquared);
+vec3 ShadowLighting(in const vec3 n, in const vec3 e, in const vec3 diffuseColor) {
+    vec3 color = vec3(0, 0, 0);
+    if (shadowLightType == 1) { // directional light
+        vec3 l = -shadowLight.dir;
+        vec3 h = normalize(l + e);
+        color = shadowLight.color * diffuseColor * max(0.0, dot(l, n));
+        if (dot(l, n) > EPSILON)
+            color += shadowLight.color * ks * pow(max(dot(h, n), 0.0), 4*specular);
+        color *= ShadowAmount(n, l);
+    } else if (shadowLightType == 2) { // point light
+        
+    } else if (shadowLightType == 3) { // spot light
+        vec3 vertToLight = shadowLight.pos - fragPosInWorldSpace;
+        vec3 l = normalize(vertToLight);
+        vec3 h = normalize(l + e);
+        
+        float theta = dot(-l, shadowLight.dir);
+        if (theta > shadowLight.outerCutoff) {
+            float epsilon = shadowLight.innerCutoff - shadowLight.outerCutoff;
+            float intensity = clamp((theta - shadowLight.outerCutoff) / epsilon, 0.0, 1.0);
+            float d2 = dot(vertToLight, vertToLight);
+            float atten = intensity * attenuate(d2, shadowLight.rSquared);
+            
+            color += atten * shadowLight.color * diffuseColor * max(0.0, dot(l, n));
+            if (dot(l, n) > EPSILON)
+                color += atten * shadowLight.color * ks * pow(max(dot(h, n), 0.0), 4*specular);
+            color *= ShadowAmount(n, l);
+        }
+    }
+    
+    return color;
 }
 
 void main() {
@@ -94,16 +126,8 @@ void main() {
 
     vec3 outColor = ke + ka*ambientLight;
 
-    vec3 l = shadowLight.dir;
-    vec3 h = normalize(l + e);
-    vec3 shadowColor = shadowLight.color * diffuseColor * max(0.0, dot(l, n));
-    if (dot(l, n) > EPSILON)
-        shadowColor += shadowLight.color * ks * pow(max(dot(h, n), 0.0), 4*specular);
+    outColor += ShadowLighting(n, e, diffuseColor);
     
-    float shadow = ShadowCalculation(fragPosInLightSpace, n, l);
-    outColor += shadow * shadowColor;
-    
-    /*
     for (int i = 0; i < numDirectionalLights; ++i) {
         vec3 lightDir   = lights[3 * i + 0].xyz;
         vec3 lightColor = lights[3 * i + 1].xyz;
@@ -144,16 +168,16 @@ void main() {
         
         data                     = lights[3 * (numLights + i) + 2];
         vec3 lightDir            = data.xyz;
-        float outterCutoff       = data.w;
+        float outerCutoff       = data.w;
 
         vec3 vertToLight = lightPos - fragPosInWorldSpace;
         vec3 l = normalize(vertToLight);
         vec3 h = normalize(l + e);
         
         float theta = dot(-l, lightDir);
-        if (theta > outterCutoff) {
-            float epsilon = innerCutoff - outterCutoff;
-            float intensity = clamp((theta - outterCutoff) / epsilon, 0.0, 1.0);
+        if (theta > outerCutoff) {
+            float epsilon = innerCutoff - outerCutoff;
+            float intensity = clamp((theta - outerCutoff) / epsilon, 0.0, 1.0);
             float d2 = dot(vertToLight, vertToLight);
             float atten = intensity * attenuate(d2, lightRadiusSquared);
 
@@ -162,7 +186,6 @@ void main() {
                 outColor += atten * lightColor * ks * pow(max(dot(h, n), 0.0), 4*specular);
         }
     }
-    */
     
     finalColor = vec4(outColor, 1.0);
 }
