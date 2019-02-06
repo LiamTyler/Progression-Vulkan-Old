@@ -29,7 +29,6 @@ name mainSpot
 type spot
 position -5 3 0
 rotation 0 -90 0
-#rotation -25 -45 0
 intensity 3
 radius 15
 innerCutoff 40

@@ -79,7 +79,7 @@ float ShadowAmount(in const vec3 n, in const vec3 dirToLight) {
     return 1.0 - shadow;
     */
 
-    return currentDepth - bias > texture(depthTex, projCoords.xy).r ? 0.3 : 1.0;
+    return currentDepth - bias > texture(depthTex, projCoords.xy).r ? 0.0 : 1.0;
 }
 
 vec3 ShadowLighting(in const vec3 n, in const vec3 e, in const vec3 diffuseColor) {
@@ -109,7 +109,25 @@ vec3 ShadowLighting(in const vec3 n, in const vec3 e, in const vec3 diffuseColor
             if (dot(l, n) > EPSILON)
                 color += atten * shadowLight.color * ks * pow(max(dot(h, n), 0.0), 4*specular);
             color *= ShadowAmount(n, l);
+            //color = vec3(ShadowAmount(n, l));
         }
+        /*
+        vec3 vertToLight = lightPos - fragPosInWorldSpace;
+        vec3 l = normalize(vertToLight);
+        vec3 h = normalize(l + e);
+        
+        float theta = dot(-l, lightDir);
+        if (theta > outerCutoff) {
+            float epsilon = innerCutoff - outerCutoff;
+            float intensity = clamp((theta - outerCutoff) / epsilon, 0.0, 1.0);
+            float d2 = dot(vertToLight, vertToLight);
+            float atten = intensity * attenuate(d2, lightRadiusSquared);
+
+            outColor += atten * lightColor * diffuseColor * max(0.0, dot(l, n));
+            if (dot(l, n) > EPSILON)
+                outColor += atten * lightColor * ks * pow(max(dot(h, n), 0.0), 4*specular);
+        }
+        */
     }
     
     return color;
@@ -168,7 +186,7 @@ void main() {
         
         data                     = lights[3 * (numLights + i) + 2];
         vec3 lightDir            = data.xyz;
-        float outerCutoff       = data.w;
+        float outerCutoff        = data.w;
 
         vec3 vertToLight = lightPos - fragPosInWorldSpace;
         vec3 l = normalize(vertToLight);

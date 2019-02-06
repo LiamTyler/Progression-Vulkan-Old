@@ -243,7 +243,8 @@ namespace Progression {
             // TODO: point shadows
         } else {
             const auto lightDir = rotationToDirection(shadowLight->transform.rotation);
-            const auto lightUp = rotationToDirection(shadowLight->transform.rotation, glm::vec3(0, 1, 0));
+            const auto lightUp = glm::vec3(0, 1, 0);
+            // const auto lightUp = rotationToDirection(shadowLight->transform.rotation, glm::vec3(0, 1, 0));
             const auto& lightPos = shadowLight->transform.position;
             glm::mat4 lightView = glm::lookAt(lightPos, lightPos + lightDir, lightUp);
 
@@ -431,10 +432,10 @@ namespace Progression {
             glUniform3fv(shader["shadowLight.color"], 1, glm::value_ptr(shadowLight->color * shadowLight->intensity));
             glm::vec3 dir = rotationToDirection(shadowLight->transform.rotation);
             glUniform3fv(shader["shadowLight.dir"], 1, glm::value_ptr(dir));
-            glUniform3fv(shader["shadowLight.pos"], 1, glm::value_ptr(shadowLight->color * shadowLight->intensity));
+            glUniform3fv(shader["shadowLight.pos"], 1, glm::value_ptr(shadowLight->transform.position));
             glUniform1f(shader["shadowLight.rSquared"], shadowLight->radius * shadowLight->radius);
-            glUniform1f(shader["shadowLight.innerCutoff"], shadowLight->innerCutoff);
-            glUniform1f(shader["shadowLight.outerCutoff"], shadowLight->outerCutoff);
+            glUniform1f(shader["shadowLight.innerCutoff"], glm::cos(shadowLight->innerCutoff));
+            glUniform1f(shader["shadowLight.outerCutoff"], glm::cos(shadowLight->outerCutoff));
 
             auto type = shadowLight->type;
             if (type == Light::Type::DIRECTIONAL)
