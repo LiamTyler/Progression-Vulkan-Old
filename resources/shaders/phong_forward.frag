@@ -109,25 +109,7 @@ vec3 ShadowLighting(in const vec3 n, in const vec3 e, in const vec3 diffuseColor
             if (dot(l, n) > EPSILON)
                 color += atten * shadowLight.color * ks * pow(max(dot(h, n), 0.0), 4*specular);
             color *= ShadowAmount(n, l);
-            //color = vec3(ShadowAmount(n, l));
         }
-        /*
-        vec3 vertToLight = lightPos - fragPosInWorldSpace;
-        vec3 l = normalize(vertToLight);
-        vec3 h = normalize(l + e);
-        
-        float theta = dot(-l, lightDir);
-        if (theta > outerCutoff) {
-            float epsilon = innerCutoff - outerCutoff;
-            float intensity = clamp((theta - outerCutoff) / epsilon, 0.0, 1.0);
-            float d2 = dot(vertToLight, vertToLight);
-            float atten = intensity * attenuate(d2, lightRadiusSquared);
-
-            outColor += atten * lightColor * diffuseColor * max(0.0, dot(l, n));
-            if (dot(l, n) > EPSILON)
-                outColor += atten * lightColor * ks * pow(max(dot(h, n), 0.0), 4*specular);
-        }
-        */
     }
     
     return color;

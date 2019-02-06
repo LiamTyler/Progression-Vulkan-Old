@@ -16,7 +16,8 @@ namespace Progression {
         Shader(Shader&& shader);
         Shader& operator=(Shader&& shader);
 
-        bool Load(const std::string& vertex_or_compute_fname, const std::string& frag_name = "");
+        bool Load(const std::string& vertex_or_compute_fname, const std::string& frag_fname = "",
+                const std::string& geom_fname = "");
 		bool AttachShaderFromString(GLenum shaderType, const std::string& source);
 		bool AttachShaderFromFile(GLenum shaderType, const std::string& fname);
 		bool CreateAndLinkProgram();

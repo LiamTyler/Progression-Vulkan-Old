@@ -26,18 +26,31 @@ namespace Progression {
         return *this;
     }
 
-    bool Shader::Load(const std::string& vertex_or_compute_fname, const std::string& frag_name) {
-        if (frag_name == "") {
+    bool Shader::Load(const std::string& vertex_or_compute_fname, const std::string& frag_fname,
+            const std::string& geom_fname)
+    {
+        if (frag_fname == "") {
             if (AttachShaderFromFile(GL_COMPUTE_SHADER, vertex_or_compute_fname) &&
                 CreateAndLinkProgram())
                 AutoDetectVariables();
             else
                 return false;
         } else {
-            if (AttachShaderFromFile(GL_VERTEX_SHADER, vertex_or_compute_fname) && AttachShaderFromFile(GL_FRAGMENT_SHADER, frag_name) && CreateAndLinkProgram())
-                AutoDetectVariables();
-            else
-                return false;
+            if (geom_fname == "") {
+                if (AttachShaderFromFile(GL_VERTEX_SHADER, vertex_or_compute_fname) &&
+                    AttachShaderFromFile(GL_FRAGMENT_SHADER, frag_fname) && CreateAndLinkProgram())
+                    AutoDetectVariables();
+                else
+                    return false;
+            } else {
+                if (AttachShaderFromFile(GL_VERTEX_SHADER, vertex_or_compute_fname) &&
+                    AttachShaderFromFile(GL_GEOMETRY_SHADER, vertex_or_compute_fname) &&
+                    AttachShaderFromFile(GL_FRAGMENT_SHADER, frag_fname) && CreateAndLinkProgram())
+                    AutoDetectVariables();
+                else
+                    return false;
+
+            }
         }
 
         return true;

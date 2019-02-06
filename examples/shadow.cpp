@@ -18,18 +18,18 @@ int main(int argc, char* argv[]) {
     (void)argc;
     (void)argv;
 
-	PG::EngineInitialize();
+    PG::EngineInitialize();
 
     const std::string sceneName = "scene1.pgscn";
     // const std::string sceneName = "shadow.pgscn";
 
-	auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/" + sceneName);
+    auto scene = Scene::Load(PG_ROOT_DIR "resources/scenes/" + sceneName);
     if (!scene) {
         LOG_ERR("Failed to load scene:");
         exit(EXIT_FAILURE);
     }
-	auto camera = scene->GetCamera();
-	camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera, 3));
+    auto camera = scene->GetCamera();
+    camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera, 3));
 
     if (sceneName == "scene1.pgscn") {
         auto cube = ResourceManager::GetModel("model");
@@ -44,12 +44,44 @@ int main(int argc, char* argv[]) {
         }
     }
 
-	Window::SetRelativeMouse(true);
-	PG::Input::PollEvents();
 
-	graphics::BindFrameBuffer();
+    GLuint depthCubeMap;
+    glGenTextures(1, &depthCubeMap);
+    const int SHADOW_WIDTH  = 1024;
+    const int SHADOW_HEIGHT = 1024;
+    glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubeMap);
+    for (unsigned int i = 0; i < 6; ++i) {
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT,
+                SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    }
 
-	// Game loop
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    auto fbo = graphics::CreateFrameBuffer();
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubeMap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    graphics::BindFrameBuffer();
+
+    Shader pointShadowShader;
+    if (!pointShadowShader.Load(
+                PG_RESOURCE_DIR "shaders/pointShadow.vert",
+                PG_RESOURCE_DIR "shaders/pointShadow.frag",
+                PG_RESOURCE_DIR "shaders/pointShadow.geom"))
+    {
+        LOG_ERR("Could not load the point shadow shader");
+        exit(EXIT_FAILURE);
+    }
+
+    Window::SetRelativeMouse(true);
+    PG::Input::PollEvents();
+
+
+    // Game loop
     while (!PG::EngineShutdown) {
         PG::Window::StartFrame();
         PG::Input::PollEvents();
@@ -59,7 +91,13 @@ int main(int argc, char* argv[]) {
 
         scene->Update();
 
-		RenderSystem::Render(scene);
+        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+        graphics::BindFrameBuffer(fbo);
+        graphics::Clear(GL_DEPTH_BUFFER_BIT);
+        auto MRS = RenderSystem::GetSubSystem<MeshRenderSubSystem>();
+        MRS->DepthPass(
+
+        // RenderSystem::Render(scene);
 
         PG::Window::EndFrame();
     }
