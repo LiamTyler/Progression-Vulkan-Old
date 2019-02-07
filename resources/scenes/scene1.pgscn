@@ -16,6 +16,15 @@ far-plane 300
 primary-camera true
 #rendering-pipeline tiled-deferred
 
+Light
+name P1
+type point
+radius 15
+position -5 3 0
+intensity 2
+#shadows true
+#shadowMapResolution 1024 1024
+
 #Light
 name mainDirectional
 type directional
@@ -24,7 +33,7 @@ intensity 1
 shadows true
 shadowMapResolution 1024 1024
 
-Light
+#Light
 name mainSpot
 type spot
 position -5 3 0

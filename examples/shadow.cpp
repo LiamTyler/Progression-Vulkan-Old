@@ -44,6 +44,11 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    if (scene->GetNumPointLights() == 0) {
+        LOG_ERR("Scene has no point lights");
+        exit(EXIT_FAILURE);
+    }
+    auto light = scene->GetPointLights()[0];
 
     GLuint depthCubeMap;
     glGenTextures(1, &depthCubeMap);
@@ -76,6 +81,8 @@ int main(int argc, char* argv[]) {
         LOG_ERR("Could not load the point shadow shader");
         exit(EXIT_FAILURE);
     }
+    pointShadowShader.AddUniform("shadowMatrices");
+    LOG(pointShadowShader["shadowMatrices"]);
 
     Window::SetRelativeMouse(true);
     PG::Input::PollEvents();
@@ -90,14 +97,43 @@ int main(int argc, char* argv[]) {
             PG::EngineShutdown = true;
 
         scene->Update();
+        // RenderSystem::Render(scene);
 
         glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
         graphics::BindFrameBuffer(fbo);
         graphics::Clear(GL_DEPTH_BUFFER_BIT);
-        auto MRS = RenderSystem::GetSubSystem<MeshRenderSubSystem>();
-        MRS->DepthPass(
+        pointShadowShader.Enable();
 
-        // RenderSystem::Render(scene);
+        glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), SHADOW_WIDTH / (float)SHADOW_HEIGHT, 0.1f, light->radius);
+        auto pos = light->transform.position;
+        std::vector<glm::mat4> LSMs = {
+            shadowProj * glm::lookAt(pos, pos + glm::vec3(1, 0, 0), glm::vec3(0, -1, 0)),
+            shadowProj * glm::lookAt(pos, pos + glm::vec3(-1, 0, 0), glm::vec3(0, -1, 0)),
+            shadowProj * glm::lookAt(pos, pos + glm::vec3(0, 1, 0), glm::vec3(0, 0, -1)),
+            shadowProj * glm::lookAt(pos, pos + glm::vec3(0, -1, 0), glm::vec3(0, 0, -1)),
+            shadowProj * glm::lookAt(pos, pos + glm::vec3(0, 0, 1), glm::vec3(0, -1, 0)),
+            shadowProj * glm::lookAt(pos, pos + glm::vec3(0, 0, -1), glm::vec3(0, -1, 0)),
+        };
+            
+        glUniform1f(pointShadowShader["far_plane"], light->radius);
+        glUniform3fv(pointShadowShader["light_pos"], 1, glm::value_ptr(pos));
+        glUniformMatrix4fv(pointShadowShader["shadowMatrices"], 6, GL_FALSE, glm::value_ptr(LSMs[0]));
+        auto MRS = RenderSystem::GetSubSystem<MeshRenderSubSystem>();
+        MRS->DepthPass(pointShadowShader, glm::mat4(1));
+
+        glViewport(0, 0, PG::Window::width(), PG::Window::height());
+        graphics::BindFrameBuffer(0); // NOTE: This should be the post process FBO for the real rendering system
+        graphics::Clear();
+        pointShadowShader.Enable();
+        glUniform3fv(pointShadowShader["shadowLight.color"], 1, glm::value_ptr(light->color * light->intensity));
+        glm::vec3 dir = rotationToDirection(light->transform.rotation);
+        glUniform3fv(pointShadowShader["shadowLight.pos"], 1, glm::value_ptr(light->transform.position));
+        glUniform1f(pointShadowShader["shadowLight.rSquared"], light->radius * light->radius);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubeMap);
+
+        MRS->DepthRender(pointShadowShader, *camera);
 
         PG::Window::EndFrame();
     }

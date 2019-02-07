@@ -2,6 +2,15 @@
 
 #define EPSILON 0.000001
 
+struct Light {
+    vec3 pos;
+    float rSquared;
+    vec3 color;
+    float innerCutoff;
+    vec3 dir;
+    float outerCutoff;
+};
+
 in vec3 fragPosInWorldSpace;
 in vec3 normalInWorldSpace;
 in vec4 fragPosInLightSpace;
@@ -16,26 +25,21 @@ uniform float specular;
 uniform vec3 cameraPos;
 uniform bool textured;
 uniform sampler2D diffuseTex;
-uniform sampler2D depthTex;
 
-uniform int numDirectionalLights;
-uniform int numPointLights;
-
-
-layout(std430, binding=10) buffer point_light_list
-{
-    vec4 lights[];
-};
-
-
-uniform vec3 lightDir;
-
-uniform float bloomThreshold;
+// shadow data
+uniform Light shadowLight;
+uniform samplerCube depthCube;
 
 layout (location = 0) out vec4 finalColor;
 
-float ShadowCalculation(in const vec4 fragPosInLS, in const vec3 n, in const vec3 lightDir) {
-    vec3 ndc = fragPosInLS.xyz / fragPosInLS.w;
+float attenuate(in const float distSquared, in const float radiusSquared) {
+    float frac = distSquared / radiusSquared;
+    float atten = max(0, 1 - frac * frac);
+    return (atten * atten) / (1.0 + distSquared);
+}
+
+float ShadowAmount(in const vec3 n, in const vec3 dirToLight) {
+    vec3 ndc = fragPosInLightSpace.xyz / fragPosInLightSpace.w;
     vec3 projCoords = 0.5 * ndc + vec3(0.5);
     float currentDepth = projCoords.z;
     // To account for when the fragment is shadow's projection matrix doesn't reach far enough
@@ -43,28 +47,25 @@ float ShadowCalculation(in const vec4 fragPosInLS, in const vec3 n, in const vec
     if (currentDepth > 1.0)
         return 1.0;
 
+    float bias = 0.005;
+    return currentDepth - bias > texture(depthCube, projCoords.xy).r ? 0.0 : 1.0;
+}
 
-    float cosTheta = max(0.0, dot(n, lightDir));
-    float bias = max(0.005 * (1.0 - cosTheta), 0.0005);
-    // float bias = 0.0008*tan(acos(cosTheta));
-    bias = clamp(bias, 0.0, 0.01);
-
-    // PCF
-    float shadow = 0.0;
-    vec2 texelSize = 1.0 / textureSize(depthTex, 0);
-    for(int x = -1; x <= 1; ++x)
-    {
-        for(int y = -1; y <= 1; ++y)
-        {
-            float pcfDepth = texture(depthTex, projCoords.xy + vec2(x, y) * texelSize).r;
-            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
-        }
-    }
-    shadow /= 9.0;
-
-    // float shadowDepth = texture(depthTex, projCoords.xy).r;
-    return currentDepth - bias > texture(depthTex, projCoords.xy).r ? 0.3 : 1.0;
-    // return 1.0 - shadow;
+vec3 ShadowLighting(in const vec3 n, in const vec3 e, in const vec3 diffuseColor) {
+    vec3 color = vec3(0, 0, 0);
+    
+    vec3 vertToLight = shadowLight.pos - fragPosInWorldSpace;
+    vec3 l = normalize(vertToLight);
+    vec3 h = normalize(l + e);
+    float d2 = dot(vertToLight, vertToLight);
+    float atten = attenuate(d2, shadowLight.rSquared);
+            
+    color += atten * shadowLight.color * diffuseColor * max(0.0, dot(l, n));
+    if (dot(l, n) > EPSILON)
+        color += atten * shadowLight.color * ks * pow(max(dot(h, n), 0.0), 4*specular);
+    color *= ShadowAmount(n, l);
+    
+    return color;
 }
 
 void main() {
@@ -76,44 +77,9 @@ void main() {
         diffuseColor *= texture(diffuseTex, texCoord).xyz;
     }
 
-    vec3 outColor = ke;
-    
-    vec3 lightColor = vec3(1, 1, 1);
-    vec3 l = normalize(-lightDir);
-    //vec3 l = normalize(-lights[0].xyz);
-    vec3 h = normalize(l + e);
-    outColor += lightColor * ka;
-    vec3 shadowColor = lightColor * diffuseColor * max(0.0, dot(l, n));
-    if (dot(l, n) > EPSILON)
-        shadowColor += lightColor * ks * pow(max(dot(h, n), 0.0), 4*specular);
-    
-    float shadow = ShadowCalculation(fragPosInLightSpace, n, l);
-    outColor += shadow * shadowColor;
-    /*
-    for (int i = 0; i < numDirectionalLights; ++i) {
-        vec3 lightDir   = lights[2 * i + 0].xyz;
-        vec3 lightColor = lights[2 * i + 1].xyz;
-        vec3 l = normalize(-lightDir);
-        vec3 h = normalize(l + e);
-        outColor += lightColor * ka;
-        outColor += lightColor * diffuseColor * max(0.0, dot(l, n));
-        if (dot(l, n) > EPSILON)
-            outColor += lightColor * ks * pow(max(dot(h, n), 0.0), 4*specular);
-    }
-        
-    for (int i = 0; i < numPointLights; ++i) {
-        vec3 lightPos   = lights[2 * (numDirectionalLights + i) + 0].xyz;
-        vec3 lightColor = lights[2 * (numDirectionalLights + i) + 1].xyz;
+    vec3 outColor = ke + ka*ambientLight;
 
-        vec3 l = normalize(lightPos - vertexInEyeSpace);
-        vec3 h = normalize(l + e);
-        float attenuation = 1.0 / pow(length(lightPos - vertexInEyeSpace), 2.0);
-        outColor += lightColor * ka;
-        outColor += attenuation * lightColor * diffuseColor * max(0.0, dot(l, n));
-        if (dot(l, n) > EPSILON)
-            outColor += attenuation * lightColor * ks * pow(max(dot(h, n), 0.0), 4*specular);
-    }
-    */
+    outColor += ShadowLighting(n, e, diffuseColor);
     
     finalColor = vec4(outColor, 1.0);
 }

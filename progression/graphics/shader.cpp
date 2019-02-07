@@ -44,7 +44,7 @@ namespace Progression {
                     return false;
             } else {
                 if (AttachShaderFromFile(GL_VERTEX_SHADER, vertex_or_compute_fname) &&
-                    AttachShaderFromFile(GL_GEOMETRY_SHADER, vertex_or_compute_fname) &&
+                    AttachShaderFromFile(GL_GEOMETRY_SHADER, geom_fname) &&
                     AttachShaderFromFile(GL_FRAGMENT_SHADER, frag_fname) && CreateAndLinkProgram())
                     AutoDetectVariables();
                 else

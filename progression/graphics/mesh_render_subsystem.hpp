@@ -15,6 +15,7 @@ namespace Progression {
         virtual void RemoveRenderComponent(RenderComponent* rc);
 
         virtual void Render(const Camera& camera);
+        void DepthRender(Shader& shader, const Camera& camera);
         void DepthPass(Shader& shader, const glm::mat4& LSM);
     
     private:
