@@ -21,7 +21,7 @@ name P1
 type point
 radius 15
 position -5 3 0
-intensity 2
+intensity 5
 #shadows true
 #shadowMapResolution 1024 1024
 

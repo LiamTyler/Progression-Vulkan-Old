@@ -267,12 +267,12 @@ namespace Progression {
         graphics::ToggleDepthTesting(true);
 
         graphics::BindFrameBuffer(postProcess_.FBO);
-        graphics::SetClearColor(glm::vec4(0));
+        graphics::SetClearColor(glm::vec4(0, 0, 0, 1));
         graphics::Clear();
 
         if (camera->GetRenderingPipeline() == RenderingPipeline::TILED_DEFERRED) {
             graphics::BindFrameBuffer(tdGbuffer_);
-            graphics::SetClearColor(glm::vec4(0));
+            graphics::SetClearColor(glm::vec4(0, 0, 0, 1));
             graphics::Clear();
         }
 
@@ -315,7 +315,7 @@ namespace Progression {
         // Bind and clear the main screen
         graphics::BindFrameBuffer(0);
         glViewport(0, 0, Window::width(), Window::height());
-        graphics::SetClearColor(glm::vec4(0));
+        graphics::SetClearColor(glm::vec4(0, 0, 0, 1));
         graphics::Clear();
 
         // Copy the post processing depth buffer to the main screen
