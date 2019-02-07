@@ -33,7 +33,7 @@ uniform samplerCube depthCube;
 layout (location = 0) out vec4 finalColor;
 
 float attenuate(in const float distSquared, in const float radiusSquared) {
-    return 1.0 / (1 + sqrt(distSquared/radiusSquared));
+    return 1.0 / (1 + sqrt(distSquared));
     float frac = distSquared / radiusSquared;
     float atten = max(0, 1 - frac * frac);
     return (atten * atten) / (1.0 + distSquared);
@@ -42,12 +42,16 @@ float attenuate(in const float distSquared, in const float radiusSquared) {
 float ShadowAmount(in const vec3 n, in const vec3 dirToLight) {
 
     vec3 fragToLight = fragPosInWorldSpace - shadowLight.pos;
+    // now get current linear depth as the length between the fragment and light position
+    float currentDepth = length(fragToLight);
+    if (currentDepth > far_plane)
+        return 1.0;
+    
     // use the light to fragment vector to sample from the depth map    
     float closestDepth = texture(depthCube, fragToLight).r;
     // it is currently in linear range between [0,1]. Re-transform back to original value
     closestDepth *= far_plane;
-    // now get current linear depth as the length between the fragment and light position
-    float currentDepth = length(fragToLight);
+    
     // now test for shadows
     float bias = 0.05; 
     float shadow = currentDepth -  bias > closestDepth ? 0.0 : 1.0;

@@ -7,18 +7,25 @@ namespace Progression {
 
     class ShadowMap {
     public:
-        ShadowMap(int _width = 1024, int _height = 1024);
+        enum class Type {
+            QUAD,
+            CUBE
+        };
+
+        explicit ShadowMap(Type _type, int _width = 1024, int _height = 1024);
         ~ShadowMap();
         ShadowMap(ShadowMap&& map);
         ShadowMap& operator=(ShadowMap&& map);
 
         void BindForWriting() const;
 
+        Type type() const { return type_; }
         int width() const { return width_; }
         int height() const { return height_; }
         int texture() const { return depthTex_; }
 
     private:
+        Type type_;
         int width_;
         int height_;
         GLuint fbo_;

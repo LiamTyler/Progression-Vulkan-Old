@@ -307,11 +307,13 @@ namespace Progression {
             }
         }
 
+        auto shadowType = light->type == Light::Type::POINT ? ShadowMap::Type::CUBE : ShadowMap::Type::QUAD;
+
         if (shadows) {
             if (shadowResolution.x != -1)
-                light->shadowMap = new ShadowMap(shadowResolution.x, shadowResolution.y);
+                light->shadowMap = new ShadowMap(shadowType, shadowResolution.x, shadowResolution.y);
             else
-                light->shadowMap = new ShadowMap;
+                light->shadowMap = new ShadowMap(shadowType);
         }
         scene->AddLight(light);
     }
