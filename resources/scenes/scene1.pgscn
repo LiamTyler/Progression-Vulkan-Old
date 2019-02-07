@@ -19,9 +19,9 @@ primary-camera true
 Light
 name P1
 type point
-radius 15
-position -5 3 0
-intensity 5
+radius 35
+position -5 6 0
+intensity 10
 #shadows true
 #shadowMapResolution 1024 1024
 

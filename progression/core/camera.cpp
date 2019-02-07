@@ -10,8 +10,25 @@ namespace Progression {
 		farPlane_(fp),
 		renderingPipeline_(RenderingPipeline::FORWARD)
 	{
+        UpdateOrientationVectors();
+        UpdateViewMatrix();
 		UpdateProjectionMatrix();
 	}
+
+    void Camera::print() const {
+        std::cout << "fieldOfView_: " << fieldOfView_ << std::endl;
+        std::cout << "aspectRatio_: " << aspectRatio_ << std::endl;
+        std::cout << "nearPlane_: " << nearPlane_ << std::endl;
+        std::cout << "farPlane_: " << farPlane_ << std::endl;
+        std::cout << "currDir_: " << currDir_ << std::endl;
+        std::cout << "currUp_: " << currUp_ << std::endl;
+        std::cout << "currRight_: " << currRight_ << std::endl;
+        std::cout << "position: " << transform.position << std::endl;
+        std::cout << "rotation: " << transform.rotation << std::endl;
+        std::cout << "scale: " << transform.scale << std::endl;
+        std::cout << "view: " << viewMatrix_ << std::endl;
+        std::cout << "proj: " << projectionMatrix_ << std::endl;
+    }
 
     void Camera::UpdateFrustum(const glm::vec3& position, const glm::vec3& rotation) {
         transform.position = position;

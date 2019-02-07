@@ -42,6 +42,8 @@ namespace Progression {
 			void SetFarPlane(float p);
 			void SetRenderingPipeline(RenderingPipeline p);
 
+            void print() const;
+
 		protected:
 			void UpdateProjectionMatrix();
 			float fieldOfView_;
