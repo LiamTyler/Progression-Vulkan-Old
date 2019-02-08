@@ -61,8 +61,6 @@ namespace Progression {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, glMajor);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, glMinor);        
         glfwWindowHint(GLFW_RESIZABLE, false);
-        glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
-
 
         _mWindow = glfwCreateWindow(_mWindowSize.x, _mWindowSize.y, _mTitle.c_str(), NULL, NULL);
         if (!_mWindow) {

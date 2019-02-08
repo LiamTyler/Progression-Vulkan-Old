@@ -19,11 +19,11 @@ primary-camera true
 Light
 name P1
 type point
-radius 10
+radius 35
 position -5 6 0
 intensity 10
-#shadows true
-#shadowMapResolution 1024 1024
+shadows true
+shadowMapResolution 1024 1024
 
 #Light
 name mainDirectional

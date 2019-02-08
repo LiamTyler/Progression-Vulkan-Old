@@ -46,6 +46,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    /*
     if (scene->GetNumPointLights() == 0) {
         LOG_ERR("Scene has no point lights");
         exit(EXIT_FAILURE);
@@ -56,9 +57,9 @@ int main(int argc, char* argv[]) {
 
     Shader pointShadowShader;
     if (!pointShadowShader.Load(
-        PG_RESOURCE_DIR "shaders/pointShadow.vert",
-        PG_RESOURCE_DIR "shaders/pointShadow.frag",
-        PG_RESOURCE_DIR "shaders/pointShadow.geom"))
+                PG_RESOURCE_DIR "shaders/pointShadow.vert",
+                PG_RESOURCE_DIR "shaders/pointShadow.frag",
+                PG_RESOURCE_DIR "shaders/pointShadow.geom"))
     {
         LOG_ERR("Could not load the point shadow shader");
         exit(EXIT_FAILURE);
@@ -67,23 +68,16 @@ int main(int argc, char* argv[]) {
 
     Shader phongShader;
     if (!phongShader.Load(
-        PG_RESOURCE_DIR "shaders/phong_forward_shadow.vert",
-        PG_RESOURCE_DIR "shaders/phong_forward_shadow.frag"))
+                PG_RESOURCE_DIR "shaders/phong_forward_shadow.vert",
+                PG_RESOURCE_DIR "shaders/phong_forward_shadow.frag"))
     {
         LOG_ERR("Could not load the phong shader");
         exit(EXIT_FAILURE);
     }
+    */
 
     Window::SetRelativeMouse(true);
     PG::Input::PollEvents();
-
-    GLenum err;
-    while((err = glGetError()) != GL_NO_ERROR)
-    {
-        LOG_ERR("opengl error!")
-      // Process/log the error.
-    }
-
 
     // Game loop
     while (!PG::EngineShutdown) {
@@ -95,33 +89,34 @@ int main(int argc, char* argv[]) {
 
         scene->Update();
         // camera->print();
-        //RenderSystem::Render(scene);
+        RenderSystem::Render(scene);
 
-         auto MRS = RenderSystem::GetSubSystem<MeshRenderSubSystem>();
+        /*
+        auto MRS = RenderSystem::GetSubSystem<MeshRenderSubSystem>();
 
-         float near_plane = .1f;
-         float far_plane = light->radius;
-         auto lightPos = light->transform.position;
-         glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)shadowMap.width() / (float)shadowMap.height(), near_plane, far_plane);
-         std::vector<glm::mat4> shadowTransforms;
-         shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-         shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-         shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-         shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
-         shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-         shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-         shadowMap.BindForWriting();
-         pointShadowShader.Enable();
-         glUniformMatrix4fv(pointShadowShader["shadowMatrices"], 6, GL_FALSE, glm::value_ptr(shadowTransforms[0]));
+        float near_plane = .1f;
+        float far_plane = light->radius;
+        auto lightPos = light->transform.position;
+        glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)shadowMap.width() / (float)shadowMap.height(), near_plane, far_plane);
+        std::vector<glm::mat4> shadowTransforms;
+        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowMap.BindForWriting();
+        pointShadowShader.Enable();
+        glUniformMatrix4fv(pointShadowShader["shadowMatrices"], 6, GL_FALSE, glm::value_ptr(shadowTransforms[0]));
 
-         //for (unsigned int i = 0; i < 6; ++i)
-         //    glUniformMatrix4fv(pointShadowShader["shadowMatrices[" + std::to_string(i) + "]"], 1, GL_FALSE, glm::value_ptr(shadowTransforms[i]));
-         glUniform1f(pointShadowShader["far_plane"], light->radius);
-         glUniform3fv(pointShadowShader["lightPos"], 1, glm::value_ptr(lightPos));
-         MRS->DepthPass(pointShadowShader, glm::mat4(1));
-         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        //for (unsigned int i = 0; i < 6; ++i)
+        //    glUniformMatrix4fv(pointShadowShader["shadowMatrices[" + std::to_string(i) + "]"], 1, GL_FALSE, glm::value_ptr(shadowTransforms[i]));
+        glUniform1f(pointShadowShader["far_plane"], light->radius);
+        glUniform3fv(pointShadowShader["lightPos"], 1, glm::value_ptr(lightPos));
+        MRS->DepthPass(pointShadowShader, glm::mat4(1));
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        
+
         glViewport(0, 0, PG::Window::width(), PG::Window::height());
         graphics::BindFrameBuffer(0); // NOTE: This should be the post process FBO for the real rendering system
         graphics::Clear();
@@ -139,7 +134,7 @@ int main(int argc, char* argv[]) {
         glUniform1i(phongShader["depthCube"], 1);
 
         MRS->DepthRender(phongShader, *camera);
-        
+        */
 
         PG::Window::EndFrame();
     }

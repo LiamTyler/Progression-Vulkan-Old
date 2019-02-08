@@ -29,7 +29,9 @@ uniform sampler2D diffuseTex;
 // shadow data
 uniform int shadowLightType;
 uniform Light shadowLight;
+uniform float shadowFarPlane;
 uniform sampler2D depthTex;
+uniform samplerCube depthCube;
 
 uniform vec3 ambientLight;
 uniform int numDirectionalLights;
@@ -49,7 +51,25 @@ float attenuate(in const float distSquared, in const float radiusSquared) {
     return (atten * atten) / (1.0 + distSquared);
 }
 
-float ShadowAmount(in const vec3 n, in const vec3 dirToLight) {
+float PointShadowAmount(in const vec3 n) {
+    vec3 fragToLight = fragPosInWorldSpace - shadowLight.pos;
+    // now get current linear depth as the length between the fragment and light position
+    float currentDepth = length(fragToLight);
+    if (currentDepth > shadowFarPlane)
+        return 1.0;
+    
+    // use the light to fragment vector to sample from the depth map    
+    float closestDepth = texture(depthCube, fragToLight).r;
+    // it is currently in linear range between [0,1]. Re-transform back to original value
+    closestDepth *= shadowFarPlane;
+    
+    // now test for shadows
+    float bias = 0.05; 
+    float shadow = currentDepth -  bias > closestDepth ? 0.0 : 1.0;
+    return shadow;
+}
+
+float DirAndSpotShadowAmount(in const vec3 n, in const vec3 dirToLight) {
     vec3 ndc = fragPosInLightSpace.xyz / fragPosInLightSpace.w;
     vec3 projCoords = 0.5 * ndc + vec3(0.5);
     float currentDepth = projCoords.z;
@@ -90,9 +110,19 @@ vec3 ShadowLighting(in const vec3 n, in const vec3 e, in const vec3 diffuseColor
         color = shadowLight.color * diffuseColor * max(0.0, dot(l, n));
         if (dot(l, n) > EPSILON)
             color += shadowLight.color * ks * pow(max(dot(h, n), 0.0), 4*specular);
-        color *= ShadowAmount(n, l);
+        color *= DirAndSpotShadowAmount(n, l);
     } else if (shadowLightType == 2) { // point light
+        vec3 vertToLight = shadowLight.pos - fragPosInWorldSpace;
+        vec3 l = normalize(vertToLight);
+        vec3 h = normalize(l + e);
+        float d2 = dot(vertToLight, vertToLight);
+        float atten = attenuate(d2, shadowLight.rSquared);
+                
+        color += atten * shadowLight.color * diffuseColor * max(0.0, dot(l, n));
+        if (dot(l, n) > EPSILON)
+            color += atten * shadowLight.color * ks * pow(max(dot(h, n), 0.0), 4*specular);
         
+        color *= PointShadowAmount(n);
     } else if (shadowLightType == 3) { // spot light
         vec3 vertToLight = shadowLight.pos - fragPosInWorldSpace;
         vec3 l = normalize(vertToLight);
@@ -108,7 +138,7 @@ vec3 ShadowLighting(in const vec3 n, in const vec3 e, in const vec3 diffuseColor
             color += atten * shadowLight.color * diffuseColor * max(0.0, dot(l, n));
             if (dot(l, n) > EPSILON)
                 color += atten * shadowLight.color * ks * pow(max(dot(h, n), 0.0), 4*specular);
-            color *= ShadowAmount(n, l);
+            color *= DirAndSpotShadowAmount(n, l);
         }
     }
     

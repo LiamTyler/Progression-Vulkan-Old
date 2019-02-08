@@ -13,8 +13,9 @@ namespace Progression {
     namespace {
 
         Light* shadowLight = nullptr;
-        glm::mat4 LSM;
-        Shader depthShader;
+        glm::mat4 LSMs[6];
+        Shader depthQuadShader;
+        Shader depthCubeShader;
 
     } // namespace anonymous
 
@@ -177,10 +178,17 @@ namespace Progression {
 
         postProcess_.exposure = 1;
 
-        if (!depthShader.Load(PG_RESOURCE_DIR "shaders/shadow.vert", PG_RESOURCE_DIR "shaders/shadow.frag")) {
-            LOG_ERR("Could not load shadow shader");
+        if (!depthQuadShader.Load(PG_RESOURCE_DIR "shaders/shadow.vert", PG_RESOURCE_DIR "shaders/shadow.frag")) {
+            LOG_ERR("Could not load quad shadow shader");
             exit(EXIT_FAILURE);
         }
+
+        if (!depthCubeShader.Load(PG_RESOURCE_DIR "shaders/pointShadow.vert", PG_RESOURCE_DIR "shaders/pointShadow.frag",
+                    PG_RESOURCE_DIR "shaders/pointShadow.geom")) {
+            LOG_ERR("Could not load point shadow shader");
+            exit(EXIT_FAILURE);
+        }
+        depthCubeShader.AddUniform("LSMs");
     }
 
     void RenderSystem::Free() {
@@ -207,7 +215,8 @@ namespace Progression {
         glDeleteTextures(1, &postProcess_.colorTex);
         glDeleteRenderbuffers(1, &postProcess_.depthTex);
         postProcess_.shader.Free();
-        depthShader.Free();
+        depthQuadShader.Free();
+        depthCubeShader.Free();
     }
 
     void RenderSystem::ShadowPass(const Camera& camera) {
@@ -215,7 +224,6 @@ namespace Progression {
         if (!shadowLight)
             return;
 
-        LSM = glm::mat4(1);
         Frustum frustum = camera.GetFrustum();
         float np = camera.GetNearPlane();
         float fp = camera.GetFarPlane();
@@ -238,9 +246,20 @@ namespace Progression {
             glm::mat4 lightProj = glm::ortho<float>(pMin.x, pMax.x, pMin.y, pMax.y, pMin.z, pMax.z);
             // glm::mat4 lightProj = glm::ortho(lsmBB.min.x, lsmBB.max.x, lsmBB.min.y, lsmBB.max.y, np, fp);
 
-            LSM = lightProj * lightView;
+            LSMs[0] = lightProj * lightView;
         } else if (shadowLight->type == Light::Type::POINT) {
-            // TODO: point shadows
+            auto pos = shadowLight->transform.position;
+            glm::mat4 shadowProj = glm::perspective(
+                    glm::radians(90.0f),
+                    shadowLight->shadowMap->width() / (float) shadowLight->shadowMap->height(),
+                    0.1f,
+                    shadowLight->radius);
+            LSMs[0] = shadowProj * glm::lookAt(pos, pos + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+            LSMs[1] = shadowProj * glm::lookAt(pos, pos + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+            LSMs[2] = shadowProj * glm::lookAt(pos, pos + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+            LSMs[3] = shadowProj * glm::lookAt(pos, pos + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+            LSMs[4] = shadowProj * glm::lookAt(pos, pos + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+            LSMs[5] = shadowProj * glm::lookAt(pos, pos + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
         } else {
             const auto lightDir = rotationToDirection(shadowLight->transform.rotation);
             const auto lightUp = glm::vec3(0, 1, 0);
@@ -250,13 +269,25 @@ namespace Progression {
 
             float aspect = shadowLight->shadowMap->width() / (float)shadowLight->shadowMap->height();
             glm::mat4 lightProj = glm::perspective(shadowLight->outerCutoff, aspect, 0.1f, shadowLight->radius);
-            LSM = lightProj * lightView;
+            LSMs[0] = lightProj * lightView;
         }
 
         shadowLight->shadowMap->BindForWriting();
-        depthShader.Enable();
-        for (const auto& subsys : subSystems_)
-            subsys.second->DepthPass(depthShader, LSM);
+
+        // if there are point shadows, the vertex shader is expecting just a model matrix,
+        // so pass the identity as the LSM/VP matrix. Then bind all 6 LSMs for the cube.
+        if (shadowLight->type == Light::Type::POINT) {
+            depthCubeShader.Enable();
+            glUniformMatrix4fv(depthCubeShader["LSMs"], 6, GL_FALSE, glm::value_ptr(LSMs[0]));
+            glUniform1f(depthCubeShader["invFarPlane"], 1.0f / shadowLight->radius);
+            glUniform3fv(depthCubeShader["lightPos"], 1, glm::value_ptr(shadowLight->transform.position));
+            for (const auto& subsys : subSystems_)
+                subsys.second->DepthPass(depthCubeShader, glm::mat4(1));
+        } else {
+            depthQuadShader.Enable();
+            for (const auto& subsys : subSystems_)
+                subsys.second->DepthPass(depthQuadShader, LSMs[0]);
+        }
     }
 
     void RenderSystem::Render(Scene* scene, Camera* camera) {
@@ -427,23 +458,30 @@ namespace Progression {
 
         int shadowLightType = 0;
         if (shadowLight) {
-            glUniformMatrix4fv(shader["LSM"], 1, GL_FALSE, glm::value_ptr(LSM));
-            graphics::Bind2DTexture(shadowLight->shadowMap->texture(), shader["depthTex"], 1);
-            glUniform3fv(shader["shadowLight.color"], 1, glm::value_ptr(shadowLight->color * shadowLight->intensity));
             glm::vec3 dir = rotationToDirection(shadowLight->transform.rotation);
             glUniform3fv(shader["shadowLight.dir"], 1, glm::value_ptr(dir));
+            glUniform3fv(shader["shadowLight.color"], 1, glm::value_ptr(shadowLight->color * shadowLight->intensity));
             glUniform3fv(shader["shadowLight.pos"], 1, glm::value_ptr(shadowLight->transform.position));
             glUniform1f(shader["shadowLight.rSquared"], shadowLight->radius * shadowLight->radius);
             glUniform1f(shader["shadowLight.innerCutoff"], glm::cos(shadowLight->innerCutoff));
             glUniform1f(shader["shadowLight.outerCutoff"], glm::cos(shadowLight->outerCutoff));
 
             auto type = shadowLight->type;
-            if (type == Light::Type::DIRECTIONAL)
+            if (type == Light::Type::DIRECTIONAL) {
+                glUniformMatrix4fv(shader["LSM"], 1, GL_FALSE, glm::value_ptr(LSMs[0]));
+                graphics::Bind2DTexture(shadowLight->shadowMap->texture(), shader["depthTex"], 1);
                 shadowLightType = 1;
-            else if (type == Light::Type::POINT)
+            } else if (type == Light::Type::POINT) {
+                glUniform1f(shader["shadowFarPlane"], shadowLight->radius);
+                glActiveTexture(GL_TEXTURE2);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, shadowLight->shadowMap->texture());
+                glUniform1i(shader["depthCube"], 2);
                 shadowLightType = 2;
-            else
+            } else {
+                glUniformMatrix4fv(shader["LSM"], 1, GL_FALSE, glm::value_ptr(LSMs[0]));
+                graphics::Bind2DTexture(shadowLight->shadowMap->texture(), shader["depthTex"], 1);
                 shadowLightType = 3;
+            }
         }
         glUniform1i(shader["shadowLightType"], shadowLightType);
     }

@@ -64,22 +64,12 @@ namespace Progression {
         (void)rc;
     }
 
-    /*void MeshRenderSubSystem::DepthPass(Shader& shader, const glm::mat4& LSM) {
-        for (const auto& mr : meshRenderers) {
-            glBindVertexArray(mr->vao);
-            glm::mat4 M = mr->gameObject->transform.GetModelMatrix();
-            glm::mat4 MVP = LSM * M;
-            glUniformMatrix4fv(shader["MVP"], 1, GL_FALSE, glm::value_ptr(MVP));
-            glDrawElements(GL_TRIANGLES, mr->mesh->getNumIndices(), GL_UNSIGNED_INT, 0);
-        }
-    }*/
-
     void MeshRenderSubSystem::DepthPass(Shader& shader, const glm::mat4& LSM) {
         for (const auto& mr : meshRenderers) {
             glBindVertexArray(mr->vao);
             glm::mat4 M = mr->gameObject->transform.GetModelMatrix();
             glm::mat4 MVP = LSM * M;
-            glUniformMatrix4fv(shader["M"], 1, GL_FALSE, glm::value_ptr(MVP));
+            glUniformMatrix4fv(shader["MVP"], 1, GL_FALSE, glm::value_ptr(MVP));
             glDrawElements(GL_TRIANGLES, mr->mesh->getNumIndices(), GL_UNSIGNED_INT, 0);
         }
     }
