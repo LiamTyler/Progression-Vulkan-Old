@@ -233,6 +233,9 @@ namespace Progression {
                 ss >> tmp;
                 if (tmp == "true")
                     primaryCamera = true;
+            } else if (first == "exposure") {
+                ss >> camera->renderOptions.exposure;
+                std::cout << "exposure: " << camera->renderOptions.exposure << std::endl;
             } else if (first == "rendering-pipeline") {
 				std::string tmp;
 				ss >> tmp;

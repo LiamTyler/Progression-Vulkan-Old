@@ -14,7 +14,7 @@ aspect 16:9
 near-plane .1
 far-plane 300
 primary-camera true
-#rendering-pipeline tiled-deferred
+exposure 1
 
 Light
 name P1

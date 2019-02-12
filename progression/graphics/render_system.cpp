@@ -176,8 +176,6 @@ namespace Progression {
         graphics::AttachRenderBufferToFBO(postProcess_.depthTex);
         graphics::FinalizeFBO();
 
-        postProcess_.exposure = 1;
-
         if (!depthQuadShader.Load(PG_RESOURCE_DIR "shaders/shadow.vert", PG_RESOURCE_DIR "shaders/shadow.frag")) {
             LOG_ERR("Could not load quad shadow shader");
             exit(EXIT_FAILURE);
@@ -359,7 +357,7 @@ namespace Progression {
         // Draw the post processing color texture to screen, while performing
         // post processing effects, tone mapping, and gamma correction
         postProcess_.shader.Enable();
-        glUniform1f(postProcess_.shader["exposure"], postProcess_.exposure);
+        glUniform1f(postProcess_.shader["exposure"], camera->renderOptions.exposure);
         graphics::Bind2DTexture(postProcess_.colorTex, postProcess_.shader["originalColor"], 0);
         glBindVertexArray(quadVAO_);
         glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -379,18 +377,6 @@ namespace Progression {
             glDrawArrays(GL_TRIANGLES, 0, 6);
             glDepthMask(GL_TRUE);
         }
-    }
-
-    void RenderSystem::EnableOption(uint64_t option) {
-        options_ |= option;
-    }
-
-    void RenderSystem::DisableOption(uint64_t option) {
-        options_ &= (~option);
-    }
-
-    bool RenderSystem::GetOption(uint64_t option) {
-        return options_ & option;
     }
 
     void RenderSystem::UpdateLights(Scene* scene, Camera* camera) {

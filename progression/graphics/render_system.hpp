@@ -25,7 +25,6 @@ namespace Progression {
 			GLuint FBO;
 			GLuint colorTex;
 			GLuint depthTex;
-			float exposure;
             Shader shader;
 		};
 
@@ -46,10 +45,6 @@ namespace Progression {
             else
                 return (T*) subSystems_[typeid(T)];
         }
-
-		static void EnableOption(uint64_t option);
-		static void DisableOption(uint64_t option);
-		static bool GetOption(uint64_t option);
 
         static void UpdateLights(Scene* scene, Camera* camera);
         static void UploadLights(Shader& shader);

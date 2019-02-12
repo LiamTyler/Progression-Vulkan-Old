@@ -13,6 +13,10 @@ namespace Progression {
 
 	class Camera : public GameObject {
 		public:
+            struct RenderOptions {
+                float exposure = 1.0f;
+            };
+
 			Camera(
 				const Transform& t = Transform(),
 				float fovy = glm::radians(45.0f),
@@ -42,7 +46,7 @@ namespace Progression {
 			void SetFarPlane(float p);
 			void SetRenderingPipeline(RenderingPipeline p);
 
-            void print() const;
+            struct RenderOptions renderOptions;
 
 		protected:
 			void UpdateProjectionMatrix();

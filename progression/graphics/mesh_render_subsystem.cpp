@@ -74,22 +74,6 @@ namespace Progression {
         }
     }
 
-    void MeshRenderSubSystem::DepthRender(Shader& shader, const Camera& camera) {
-        auto VP = camera.GetP() * camera.GetV();
-        for (const auto& mr : meshRenderers) {
-            glBindVertexArray(mr->vao);
-            RenderSystem::UploadMaterial(shader, *mr->material);
-            glm::mat4 M = mr->gameObject->transform.GetModelMatrix();
-            glm::mat4 N = glm::transpose(glm::inverse(M));
-            glm::mat4 MVP = VP * M;
-            glUniformMatrix4fv(shader["M"], 1, GL_FALSE, glm::value_ptr(M));
-            glUniformMatrix4fv(shader["N"], 1, GL_FALSE, glm::value_ptr(N));
-            glUniformMatrix4fv(shader["MVP"], 1, GL_FALSE, glm::value_ptr(MVP));
-            glDrawElements(GL_TRIANGLES, mr->mesh->getNumIndices(), GL_UNSIGNED_INT, 0);
-        }
-    }
-
-
     void MeshRenderSubSystem::Render(const Camera& camera) {
 		auto& shader = pipelineShaders[camera.GetRenderingPipeline()];
 		shader.Enable();
