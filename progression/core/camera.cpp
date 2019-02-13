@@ -7,8 +7,7 @@ namespace Progression {
 		fieldOfView_(fovy),
 		aspectRatio_(a),
 		nearPlane_(np),
-		farPlane_(fp),
-		renderingPipeline_(RenderingPipeline::FORWARD)
+		farPlane_(fp)
 	{
         UpdateOrientationVectors();
         UpdateViewMatrix();
@@ -53,7 +52,6 @@ namespace Progression {
 	glm::vec3 Camera::GetForwardDir() const { return currDir_; }
 	glm::vec3 Camera::GetUpDir() const { return currUp_; }
 	glm::vec3 Camera::GetRightDir() const { return currRight_; }
-	RenderingPipeline Camera::GetRenderingPipeline() const { return renderingPipeline_; }
 	Frustum Camera::GetFrustum() const { return frustum_; }
 
 	void Camera::SetFOV(float f) {
@@ -74,10 +72,6 @@ namespace Progression {
 	void Camera::SetFarPlane(float p) {
 		farPlane_ = p;
 		UpdateProjectionMatrix();
-	}
-
-	void Camera::SetRenderingPipeline(RenderingPipeline p) {
-		renderingPipeline_ = p;
 	}
 
 } // namespace Progression

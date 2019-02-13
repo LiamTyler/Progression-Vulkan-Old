@@ -10,9 +10,9 @@
 namespace Progression {
 
     Scene::Scene(unsigned int maxObjects, unsigned int maxLights) :
+        backgroundColor(glm::vec4(.3, .3, .3, 1)),
         maxGameObjects_(maxObjects),
         maxLights_(maxLights),
-        backgroundColor_(glm::vec4(.3, .3, .3, 1)),
         skybox_(nullptr)
     {
     }
@@ -74,14 +74,14 @@ namespace Progression {
                 std::stringstream ss(line);
                 std::string name;
                 ss >> name;
-                ss >> RenderSystem::ambientLight;
+                ss >> scene->ambientColor;
             } else if (line == "BackgroundColor") {
                 // next line should be "color _ _ _"
                 std::getline(in, line);
                 std::stringstream ss(line);
                 std::string name;
                 ss >> name;
-                ss >> scene->backgroundColor_;
+                ss >> scene->backgroundColor;
             }
         }
 
@@ -235,16 +235,6 @@ namespace Progression {
                     primaryCamera = true;
             } else if (first == "exposure") {
                 ss >> camera->renderOptions.exposure;
-                std::cout << "exposure: " << camera->renderOptions.exposure << std::endl;
-            } else if (first == "rendering-pipeline") {
-				std::string tmp;
-				ss >> tmp;
-				RenderingPipeline pipeline;
-				if (tmp == "forward")
-					pipeline = RenderingPipeline::FORWARD;
-				else if (tmp == "tiled-deferred")
-					pipeline = RenderingPipeline::TILED_DEFERRED;
-				camera->SetRenderingPipeline(pipeline);
 			}
         }
 
@@ -363,11 +353,13 @@ namespace Progression {
             }
             // TODO: Specify material from here, which will help with built in shapes
         }
-        auto modelRenderer = obj->GetComponent<ModelRenderer>();
-        if (modelRenderer && material) {
-            for (size_t i = 0; i < modelRenderer->meshRenderers.size(); ++i)
-                modelRenderer->meshRenderers[i]->material = material.get();
-        }
+
+        // TODO: add back in
+        // auto modelRenderer = obj->GetComponent<ModelRenderer>();
+        // if (modelRenderer && material) {
+        //     for (size_t i = 0; i < modelRenderer->meshRenderers.size(); ++i)
+        //         modelRenderer->meshRenderers[i]->material = material.get();
+        // }
         scene->AddGameObject(obj);
     }
 

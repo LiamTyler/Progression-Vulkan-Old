@@ -16,28 +16,44 @@ namespace Progression {
         Shader(Shader&& shader);
         Shader& operator=(Shader&& shader);
 
-        bool Load(const std::string& vertex_or_compute_fname, const std::string& frag_fname = "",
-                const std::string& geom_fname = "");
-		bool AttachShaderFromString(GLenum shaderType, const std::string& source);
-		bool AttachShaderFromFile(GLenum shaderType, const std::string& fname);
-		bool CreateAndLinkProgram();
-		void AutoDetectVariables();
-        void Free();
-		void Enable();
-		void Disable();
-		void AddAttribute(const std::string& attribute);
-		void AddUniform(const std::string& uniform);
-		GLuint GetUniform(const std::string& name) const;
-		GLuint GetAttribute(const std::string& name) const;
-		GLuint operator[] (const std::string& name) const;
+        /** \brief Load a the specified shader files and compile the shader for use. If the second
+         *         and third arguments are empty strings, then the shader is assumed to be a
+         *         compute shader, and the first argument is used as the filename for it.
+         */
+        bool load(
+                const std::string& vertex_or_compute_fname,
+                const std::string& frag_fname = "",
+                const std::string& geom_fname = ""
+                );
+        void free();
+		bool attachShaderFromString(GLenum shaderType, const std::string& source);
+		bool attachShaderFromFile(GLenum shaderType, const std::string& fname);
+		bool createAndLinkProgram();
+		void queryUniforms();
+		void enable() const;
+		void disable() const;
+		GLuint getUniform(const std::string& name) const;
+		GLuint getAttribute(const std::string& name) const;
+		GLuint getProgram() const { return program_; }
 
-		GLuint getProgram() { return program_; }
+        void setUniform(const std::string& name, const bool data);
+        void setUniform(const std::string& name, const int data);
+        void setUniform(const std::string& name, const float data);
+        void setUniform(const std::string& name, const glm::ivec2& data);
+        void setUniform(const std::string& name, const glm::vec2& data);
+        void setUniform(const std::string& name, const glm::vec3& data);
+        void setUniform(const std::string& name, const glm::vec4& data);
+        void setUniform(const std::string& name, const glm::mat3& data);
+        void setUniform(const std::string& name, const glm::mat4& data);
+
+        void setUniform(const std::string& name, const glm::mat4* data, int elements);
+        void setUniform(const std::string& name, const glm::vec3* data, int elements);
+        void setUniform(const std::string& name, const glm::vec4* data, int elements);
 
 	protected:
 		GLuint program_;
 		std::vector<GLuint> shaders_;
-		std::unordered_map<std::string, GLuint> attributeList_;
-		std::unordered_map<std::string, GLuint> uniformList_;
+		std::unordered_map<std::string, GLuint> uniforms_;
 	};
 
 } // namespace Progression

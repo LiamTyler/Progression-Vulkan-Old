@@ -1,7 +1,6 @@
 #pragma once
 
 #include "graphics/render_component.hpp"
-#include "graphics/mesh_render_component.hpp"
 #include "graphics/model.hpp"
 
 namespace Progression {
@@ -15,7 +14,6 @@ namespace Progression {
         virtual void Stop();
 
         Model* model;
-        std::vector<MeshRenderer*> meshRenderers;
     };
 
 } // namespace Progression

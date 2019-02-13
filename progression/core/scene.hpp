@@ -41,10 +41,11 @@ namespace Progression {
         unsigned int GetNumPointLights() const { return pointLights_.size(); }
         unsigned int GetNumDirectionalLights() const { return directionalLights_.size(); }
         const std::vector<GameObject*>& GetGameObjects() const { return gameObjects_; }
-        glm::vec3 GetBackgroundColor() const { return backgroundColor_; }
-        void SetBackgroundColor(const glm::vec3& color) { backgroundColor_ = color; }
         std::shared_ptr<Skybox> getSkybox() const { return skybox_; }
         void setSkybox(std::shared_ptr<Skybox> skybox) { skybox_ = skybox; }
+
+        glm::vec4 backgroundColor;
+        glm::vec4 ambientColor;
 
     protected:
         unsigned int maxGameObjects_;
@@ -56,7 +57,6 @@ namespace Progression {
         std::vector<Light*> spotLights_;
         std::vector<Camera*> cameras_;
 
-        glm::vec3 backgroundColor_;
         std::shared_ptr<Skybox> skybox_;
 
         // scene file parser helpers

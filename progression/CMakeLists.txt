@@ -36,8 +36,6 @@ set(
     graphics/shader.cpp
     graphics/render_component.cpp
     graphics/render_system.cpp
-    graphics/mesh_render_subsystem.cpp
-    graphics/mesh_render_component.cpp
     graphics/model_render_component.cpp
     graphics/skybox.cpp
     graphics/shadow_map.cpp
@@ -81,9 +79,6 @@ set(
     graphics/shader.hpp
     graphics/render_component.hpp
     graphics/render_system.hpp
-    graphics/render_subsystem.hpp
-    graphics/mesh_render_subsystem.hpp
-    graphics/mesh_render_component.hpp
     graphics/model_render_component.hpp
     graphics/skybox.hpp
     graphics/shadow_map.hpp

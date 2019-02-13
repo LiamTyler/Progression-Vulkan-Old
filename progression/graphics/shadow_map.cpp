@@ -8,7 +8,7 @@ namespace Progression {
         width_(_width),
         height_(_height)
     {
-        fbo_ = graphics::CreateFrameBuffer();
+        fbo_ = graphicsApi::createFramebuffer();
         glGenTextures(1, &depthTex_);
 
         if (type_ == Type::QUAD) {
@@ -35,7 +35,7 @@ namespace Progression {
 
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
-        graphics::BindFrameBuffer();
+        graphicsApi::bindFramebuffer(0);
     }
 
     ShadowMap::~ShadowMap() {
@@ -63,9 +63,9 @@ namespace Progression {
     }
 
     void ShadowMap::BindForWriting() const {
-        glViewport(0, 0, width_, height_);
-        graphics::BindFrameBuffer(fbo_);
-        graphics::Clear(GL_DEPTH_BUFFER_BIT);
+        graphicsApi::setViewport(width_, height_);
+        graphicsApi::bindFramebuffer(fbo_);
+        graphicsApi::clearDepthBuffer();
     }
 
 } // namespace Progression

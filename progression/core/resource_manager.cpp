@@ -235,7 +235,7 @@ namespace Progression {
                     continue;
                 }
                 shaders_[name] = std::make_shared<Shader>();
-                shaders_[name]->Load(vertex, frag);
+                shaders_[name]->load(vertex, frag);
             }
         }
 

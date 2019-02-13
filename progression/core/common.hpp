@@ -12,6 +12,8 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#define UNUSED(x) (void)(x);
+
 namespace Progression {
 
     inline std::ostream& operator <<(std::ostream& out, const glm::vec2& v) {
