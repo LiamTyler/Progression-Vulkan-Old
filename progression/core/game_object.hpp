@@ -7,40 +7,44 @@
 #include "core/transform.hpp"
 #include "core/component.hpp"
 #include "core/bounding_box.hpp"
+#include "utils/noncopyable.hpp"
 
 namespace Progression {
 
-	class GameObject {
+	class GameObject : public NonCopyable {
 	public:
 		GameObject(const Transform& t = Transform(), const std::string& name = "");
 		virtual ~GameObject();
+
+        GameObject(GameObject&& o) = default;
+        GameObject& operator=(GameObject&& o) = default;
 
 		virtual void Update();
 
 		template<typename ComponentType>
 		void AddComponent(Component* c) {
-			assert(component_list_.find(typeid(ComponentType)) == component_list_.end());
+			assert(componentList_.find(typeid(ComponentType)) == componentList_.end());
 			c->gameObject = this;
 			c->Start();
-			component_list_[typeid(ComponentType)] = c;
+			componentList_[typeid(ComponentType)] = c;
 		}
 
 		template<typename ComponentType>
 		void RemoveComponent() {
-			assert(component_list_.find(typeid(ComponentType)) != component_list_.end());
-			Component* c = component_list_[typeid(ComponentType)];
+			assert(componentList_.find(typeid(ComponentType)) != componentList_.end());
+			Component* c = componentList_[typeid(ComponentType)];
 			c->Stop();
 			delete c;
-			component_list_.erase(typeid(ComponentType));
+			componentList_.erase(typeid(ComponentType));
 		}
 
 		template<typename ComponentType>
 		ComponentType* GetComponent() {
-			//assert(component_list_.find(typeid(ComponentType)) != component_list_.end());
-            if (component_list_.find(typeid(ComponentType)) == component_list_.end())
+			//assert(componentList_.find(typeid(ComponentType)) != componentList_.end());
+            if (componentList_.find(typeid(ComponentType)) == componentList_.end())
                 return nullptr;
 			else
-                return (ComponentType*)component_list_[typeid(ComponentType)];
+                return (ComponentType*)componentList_[typeid(ComponentType)];
 		}
 
 		Transform transform;
@@ -48,7 +52,7 @@ namespace Progression {
         std::string name;
 
 	protected:
-		std::unordered_map<std::type_index, Component*> component_list_;
+		std::unordered_map<std::type_index, Component*> componentList_;
 	};
 
 } // namespace Progression

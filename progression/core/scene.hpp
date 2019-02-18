@@ -13,56 +13,53 @@ namespace Progression {
 
     class Scene {
     public:
-        Scene(unsigned int maxObjects = 1000000, unsigned int maxLights = 100000);
+        Scene();
         ~Scene();
 
-        static Scene* Load(const std::string& filename);
-        static bool Save(const std::string& filename);
+        /** \brief Parses a .pgscn file and returns a Scene object as specified in the file. */
+        static Scene* load(const std::string& filename);
 
-        void Update();
+        /** \brief Updates all of the gameobjects, lights, the camera, and their components. */
+        void update();
 
-        void AddGameObject(GameObject* o);
-        void RemoveGameObject(GameObject* o);
-        GameObject* GetGameObject(const std::string& name) const;
-        void GetNeighbors(GameObject* o, float radius, std::vector<GameObject*>& neighborList);
+        // /** \brief Add's the given object to the scene. This move constructs a new gameobject
+        //  *         given the one passed in, so the argument will be invalid upon returning. */
+        // void addGameObject(GameObject&& o);
+        // /** \brief Updates all of the gameobjects, lights, the camera, and their components. */
+        // void removeGameObject(GameObject* o);
 
-        bool AddLight(Light* light);
-        void RemoveLight(Light* light);
+        /** \brief Returns the gameobject with the given name if found, nullptr is not.
+         *         Search is O(n). */
+        GameObject* getGameObject(const std::string& name) const;
 
-        void AddCamera(Camera* camera, bool setMain = false);
-        void RemoveCamera(Camera* camera);
-        Camera* GetCamera(int index = 0) { return cameras_[index]; }
+        /** \brief */
+        // void getNeighbors(GameObject* o, float radius, std::vector<GameObject*>& neighborList);
 
-        void GenerateVisibilityList();
+        // /** \brief Add's the given light to the scene. This move constructs a new light 
+        //  *         given the one passed in, so the argument will be invalid upon returning. */
+        // bool addLight(Light&& light);
+        // /** \brief Updates all of the gameobjects, lights, the camera, and their components. */
+        // void removeLight(Light* light);
 
-        std::vector<Light*>& GetPointLights() { return pointLights_; }
-        std::vector<Light*>& GetDirectionalLights() { return directionalLights_; }
-        std::vector<Light*>& GetSpotLights() { return spotLights_; }
-        unsigned int GetNumPointLights() const { return pointLights_.size(); }
-        unsigned int GetNumDirectionalLights() const { return directionalLights_.size(); }
-        const std::vector<GameObject*>& GetGameObjects() const { return gameObjects_; }
-        std::shared_ptr<Skybox> getSkybox() const { return skybox_; }
-        void setSkybox(std::shared_ptr<Skybox> skybox) { skybox_ = skybox; }
+        Camera* getCamera() { return &camera_; }
+        const std::vector<Light>& getLights() { return lights_; }
+        const std::vector<GameObject>& getGameObjects() const { return gameObjects_; }
 
-        glm::vec4 backgroundColor;
-        glm::vec4 ambientColor;
+
+        glm::vec4 backgroundColor; ///< The background color of the scene
+        glm::vec4 ambientColor; ///< The ambient light color used in lighting calculations
+        std::shared_ptr<Skybox> skybox; ///< Pointer to the scene's current skybox, or nullptr
 
     protected:
-        unsigned int maxGameObjects_;
-        unsigned int maxLights_;
+        std::vector<GameObject> gameObjects_; ///< A list of all the gameobjects in the scene
+        std::vector<Light> lights_; ///< A list of all the lights in the scene
+        Camera camera_; ///< The scene's camera
 
-        std::vector<GameObject*> gameObjects_;
-        std::vector<Light*> directionalLights_;
-        std::vector<Light*> pointLights_;
-        std::vector<Light*> spotLights_;
-        std::vector<Camera*> cameras_;
-
-        std::shared_ptr<Skybox> skybox_;
 
         // scene file parser helpers
-        static void ParseCamera(Scene* scene, std::ifstream& in);
-        static void ParseLight(Scene* scene, std::ifstream& in);
-        static void ParseGameObject(Scene* scene, std::ifstream& in);
+        static void parseCamera(Scene* scene, std::ifstream& in);
+        static void parseLight(Scene* scene, std::ifstream& in);
+        static void parseGameObject(Scene* scene, std::ifstream& in);
     };
 
 } // namespace Progression

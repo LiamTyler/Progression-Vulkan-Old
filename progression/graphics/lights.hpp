@@ -24,7 +24,9 @@ namespace Progression {
             float _outerCutoff = glm::radians(35.0f)
         );
 
-        ~Light();
+        virtual ~Light();
+        Light(Light&& light);
+        Light& operator=(Light&& light);
 
         Type type;
         glm::vec3 color;

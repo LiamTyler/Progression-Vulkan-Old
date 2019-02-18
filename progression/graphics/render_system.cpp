@@ -53,6 +53,22 @@ namespace {
 
 namespace Progression { namespace RenderSystem {
 
+    void shadowPass(const Camera& camera) {
+
+    }
+
+    void gBufferPass(const Camera& camera) {
+
+    }
+
+    void lightingPass(const Camera& camera) {
+
+    }
+
+    void postProcessPass(const Camera& camera) {
+
+    }
+
     bool Init(const config::Config& config) {
         UNUSED(config);
         UNUSED(cubeVao);
@@ -99,7 +115,8 @@ namespace Progression { namespace RenderSystem {
     void Free() {
     }
 
-    void render() {
+    void render(Scene* scene) {
+        shadowPass(
     }
 
 } } // namespace Progression::RenderSystem

@@ -21,4 +21,21 @@ namespace Progression {
             delete shadowMap;
     }
 
+    Light::Light(Light&& light) {
+        *this = std::move(light);
+    }
+
+    Light& Light::operator=(Light&& light) {
+        type            = std::move(light.type);
+        color           = std::move(light.color);
+        intensity       = std::move(light.intensity);
+        radius          = std::move(light.radius);
+        innerCutoff     = std::move(light.innerCutoff);
+        outerCutoff     = std::move(light.outerCutoff);
+        shadowMap       = std::move(light.shadowMap);
+        light.shadowMap = nullptr;
+
+        return *this;
+    }
+
 } // namespace Progression

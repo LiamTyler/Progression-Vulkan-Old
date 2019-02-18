@@ -9,14 +9,29 @@ namespace Progression {
 	}
 
 	GameObject::~GameObject() {
-		for (auto& c : component_list_) {
+		for (auto& c : componentList_) {
 			c.second->Stop();
 			delete c.second;
 		}
 	}
 
+    /*
+    GameObject::GameObject(GameObject&& o) {
+        *this = std::move(o);
+    }
+
+    GameObject& GameObject::operator=(GameObject&& o) {
+        transform      = std::move(o.transform);
+        boundingBox    = std::move(o.boundingBox);
+        name           = std::move(o.name);
+        componentList_ = std::move(o.componentList_);
+
+        return *this;
+    }
+    */
+
 	void GameObject::Update() {
-		for (auto& c : component_list_)
+		for (auto& c : componentList_)
 			c.second->Update();
 	}
 
