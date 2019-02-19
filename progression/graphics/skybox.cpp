@@ -35,7 +35,7 @@ namespace Progression {
                 return false;
             }
 
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA,
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_SRGB,
 				img.Width(), img.Height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, img.GetData());
 
 		}

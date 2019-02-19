@@ -125,6 +125,10 @@ namespace Progression { namespace graphicsApi {
         return tex;
     }
 
+    void deleteTexture(GLuint textures) {
+        glDeleteTextures(1, &textures);
+    }
+
     void deleteTextures(GLuint* textures, int count) {
         glDeleteTextures(count, textures);
     }

@@ -62,7 +62,10 @@ namespace Progression { namespace RenderSystem {
     }
 
     void gBufferPass(Scene* scene) {
-
+        graphicsApi::bindFramebuffer(gbuffer.fbo);
+        graphicsApi::clearColor(0, 0, 0, 0);
+        graphicsApi::clearColorBuffer();
+        graphicsApi::clearDepthBuffer();
     }
 
     void lightingPass(Scene* scene) {
@@ -121,9 +124,6 @@ namespace Progression { namespace RenderSystem {
 
     bool Init(const config::Config& config) {
         UNUSED(config);
-        UNUSED(cubeVao);
-        UNUSED(cubeVbo);
-        UNUSED(postProcessBuffer);
         UNUSED(gbuffer);
 
         // load shaders
@@ -213,12 +213,26 @@ namespace Progression { namespace RenderSystem {
 
         
         // create gbuffer
-
-        // create postProcessBuffer
-        postProcessBuffer.fbo = graphicsApi::createFramebuffer();
+        gbuffer.fbo = graphicsApi::createFramebuffer();
         graphicsApi::Texture2DDesc desc;
         desc.width = Window::width();
         desc.height = Window::height();
+        desc.internalFormat = GL_RGBA32F;
+        gbuffer.positionTex = graphicsApi::create2DTexture(desc);
+        gbuffer.normalTex   = graphicsApi::create2DTexture(desc);
+        desc.internalFormat = GL_RGBA16F;
+        gbuffer.specularTex = graphicsApi::create2DTexture(desc);
+        desc.internalFormat = GL_RGB16F;
+        gbuffer.emissiveTex = graphicsApi::create2DTexture(desc);
+        desc.internalFormat = GL_RGB;
+        gbuffer.diffuseTex  = graphicsApi::create2DTexture(desc);
+        gbuffer.depthRbo = graphicsApi::createRenderbuffer(Window::width(), Window::height());
+        graphicsApi::attachColorTextures({ gbuffer.positionTex, gbuffer.normalTex, gbuffer.diffuseTex, gbuffer.specularTex, gbuffer.emissiveTex });
+        graphicsApi::attachDepthRbo(gbuffer.depthRbo);
+        graphicsApi::checkFboCompleteness();
+
+        // create postProcessBuffer
+        postProcessBuffer.fbo = graphicsApi::createFramebuffer();
         desc.internalFormat = GL_RGBA16F;
         postProcessBuffer.hdrColorTex = graphicsApi::create2DTexture(desc);
         postProcessBuffer.depthRbo = graphicsApi::createRenderbuffer(Window::width(), Window::height());
@@ -226,14 +240,38 @@ namespace Progression { namespace RenderSystem {
         graphicsApi::attachDepthRbo(postProcessBuffer.depthRbo);
         graphicsApi::checkFboCompleteness();
 
+        // other options
+        graphicsApi::toggleDepthTest(true);
+        graphicsApi::toggleDepthWrite(true);
+
         return true;
     }
 
     void Free() {
+        // quad and cube data
         graphicsApi::deleteVao(quadVao);
         graphicsApi::deleteVao(cubeVao);
         graphicsApi::deleteBuffer(quadVbo);
         graphicsApi::deleteBuffer(cubeVbo);
+
+        // gbuffer
+        graphicsApi::deleteTexture(gbuffer.positionTex);
+        graphicsApi::deleteTexture(gbuffer.normalTex);
+        graphicsApi::deleteTexture(gbuffer.diffuseTex);
+        graphicsApi::deleteTexture(gbuffer.specularTex);
+        graphicsApi::deleteTexture(gbuffer.emissiveTex);
+        graphicsApi::deleteRenderbuffer(gbuffer.depthRbo);
+        graphicsApi::deleteFramebuffer(gbuffer.fbo);
+
+        // post process data
+        graphicsApi::deleteTexture(postProcessBuffer.hdrColorTex);
+        graphicsApi::deleteRenderbuffer(postProcessBuffer.depthRbo);
+        graphicsApi::deleteFramebuffer(postProcessBuffer.fbo);
+
+        // shaders
+        for (int i = 0; i < TOTAL_SHADERS; ++i) {
+            shaders[i].free();
+        }
     }
 
     void render(Scene* scene) {
@@ -245,8 +283,7 @@ namespace Progression { namespace RenderSystem {
         graphicsApi::bindFramebuffer(postProcessBuffer.fbo);
         graphicsApi::clearColor(0, 0, 0, 0);
         graphicsApi::clearColorBuffer();
-        //graphicsApi::blitFboToFbo(gbuffer.fbo, postProcessBuffer.fbo, Window::width(), Window::height(), GL_DEPTH_BUFFER_BIT);
-        graphicsApi::clearDepthBuffer();
+        graphicsApi::blitFboToFbo(gbuffer.fbo, postProcessBuffer.fbo, Window::width(), Window::height(), GL_DEPTH_BUFFER_BIT);
 
         lightingPass(scene);
 

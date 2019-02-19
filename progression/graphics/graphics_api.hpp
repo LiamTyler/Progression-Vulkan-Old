@@ -106,6 +106,9 @@ namespace Progression { namespace graphicsApi {
     /** \brief Creates a texture based on the parameters in the texture descriptor struct. */
     GLuint create2DTexture(const Texture2DDesc& textureDesc);
 
+    /** \brief Deletes the texture given. */
+    void deleteTexture(GLuint textures);
+
     /** \brief Deletes the texture(s) given. */
     void deleteTextures(GLuint* textures, int count);
 

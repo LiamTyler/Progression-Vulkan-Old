@@ -98,7 +98,6 @@ namespace Progression {
         return attachShaderFromString(shaderType, file);
     }
 
-    // Note: technically, if 
     bool Shader::createAndLinkProgram() {
         program_ = glCreateProgram();
         for (size_t i = 0; i < shaders_.size(); i++)
@@ -132,7 +131,7 @@ namespace Progression {
         glGetProgramiv(program_, GL_ACTIVE_UNIFORM_MAX_LENGTH, &uniformBufSize);
         GLchar* uniformName = new GLchar[uniformBufSize];
         glGetProgramiv(program_, GL_ACTIVE_UNIFORMS, &count);
-        LOG("Num uniforms:",count);
+        // LOG("Num uniforms:",count);
         for (int i = 0; i < count; i++) {
             GLint size;
             GLenum type;
@@ -140,11 +139,18 @@ namespace Progression {
             glGetActiveUniform(program_, (GLuint)i, uniformBufSize, &length, &size, &type, uniformName);
 
             std::string sName(uniformName);
+            // fix uniform arrays
+            int len = sName.length();
+            if (len > 3) {
+                if (sName[len - 1] == ']' && sName[len - 3] == '[') {
+                    uniforms_[sName.substr(0, len - 3)] = i;
+                    // LOG("Uniform:", i, "=", sName.substr(0, len - 3));
+                }
+            }
             uniforms_[sName] = i;
-            LOG("Uniform:",i,"=",sName);
+            // LOG("Uniform:",i,"=",sName);
         }
         delete[] uniformName;
-        disable();
     }
 
     void Shader::enable() const {
