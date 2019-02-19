@@ -9,28 +9,21 @@
 
 namespace Progression {
 
-    Scene::Scene(unsigned int maxObjects, unsigned int maxLights) :
+    Scene::Scene() :
         backgroundColor(glm::vec4(.3, .3, .3, 1)),
-        maxGameObjects_(maxObjects),
-        maxLights_(maxLights),
-        skybox_(nullptr)
+        ambientColor(glm::vec4(0)),
+        skybox(nullptr)
     {
     }
 
     Scene::~Scene() {
-        for (const auto& o : gameObjects_)
-            delete o;
-        for (const auto& l : directionalLights_)
+        for (const auto& obj : gameObjects_)
+            delete obj;
+        for (const auto& l : lights_)
             delete l;
-        for (const auto& l : pointLights_)
-            delete l;
-        for (const auto& l : spotLights_)
-            delete l;
-        for (const auto& c : cameras_)
-            delete c;
     }
 
-    Scene* Scene::Load(const std::string& filename) {
+    Scene* Scene::load(const std::string& filename) {
         Scene* scene = new Scene;
 
         std::ifstream in(filename);
@@ -67,7 +60,7 @@ namespace Progression {
                 std::string name;
                 ss >> name;
                 ss >> name;
-                scene->skybox_ = ResourceManager::GetSkybox(name);
+                scene->skybox = ResourceManager::GetSkybox(name);
             } else if (line == "AmbientLight") {
                 // next line should be "color _ _ _"
                 std::getline(in, line);
@@ -76,7 +69,7 @@ namespace Progression {
                 ss >> name;
                 ss >> scene->ambientColor;
             } else if (line == "BackgroundColor") {
-                // next line should be "color _ _ _"
+                // next line should be "color _ _ _ _"
                 std::getline(in, line);
                 std::stringstream ss(line);
                 std::string name;
@@ -90,7 +83,7 @@ namespace Progression {
         return scene;
     }
 
-    void Scene::Update() {
+    void Scene::update() {
         for (const auto& obj : gameObjects_)
             obj->Update();
         for (const auto& l : lights_)
@@ -231,7 +224,8 @@ namespace Progression {
             else
                 light->shadowMap = new ShadowMap(shadowType);
         }
-        scene->AddLight(light);
+
+        scene->lights_.push_back(light);
     }
 
     void Scene::parseGameObject(Scene* scene, std::ifstream& in) {
@@ -265,7 +259,7 @@ namespace Progression {
                     LOG_ERR("No model found with name: ", modelName);
                     exit(EXIT_FAILURE);
                 }
-				obj->AddComponent<ModelRenderer>(new ModelRenderer(obj, model.get()));
+				// obj.AddComponent<ModelRenderer>(new ModelRenderer(obj, model.get()));
             } else if (first == "material") {
                 std::string materialName;
                 ss >> materialName;
@@ -283,7 +277,7 @@ namespace Progression {
         //     for (size_t i = 0; i < modelRenderer->meshRenderers.size(); ++i)
         //         modelRenderer->meshRenderers[i]->material = material.get();
         // }
-        scene->AddGameObject(obj);
+        scene->gameObjects_.push_back(obj);
     }
 
 } // namespace Progression

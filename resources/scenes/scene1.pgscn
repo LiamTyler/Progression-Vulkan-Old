@@ -1,6 +1,9 @@
 Resource-file
 filename scenes/scene1Resources.txt
 
+BackgroundColor
+color 0 1 0 1
+
 AmbientLight
 color 0 0 0
 
@@ -16,52 +19,10 @@ far-plane 300
 primary-camera true
 exposure 1
 
-Light
-name P1
-type point
-radius 35
-position -5 6 0
-intensity 10
-shadows true
-shadowMapResolution 1024 1024
-
-#Light
-name mainDirectional
-type directional
-rotation -25 -45 0
-intensity 1
-shadows true
-shadowMapResolution 1024 1024
-
-#Light
-name mainSpot
-type spot
-position -5 3 0
-rotation 0 -90 0
-intensity 3
-radius 15
-innerCutoff 40
-outerCutoff 45
-shadows true
-shadowMapResolution 1024 1024
-
 Skybox
 name water
 
-GameObject
+#GameObject
 name floor
 scale 100 1 100
 model metalFloor
-
-#GameObject
-name robot
-position 0 2 0
-scale 1 1 1
-model model
-
-GameObject
-name plane
-position -5 2 0
-rotation 0 0 0
-scale 1 1 1
-model plane2

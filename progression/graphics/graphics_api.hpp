@@ -63,6 +63,9 @@ namespace Progression { namespace graphicsApi {
     /** \brief Binds the given vao. */
     void bindVao(GLuint vao);
 
+    /** \brief Enables an attribute at location, and describes the buffer data layout for that attribute. */
+    void describeAttribute(GLuint location, GLint elements, GLenum type, int stride = 0, int offset = 0);
+
     /** \brief Delete the given vao. */
     void deleteVao(GLuint vao);
 
@@ -86,6 +89,9 @@ namespace Progression { namespace graphicsApi {
     /** \brief Binds the given texture, set the shader's uniform, and the active texture unit. */
     void bind2DTexture(GLuint tex, GLuint uniformLocation, int unit = 0);
 
+    /** \brief Binds the given cubemap, set the shader's uniform, and the active texture unit. */
+    void bindCubemap(GLuint tex, GLuint uniformLocation, int unit = 0);
+
     typedef struct Texture2DDesc {
         int width;
         int height;
@@ -108,7 +114,7 @@ namespace Progression { namespace graphicsApi {
 
     /** \brief Creates a render buffer with the given width, height, and internal format, and
      *         binds the buffer as well. */
-    GLuint createRenderBuffer(int width, int height, GLenum internalFormat = GL_DEPTH_COMPONENT);
+    GLuint createRenderbuffer(int width, int height, GLenum internalFormat = GL_DEPTH_COMPONENT);
 
     /** \brief Deletes the rbo given. */
     void deleteRenderbuffer(GLuint rbo);
@@ -130,7 +136,7 @@ namespace Progression { namespace graphicsApi {
 
     // NOTE: might need to specify between glFramebufferTexture and glFramebufferTexture2D?
     /** \brief Sets the depth attachment to be the given texture. */
-    void attachDepthTexure(GLuint tex);
+    void attachDepthTexture(GLuint tex);
 
     /** \brief Sets the depth attachment to be the given rbo. */
     void attachDepthRbo(GLuint rbo);

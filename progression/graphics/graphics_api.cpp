@@ -60,7 +60,7 @@ namespace Progression { namespace graphicsApi {
     }
 
 
-    GLuint createVaos() {
+    GLuint createVao() {
         GLuint vao;
         glGenVertexArrays(1, &vao);
         glBindVertexArray(vao);
@@ -74,6 +74,12 @@ namespace Progression { namespace graphicsApi {
     void bindVao(GLuint vao) {
         glBindVertexArray(vao);
     }
+
+    void describeAttribute(GLuint location, GLint elements, GLenum type, int stride, int offset) {
+        glEnableVertexAttribArray(location);
+        glVertexAttribPointer(location, elements, type, GL_FALSE, stride, (void*) offset);
+    }
+
 
     void deleteBuffer(GLuint buffer) {
         glDeleteBuffers(1, &buffer);
@@ -96,6 +102,12 @@ namespace Progression { namespace graphicsApi {
     void bind2DTexture(GLuint tex, GLuint uniformLocation, int unit) {
         glActiveTexture(GL_TEXTURE0 + unit);
         glBindTexture(GL_TEXTURE_2D, tex);
+        glUniform1i(uniformLocation, unit);
+    }
+
+    void bindCubemap(GLuint tex, GLuint uniformLocation, int unit) {
+        glActiveTexture(GL_TEXTURE0 + unit);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, tex);
         glUniform1i(uniformLocation, unit);
     }
 

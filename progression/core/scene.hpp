@@ -42,17 +42,17 @@ namespace Progression {
         // void removeLight(Light* light);
 
         Camera* getCamera() { return &camera_; }
-        const std::vector<Light>& getLights() { return lights_; }
-        const std::vector<GameObject>& getGameObjects() const { return gameObjects_; }
+        const std::vector<Light*>& getLights() { return lights_; }
+        const std::vector<GameObject*>& getGameObjects() const { return gameObjects_; }
 
 
         glm::vec4 backgroundColor; ///< The background color of the scene
-        glm::vec4 ambientColor; ///< The ambient light color used in lighting calculations
+        glm::vec3 ambientColor; ///< The ambient light color used in lighting calculations
         std::shared_ptr<Skybox> skybox; ///< Pointer to the scene's current skybox, or nullptr
 
     protected:
-        std::vector<GameObject> gameObjects_; ///< A list of all the gameobjects in the scene
-        std::vector<Light> lights_; ///< A list of all the lights in the scene
+        std::vector<GameObject*> gameObjects_; ///< A list of all the gameobjects in the scene
+        std::vector<Light*> lights_; ///< A list of all the lights in the scene
         Camera camera_; ///< The scene's camera
 
 

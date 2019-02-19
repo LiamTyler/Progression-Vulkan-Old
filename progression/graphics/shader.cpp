@@ -174,51 +174,51 @@ namespace Progression {
     }
 
     void Shader::setUniform(const std::string& name, const bool data) {
-        glUniform1i(uniforms_[name], data);
+        glUniform1i(getUniform(name), data);
     }
 
     void Shader::setUniform(const std::string& name, const int data) {
-        glUniform1i(uniforms_[name], data);
+        glUniform1i(getUniform(name), data);
     }
 
     void Shader::setUniform(const std::string& name, const float data) {
-        glUniform1f(uniforms_[name], data);
+        glUniform1f(getUniform(name), data);
     }
 
     void Shader::setUniform(const std::string& name, const glm::ivec2& data) {
-        glUniform2i(uniforms_[name], data.x, data.y);
+        glUniform2i(getUniform(name), data.x, data.y);
     }
 
     void Shader::setUniform(const std::string& name, const glm::vec2& data) {
-        glUniform2f(uniforms_[name], data.x, data.y);
+        glUniform2f(getUniform(name), data.x, data.y);
     }
 
     void Shader::setUniform(const std::string& name, const glm::vec3& data) {
-        glUniform3f(uniforms_[name], data.x, data.y, data.z);
+        glUniform3f(getUniform(name), data.x, data.y, data.z);
     }
 
     void Shader::setUniform(const std::string& name, const glm::vec4& data) {
-        glUniform4f(uniforms_[name], data.x, data.y, data.z, data.w);
+        glUniform4f(getUniform(name), data.x, data.y, data.z, data.w);
     }
 
     void Shader::setUniform(const std::string& name, const glm::mat3& data) {
-        glUniformMatrix3fv(uniforms_[name], 1, GL_FALSE, glm::value_ptr(data));
+        glUniformMatrix3fv(getUniform(name), 1, GL_FALSE, glm::value_ptr(data));
     }
 
     void Shader::setUniform(const std::string& name, const glm::mat4& data) {
-        glUniformMatrix4fv(uniforms_[name], 1, GL_FALSE, glm::value_ptr(data));
+        glUniformMatrix4fv(getUniform(name), 1, GL_FALSE, glm::value_ptr(data));
     }
 
     void Shader::setUniform(const std::string& name, const glm::mat4* data, int elements) {
-        glUniformMatrix4fv(uniforms_[name], elements, GL_FALSE, glm::value_ptr(data[0]));
+        glUniformMatrix4fv(getUniform(name), elements, GL_FALSE, glm::value_ptr(data[0]));
     }
 
     void Shader::setUniform(const std::string& name, const glm::vec3* data, int elements) {
-        glUniform3fv(uniforms_[name], elements, glm::value_ptr(data[0]));
+        glUniform3fv(getUniform(name), elements, glm::value_ptr(data[0]));
     }
 
     void Shader::setUniform(const std::string& name, const glm::vec4* data, int elements) {
-        glUniform4fv(uniforms_[name], elements, glm::value_ptr(data[0]));
+        glUniform4fv(getUniform(name), elements, glm::value_ptr(data[0]));
     }
 
 } // namespace Progression

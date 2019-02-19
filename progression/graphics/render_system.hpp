@@ -3,7 +3,11 @@
 #include "core/common.hpp"
 #include "core/config.hpp"
 
-namespace Progression { namespace RenderSystem {
+namespace Progression {
+
+    class Scene;
+    
+namespace RenderSystem {
 
     /**
      * \brief Initialze the main rendering engine. This includes the shaders,
@@ -17,8 +21,8 @@ namespace Progression { namespace RenderSystem {
     void Free();
 
     /**
-     * \brief Will render whatever the current active scene is
+     * \brief Will render the given scene.
      */
-    void render();
+    void render(Scene* scene);
 
 } } // namespace Progression::RenderSystem
