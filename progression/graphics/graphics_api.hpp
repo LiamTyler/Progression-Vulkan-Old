@@ -75,7 +75,7 @@ namespace Progression { namespace graphicsApi {
     GLuint createBuffer();
 
     /** \brief Creates as many buffers as specified by count, unbound. */
-    void createBuffers(GLuint*& buffers, int count);
+    void createBuffers(GLuint* buffers, int count);
 
     /** \brief Deletes the single buffer given. */
     void deleteBuffer(GLuint buffer);

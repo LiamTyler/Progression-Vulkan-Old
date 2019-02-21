@@ -98,23 +98,14 @@ namespace Progression {
         return nullptr;
     }
 
-    /*
-    void Scene::GetNeighbors(GameObject* o, float radius, std::vector<GameObject*>& neighborList) {
-        neighborList.clear();
-        float r2 = radius*radius;
-        auto& pos = o->transform.position;
-        for (auto& obj : gameObjects_) {
-            auto diff = obj->transform.position - pos;
-            if (obj != o && glm::dot(diff, diff) < r2)
-                neighborList.push_back(obj);
-        }
+    void Scene::sortLights() {
+        std::sort(lights_.begin(), lights_.end(),
+                [] (const auto& lhs, const auto& rhs) { return lhs->type < rhs->type; });
     }
-    */
 
     void Scene::parseCamera(Scene* scene, std::ifstream& in) {
         Camera& camera = scene->camera_;
         std::string line = " ";
-        bool primaryCamera = false;
         while (line != "" && !in.eof()) {
             std::getline(in, line);
             std::stringstream ss(line);
@@ -153,7 +144,7 @@ namespace Progression {
                 camera.SetFarPlane(x);
             } else if (first == "exposure") {
                 ss >> camera.renderOptions.exposure;
-			}
+            }
         }
     }
 
@@ -174,10 +165,13 @@ namespace Progression {
                 ss >> type;
                 if (type == "directional") {
                     light->type = Light::Type::DIRECTIONAL;
+                    scene->numDirectionalLights_ += 1;
                 } else if (type == "spot") {
                     light->type = Light::Type::SPOT;
+                    scene->numSpotLights_ += 1;
                 } else {
                     light->type = Light::Type::POINT;
+                    scene->numPointLights_ += 1;
                 }
             } else if (first == "shadows") {
                 std::string tmp;
@@ -231,7 +225,6 @@ namespace Progression {
     void Scene::parseGameObject(Scene* scene, std::ifstream& in) {
         GameObject* obj = new GameObject;
         std::string line = " ";
-        std::shared_ptr<Material> material;
         while (line != "" && !in.eof()) {
             std::getline(in, line);
             std::stringstream ss(line);
@@ -251,32 +244,48 @@ namespace Progression {
                 float x, y, z;
                 ss >> x >> y >> z;
                 obj->transform.scale = glm::vec3(x, y, z);
-            } else if (first == "model") {
-				std::string modelName;
-				ss >> modelName;
-				auto model = ResourceManager::GetModel(modelName);
+            } else if (first == "modelRenderer") {
+                std::getline(in, line);
+                ss.clear();
+                ss.str(line);
+                std::string modelName;
+                // model [model name]
+                ss >> modelName >> modelName;
+                LOG("Model:", modelName);
+                auto model = ResourceManager::GetModel(modelName);
                 if (!model) {
                     LOG_ERR("No model found with name: ", modelName);
                     exit(EXIT_FAILURE);
                 }
-				// obj.AddComponent<ModelRenderer>(new ModelRenderer(obj, model.get()));
-            } else if (first == "material") {
-                std::string materialName;
-                ss >> materialName;
-                material = ResourceManager::GetMaterial(materialName);
-                if (!material) {
-                    LOG_WARN("No match for material", materialName, "in the resource manager");
+                std::vector<std::shared_ptr<Material>> materials;
+                materials = ResourceManager::GetOriginalMaterials(model);
+                for (size_t i = 0; i < model->meshes.size(); ++i)
+                    materials.push_back(ResourceManager::GetMaterial("default"));
+                
+                std::getline(in, line);
+                while (line != "" && !in.eof()) {
+                    LOG("line:",line);
+                    ss.clear();
+                    ss.str(line);
+                    ss >> first;
+                    if (first == "material") {
+                        std::string materialName;
+                        int materialIndex;
+                        ss >> materialIndex >> materialName;
+                        auto material = ResourceManager::GetMaterial(materialName);
+                        LOG("mat",materialName);
+                        if (!material) {
+                            LOG_WARN("No match for material", materialName, "in the resource manager");
+                        } else {
+                            materials[materialIndex] = material;
+                        }
+                    }
+                    std::getline(in, line);
                 }
+                obj->AddComponent<ModelRenderer>(new ModelRenderer(obj, model.get(), materials));
             }
-            // TODO: Specify material from here, which will help with built in shapes
         }
 
-        // TODO: add back in
-        // auto modelRenderer = obj->GetComponent<ModelRenderer>();
-        // if (modelRenderer && material) {
-        //     for (size_t i = 0; i < modelRenderer->meshRenderers.size(); ++i)
-        //         modelRenderer->meshRenderers[i]->material = material.get();
-        // }
         scene->gameObjects_.push_back(obj);
     }
 

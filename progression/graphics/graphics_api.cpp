@@ -77,7 +77,7 @@ namespace Progression { namespace graphicsApi {
 
     void describeAttribute(GLuint location, GLint elements, GLenum type, int stride, int offset) {
         glEnableVertexAttribArray(location);
-        glVertexAttribPointer(location, elements, type, GL_FALSE, stride, (void*) offset);
+        glVertexAttribPointer(location, elements, type, GL_FALSE, stride, (void*) (long) offset);
     }
 
 
@@ -91,7 +91,7 @@ namespace Progression { namespace graphicsApi {
         return buffer;
     }
 
-    void createBuffers(GLuint*& buffers, int count) {
+    void createBuffers(GLuint* buffers, int count) {
         glGenBuffers(count, buffers);
     }
 

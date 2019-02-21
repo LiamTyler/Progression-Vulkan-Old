@@ -14,7 +14,6 @@ kd 1 1 1
 ks .1 .1 .1
 ns 50
 diffuseTex textures/metal2.jpg
-shader default-mesh
 
 Material
 name red 
@@ -23,19 +22,3 @@ kd 1 1 1
 ks .5 .5 .5
 ns 50
 diffuseTex textures/cockatoo.jpg
-shader default-mesh
-
-Model
-name metalFloor
-filename models/cube.obj
-material metalFloor
-
-Model
-name model 
-filename models/cube.obj
-material red
-
-Model
-name plane2 
-filename models/plane.obj
-material red

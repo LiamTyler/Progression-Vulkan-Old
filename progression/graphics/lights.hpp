@@ -8,10 +8,10 @@ namespace Progression {
 
     class Light : public GameObject {
     public:
-        enum class Type {
-            POINT,
+        enum Type {
+            POINT = 0,
+            SPOT,
             DIRECTIONAL,
-            SPOT
         };
 
         Light(

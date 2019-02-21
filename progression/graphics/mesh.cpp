@@ -1,4 +1,5 @@
 #include "graphics/mesh.hpp"
+#include "graphics/graphics_api.hpp"
 
 namespace Progression {
 
@@ -14,7 +15,10 @@ namespace Progression {
                 ++numBuffers;
             if (hasIndexBuffer())
                 ++numBuffers;
-            glDeleteBuffers(numBuffers, vbos);
+
+            graphicsApi::deleteBuffers(vbos, numBuffers);
+            if (vao != (GLuint) -1)
+                graphicsApi::deleteVao(vao);
         }
     }
 
@@ -38,27 +42,29 @@ namespace Progression {
             mesh.vbos[i] = (GLuint) -1;
         }
 
+        vao = std::move(mesh.vao);
+        mesh.vao = (GLuint) -1;
+
         return *this;
     }
 
     void Mesh::UploadToGPU(bool freeCPUCopy) {
+        bool created = false;
         if (!gpuCopyCreated()) {
             GLuint numBuffers = 2;
             if (uvs.size())
                 ++numBuffers;
-            else
-                vbos[vboName::UV] = (GLuint) -1;
 
             if (indices.size())
                 ++numBuffers;
-            else
-                vbos[vboName::INDEX] = (GLuint) -1;
 
-            glGenBuffers(numBuffers, vbos);
+            graphicsApi::createBuffers(vbos, numBuffers);
+            vao = graphicsApi::createVao();
+            created = true;
         }
 
         GLenum usage = dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW;
-        
+
         if (maxVertices_ < vertices.size()) {
             maxVertices_ = vertices.size();
             glBindBuffer(GL_ARRAY_BUFFER, vbos[vboName::VERTEX]);
@@ -92,30 +98,42 @@ namespace Progression {
             glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, indices.size() * sizeof(unsigned int), &indices[0]);
         }
 
+        if (created) {
+            glBindBuffer(GL_ARRAY_BUFFER, vbos[vboName::VERTEX]);
+            graphicsApi::describeAttribute(0, 3, GL_FLOAT);
+            glBindBuffer(GL_ARRAY_BUFFER, vbos[vboName::NORMAL]);
+            graphicsApi::describeAttribute(1, 3, GL_FLOAT);
+            if (hasUVBuffer()) {
+                glBindBuffer(GL_ARRAY_BUFFER, vbos[vboName::UV]);
+                graphicsApi::describeAttribute(2, 2, GL_FLOAT);
+            }
+        }
+
         if (freeCPUCopy)
             Free(false, true);
     }
 
-	void Mesh::Free(bool gpuCopy, bool cpuCopy) {
-		if (cpuCopy) {
+    void Mesh::Free(bool gpuCopy, bool cpuCopy) {
+        if (cpuCopy) {
             numVertices_ = vertices.size();
             numIndices_ = indices.size();
-            vertices.clear();
-            normals.clear();
-            uvs.clear();
-            indices.clear();
+            vertices.shrink_to_fit();
+            normals.shrink_to_fit();
+            uvs.shrink_to_fit();
+            indices.shrink_to_fit();
         }
 
-		if (gpuCopy && gpuCopyCreated()) {
+        if (gpuCopy && gpuCopyCreated()) {
             GLuint numBuffers = 2;
             if (hasUVBuffer())
                 ++numBuffers;
             if (hasIndexBuffer())
                 ++numBuffers;
-            glDeleteBuffers(numBuffers, vbos);
+            graphicsApi::deleteBuffers(vbos, numBuffers);
+            graphicsApi::deleteVao(vao);
 
             numVertices_ = numIndices_ = maxVertices_ = maxIndices_ = 0;
-		}
-	}
+        }
+    }
 
 } // namespace Progression

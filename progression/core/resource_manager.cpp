@@ -41,6 +41,7 @@ namespace Progression {
 
     std::string ResourceManager::rootResourceDir = PG_RESOURCE_DIR;
     std::unordered_map<std::string, std::shared_ptr<Model>> ResourceManager::models_ = {};
+    std::unordered_map<std::shared_ptr<Model>, std::vector<std::shared_ptr<Material>>> ResourceManager::modelToLoadedMaterials_ = {};
     std::unordered_map<std::string, std::shared_ptr<Material>> ResourceManager::materials_ = {};
     std::unordered_map<std::string, std::shared_ptr<Shader>> ResourceManager::shaders_ = {};
     std::unordered_map<std::string, std::shared_ptr<Texture2D>> ResourceManager::textures2D_ = {};
@@ -172,7 +173,7 @@ namespace Progression {
                     LOG_WARN("resource manager already contains a material with the name '", name, "'. Overriding with the new material");
                 materials_[name] = material;
             } else if (line == "Model") {
-                std::string filename, material, name;
+                std::string filename, name;
                 line = " ";
                 while (line != "" && !in.eof()) {
                     std::getline(in, line);
@@ -181,8 +182,6 @@ namespace Progression {
                     ss >> first;
                     if (first == "filename") {
                         ss >> filename;
-                    } else if (first == "material") {
-                        ss >> material;
                     } else if (first == "name") {
                         ss >> name;
                     }
@@ -190,16 +189,6 @@ namespace Progression {
                 auto model = LoadModel(filename);
                 if (name != "") {
                     models_[name] = std::make_shared<Model>(*model);
-                    model = models_[name];
-                }
-                if (material != "") {
-                    if (materials_.find(material) == materials_.end()) {
-                        LOG_WARN("warning: resource manager has no material with name '", material, "'. Sticking with the model's default materials.");
-                        continue;
-                    }
-                    auto mat = GetMaterial(material);
-                    for (size_t i = 0; i < model->materials.size(); ++i)
-                        model->materials[i] = mat;
                 }
             } else if (line == "Texture") {
                 std::string filename;
@@ -266,6 +255,9 @@ namespace Progression {
     }
 
     std::shared_ptr<Model> ResourceManager::LoadPGModel(const std::string& relativePath) {
+        UNUSED(relativePath);
+        return nullptr;
+        /*
         std::string fullPath = rootResourceDir + relativePath;
         std::ifstream in(fullPath, std::ios::binary);
         if (!in) {
@@ -279,7 +271,9 @@ namespace Progression {
         in.read((char*)&numMeshes, sizeof(int));
         in.read((char*)&numMaterials, sizeof(int));
         model->meshes.resize(numMeshes);
-        model->materials.resize(numMeshes);
+
+        std::vector<std::shared_ptr<Material>> materials;
+        materials.resize(numMeshes);
 
         std::vector<std::shared_ptr<Material>> materials(numMaterials);
         std::vector<std::string> diffuseTexNames;
@@ -350,6 +344,7 @@ namespace Progression {
         }
 
         return model;
+        */
     }
 
     std::shared_ptr<Model> ResourceManager::LoadOBJ(const std::string& relativePath) {
@@ -370,6 +365,7 @@ namespace Progression {
         }
 
         auto model = std::make_shared<Model>();
+        std::vector<std::shared_ptr<Material>> pgMaterials;
 
         for (int currentMaterialID = -1; currentMaterialID < (int) materials.size(); ++currentMaterialID) {
             std::shared_ptr<Material> currentMaterial;
@@ -390,6 +386,7 @@ namespace Progression {
                 }
 
                 currentMaterial = std::make_shared<Material>(ambient, diffuse, specular, emissive, shininess, diffuseTex);
+                pgMaterials.push_back(currentMaterial);
             }
 
             auto mesh = std::make_shared<Mesh>();
@@ -439,14 +436,22 @@ namespace Progression {
                 mesh->UploadToGPU(true);
 
                 model->meshes.push_back(mesh);
-                model->materials.push_back(currentMaterial);
             }
+        }
+
+        if (pgMaterials.size()) {
+            modelToLoadedMaterials_[model] = pgMaterials;
         }
 
         return model;
     }
 
     bool ResourceManager::ConvertOBJToPGModel(const std::string& fullPathToOBJ, const std::string& fullPathToMaterialDir, const std::string& fullOutputPath) {
+        UNUSED(fullPathToOBJ);
+        UNUSED(fullPathToMaterialDir);
+        UNUSED(fullOutputPath);
+        return false;
+        /*
         std::ofstream outFile(fullOutputPath, std::ios::binary);
         if (!outFile) {
             LOG_ERR("Could not open output file:", fullOutputPath);
@@ -593,6 +598,7 @@ namespace Progression {
         outFile.close();
 
         return true;
+        */
     }
 
     std::shared_ptr<Skybox> ResourceManager::LoadSkybox(const std::string& name, const std::vector<std::string>& textures, bool addToManager) {

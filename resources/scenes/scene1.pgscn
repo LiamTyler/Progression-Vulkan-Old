@@ -22,7 +22,16 @@ exposure 1
 Skybox
 name water
 
-#GameObject
+Light
+name mainDirectional
+type directional
+rotation -50 -80 0
+
+GameObject
 name floor
 scale 100 1 100
-model metalFloor
+modelRenderer
+model plane
+material 0 metalFloor
+
+

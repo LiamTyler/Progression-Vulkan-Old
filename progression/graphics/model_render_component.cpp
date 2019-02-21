@@ -3,9 +3,10 @@
 
 namespace Progression {
 
-    ModelRenderer::ModelRenderer(GameObject* go, Model* mod, bool _active) :
-        RenderComponent(go, _active),
-        model(mod)
+    ModelRenderer::ModelRenderer(GameObject* go, Model* mod, const std::vector<std::shared_ptr<Material>>& mats) :
+        RenderComponent(go),
+        model(mod),
+        materials(mats)
     {
     }
 

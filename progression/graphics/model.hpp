@@ -6,7 +6,6 @@
 namespace Progression {
 
     class Mesh;
-    class Material;
 
     class Model {
     public:
@@ -14,7 +13,6 @@ namespace Progression {
 		virtual ~Model() = default;
 
         std::vector<std::shared_ptr<Mesh>> meshes;
-        std::vector<std::shared_ptr<Material>> materials;
     };
 
 } // namespace Progression

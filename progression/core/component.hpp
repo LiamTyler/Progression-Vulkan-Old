@@ -14,6 +14,7 @@ namespace Progression {
 		virtual void Stop() = 0;
 
 		GameObject* gameObject;
+        bool enabled = true;
 	};
 
 } // namespace Progression

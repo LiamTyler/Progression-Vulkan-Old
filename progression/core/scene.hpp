@@ -32,18 +32,22 @@ namespace Progression {
          *         Search is O(n). */
         GameObject* getGameObject(const std::string& name) const;
 
-        /** \brief */
-        // void getNeighbors(GameObject* o, float radius, std::vector<GameObject*>& neighborList);
-
         // /** \brief Add's the given light to the scene. This move constructs a new light 
         //  *         given the one passed in, so the argument will be invalid upon returning. */
         // bool addLight(Light&& light);
         // /** \brief Updates all of the gameobjects, lights, the camera, and their components. */
         // void removeLight(Light* light);
+        
+        /** \brief Sorts the list of lights to be all point, then spot, then directional lights.*/
+        void sortLights();
 
         Camera* getCamera() { return &camera_; }
-        const std::vector<Light*>& getLights() { return lights_; }
+        const std::vector<Light*>& getLights() const { return lights_; }
         const std::vector<GameObject*>& getGameObjects() const { return gameObjects_; }
+
+        unsigned int getNumPointLights() const { return numPointLights_; }
+        unsigned int getNumSpotLights() const { return numSpotLights_; }
+        unsigned int getNumDirectionalLights() const { return numDirectionalLights_; }
 
 
         glm::vec4 backgroundColor; ///< The background color of the scene
@@ -54,6 +58,10 @@ namespace Progression {
         std::vector<GameObject*> gameObjects_; ///< A list of all the gameobjects in the scene
         std::vector<Light*> lights_; ///< A list of all the lights in the scene
         Camera camera_; ///< The scene's camera
+
+        unsigned int numPointLights_       = 0;
+        unsigned int numSpotLights_        = 0;
+        unsigned int numDirectionalLights_ = 0;
 
 
         // scene file parser helpers

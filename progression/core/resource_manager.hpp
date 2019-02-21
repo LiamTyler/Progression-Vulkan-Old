@@ -8,6 +8,7 @@
 #include "graphics/skybox.hpp"
 #include "graphics/texture2D.hpp"
 #include <unordered_set>
+#include <memory>
 
 namespace Progression {
 
@@ -33,6 +34,13 @@ namespace Progression {
                 return nullptr;
             }
 			return materials_[name];
+        }
+
+        static std::vector<std::shared_ptr<Material>> GetOriginalMaterials(const std::shared_ptr<Model> model) {
+            if (modelToLoadedMaterials_.find(model) == modelToLoadedMaterials_.end()) {
+                return {};
+            }
+			return modelToLoadedMaterials_[model];
         }
 
         static std::shared_ptr<Shader> GetShader(const std::string& name) {
@@ -71,6 +79,7 @@ namespace Progression {
 
     private:
         static std::unordered_map<std::string, std::shared_ptr<Model>> models_;
+        static std::unordered_map<std::shared_ptr<Model>, std::vector<std::shared_ptr<Material>>> modelToLoadedMaterials_;
         static std::unordered_map<std::string, std::shared_ptr<Material>> materials_;
         static std::unordered_map<std::string, std::shared_ptr<Texture2D>> textures2D_;
         static std::unordered_map<std::string, std::shared_ptr<Shader>> shaders_;

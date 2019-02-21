@@ -2,10 +2,7 @@
 
 namespace Progression {
 
-    RenderComponent::RenderComponent(GameObject* obj, bool active_) :
-        Component(obj),
-        active(active_),
-        visible(true)
+    RenderComponent::RenderComponent(GameObject* obj) : Component(obj)
     {
     }
 

@@ -37,6 +37,7 @@ namespace Progression {
 		std::vector<glm::vec2> uvs;
 		std::vector<unsigned int> indices;
         GLuint vbos[vboName::TOTAL_VBOS];
+        GLuint vao = (GLuint) -1;
         bool dynamic = false;
 
 	private:

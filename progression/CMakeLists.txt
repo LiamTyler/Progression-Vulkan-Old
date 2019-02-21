@@ -32,7 +32,6 @@ set(
     
     graphics/material.cpp
     graphics/mesh.cpp
-    graphics/model.cpp
     graphics/shader.cpp
     graphics/render_component.cpp
     graphics/render_system.cpp
