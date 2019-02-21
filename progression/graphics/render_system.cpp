@@ -15,8 +15,8 @@ namespace {
         GBUFFER_PASS = 0,
         // SHADOWPASS_DIRECTIONAL_SPOT,
         // SHADOWPASS_POINT,
-        // LIGHTPASS_POINT,
-        // LIGHTPASS_SPOT,
+        LIGHTPASS_POINT,
+        LIGHTPASS_SPOT,
         LIGHTPASS_DIRECTIONAL,
         BACKGROUND_OR_SKYBOX,
         POST_PROCESS,
@@ -26,6 +26,8 @@ namespace {
 
     const std::string shaderPaths[TOTAL_SHADERS][3] = {
         { "gbuffer.vert", "gbuffer.frag", "" },
+        { "lightVolume.vert", "light_pass_point.frag", "" },
+        { "lightVolume.vert", "light_pass_spot.frag", "" },
         { "quad.vert", "light_pass_directional.frag", "" },
         { "background.vert", "background.frag", "" },
         { "quad.vert", "post_process.frag", "" },
@@ -56,6 +58,15 @@ namespace {
 
     GLuint cubeVao;
     GLuint cubeVbo;
+
+    // helper functions
+    void bindGBufferTextures(const Shader& shader) {
+        graphicsApi::bind2DTexture(gbuffer.positionTex, shader.getUniform("gPosition"), 0);
+        graphicsApi::bind2DTexture(gbuffer.normalTex,   shader.getUniform("gNormal"), 1);
+        graphicsApi::bind2DTexture(gbuffer.diffuseTex,  shader.getUniform("gDiffuse"), 2);
+        graphicsApi::bind2DTexture(gbuffer.specularTex, shader.getUniform("gSpecularExp"), 3);
+        graphicsApi::bind2DTexture(gbuffer.emissiveTex, shader.getUniform("gEmissive"), 4);
+    }
 
 } // namespace anonymous
 
@@ -223,34 +234,6 @@ namespace Progression { namespace RenderSystem {
     }
 
     void render(Scene* scene) {
-        /*
-        graphicsApi::bindFramebuffer(0);
-        graphicsApi::clearColor(0, 0, 0, 0);
-        graphicsApi::clearColorBuffer();
-        graphicsApi::clearDepthBuffer();
-
-        auto& shader = shaders[ShaderNames::FLAT];
-        shader.enable();
-        auto VP = scene->getCamera()->GetP() * scene->getCamera()->GetV();
-
-        const auto& gameObjects = scene->getGameObjects();
-        for (const auto& obj : gameObjects) {
-            auto mr = obj->GetComponent<ModelRenderer>();
-            if (mr && mr->enabled) {
-                glm::mat4 M   = obj->transform.GetModelMatrix();
-                glm::mat4 MVP = VP * M;
-                shader.setUniform("MVP", MVP);
-                shader.setUniform("color", glm::vec3(0, 1, 0));
-                for (size_t i = 0; i < mr->materials.size(); ++i) {
-                    const auto& mesh     = mr->model->meshes[i];
-                    graphicsApi::bindVao(mesh->vao);
-                    glDrawElements(GL_TRIANGLES, mesh->getNumIndices(), GL_UNSIGNED_INT, 0);
-                }
-            }
-        }
-
-        return;
-        */
         shadowPass(scene);
 
         gBufferPass(scene);
@@ -323,6 +306,7 @@ namespace Progression { namespace RenderSystem {
         scene->sortLights();
         const auto& lights = scene->getLights();
         const auto* camera = scene->getCamera();
+        auto VP = camera->GetP() * camera->GetV();
 
         graphicsApi::toggleBlending(true);
         graphicsApi::blendFunction(GL_ONE, GL_ONE);
@@ -335,46 +319,67 @@ namespace Progression { namespace RenderSystem {
         unsigned int index = 0;
         
         // point lights
-        // auto& shader = shaders[ShaderNames::LIGHTPASS_POINT];
-        // shader.enable();
-        for (unsigned int i = 0; i < numPointLights; ++i) {
-            Light* l = lights[index + i];
-            UNUSED(l);
+        {
+            auto& shader = shaders[ShaderNames::LIGHTPASS_POINT];
+            shader.enable();
+            bindGBufferTextures(shader);
+            graphicsApi::bindVao(cubeVao);
+            shader.setUniform("cameraPos", camera->transform.position);
+            for (unsigned int i = 0; i < numPointLights; ++i) {
+                Light* l = lights[index + i];
+                shader.setUniform("lightPos", l->transform.position);
+                shader.setUniform("lightColor", l->color);
+                shader.setUniform("lightRadiusSquared", l->radius * l->radius);
+
+                l->transform.scale = glm::vec3(l->radius);
+                auto MVP = VP * l->transform.GetModelMatrix();
+                shader.setUniform("MVP", MVP);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+            }
+            index += numPointLights;
         }
-        index += numPointLights;
 
         // spot lights
-        // auto& shader = shaders[ShaderNames::LIGHTPASS_SPOT];
-        // shader.enable();
-        for (unsigned int i = 0; i < numPointLights; ++i) {
-            Light* l = lights[index + i];
-            UNUSED(l);
+        {
+            auto& shader = shaders[ShaderNames::LIGHTPASS_SPOT];
+            shader.enable();
+            bindGBufferTextures(shader);
+            graphicsApi::bindVao(cubeVao);
+            shader.setUniform("cameraPos", camera->transform.position);
+            for (unsigned int i = 0; i < numSpotLights; ++i) {
+                Light* l = lights[index + i];
+                shader.setUniform("lightPos", l->transform.position);
+                shader.setUniform("lightColor", l->color);
+                shader.setUniform("lightRadiusSquared", l->radius * l->radius);
+                shader.setUniform("lightInnerCutoff", glm::cos(l->innerCutoff));
+                shader.setUniform("lightOuterCutoff", glm::cos(l->outerCutoff));
+                shader.setUniform("lightDir", rotationToDirection(l->transform.rotation));
+
+                l->transform.scale = glm::vec3(l->radius);
+                auto MVP = VP * l->transform.GetModelMatrix();
+                shader.setUniform("MVP", MVP);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+            }
+            index += numSpotLights;
         }
-        index += numSpotLights;
 
         // directional lights
-        auto& shader = shaders[ShaderNames::LIGHTPASS_DIRECTIONAL];
-        shader.enable();
-        graphicsApi::bind2DTexture(gbuffer.positionTex, shader.getUniform("gPosition"), 0);
-        graphicsApi::bind2DTexture(gbuffer.normalTex,   shader.getUniform("gNormal"), 1);
-        graphicsApi::bind2DTexture(gbuffer.diffuseTex,  shader.getUniform("gDiffuse"), 2);
-        graphicsApi::bind2DTexture(gbuffer.specularTex, shader.getUniform("gSpecularExp"), 3);
-        graphicsApi::bind2DTexture(gbuffer.emissiveTex, shader.getUniform("gEmissive"), 4);
-        graphicsApi::bindVao(quadVao);
-        shader.setUniform("cameraPos", camera->transform.position);
-        for (unsigned int i = 0; i < numDirectionalLights; ++i) {
-            Light* l = lights[index + i];
+        {
+            auto& shader = shaders[ShaderNames::LIGHTPASS_DIRECTIONAL];
+            shader.enable();
+            bindGBufferTextures(shader);
+            graphicsApi::bindVao(quadVao);
+            shader.setUniform("cameraPos", camera->transform.position);
+            for (unsigned int i = 0; i < numDirectionalLights; ++i) {
+                Light* l = lights[index + i];
 
-            glm::mat4 rot(1);
-            rot = glm::rotate(rot, l->transform.rotation.z, glm::vec3(0, 0, 1));
-            rot = glm::rotate(rot, l->transform.rotation.y, glm::vec3(0, 1, 0));
-            rot = glm::rotate(rot, l->transform.rotation.x, glm::vec3(1, 0, 0));
-            glm::vec3 lightDir = glm::vec3(rot * glm::vec4(0, 0, -1, 0));
+                glm::vec3 lightDir = rotationToDirection(l->transform.rotation);
 
-            shader.setUniform("lightDir", lightDir);
-            shader.setUniform("lightColor", l->color);
+                shader.setUniform("lightDir", -lightDir);
+                shader.setUniform("lightColor", l->color);
 
-            glDrawArrays(GL_TRIANGLES, 0, 6);
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+            }
         }
 
         graphicsApi::toggleBlending(false);

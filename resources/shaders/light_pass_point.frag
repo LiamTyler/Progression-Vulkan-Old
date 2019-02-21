@@ -2,7 +2,7 @@
 
 #define EPSILON 0.000001
 
-in vec2 UV;
+in vec4 glPos;
 
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
@@ -12,12 +12,23 @@ uniform sampler2D gEmissive;
 
 uniform vec3 cameraPos;
 
-uniform vec3 lightDir;
+uniform vec3 lightPos;
 uniform vec3 lightColor;
+uniform float lightRadiusSquared;
 
 out vec4 finalColor;
 
+
+float attenuate(in const float distSquared, in const float radiusSquared) {
+    float frac = distSquared / radiusSquared;
+    float atten = max(0, 1 - frac * frac);
+    return (atten * atten) / (1.0 + distSquared);
+}
+
 void main() {    
+    vec3 NDC = glPos.xyz / glPos.w;
+    vec2 UV = .5 * (NDC.xy + vec2(1));
+
     vec3 fragPos      = texture(gPosition, UV).rgb;
     vec3 n            = texture(gNormal, UV).rgb;
     vec3 diffuseColor = texture(gDiffuse, UV).rgb;
@@ -28,12 +39,15 @@ void main() {
 
     vec3 outColor = ke;
     
-    vec3 l = normalize(lightDir);
+    vec3 vertToLight = lightPos - fragPos;
+    vec3 l = normalize(vertToLight);
     vec3 h = normalize(l + e);
-    // outColor += lightColor * ka;
-    outColor += lightColor * diffuseColor * max(0.0, dot(l, n));
+    float d2 = dot(vertToLight, vertToLight);
+    float atten = attenuate(d2, lightRadiusSquared);
+    
+    outColor += atten * lightColor * diffuseColor * max(0.0, dot(l, n));
     if (dot(l, n) > EPSILON)
-        outColor += lightColor * specExp.rgb * pow(max(dot(h, n), 0.0), 4*specExp.a);        
+        outColor += atten * lightColor * specExp.rgb * pow(max(dot(h, n), 0.0), 4*specExp.a);
     
     finalColor.rgb = outColor;
     finalColor.a   = 1.0;
