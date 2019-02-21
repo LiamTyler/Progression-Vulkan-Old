@@ -54,6 +54,9 @@ namespace Progression { namespace graphicsApi {
     /** \brief Specify which function causes the depth test to pass. OpenGL defaults to GL_LESS */
     void depthFunction(GLenum depthFunc);
 
+    /** \brief Specify whether to cull the front faces or back faces. Face culling must be enabled. */
+    void cullFace(GLenum mode);
+
 
     // vaos
     

@@ -14,6 +14,7 @@ void main() {
 	
 	// Exposure tone mapping
     vec3 mapped = vec3(1.0) - exp(-hdrColor * exposure);
+    // mapped = hdrColor * 1.000001 * exposure;
 
     // Gamma correction 
     mapped = pow(mapped, vec3(1.0 / gamma));

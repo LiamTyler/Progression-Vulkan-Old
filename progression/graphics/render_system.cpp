@@ -45,6 +45,21 @@ namespace {
         GLuint ambientTex;
         GLuint emissiveTex;
         GLuint depthRbo;
+
+        void bindForWriting() {
+            graphicsApi::bindFramebuffer(fbo);
+            graphicsApi::clearColor(0, 0, 0, 0);
+            graphicsApi::clearColorBuffer();
+            graphicsApi::clearDepthBuffer();
+        }
+
+        void bindForReading(const Shader& shader) {
+            graphicsApi::bind2DTexture(positionTex, shader.getUniform("gPosition"), 0);
+            graphicsApi::bind2DTexture(normalTex,   shader.getUniform("gNormal"), 1);
+            graphicsApi::bind2DTexture(diffuseTex,  shader.getUniform("gDiffuse"), 2);
+            graphicsApi::bind2DTexture(specularTex, shader.getUniform("gSpecularExp"), 3);
+            graphicsApi::bind2DTexture(emissiveTex, shader.getUniform("gEmissive"), 4);
+        }
     } gbuffer;
 
     struct PostProcessBuffer {
@@ -58,15 +73,6 @@ namespace {
 
     GLuint cubeVao;
     GLuint cubeVbo;
-
-    // helper functions
-    void bindGBufferTextures(const Shader& shader) {
-        graphicsApi::bind2DTexture(gbuffer.positionTex, shader.getUniform("gPosition"), 0);
-        graphicsApi::bind2DTexture(gbuffer.normalTex,   shader.getUniform("gNormal"), 1);
-        graphicsApi::bind2DTexture(gbuffer.diffuseTex,  shader.getUniform("gDiffuse"), 2);
-        graphicsApi::bind2DTexture(gbuffer.specularTex, shader.getUniform("gSpecularExp"), 3);
-        graphicsApi::bind2DTexture(gbuffer.emissiveTex, shader.getUniform("gEmissive"), 4);
-    }
 
 } // namespace anonymous
 
@@ -118,47 +124,53 @@ namespace Progression { namespace RenderSystem {
         // load cube data
         float skyboxVertices[] = {
             // positions          
+            // back
             -1.0f,  1.0f, -1.0f,
+            1.0f, -1.0f, -1.0f,
             -1.0f, -1.0f, -1.0f,
             1.0f, -1.0f, -1.0f,
-            1.0f, -1.0f, -1.0f,
+            -1.0f,  1.0f, -1.0f,
             1.0f,  1.0f, -1.0f,
-            -1.0f,  1.0f, -1.0f,
 
+            //front
             -1.0f, -1.0f,  1.0f,
-            -1.0f, -1.0f, -1.0f,
-            -1.0f,  1.0f, -1.0f,
-            -1.0f,  1.0f, -1.0f,
+            1.0f,  1.0f,  1.0f,
             -1.0f,  1.0f,  1.0f,
+            1.0f,  1.0f,  1.0f,
             -1.0f, -1.0f,  1.0f,
+            1.0f, -1.0f,  1.0f,
 
+            // right
             1.0f, -1.0f, -1.0f,
+            1.0f,  1.0f,  1.0f,
             1.0f, -1.0f,  1.0f,
             1.0f,  1.0f,  1.0f,
-            1.0f,  1.0f,  1.0f,
-            1.0f,  1.0f, -1.0f,
             1.0f, -1.0f, -1.0f,
-
-            -1.0f, -1.0f,  1.0f,
-            -1.0f,  1.0f,  1.0f,
-            1.0f,  1.0f,  1.0f,
-            1.0f,  1.0f,  1.0f,
-            1.0f, -1.0f,  1.0f,
-            -1.0f, -1.0f,  1.0f,
-
-            -1.0f,  1.0f, -1.0f,
             1.0f,  1.0f, -1.0f,
-            1.0f,  1.0f,  1.0f,
-            1.0f,  1.0f,  1.0f,
-            -1.0f,  1.0f,  1.0f,
-            -1.0f,  1.0f, -1.0f,
 
+            // left
+            -1.0f, -1.0f,  1.0f,
+            -1.0f,  1.0f, -1.0f,
             -1.0f, -1.0f, -1.0f,
+            -1.0f,  1.0f, -1.0f,
             -1.0f, -1.0f,  1.0f,
-            1.0f, -1.0f, -1.0f,
-            1.0f, -1.0f, -1.0f,
+            -1.0f,  1.0f,  1.0f,
+
+            // top
+            -1.0f,  1.0f, -1.0f,
+            1.0f,   1.0f,  1.0f,
+            1.0f,   1.0f, -1.0f,
+            1.0f,   1.0f,  1.0f,
+            -1.0f,  1.0f, -1.0f,
+            -1.0f,  1.0f,  1.0f,
+
+            // bottom
+            -1.0f, -1.0f, -1.0f,
+            1.0f,  -1.0f, -1.0f,
             -1.0f, -1.0f,  1.0f,
-            1.0f, -1.0f,  1.0f
+            1.0f,  -1.0f, -1.0f,
+            1.0f,  -1.0f,  1.0f,
+            -1.0f, -1.0f,  1.0f,
         };
         
         cubeVao = graphicsApi::createVao();
@@ -258,10 +270,7 @@ namespace Progression { namespace RenderSystem {
     }
 
     void gBufferPass(Scene* scene) {
-        graphicsApi::bindFramebuffer(gbuffer.fbo);
-        graphicsApi::clearColor(0, 0, 0, 0);
-        graphicsApi::clearColorBuffer();
-        graphicsApi::clearDepthBuffer();
+        gbuffer.bindForWriting();
 
         graphicsApi::toggleDepthTest(true);
         graphicsApi::toggleDepthWrite(true);
@@ -302,6 +311,8 @@ namespace Progression { namespace RenderSystem {
         }
     }
 
+    // TODO: Possible use tighter bounding light volumes, and look into using the stencil buffer
+    //       to help not light pixels that intersect the volume only in screen space, not world
     void lightingPass(Scene* scene) {
         scene->sortLights();
         const auto& lights = scene->getLights();
@@ -310,31 +321,46 @@ namespace Progression { namespace RenderSystem {
 
         graphicsApi::toggleBlending(true);
         graphicsApi::blendFunction(GL_ONE, GL_ONE);
-        // graphicsApi::toggleCulling(true);
+        graphicsApi::toggleCulling(true);
+        graphicsApi::cullFace(GL_BACK);
         graphicsApi::toggleDepthWrite(false);
+        graphicsApi::toggleDepthTest(true);
 
         auto numPointLights       = scene->getNumPointLights();
         auto numSpotLights        = scene->getNumSpotLights();
         auto numDirectionalLights = scene->getNumDirectionalLights();
         unsigned int index = 0;
-        
+
         // point lights
         {
             auto& shader = shaders[ShaderNames::LIGHTPASS_POINT];
             shader.enable();
-            bindGBufferTextures(shader);
+            gbuffer.bindForReading(shader);
             graphicsApi::bindVao(cubeVao);
             shader.setUniform("cameraPos", camera->transform.position);
             for (unsigned int i = 0; i < numPointLights; ++i) {
                 Light* l = lights[index + i];
                 shader.setUniform("lightPos", l->transform.position);
-                shader.setUniform("lightColor", l->color);
+                shader.setUniform("lightColor", l->color * l->intensity);
                 shader.setUniform("lightRadiusSquared", l->radius * l->radius);
 
-                l->transform.scale = glm::vec3(l->radius);
-                auto MVP = VP * l->transform.GetModelMatrix();
+                glm::mat4 M(1);
+                M = glm::translate(M, l->transform.position);
+                M = glm::scale(M, glm::vec3(l->radius));
+                auto MVP = VP * M;
                 shader.setUniform("MVP", MVP);
-                glDrawArrays(GL_TRIANGLES, 0, 36);
+
+                float distToCam = glm::length(camera->transform.position - l->transform.position);
+                // if the camera is inside of the volume, then render the back faces instead
+                if (distToCam < sqrtf(3.05f) * l->radius) {
+                    graphicsApi::cullFace(GL_FRONT);
+                    graphicsApi::toggleDepthTest(false);
+                    glDrawArrays(GL_TRIANGLES, 0, 36);
+                    graphicsApi::cullFace(GL_BACK);
+                    graphicsApi::toggleDepthTest(true);
+                } else {
+                    glDrawArrays(GL_TRIANGLES, 0, 36);
+                }
             }
             index += numPointLights;
         }
@@ -343,48 +369,66 @@ namespace Progression { namespace RenderSystem {
         {
             auto& shader = shaders[ShaderNames::LIGHTPASS_SPOT];
             shader.enable();
-            bindGBufferTextures(shader);
+            gbuffer.bindForReading(shader);
             graphicsApi::bindVao(cubeVao);
             shader.setUniform("cameraPos", camera->transform.position);
             for (unsigned int i = 0; i < numSpotLights; ++i) {
                 Light* l = lights[index + i];
                 shader.setUniform("lightPos", l->transform.position);
-                shader.setUniform("lightColor", l->color);
+                shader.setUniform("lightColor", l->color * l->intensity);
                 shader.setUniform("lightRadiusSquared", l->radius * l->radius);
                 shader.setUniform("lightInnerCutoff", glm::cos(l->innerCutoff));
                 shader.setUniform("lightOuterCutoff", glm::cos(l->outerCutoff));
-                shader.setUniform("lightDir", rotationToDirection(l->transform.rotation));
+                glm::vec3 dir = rotationToDirection(l->transform.rotation);
+                shader.setUniform("lightDir", dir);
 
-                l->transform.scale = glm::vec3(l->radius);
-                auto MVP = VP * l->transform.GetModelMatrix();
+                // create a bounding box around the center (not beginning) of the spot light
+                Transform t = l->transform;
+                t.position += 0.5f * l->radius * dir;
+                float maxExtent = glm::tan(l->outerCutoff) * l->radius;
+                t.scale = glm::vec3(maxExtent, maxExtent, 0.5f * l->radius);
+                auto MVP = VP * t.GetModelMatrix();
                 shader.setUniform("MVP", MVP);
-                glDrawArrays(GL_TRIANGLES, 0, 36);
+
+                maxExtent = std::max(maxExtent, 0.5f * l->radius);
+                float distToCam = glm::length(camera->transform.position - t.position);
+                // if the camera is inside of the volume, then render the back faces instead
+                if (distToCam < sqrtf(3.05) * maxExtent) {
+                    graphicsApi::cullFace(GL_FRONT);
+                    graphicsApi::toggleDepthTest(false);
+                    glDrawArrays(GL_TRIANGLES, 0, 36);
+                    graphicsApi::cullFace(GL_BACK);
+                    graphicsApi::toggleDepthTest(true);
+                } else {
+                    glDrawArrays(GL_TRIANGLES, 0, 36);
+                }
             }
             index += numSpotLights;
         }
 
+        graphicsApi::toggleCulling(false);
+        graphicsApi::toggleDepthTest(false);
         // directional lights
         {
             auto& shader = shaders[ShaderNames::LIGHTPASS_DIRECTIONAL];
             shader.enable();
-            bindGBufferTextures(shader);
+            gbuffer.bindForReading(shader);
             graphicsApi::bindVao(quadVao);
             shader.setUniform("cameraPos", camera->transform.position);
             for (unsigned int i = 0; i < numDirectionalLights; ++i) {
                 Light* l = lights[index + i];
 
                 glm::vec3 lightDir = rotationToDirection(l->transform.rotation);
-
+                shader.setUniform("lightColor", l->color * l->intensity);
                 shader.setUniform("lightDir", -lightDir);
-                shader.setUniform("lightColor", l->color);
 
                 glDrawArrays(GL_TRIANGLES, 0, 6);
             }
         }
 
         graphicsApi::toggleBlending(false);
-        graphicsApi::toggleCulling(false);
         graphicsApi::toggleDepthWrite(true);
+        graphicsApi::toggleDepthTest(true);
     }
 
     void backgroundPass(Scene* scene) {

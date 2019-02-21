@@ -59,6 +59,10 @@ namespace Progression { namespace graphicsApi {
         glDepthFunc(depthFunc);
     }
 
+    void cullFace(GLenum mode) {
+        glCullFace(mode);
+    }
+
 
     GLuint createVao() {
         GLuint vao;

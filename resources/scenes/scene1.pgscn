@@ -22,22 +22,25 @@ exposure 1
 Skybox
 name water
 
-#Light
-name mainDirectional
+Light
+name dir 
 type directional
 rotation -50 -80 0
+intensity .1
 
-#Light
-name l 
+Light
+name l2
 type point 
-position 0 5 0
-intensity 2
+position 3 5 0
+intensity 30
+radius 20
 
 Light
 name l 
 type spot 
 position 0 2 0
-intensity 2
+intensity 30
+radius 20
 
 GameObject
 name floor
