@@ -27,15 +27,16 @@ name dir
 type directional
 rotation -50 -80 0
 intensity .1
+shadows true
 
-Light
+#Light
 name l2
 type point 
 position 3 5 0
 intensity 30
 radius 20
 
-Light
+#Light
 name l 
 type spot 
 position 0 2 0

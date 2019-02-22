@@ -22,9 +22,8 @@ namespace Progression {
         /** \brief Updates all of the gameobjects, lights, the camera, and their components. */
         void update();
 
-        // /** \brief Add's the given object to the scene. This move constructs a new gameobject
-        //  *         given the one passed in, so the argument will be invalid upon returning. */
-        // void addGameObject(GameObject&& o);
+        /** \brief Add's the given object to the scene. */
+        void addGameObject(GameObject* o);
         // /** \brief Updates all of the gameobjects, lights, the camera, and their components. */
         // void removeGameObject(GameObject* o);
 
@@ -59,9 +58,9 @@ namespace Progression {
         std::vector<Light*> lights_; ///< A list of all the lights in the scene
         Camera camera_; ///< The scene's camera
 
-        unsigned int numPointLights_       = 0;
-        unsigned int numSpotLights_        = 0;
-        unsigned int numDirectionalLights_ = 0;
+        unsigned int numPointLights_       = 0; ///< Number of point lights currently in the list
+        unsigned int numSpotLights_        = 0; ///< Number of spot lights currently in the list
+        unsigned int numDirectionalLights_ = 0; ///< Number of directional lights currently in the list
 
 
         // scene file parser helpers

@@ -16,7 +16,7 @@ ns 50
 diffuseTex textures/metal2.jpg
 
 Material
-name red 
+name cockatoo
 ka 1 1 1
 kd 1 1 1
 ks .5 .5 .5

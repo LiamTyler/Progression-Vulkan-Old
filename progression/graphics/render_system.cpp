@@ -6,6 +6,7 @@
 #include "graphics/graphics_api.hpp"
 #include "graphics/model_render_component.hpp"
 #include "graphics/mesh.hpp"
+#include "graphics/shadow_map.hpp"
 
 namespace {
 
@@ -13,7 +14,7 @@ namespace {
 
     enum ShaderNames {
         GBUFFER_PASS = 0,
-        // SHADOWPASS_DIRECTIONAL_SPOT,
+        SHADOWPASS_DIRECTIONAL_SPOT,
         // SHADOWPASS_POINT,
         LIGHTPASS_POINT,
         LIGHTPASS_SPOT,
@@ -26,6 +27,7 @@ namespace {
 
     const std::string shaderPaths[TOTAL_SHADERS][3] = {
         { "gbuffer.vert", "gbuffer.frag", "" },
+        { "shadow.vert", "shadow.frag", "" },
         { "lightVolume.vert", "light_pass_point.frag", "" },
         { "lightVolume.vert", "light_pass_spot.frag", "" },
         { "quad.vert", "light_pass_directional.frag", "" },
@@ -73,6 +75,24 @@ namespace {
 
     GLuint cubeVao;
     GLuint cubeVbo;
+
+    // helper functions
+    void depthRender(Scene* scene, Shader& shader, const glm::mat4& LSM) {
+        const auto& gameObjects = scene->getGameObjects();
+        for (const auto& obj : gameObjects) {
+            auto mr = obj->GetComponent<ModelRenderer>();
+            if (mr && mr->enabled) {
+                glm::mat4 M   = obj->transform.GetModelMatrix();
+                glm::mat4 MVP = LSM * M;
+                shader.setUniform("MVP", MVP);
+                for (size_t i = 0; i < mr->model->meshes.size(); ++i) {
+                    const auto& mesh = mr->model->meshes[i];
+                    graphicsApi::bindVao(mesh->vao);
+                    glDrawElements(GL_TRIANGLES, mesh->getNumIndices(), GL_UNSIGNED_INT, 0);
+                }
+            }
+        }
+    }
 
 } // namespace anonymous
 
@@ -246,6 +266,8 @@ namespace Progression { namespace RenderSystem {
     }
 
     void render(Scene* scene) {
+        scene->sortLights();
+
         shadowPass(scene);
 
         gBufferPass(scene);
@@ -266,10 +288,55 @@ namespace Progression { namespace RenderSystem {
     }
 
     void shadowPass(Scene* scene) {
-        UNUSED(scene);
+        const auto& lights = scene->getLights();
+        const auto& camera = *scene->getCamera();
+        Frustum frustum = camera.GetFrustum();
+        float np = camera.GetNearPlane();
+        float fp = camera.GetFarPlane();
+        glm::vec3 frustCenter = 0.5f*(fp - np) * camera.GetForwardDir() + camera.transform.position;
+
+        auto numPointLights       = scene->getNumPointLights();
+        auto numSpotLights        = scene->getNumSpotLights();
+        auto numDirectionalLights = scene->getNumDirectionalLights();
+        unsigned int index = numPointLights + numSpotLights;
+
+        // directional lights
+        {
+            auto& shader = shaders[ShaderNames::SHADOWPASS_DIRECTIONAL_SPOT];
+            shader.enable();
+            graphicsApi::bindVao(quadVao);
+            for (unsigned int i = 0; i < numDirectionalLights; ++i) {
+                Light* l = lights[index + i];
+                ShadowMap* shadowMap = l->shadowMap;
+
+                if (shadowMap) {
+                    // create light space matrix (LSM)
+                    glm::vec3 lightDir = rotationToDirection(l->transform.rotation);
+                    glm::vec3 lightUp = rotationToDirection(l->transform.rotation, glm::vec3(0, 1, 0));
+                    glm::mat4 lightView = glm::lookAt(glm::vec3(0), lightDir, glm::vec3(0, 1, 0));
+
+                    glm::vec3 LSCorners[8];
+                    for (int corner = 0; corner < 8; ++corner) {
+                        LSCorners[corner] = glm::vec3(lightView * glm::vec4(frustum.corners[corner], 1));
+                    }
+                    BoundingBox lsmBB(LSCorners[0], LSCorners[0]);
+                    lsmBB.Encompass(LSCorners + 1, 7);
+
+                    glm::vec3 pMin(-70, -70, -150);
+                    glm::vec3 pMax(70, 70, 150);
+                    glm::mat4 lightProj = glm::ortho<float>(pMin.x, pMax.x, pMin.y, pMax.y, pMin.z, pMax.z);
+                    // glm::mat4 lightProj = glm::ortho(lsmBB.min.x, lsmBB.max.x, lsmBB.min.y, lsmBB.max.y, lsmBB.min.z, lsmBB.max.z);
+                    shadowMap->LSMs[0] = lightProj * lightView;
+
+                    shadowMap->BindForWriting();
+                    depthRender(scene, shader, shadowMap->LSMs[0]);
+                }
+            }
+        }
     }
 
     void gBufferPass(Scene* scene) {
+        graphicsApi::setViewport(Window::width(), Window::height());
         gbuffer.bindForWriting();
 
         graphicsApi::toggleDepthTest(true);
@@ -314,7 +381,6 @@ namespace Progression { namespace RenderSystem {
     // TODO: Possible use tighter bounding light volumes, and look into using the stencil buffer
     //       to help not light pixels that intersect the volume only in screen space, not world
     void lightingPass(Scene* scene) {
-        scene->sortLights();
         const auto& lights = scene->getLights();
         const auto* camera = scene->getCamera();
         auto VP = camera->GetP() * camera->GetV();
@@ -421,6 +487,14 @@ namespace Progression { namespace RenderSystem {
                 glm::vec3 lightDir = rotationToDirection(l->transform.rotation);
                 shader.setUniform("lightColor", l->color * l->intensity);
                 shader.setUniform("lightDir", -lightDir);
+
+                if (l->shadowMap) {
+                    graphicsApi::bind2DTexture(l->shadowMap->texture(), shader.getUniform("shadowMap"), 5);
+                    shader.setUniform("LSM", l->shadowMap->LSMs[0]);
+                    shader.setUniform("shadows", true);
+                } else {
+                    shader.setUniform("shadows", false);
+                }
 
                 glDrawArrays(GL_TRIANGLES, 0, 6);
             }

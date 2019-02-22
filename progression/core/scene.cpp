@@ -91,6 +91,10 @@ namespace Progression {
         camera_.Update();
     }
 
+    void Scene::addGameObject(GameObject* obj) {
+        gameObjects_.push_back(obj);
+    }
+
     GameObject* Scene::getGameObject(const std::string& name) const {
         for (const auto& obj : gameObjects_)
             if (obj->name == name)

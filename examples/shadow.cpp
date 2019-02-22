@@ -33,6 +33,19 @@ int main(int argc, char* argv[]) {
     auto camera = scene->getCamera();
     camera->AddComponent<UserCameraComponent>(new UserCameraComponent(camera, 3));
 
+    if (sceneName == "scene1.pgscn") {
+        auto cube = ResourceManager::GetModel("cube");
+        auto material = ResourceManager::GetMaterial("cockatoo");
+        for (float x = 0; x < 10; x++) {
+            for (float z = 0; z < 10; z++) {
+                float randHeight = 2 + 4 * (rand() / static_cast<float>(RAND_MAX));
+                glm::vec3 pos = glm::vec3(-80 + 20*x, randHeight, -80 + 20*z);
+                GameObject* obj = new GameObject(Transform(pos, glm::vec3(0), glm::vec3(1, randHeight, 1)));
+                obj->AddComponent<ModelRenderer>(new ModelRenderer(obj, cube.get(), { material }));
+                scene->addGameObject(obj);
+            }
+        }
+    }
 
     Window::SetRelativeMouse(true);
     PG::Input::PollEvents();
