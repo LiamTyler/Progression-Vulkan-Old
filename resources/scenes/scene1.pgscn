@@ -22,26 +22,28 @@ exposure 1
 Skybox
 name water
 
-Light
+#Light
 name dir 
 type directional
 rotation -50 -80 0
 intensity .1
 shadows true
 
-#Light
+Light
 name l2
 type point 
-position 3 5 0
+position 2 2 5
 intensity 30
-radius 20
+radius 40
+shadows true
 
 #Light
 name l 
 type spot 
-position 0 2 0
+position 2 2 5
 intensity 30
-radius 20
+radius 30
+#shadows true
 
 GameObject
 name floor

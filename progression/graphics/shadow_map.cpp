@@ -35,6 +35,7 @@ namespace Progression {
 
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
+        graphicsApi::checkFboCompleteness();
         graphicsApi::bindFramebuffer(0);
     }
 

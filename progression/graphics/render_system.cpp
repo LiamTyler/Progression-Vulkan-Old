@@ -15,7 +15,7 @@ namespace {
     enum ShaderNames {
         GBUFFER_PASS = 0,
         SHADOWPASS_DIRECTIONAL_SPOT,
-        // SHADOWPASS_POINT,
+        SHADOWPASS_POINT,
         LIGHTPASS_POINT,
         LIGHTPASS_SPOT,
         LIGHTPASS_DIRECTIONAL,
@@ -28,6 +28,7 @@ namespace {
     const std::string shaderPaths[TOTAL_SHADERS][3] = {
         { "gbuffer.vert", "gbuffer.frag", "" },
         { "shadow.vert", "shadow.frag", "" },
+        { "shadow.vert", "pointShadow.frag", "pointShadow.geom" },
         { "lightVolume.vert", "light_pass_point.frag", "" },
         { "lightVolume.vert", "light_pass_spot.frag", "" },
         { "quad.vert", "light_pass_directional.frag", "" },
@@ -44,7 +45,6 @@ namespace {
         GLuint normalTex;
         GLuint diffuseTex;
         GLuint specularTex;
-        GLuint ambientTex;
         GLuint emissiveTex;
         GLuint depthRbo;
 
@@ -78,6 +78,7 @@ namespace {
 
     // helper functions
     void depthRender(Scene* scene, Shader& shader, const glm::mat4& LSM) {
+        LOG("depth render");
         const auto& gameObjects = scene->getGameObjects();
         for (const auto& obj : gameObjects) {
             auto mr = obj->GetComponent<ModelRenderer>();
@@ -298,39 +299,84 @@ namespace Progression { namespace RenderSystem {
         auto numPointLights       = scene->getNumPointLights();
         auto numSpotLights        = scene->getNumSpotLights();
         auto numDirectionalLights = scene->getNumDirectionalLights();
-        unsigned int index = numPointLights + numSpotLights;
+        unsigned int index = 0;
+
+        // point lights
+        auto& pShader = shaders[ShaderNames::SHADOWPASS_POINT];
+        pShader.enable();
+        for (unsigned int i = 0; i < numPointLights; ++i) {
+            Light* l = lights[index + i];
+            ShadowMap* shadowMap = l->shadowMap;
+
+            if (shadowMap) {
+                const auto& pos = l->transform.position;
+                glm::mat4 P = glm::perspective(glm::radians(90.0f), shadowMap->width() / (float)shadowMap->height(), 0.1f, l->radius);
+                shadowMap->LSMs[0] = P * glm::lookAt(pos, pos + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+                shadowMap->LSMs[1] = P * glm::lookAt(pos, pos + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+                shadowMap->LSMs[2] = P * glm::lookAt(pos, pos + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+                shadowMap->LSMs[3] = P * glm::lookAt(pos, pos + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+                shadowMap->LSMs[4] = P * glm::lookAt(pos, pos + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+                shadowMap->LSMs[5] = P * glm::lookAt(pos, pos + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+
+                shadowMap->BindForWriting();
+                pShader.setUniform("LSMs", shadowMap->LSMs, 6);
+                pShader.setUniform("invFarPlane", 1.0f / l->radius);
+                pShader.setUniform("lightPos", pos);
+                depthRender(scene, pShader, glm::mat4(1));
+            }
+        }
+        index += numPointLights;
+        
+        // spot lights
+        auto& shader = shaders[ShaderNames::SHADOWPASS_DIRECTIONAL_SPOT];
+        shader.enable();
+        for (unsigned int i = 0; i < numSpotLights; ++i) {
+            Light* l = lights[index + i];
+            ShadowMap* shadowMap = l->shadowMap;
+
+            if (shadowMap) {
+                const auto& lightPos = l->transform.position;
+                const auto lightDir = rotationToDirection(l->transform.rotation);
+                const auto lightUp = rotationToDirection(l->transform.rotation, glm::vec3(0, 1, 0));
+                //const auto lightUp = glm::vec3(0, 1, 0);
+                glm::mat4 lightView = glm::lookAt(lightPos, lightPos + lightDir, lightUp);
+
+                float aspect = shadowMap->width() / (float) shadowMap->height();
+                glm::mat4 lightProj = glm::perspective(glm::radians(90.0f), aspect, 0.1f, l->radius);
+                shadowMap->LSMs[0] = lightProj * lightView;
+
+                shadowMap->BindForWriting();
+                depthRender(scene, shader, shadowMap->LSMs[0]);
+            }
+        }
+        index += numSpotLights;
 
         // directional lights
-        {
-            auto& shader = shaders[ShaderNames::SHADOWPASS_DIRECTIONAL_SPOT];
-            shader.enable();
-            graphicsApi::bindVao(quadVao);
-            for (unsigned int i = 0; i < numDirectionalLights; ++i) {
-                Light* l = lights[index + i];
-                ShadowMap* shadowMap = l->shadowMap;
+        for (unsigned int i = 0; i < numDirectionalLights; ++i) {
+            Light* l = lights[index + i];
+            ShadowMap* shadowMap = l->shadowMap;
 
-                if (shadowMap) {
-                    // create light space matrix (LSM)
-                    glm::vec3 lightDir = rotationToDirection(l->transform.rotation);
-                    glm::vec3 lightUp = rotationToDirection(l->transform.rotation, glm::vec3(0, 1, 0));
-                    glm::mat4 lightView = glm::lookAt(glm::vec3(0), lightDir, glm::vec3(0, 1, 0));
+            if (shadowMap) {
+                // create light space matrix (LSM)
+                glm::vec3 lightDir = rotationToDirection(l->transform.rotation);
+                glm::vec3 lightUp = rotationToDirection(l->transform.rotation, glm::vec3(0, 1, 0));
+                glm::mat4 lightView = glm::lookAt(glm::vec3(0), lightDir, glm::vec3(0, 1, 0));
 
-                    glm::vec3 LSCorners[8];
-                    for (int corner = 0; corner < 8; ++corner) {
-                        LSCorners[corner] = glm::vec3(lightView * glm::vec4(frustum.corners[corner], 1));
-                    }
-                    BoundingBox lsmBB(LSCorners[0], LSCorners[0]);
-                    lsmBB.Encompass(LSCorners + 1, 7);
-
-                    glm::vec3 pMin(-70, -70, -150);
-                    glm::vec3 pMax(70, 70, 150);
-                    glm::mat4 lightProj = glm::ortho<float>(pMin.x, pMax.x, pMin.y, pMax.y, pMin.z, pMax.z);
-                    // glm::mat4 lightProj = glm::ortho(lsmBB.min.x, lsmBB.max.x, lsmBB.min.y, lsmBB.max.y, lsmBB.min.z, lsmBB.max.z);
-                    shadowMap->LSMs[0] = lightProj * lightView;
-
-                    shadowMap->BindForWriting();
-                    depthRender(scene, shader, shadowMap->LSMs[0]);
+                glm::vec3 LSCorners[8];
+                for (int corner = 0; corner < 8; ++corner) {
+                    LSCorners[corner] = glm::vec3(lightView * glm::vec4(frustum.corners[corner], 1));
                 }
+                BoundingBox lsmBB(LSCorners[0], LSCorners[0]);
+                lsmBB.Encompass(LSCorners + 1, 7);
+
+                glm::vec3 pMin(-70, -70, -150);
+                glm::vec3 pMax(70, 70, 150);
+                glm::mat4 lightProj = glm::ortho<float>(pMin.x, pMax.x, pMin.y, pMax.y, pMin.z, pMax.z);
+                // glm::mat4 lightProj = glm::ortho(lsmBB.min.x, lsmBB.max.x, lsmBB.min.y, lsmBB.max.y, lsmBB.min.z, lsmBB.max.z);
+                shadowMap->LSMs[0] = lightProj * lightView;
+
+                shadowMap->BindForWriting();
+                depthRender(scene, shader, shadowMap->LSMs[0]);
             }
         }
     }
@@ -416,6 +462,14 @@ namespace Progression { namespace RenderSystem {
                 auto MVP = VP * M;
                 shader.setUniform("MVP", MVP);
 
+                if (l->shadowMap) {
+                    graphicsApi::bindCubemap(l->shadowMap->texture(), shader.getUniform("shadowMap"), 5);
+                    shader.setUniform("shadows", true);
+                    shader.setUniform("shadowFarPlane", l->radius);
+                } else {
+                    shader.setUniform("shadows", false);
+                }
+
                 float distToCam = glm::length(camera->transform.position - l->transform.position);
                 // if the camera is inside of the volume, then render the back faces instead
                 if (distToCam < sqrtf(3.05f) * l->radius) {
@@ -455,6 +509,13 @@ namespace Progression { namespace RenderSystem {
                 t.scale = glm::vec3(maxExtent, maxExtent, 0.5f * l->radius);
                 auto MVP = VP * t.GetModelMatrix();
                 shader.setUniform("MVP", MVP);
+                if (l->shadowMap) {
+                    graphicsApi::bind2DTexture(l->shadowMap->texture(), shader.getUniform("shadowMap"), 5);
+                    shader.setUniform("LSM", l->shadowMap->LSMs[0]);
+                    shader.setUniform("shadows", true);
+                } else {
+                    shader.setUniform("shadows", false);
+                }
 
                 maxExtent = std::max(maxExtent, 0.5f * l->radius);
                 float distToCam = glm::length(camera->transform.position - t.position);

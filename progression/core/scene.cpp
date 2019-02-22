@@ -255,7 +255,6 @@ namespace Progression {
                 std::string modelName;
                 // model [model name]
                 ss >> modelName >> modelName;
-                LOG("Model:", modelName);
                 auto model = ResourceManager::GetModel(modelName);
                 if (!model) {
                     LOG_ERR("No model found with name: ", modelName);
@@ -268,7 +267,6 @@ namespace Progression {
                 
                 std::getline(in, line);
                 while (line != "" && !in.eof()) {
-                    LOG("line:",line);
                     ss.clear();
                     ss.str(line);
                     ss >> first;
@@ -277,7 +275,6 @@ namespace Progression {
                         int materialIndex;
                         ss >> materialIndex >> materialName;
                         auto material = ResourceManager::GetMaterial(materialName);
-                        LOG("mat",materialName);
                         if (!material) {
                             LOG_WARN("No match for material", materialName, "in the resource manager");
                         } else {

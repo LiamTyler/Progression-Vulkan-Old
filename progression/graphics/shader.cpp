@@ -40,7 +40,7 @@ namespace Progression {
             ret = ret && attachShaderFromFile(GL_FRAGMENT_SHADER, frag_fname);
 
         if (geom_fname != "")
-            ret = ret && attachShaderFromFile(GL_FRAGMENT_SHADER, frag_fname);
+            ret = ret && attachShaderFromFile(GL_GEOMETRY_SHADER, geom_fname);
 
         ret = ret && createAndLinkProgram();
 
@@ -140,16 +140,18 @@ namespace Progression {
 
             std::string sName(uniformName);
             // fix uniform arrays
+            auto location = glGetUniformLocation(program_, sName.c_str());
             int len = sName.length();
             if (len > 3) {
                 if (sName[len - 1] == ']' && sName[len - 3] == '[') {
-                    uniforms_[sName.substr(0, len - 3)] = i;
-                    // LOG("Uniform:", i, "=", sName.substr(0, len - 3));
+                    uniforms_[sName.substr(0, len - 3)] = location;
+                    LOG("Uniform:", location, "=", sName.substr(0, len - 3));
                 }
             }
-            uniforms_[sName] = i;
-            // LOG("Uniform:",i,"=",sName);
+            uniforms_[sName] = location;
+            LOG("Uniform:",location,"=",sName);
         }
+        LOG("");
         delete[] uniformName;
     }
 
