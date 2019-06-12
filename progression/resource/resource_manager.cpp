@@ -39,26 +39,7 @@ namespace std {
 
 namespace Progression {
 
-    std::string ResourceManager::rootResourceDir = PG_RESOURCE_DIR;
-    std::unordered_map<std::string, std::shared_ptr<Model>> ResourceManager::models_ = {};
-    std::unordered_map<std::shared_ptr<Model>, std::vector<std::shared_ptr<Material>>> ResourceManager::modelToLoadedMaterials_ = {};
-    std::unordered_map<std::string, std::shared_ptr<Material>> ResourceManager::materials_ = {};
-    std::unordered_map<std::string, std::shared_ptr<Shader>> ResourceManager::shaders_ = {};
-    std::unordered_map<std::string, std::shared_ptr<Texture2D>> ResourceManager::textures2D_ = {};
-    std::unordered_map<std::string, std::shared_ptr<Skybox>> ResourceManager::skyboxes_ = {};
-
     void ResourceManager::Init(const config::Config& config) {
-        auto rm = config->get_table("resourceManager");
-        // if (!rm) {
-        // }
-
-        // load defaults
-        materials_["default"] = std::make_shared<Material>();
-        models_["plane"] = LoadModel("models/plane.obj");
-        models_["cube"] = LoadModel("models/cube.obj");
-        models_["sphere"] = LoadModel("models/sphereHigh.obj");
-        models_["sphereLow"] = LoadModel("models/sphereLow.obj");
-        models_["cylinder"] = LoadModel("models/cylinder.obj");
     }
 
     // TODO: implement

@@ -17,30 +17,33 @@ set(
     core/common.cpp
     core/config.cpp
     core/game_object.cpp
-    core/image.cpp
     core/input.cpp
     core/time.cpp
     core/transform.cpp
     core/window.cpp
-    core/scene.cpp
-    core/resource_manager.cpp
+    #core/scene.cpp
     core/bounding_box.cpp
     core/frustum.cpp
 
-    graphics/texture2D.cpp
-    graphics/lights.cpp
-    
-    graphics/material.cpp
-    graphics/mesh.cpp
-    graphics/shader.cpp
-    graphics/render_component.cpp
-    graphics/render_system.cpp
-    graphics/model_render_component.cpp
-    graphics/skybox.cpp
-    graphics/shadow_map.cpp
+    #graphics/lights.cpp
+    #graphics/render_component.cpp
+    #graphics/render_system.cpp
+    #graphics/model_render_component.cpp
+    #graphics/skybox.cpp
+    #graphics/shadow_map.cpp
     graphics/graphics_api.cpp
 
-    components/user_camera_component.cpp
+    #resource/resource_manager.cpp
+    resource/image.cpp
+    resource/material.cpp
+    #resource/mesh.cpp
+    resource/shader.cpp
+    resource/texture2D.cpp
+
+    resource/resourceIO/image_io.cpp
+    resource/resourceIO/shader_io.cpp
+
+    #components/user_camera_component.cpp
 
     utils/logger.cpp
 
@@ -58,32 +61,37 @@ set(
     core/component.hpp
     core/config.hpp
     core/game_object.hpp
-    core/image.hpp
     core/input.hpp
     core/input_types.hpp
     core/time.hpp
     core/transform.hpp
     core/window.hpp
-    core/scene.hpp
-    core/resource_manager.hpp
+    #core/scene.hpp
     core/bounding_box.hpp
     core/frustum.hpp
     
-    graphics/lights.hpp
-    graphics/texture2D.hpp
-
-    graphics/material.hpp
-    graphics/mesh.hpp
-    graphics/model.hpp
-    graphics/shader.hpp
-    graphics/render_component.hpp
-    graphics/render_system.hpp
-    graphics/model_render_component.hpp
-    graphics/skybox.hpp
-    graphics/shadow_map.hpp
+    #graphics/lights.hpp
+    #graphics/render_component.hpp
+    #graphics/render_system.hpp
+    #graphics/model_render_component.hpp
+    #graphics/skybox.hpp
+    #graphics/shadow_map.hpp
     graphics/graphics_api.hpp
 
-    components/user_camera_component.hpp
+    #resource/resource_manager.hpp
+    resource/image.hpp
+    resource/material.hpp
+    #resource/mesh.hpp
+    #resource/model.hpp
+    resource/shader.hpp
+    resource/texture2D.hpp
+
+    resource/resourceIO/image_io.hpp
+    resource/resourceIO/shader_io.hpp
+    resource/resourceIO/texture_io.hpp
+    resource/resourceIO/io.hpp
+
+    #components/user_camera_component.hpp
     
     utils/noncopyable.hpp
     utils/logger.hpp
@@ -97,7 +105,7 @@ set(
     
     ${PROGRESSION_DIR}/ext/memory_map/MemoryMapped.h
 
-    progression.hpp
+    #progression.hpp
 )
 
 set(AUDIO_SRCS

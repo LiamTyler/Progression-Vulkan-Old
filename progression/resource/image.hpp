@@ -1,6 +1,5 @@
 #pragma once
-
-#include "core/common.hpp"
+#include <cstring>
 
 namespace Progression {
 
@@ -18,7 +17,7 @@ namespace Progression {
 	class Image {
 	public:
 		Image();
-		Image(int w, int h);
+		Image(int w, int h, int nc, unsigned char* pixels = nullptr);
 		~Image();
 
         Image(const Image& src);
@@ -26,22 +25,25 @@ namespace Progression {
         Image(Image&& src);
         Image& operator=(Image&& src);
 
-		bool Load(const std::string& filename, bool flip_vertically = true);
-		bool Save(const std::string& filename);
+		int width() const { return width_; }
+		int height() const { return height_; }
+		int numComponents() const { return numComponents_; }
+		unsigned char* pixels() const { return pixels_; }
 
-		int Width() const { return width_; }
-		int Height() const { return height_; }
-	    Pixel GetPixel(int r, int c) const {
+	    Pixel getPixel(int r, int c) const {
             Pixel p;
-            memcpy(&p, pixels_ + r * width_ + c, sizeof(Pixel));
+            memcpy(&p, &pixels_[numComponents_ * (r * width_ + c)], numComponents_);
             return p;
         }
-		void SetPixel(int r, int c, const Pixel& p) { memcpy(pixels_ + r*width_ + c, &p, sizeof(p)); }
-		unsigned char* GetData() const { return pixels_; }
+
+		void setPixel(int r, int c, const Pixel& p) {
+            memcpy(pixels_ + numComponents_ * (r * width_ + c), &p, numComponents_);
+        }
 
 	protected:
 		int width_;
 		int height_;
+        int numComponents_;
 		unsigned char* pixels_;
 	};
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <vector>
 #include <unordered_map>
 
 #include "core/common.hpp"
@@ -11,24 +10,13 @@ namespace Progression {
 	class Shader : public NonCopyable {
 	public:
 		Shader();
+        Shader(GLuint program, bool queryUniforms = true);
 		~Shader();
         
         Shader(Shader&& shader);
         Shader& operator=(Shader&& shader);
 
-        /** \brief Load a the specified shader files and compile the shader for use. If the second
-         *         and third arguments are empty strings, then the shader is assumed to be a
-         *         compute shader, and the first argument is used as the filename for it.
-         */
-        bool load(
-                const std::string& vertex_or_compute_fname,
-                const std::string& frag_fname = "",
-                const std::string& geom_fname = ""
-                );
         void free();
-		bool attachShaderFromString(GLenum shaderType, const std::string& source);
-		bool attachShaderFromFile(GLenum shaderType, const std::string& fname);
-		bool createAndLinkProgram();
 		void queryUniforms();
 		void enable() const;
 		void disable() const;
@@ -52,7 +40,6 @@ namespace Progression {
 
 	protected:
 		GLuint program_;
-		std::vector<GLuint> shaders_;
 		std::unordered_map<std::string, GLuint> uniforms_;
 	};
 
