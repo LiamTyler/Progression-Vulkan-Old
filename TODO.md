@@ -8,12 +8,12 @@
 - [x] load shader binary
 - [x] model loading
 - [x] model loading remove duplicate verts
-- [ ] saving model
 - [ ] mesh optimizer
 - [ ] material loader
 - [ ] skybox loading
 - [ ] resource manager
 - [ ] loading resource text file
+- [ ] save as one binary resource file
 - [ ] re-use materials when loading models if its already been loaded
 - [ ] detect changed files + reload them
 - [ ] convert resource file into 1 binary file
@@ -28,6 +28,7 @@
 - [ ] Shadows
 - [ ] Normal maps
 - [ ] PBR
+- [ ] LOD system
 
 ## Low priority software engineering related
 - [ ] follow clang tidy

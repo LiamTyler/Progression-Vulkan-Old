@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
     }
 
     Model model;
-    if (!loadModelFromObj(model, PG_RESOURCE_DIR "models/chalet2.obj", true)) {
+    if (!loadModelFromObj(model, PG_RESOURCE_DIR "models/chalet2.obj", true, true)) {
         LOG_ERR("Could not load model");
         return 1;
     }
@@ -46,8 +46,8 @@ int main(int argc, char* argv[]) {
     PG::Input::PollEvents();
 
     Transform modelTransform(
-            glm::vec3(0, -1, -5),
-            glm::vec3(0, glm::radians(90.0f), glm::radians(90.0f)),
+            glm::vec3(0, -0.5, -2),
+            glm::vec3(glm::radians(-90.0f), glm::radians(90.0f), glm::radians(0.0f)),
             glm::vec3(1));
     Camera camera(glm::vec3(0), glm::vec3(0));
 

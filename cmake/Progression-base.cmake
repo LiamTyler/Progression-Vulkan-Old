@@ -15,6 +15,7 @@ endif()
 
 set(PROGRESSION_LIBS
     glfw
+    meshoptimizer
     ${SYSTEM_LIBS}
 )
 

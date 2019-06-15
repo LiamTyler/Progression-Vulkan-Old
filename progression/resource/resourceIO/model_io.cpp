@@ -4,25 +4,35 @@
 #include "resource/mesh.hpp"
 #include "resource/texture2D.hpp"
 #include "resource/resourceIO/texture_io.hpp"
+#include "meshoptimizer/src/meshoptimizer.h"
 #include "utils/logger.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
 class Vertex {
-    public:
-        Vertex(const glm::vec3& vert, const glm::vec3& norm, const glm::vec2& tex) :
-            vertex(vert),
-            normal(norm),
-            uv(tex) {}
+public:
+    Vertex() :
+        vertex(glm::vec3(0)),
+        normal(glm::vec3(0)),
+        uv(glm::vec3(0))
+    {
+    }
 
-        bool operator==(const Vertex& other) const {
-            return vertex == other.vertex && normal == other.normal && uv == other.uv;
-        }
+    Vertex(const glm::vec3& vert, const glm::vec3& norm, const glm::vec2& tex) :
+        vertex(vert),
+        normal(norm),
+        uv(tex)
+    {
+    }
 
-        glm::vec3 vertex;
-        glm::vec3 normal;
-        glm::vec2 uv;
+    bool operator==(const Vertex& other) const {
+        return vertex == other.vertex && normal == other.normal && uv == other.uv;
+    }
+
+    glm::vec3 vertex;
+    glm::vec3 normal;
+    glm::vec2 uv;
 };
 
 namespace std {
@@ -38,7 +48,7 @@ namespace std {
 namespace Progression {
 
     // fname is full path
-    bool loadModelFromObj(Model& model, const std::string& fname, bool freeCpuCopy) {
+    bool loadModelFromObj(Model& model, const std::string& fname, bool optimize, bool freeCpuCopy) {
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
         std::vector<tinyobj::material_t> materials;
@@ -129,8 +139,10 @@ namespace Progression {
 
             // create mesh and upload to GPU
             if (currentMesh.vertices.size()) {
-                LOG("push back on mat id: ", currentMaterialID);
-                currentMesh.uploadToGpu(true);
+                if (optimize)
+                    optimizeMesh(currentMesh);
+
+                currentMesh.uploadToGpu(freeCpuCopy);
 
                 model.materials.push_back(new Material(currentMaterial));
                 model.meshes.push_back(std::move(currentMesh));
@@ -138,6 +150,69 @@ namespace Progression {
         }
 
         return true;
+    }
+
+    void optimizeMesh(Mesh& mesh) {
+        if (mesh.vertices.size() == 0) {
+            LOG_ERR("Trying to optimize a mesh with no vertices. Did you free them after uploading to the GPU?");
+            return;
+        }
+        // collect everything back into interleaved data
+        std::vector<Vertex> vertices;
+        for (size_t i = 0; i < mesh.vertices.size(); ++i) {
+            Vertex v;
+            v.vertex = mesh.vertices[i];
+            if (mesh.normals.size())
+                v.normal = mesh.normals[i];
+            if (mesh.uvs.size())
+                v.uv = mesh.uvs[i];
+
+            vertices.push_back(v);
+        }
+
+
+        // const size_t kCacheSize = 16;
+        // meshopt_VertexCacheStatistics vcs = meshopt_analyzeVertexCache(&mesh.indices[0], mesh.indices.size(),
+        //         mesh.vertices.size(), kCacheSize, 0, 0);
+        // meshopt_OverdrawStatistics os = meshopt_analyzeOverdraw(&mesh.indices[0], mesh.indices.size(),
+        //         &vertices[0].vertex.x, mesh.vertices.size(), sizeof(Vertex));
+        // meshopt_VertexFetchStatistics vfs = meshopt_analyzeVertexFetch(&mesh.indices[0], mesh.indices.size(),
+        //         mesh.vertices.size(), sizeof(Vertex));
+        // LOG("Before:");
+        // LOG("ACMR: ", vcs.acmr, ", ATVR: ", vcs.atvr, ", avg overdraw: ", os.overdraw, " avg # fetched: ", vfs.overfetch);
+
+        // vertex cache optimization should go first as it provides starting order for overdraw
+        meshopt_optimizeVertexCache(&mesh.indices[0], &mesh.indices[0], mesh.indices.size(), mesh.vertices.size());
+
+        // reorder indices for overdraw, balancing overdraw and vertex cache efficiency
+        const float kThreshold = 1.01f; // allow up to 1% worse ACMR to get more reordering opportunities for overdraw
+        meshopt_optimizeOverdraw(&mesh.indices[0], &mesh.indices[0], mesh.indices.size(),
+                                 &vertices[0].vertex.x, mesh.vertices.size(), sizeof(Vertex), kThreshold);
+
+        // vertex fetch optimization should go last as it depends on the final index order
+        meshopt_optimizeVertexFetch(&vertices[0].vertex.x, &mesh.indices[0], mesh.indices.size(),
+                                    &vertices[0].vertex.x, mesh.vertices.size(), sizeof(Vertex));
+
+        // vcs = meshopt_analyzeVertexCache(&mesh.indices[0], mesh.indices.size(), mesh.vertices.size(), kCacheSize, 0, 0);
+        // os = meshopt_analyzeOverdraw(&mesh.indices[0], mesh.indices.size(), &vertices[0].vertex.x, mesh.vertices.size(), sizeof(Vertex));
+        // vfs = meshopt_analyzeVertexFetch(&mesh.indices[0], mesh.indices.size(), mesh.vertices.size(), sizeof(Vertex));
+        // LOG("After:");
+        // LOG("ACMR: ", vcs.acmr, ", ATVR: ", vcs.atvr, ", avg overdraw: ", os.overdraw, " avg # fetched: ", vfs.overfetch);
+
+        // collect back into mesh structure
+        for (size_t i = 0; i < mesh.vertices.size(); ++i) {
+            const auto& v = vertices[i];
+            mesh.vertices[i] = v.vertex;
+            if (mesh.normals.size())
+                mesh.normals[i] = v.normal;
+            if (mesh.uvs.size())
+                mesh.uvs[i] = v.uv;
+        }
+    }
+
+    void optimizeModel(Model& model) {
+        for (Mesh& mesh : model.meshes)
+            optimizeMesh(mesh);
     }
 
 } // namespace Progression
