@@ -59,7 +59,7 @@ namespace Progression {
                     width_,
                     height_,
                     0,
-                    formats[image->numComponents()],
+                    formats[image->numComponents() - 1],
                     GL_UNSIGNED_BYTE,
                     image->pixels()
                     );
@@ -74,7 +74,7 @@ namespace Progression {
                     width_,
                     height_,
                     GL_UNSIGNED_BYTE,
-                    formats[image->numComponents()],
+                    formats[image->numComponents() - 1],
                     image->pixels()
                     );
         }

@@ -11,7 +11,7 @@ namespace Progression {
 			const glm::vec3& rot = glm::vec3(0),
 			const glm::vec3& scale = glm::vec3(1));
 
-		glm::mat4 GetModelMatrix() const;
+		glm::mat4 getModelMatrix() const;
 
 		glm::vec3 position;
 		glm::vec3 rotation;

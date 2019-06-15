@@ -8,43 +8,32 @@ namespace Progression {
 
     class Mesh : public NonCopyable {
     public:
-        enum vboName : unsigned int {
-            VERTEX,
-            NORMAL,
-            INDEX,
-            UV,
-            TOTAL_VBOS
-        };
-
         Mesh();
-        virtual ~Mesh();
+        ~Mesh();
 
         Mesh(Mesh&& mesh);
         Mesh& operator=(Mesh&& mesh);
 
-		void UploadToGPU(bool freeCPUCopy = true);
-		void Free(bool gpuCopy = true, bool cpuCopy = true);
+		void uploadToGpu(bool freeCPUCopy = true);
+		void free(bool gpuCopy = true, bool cpuCopy = true);
 
-        bool gpuCopyCreated() const { return vbos[vboName::VERTEX] != (unsigned int) -1; }
-        bool hasUVBuffer() const { return vbos[vboName::UV] != (unsigned int) -1; }
-        bool hasIndexBuffer() const { return vbos[vboName::INDEX] != (unsigned int) -1; }
-        unsigned int getNumVertices() const { return vertices.size() ? vertices.size() : numVertices_; }
-        unsigned int getNumIndices() const { return indices.size() ? indices.size() : numIndices_; }
+        unsigned int getNumVertices() const { return numVertices_; }
+        unsigned int getNumIndices() const { return numIndices_; }
 
 
 		std::vector<glm::vec3> vertices;
 		std::vector<glm::vec3> normals;
 		std::vector<glm::vec2> uvs;
 		std::vector<unsigned int> indices;
-        GLuint vbos[vboName::TOTAL_VBOS];
-        GLuint vao = (GLuint) -1;
-        bool dynamic = false;
+        GLuint vertexBuffer;
+        GLuint indexBuffer;
+        GLuint vao;
 
 	private:
-        unsigned int numVertices_ = 0;
-        unsigned int numIndices_ = 0;
-		unsigned int maxVertices_ = 0;
-		unsigned int maxIndices_ = 0;
+        unsigned int numVertices_   = 0;
+        unsigned int numIndices_    = 0;
+        unsigned int normalOffset_  = (unsigned int) -1;
+        unsigned int textureOffset_ = (unsigned int) -1;
     };
 
 } // namespace Progression

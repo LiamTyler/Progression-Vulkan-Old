@@ -5,43 +5,47 @@
 
 namespace Progression {
 
-	class Camera : public GameObject {
+	class Camera {
 	public:
         struct RenderOptions {
             float exposure = 1.0f;
         };
 
         Camera(
-            const Transform& t = Transform(),
+            const glm::vec3& pos = glm::vec3(0),
+            const glm::vec3& rot = glm::vec3(0),
             float fovy = glm::radians(45.0f),
             float a = 16.0f / 9.0f,
             float np = .1f,
             float fp = 100.0f);
 
-        void UpdateFrustum(const glm::vec3& position, const glm::vec3& rotation);
-        void UpdateOrientationVectors();
-        void UpdateViewMatrix();
+        void updateFrustum(const glm::vec3& position, const glm::vec3& rotation);
+        void updateOrientationVectors();
+        void updateViewMatrix();
 
-        float GetFOV() const;
-        float GetAspectRatio() const;
-        float GetNearPlane() const;
-        float GetFarPlane() const;
-        glm::mat4 GetV() const;
-        glm::mat4 GetP() const;
-        glm::vec3 GetForwardDir() const;
-        glm::vec3 GetUpDir() const;
-        glm::vec3 GetRightDir() const;
-        Frustum GetFrustum() const;
+        float getFOV() const;
+        float getAspectRatio() const;
+        float getNearPlane() const;
+        float getFarPlane() const;
+        glm::mat4 getV() const;
+        glm::mat4 getP() const;
+        glm::mat4 getVP() const;
+        glm::vec3 getForwardDir() const;
+        glm::vec3 getUpDir() const;
+        glm::vec3 getRightDir() const;
+        Frustum   getFrustum() const;
 
-        void SetFOV(float f);
-        void SetAspectRatio(float a);
-        void SetNearPlane(float p);
-        void SetFarPlane(float p);
+        void setFOV(float f);
+        void setAspectRatio(float a);
+        void setNearPlane(float p);
+        void setFarPlane(float p);
 
         struct RenderOptions renderOptions;
+        glm::vec3 position;
+        glm::vec3 rotation;
 
 	protected:
-        void UpdateProjectionMatrix();
+        void updateProjectionMatrix();
         float fieldOfView_;
         float aspectRatio_;
         float nearPlane_;

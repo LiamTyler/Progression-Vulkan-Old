@@ -36,12 +36,14 @@ set(
     #resource/resource_manager.cpp
     resource/image.cpp
     resource/material.cpp
-    #resource/mesh.cpp
+    resource/mesh.cpp
     resource/shader.cpp
     resource/texture2D.cpp
 
     resource/resourceIO/image_io.cpp
     resource/resourceIO/shader_io.cpp
+    resource/resourceIO/texture_io.cpp
+    resource/resourceIO/model_io.cpp
 
     #components/user_camera_component.cpp
 
@@ -81,14 +83,15 @@ set(
     #resource/resource_manager.hpp
     resource/image.hpp
     resource/material.hpp
-    #resource/mesh.hpp
-    #resource/model.hpp
+    resource/mesh.hpp
+    resource/model.hpp
     resource/shader.hpp
     resource/texture2D.hpp
 
     resource/resourceIO/image_io.hpp
     resource/resourceIO/shader_io.hpp
     resource/resourceIO/texture_io.hpp
+    resource/resourceIO/model_io.hpp
     resource/resourceIO/io.hpp
 
     #components/user_camera_component.hpp

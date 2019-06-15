@@ -14,4 +14,8 @@ namespace Progression {
 
     bool loadShaderFromText(Shader& shader, const ShaderFileDesc& desc);
 
+    bool loadShaderFromBinary(Shader& shader, const char* binarySource, GLint len, GLenum format);
+
+    char* getShaderBinary(const Shader& shader, GLint& len, GLenum& format);
+
 } // namespace Progression

@@ -8,11 +8,10 @@ namespace Progression {
     {
     }
 
-    Shader::Shader(GLuint program, bool _queryUniforms) :
+    Shader::Shader(GLuint program) :
         program_(program)
     {
-        if (_queryUniforms)
-            queryUniforms();
+        queryUniforms();
     }
 
     Shader::~Shader() {
@@ -65,7 +64,7 @@ namespace Progression {
             uniforms_[sName] = location;
             LOG("Uniform:",location,"=",sName);
         }
-        LOG("");
+        LOG("")
         delete[] uniformName;
     }
 

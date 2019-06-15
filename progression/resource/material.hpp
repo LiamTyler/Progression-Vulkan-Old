@@ -1,9 +1,10 @@
 #pragma once
 
 #include "core/common.hpp"
-#include "resource/texture2D.hpp"
 
 namespace Progression {
+
+    class Texture2D;
 
     class Material {
     public:

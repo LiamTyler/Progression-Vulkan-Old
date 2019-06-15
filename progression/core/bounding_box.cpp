@@ -50,7 +50,7 @@ namespace Progression {
             glm::vec3(-he.x, he.y, -he.z)
         };
 
-        glm::mat4 M = transform.GetModelMatrix();
+        glm::mat4 M = transform.getModelMatrix();
         min = max = glm::vec3(M * glm::vec4(points[0], 1));
         for (int i = 1; i < 8; ++i) {
             glm::vec3 tmp = glm::vec3(M * glm::vec4(points[i], 1));

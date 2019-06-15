@@ -11,6 +11,7 @@ namespace Progression {
         stbi_set_flip_vertically_on_load(flip_vertically);
         int width, height, numComponents;
         unsigned char* pixels = stbi_load(fname.c_str(), &width, &height, &numComponents, 0);
+        LOG("num components = ", numComponents);
 
         if (!pixels) {
             LOG_ERR("Failed to load image:", fname);
@@ -21,7 +22,8 @@ namespace Progression {
         return true;
 	}
 
-	bool saveImage(const Image& image, const std::string& fname) {
+	bool saveImage(const Image& image, const std::string& fname, bool flipVertically) {
+        stbi_flip_vertically_on_write(flipVertically);
 		int i = fname.length();
 		while (fname[--i] != '.' && i >= 0);
 		if (i < 0) {

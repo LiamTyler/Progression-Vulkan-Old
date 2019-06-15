@@ -1,6 +1,7 @@
 #include "resource/resourceIO/shader_io.hpp"
 #include "utils/logger.hpp"
 #include <fstream>
+#include "core/common.hpp"
 
 namespace Progression {
 
@@ -121,6 +122,35 @@ namespace Progression {
         } else {
             return false;
         }
+    }
+
+    bool loadShaderFromBinary(Shader& shader, const char* binarySource, GLint len, GLenum format) {
+        GLuint program = glCreateProgram();
+        glProgramBinary(program, format, binarySource, len);
+
+        GLint status;
+        glGetProgramiv(program, GL_LINK_STATUS, &status);
+        if( GL_FALSE == status ) {
+            LOG("Failed to create program from the binary");
+            return false;
+        }
+        shader = std::move(Shader(program));
+        return true;
+    }
+
+    char* getShaderBinary(const Shader& shader, GLint& len, GLenum& format) {
+        GLint formats = 0;
+        glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS, &formats);
+        if (formats < 1) {
+            LOG("No binary formats supported with this driver");
+            return nullptr;
+        }
+
+        glGetProgramiv(shader.getProgram(), GL_PROGRAM_BINARY_LENGTH, &len);
+        char* binary = new char[len];
+        glGetProgramBinary(shader.getProgram(), len, NULL, &format, binary);
+
+        return binary;
     }
 
 } // namespace Progression

@@ -1,25 +1,21 @@
-#include "graphics/mesh.hpp"
+#include "resource/mesh.hpp"
 #include "graphics/graphics_api.hpp"
 
 namespace Progression {
 
     Mesh::Mesh() {
-        for (GLuint i = 0; i < vboName::TOTAL_VBOS; ++i)
-            vbos[i] = (GLuint) -1;
+        graphicsApi::createBuffers(&vertexBuffer, 1);
+        graphicsApi::createBuffers(&indexBuffer, 1);
+        vao = graphicsApi::createVao();
     }
 
     Mesh::~Mesh() {
-        if (gpuCopyCreated()) {
-            GLuint numBuffers = 2;
-            if (hasUVBuffer())
-                ++numBuffers;
-            if (hasIndexBuffer())
-                ++numBuffers;
-
-            graphicsApi::deleteBuffers(vbos, numBuffers);
-            if (vao != (GLuint) -1)
-                graphicsApi::deleteVao(vao);
-        }
+        if (vertexBuffer != (GLuint) -1)
+            graphicsApi::deleteBuffers(&vertexBuffer, 1);
+        if (indexBuffer != (GLuint) -1)
+            graphicsApi::deleteBuffers(&indexBuffer, 1);
+        if (vao != (GLuint) -1)
+            graphicsApi::deleteVao(vao);
     }
 
     Mesh::Mesh(Mesh&& mesh) {
@@ -27,20 +23,19 @@ namespace Progression {
     }
 
     Mesh& Mesh::operator=(Mesh&& mesh) {
-        vertices = std::move(mesh.vertices);
-        normals = std::move(mesh.normals);
-        uvs = std::move(mesh.uvs);
-        indices = std::move(mesh.indices);
-        dynamic = std::move(mesh.dynamic);
-        numVertices_ = std::move(mesh.numVertices_);
-        numIndices_ = std::move(mesh.numIndices_);
-        maxVertices_ = std::move(mesh.maxVertices_);
-        maxIndices_ = std::move(mesh.maxIndices_);
+        vertices       = std::move(mesh.vertices);
+        normals        = std::move(mesh.normals);
+        uvs            = std::move(mesh.uvs);
+        indices        = std::move(mesh.indices);
+        numVertices_   = std::move(mesh.numVertices_);
+        numIndices_    = std::move(mesh.numIndices_);
+        normalOffset_  = std::move(mesh.normalOffset_);
+        textureOffset_ = std::move(mesh.textureOffset_);
 
-        for (GLuint i = 0; i < vboName::TOTAL_VBOS; ++i) {
-            vbos[i] = mesh.vbos[i];
-            mesh.vbos[i] = (GLuint) -1;
-        }
+        vertexBuffer = std::move(mesh.vertexBuffer);
+        indexBuffer  = std::move(mesh.indexBuffer);
+        mesh.vertexBuffer = -1;
+        mesh.indexBuffer  = -1;
 
         vao = std::move(mesh.vao);
         mesh.vao = (GLuint) -1;
@@ -48,72 +43,40 @@ namespace Progression {
         return *this;
     }
 
-    void Mesh::UploadToGPU(bool freeCPUCopy) {
-        bool created = false;
-        if (!gpuCopyCreated()) {
-            GLuint numBuffers = 2;
-            if (uvs.size())
-                ++numBuffers;
+    // TODO: dynamic meshes + usage
+    void Mesh::uploadToGpu(bool freeCPUCopy) {
+        GLenum usage = GL_STATIC_DRAW;
+        numVertices_ = vertices.size();
+        numIndices_  = indices.size();
+        normalOffset_ = numVertices_ * sizeof(glm::vec3);
+        textureOffset_ = normalOffset_ + normals.size() * sizeof(glm::vec3);
 
-            if (indices.size())
-                ++numBuffers;
+        graphicsApi::bindVao(vao);
+        glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+        glBufferData(
+                GL_ARRAY_BUFFER,
+                (vertices.size() + normals.size()) * sizeof(glm::vec3) + uvs.size() * sizeof(glm::vec2),
+                NULL, 
+                usage);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(glm::vec3), &vertices[0]);
+        graphicsApi::describeAttribute(0, 3, GL_FLOAT);
 
-            graphicsApi::createBuffers(vbos, numBuffers);
-            vao = graphicsApi::createVao();
-            created = true;
+        if (normals.size()) {
+            glBufferSubData(GL_ARRAY_BUFFER, normalOffset_, normals.size() * sizeof(glm::vec3), &normals[0]);
+            graphicsApi::describeAttribute(1, 3, GL_FLOAT, 0, normalOffset_);
+        }
+        if (uvs.size()) {
+            glBufferSubData(GL_ARRAY_BUFFER, textureOffset_, uvs.size() * sizeof(glm::vec2), &uvs[0]);
+            graphicsApi::describeAttribute(2, 2, GL_FLOAT, 0, textureOffset_);
         }
 
-        GLenum usage = dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW;
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], usage);
 
-        if (maxVertices_ < vertices.size()) {
-            maxVertices_ = vertices.size();
-            glBindBuffer(GL_ARRAY_BUFFER, vbos[vboName::VERTEX]);
-            glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], usage);
-
-            glBindBuffer(GL_ARRAY_BUFFER, vbos[vboName::NORMAL]);
-            glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(glm::vec3), &normals[0], usage);
-
-            if (hasUVBuffer()) {
-                glBindBuffer(GL_ARRAY_BUFFER, vbos[vboName::UV]);
-                glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(glm::vec2), &uvs[0], usage);
-            }
-        } else {
-            glBindBuffer(GL_ARRAY_BUFFER, vbos[vboName::VERTEX]);
-            glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(glm::vec3), &vertices[0]);
-
-            glBindBuffer(GL_ARRAY_BUFFER, vbos[vboName::NORMAL]);
-            glBufferSubData(GL_ARRAY_BUFFER, 0, normals.size() * sizeof(glm::vec3), &normals[0]);
-
-            if (hasUVBuffer()) {
-                glBindBuffer(GL_ARRAY_BUFFER, vbos[vboName::UV]);
-                glBufferSubData(GL_ARRAY_BUFFER, 0, uvs.size() * sizeof(glm::vec2), &uvs[0]);
-            }
-        }
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos[vboName::INDEX]);
-        if (maxIndices_ < indices.size()) {
-            maxIndices_ = indices.size();
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], usage);
-        } else {
-            glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, indices.size() * sizeof(unsigned int), &indices[0]);
-        }
-
-        if (created) {
-            glBindBuffer(GL_ARRAY_BUFFER, vbos[vboName::VERTEX]);
-            graphicsApi::describeAttribute(0, 3, GL_FLOAT);
-            glBindBuffer(GL_ARRAY_BUFFER, vbos[vboName::NORMAL]);
-            graphicsApi::describeAttribute(1, 3, GL_FLOAT);
-            if (hasUVBuffer()) {
-                glBindBuffer(GL_ARRAY_BUFFER, vbos[vboName::UV]);
-                graphicsApi::describeAttribute(2, 2, GL_FLOAT);
-            }
-        }
-
-        if (freeCPUCopy)
-            Free(false, true);
+        free(false, freeCPUCopy);
     }
 
-    void Mesh::Free(bool gpuCopy, bool cpuCopy) {
+    void Mesh::free(bool gpuCopy, bool cpuCopy) {
         if (cpuCopy) {
             numVertices_ = vertices.size();
             numIndices_ = indices.size();
@@ -123,16 +86,13 @@ namespace Progression {
             indices.shrink_to_fit();
         }
 
-        if (gpuCopy && gpuCopyCreated()) {
-            GLuint numBuffers = 2;
-            if (hasUVBuffer())
-                ++numBuffers;
-            if (hasIndexBuffer())
-                ++numBuffers;
-            graphicsApi::deleteBuffers(vbos, numBuffers);
+        if (gpuCopy) {
+            graphicsApi::deleteBuffers(&vertexBuffer, 1);
+            graphicsApi::deleteBuffers(&indexBuffer, 1);
             graphicsApi::deleteVao(vao);
 
-            numVertices_ = numIndices_ = maxVertices_ = maxIndices_ = 0;
+            numVertices_  = numIndices_ = 0;
+            normalOffset_ = textureOffset_ = -1;
         }
     }
 

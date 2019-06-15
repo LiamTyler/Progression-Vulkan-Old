@@ -1,14 +1,21 @@
 #version 430 core
 
-in vec2 vertex;
+in vec3 vertex;
 in vec3 normal;
-in vec2 uv;
+in vec2 inTexCoord;
 
-out vec3 fragNormal;
-out vec2 UV;
+uniform mat4 M;
+uniform mat4 N;
+uniform mat4 MVP;
+
+out vec3 fragPosInWorldSpace;
+out vec3 normalInWorldSpace;
+out vec2 texCoord;
 
 void main() {
-    gl_Position = vec4(vertex, 0, 1);
-    fragNormal = normal;
-    // UV = .5 * (vertex + vec2(1));
+    fragPosInWorldSpace = (M * vec4(vertex, 1)).xyz;
+    normalInWorldSpace  = (N * vec4(normal, 0)).xyz;
+    texCoord = inTexCoord;
+
+    gl_Position = MVP * vec4(vertex, 1);
 }

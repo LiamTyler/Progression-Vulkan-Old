@@ -1,18 +1,19 @@
 #pragma once
 
 #include <vector>
-#include <memory>
 
 namespace Progression {
 
     class Mesh;
+    class Material;
 
     class Model {
     public:
         Model() = default;
-		virtual ~Model() = default;
+		~Model() = default;
 
-        std::vector<std::shared_ptr<Mesh>> meshes;
+        std::vector<Mesh> meshes;
+        std::vector<Material*> materials;
     };
 
 } // namespace Progression

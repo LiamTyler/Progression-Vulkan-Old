@@ -10,7 +10,7 @@ namespace Progression {
 	class Shader : public NonCopyable {
 	public:
 		Shader();
-        Shader(GLuint program, bool queryUniforms = true);
+        Shader(GLuint program);
 		~Shader();
         
         Shader(Shader&& shader);
