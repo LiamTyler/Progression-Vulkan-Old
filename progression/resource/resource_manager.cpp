@@ -1,515 +1,99 @@
-#include "core/resource_manager.hpp"
-#include "graphics/mesh.hpp"
-#include "tinyobjloader/tiny_obj_loader.h"
-#include "core/time.hpp"
-#include "core/common.hpp"
+#include "resource/resource_manager.hpp"
+#include "resource/mesh.hpp"
+#include "core/configuration.hpp"
+#include "resource/resourceIO/io.hpp"
 #include "utils/logger.hpp"
-#include <functional>
-#include <fstream>
 
+namespace Progression { namespace Resource {
 
-
-namespace Progression {
-
-    void ResourceManager::Init(const config::Config& config) {
-    }
-
-    // TODO: implement
-    void ResourceManager::Free() {
-        shaders_.clear();
-        skyboxes_.clear();
-        models_.clear();
-        materials_.clear();
-        textures2D_.clear();
-    }
-
-    bool ResourceManager::LoadResourceFile(const std::string& relativePath) {
-        std::ifstream in(rootResourceDir + relativePath);
-        if (!in) {
-            LOG_ERR("Could not open resource file:", rootResourceDir + relativePath);
-            return false;
+        void init();
+        void shutdown() {
+            models_.clear();
+            materials_.clear();
+            textures2D_.clear();
+            shaders_.clear();
         }
 
-        std::string line;
-        std::string tmpRootDir = "";
-        while (std::getline(in, line)) {
-            if (line == "")
-                continue;
-            if (line[0] == '#')
-                continue;
-            if (line == "RootResourceDir") {
-                std::getline(in, line);
-                std::stringstream ss(line);
-                ss >> rootResourceDir;
-            } else if (line == "Skybox") {
-                std::string name = "";
-                line = " ";
-                std::string right, left, top, bottom, front, back;
-                while (line != "" && !in.eof()) {
-                    std::getline(in, line);
-                    std::stringstream ss(line);
-                    std::string first;
-                    ss >> first;
-                    if (first == "name") {
-                        ss >> name;
-                    } else if (first == "right") {
-                        ss >> right;
-                    } else if (first == "left") {
-                        ss >> left;
-                    } else if (first == "top") {
-                        ss >> top;
-                    } else if (first == "bottom") {
-                        ss >> bottom;
-                    } else if (first == "front") {
-                        ss >> front;
-                    } else if (first == "back") {
-                        ss >> back;
-                    }
-                }
-
-                right  = rootResourceDir + right;
-                left   = rootResourceDir + left;
-                front  = rootResourceDir + front;
-                bottom = rootResourceDir + bottom;
-                top    = rootResourceDir + top;
-                back   = rootResourceDir + back;
-                if (skyboxes_.find(name) != skyboxes_.end())
-                    LOG_WARN("resource manager already contains a skybox with the name '", name, "'. Overriding with the new skybox");
-                 auto sb = std::make_shared<Skybox>();
-                 if (!sb->Load({ right, left, top, bottom, back, front })) {
-                     LOG_ERR("Failed to load skybox");
-                     continue;
-                 }
-                 skyboxes_[name] = sb;
-            } else if (line == "Material") {
-                auto material = std::make_shared<Material>();
-                std::string name = "";
-                line = " ";
-                while (line != "" && !in.eof()) {
-                    std::getline(in, line);
-                    std::stringstream ss(line);
-                    std::string first;
-                    ss >> first;
-                    if (first == "name") {
-                        ss >> name;
-                    } else if (first == "ka") {
-                        float x, y, z;
-                        ss >> x >> y >> z;
-                        material->ambient = glm::vec3(x, y, z);
-                    } else if (first == "kd") {
-                        float x, y, z;
-                        ss >> x >> y >> z;
-                        material->diffuse = glm::vec3(x, y, z);
-                    } else if (first == "ks") {
-                        float x, y, z;
-                        ss >> x >> y >> z;
-                        material->specular = glm::vec3(x, y, z);
-                    } else if (first == "ke") {
-                        float x, y, z;
-                        ss >> x >> y >> z;
-                        material->emissive = glm::vec3(x, y, z);
-                    } else if (first == "ns") {
-                        float x;
-                        ss >> x;
-                        material->shininess = x;
-                    } else if (first == "diffuseTex") {
-                        std::string filename;
-                        ss >> filename;
-                        auto tex = ResourceManager::LoadTexture2D(filename);
-                        if (!tex)
-                            LOG_WARN("Warning: Material '", name, "'s diffuse texture : ", filename, " not yet loaded.Setting to nullptr");
-                        material->diffuseTexture = tex;
-                    }
-                }
-
-                if (materials_.find(name) != materials_.end())
-                    LOG_WARN("resource manager already contains a material with the name '", name, "'. Overriding with the new material");
-                materials_[name] = material;
-            } else if (line == "Model") {
-                std::string filename, name;
-                line = " ";
-                while (line != "" && !in.eof()) {
-                    std::getline(in, line);
-                    std::stringstream ss(line);
-                    std::string first;
-                    ss >> first;
-                    if (first == "filename") {
-                        ss >> filename;
-                    } else if (first == "name") {
-                        ss >> name;
-                    }
-                }
-                auto model = LoadModel(filename);
-                if (name != "") {
-                    models_[name] = std::make_shared<Model>(*model);
-                }
-            } else if (line == "Texture") {
-                std::string filename;
-                line = " ";
-                while (line != "" && !in.eof()) {
-                    std::getline(in, line);
-                    std::stringstream ss(line);
-                    std::string first;
-                    ss >> first;
-                    if (first == "filename") {
-                        ss >> filename;
-                    }
-                }
-                LoadTexture2D(filename);
-            } else if (line == "Shader") {
-                std::string name, vertex, frag;
-                line = " ";
-                while (line != "" && !in.eof()) {
-                    std::getline(in, line);
-                    std::stringstream ss(line);
-                    std::string first;
-                    ss >> first;
-                    if (first == "name") {
-                        ss >> name;
-                    } else if (first == "vertex") {
-                        ss >> vertex;
-                    } else if (first == "fragment") {
-                        ss >> frag;
-                    }
-                }
-                if (shaders_.find(name) != shaders_.end()) {
-                    LOG_WARN("resource manager already contains a shader with the name '", name, "'. Ignoring this one");
-                    continue;
-                }
-                shaders_[name] = std::make_shared<Shader>();
-                shaders_[name]->load(vertex, frag);
-            }
+        Model* getModel(const std::string& name) {
+            auto it = models_.find(name);
+            return it == models_.end() ? nullptr : &it->second;
         }
 
-        in.close();
-        return true;
-    }
-
-    std::shared_ptr<Model> ResourceManager::LoadModel(const std::string& relativePath, bool addToManager) {
-        if (models_.find(relativePath) != models_.end())
-            return models_[relativePath];
-
-        auto pos = relativePath.find_last_of('.');
-        std::string ext = relativePath.substr(pos);
-        std::shared_ptr<Model> model;
-        if (ext == ".obj") {
-            model = LoadOBJ(relativePath);
-        } else if (ext == ".pgModel") {
-            model = LoadPGModel(relativePath);
-        } else {
-            LOG_ERR("Trying to load model from unsupported file extension:", rootResourceDir + relativePath);
-            return nullptr;
+        Material* getMaterial(const std::string& name) {
+            auto it = materials_.find(name);
+            return it == materials_.end() ? nullptr : &it->second;
         }
 
-        if (addToManager && model != nullptr)
-            models_[relativePath] = model;
-
-        return model;
-    }
-
-    std::shared_ptr<Model> ResourceManager::LoadPGModel(const std::string& relativePath) {
-        UNUSED(relativePath);
-        return nullptr;
-        /*
-        std::string fullPath = rootResourceDir + relativePath;
-        std::ifstream in(fullPath, std::ios::binary);
-        if (!in) {
-            LOG_ERR("Failed to load the pgModel file: ", fullPath);
-            return nullptr;
+        Texture2D* getTexture2D(const std::string& name) {
+            auto it = textures2D_.find(name);
+            return it == textures2D_.end() ? nullptr : &it->second;
         }
 
-        auto model = std::make_shared<Model>();
+        Shader* getShader(const std::string& name) {
+            auto it = shaders_.find(name);
+            return it == shaders_.end() ? nullptr : &it->second;
+        }
 
-        int numMeshes, numMaterials;
-        in.read((char*)&numMeshes, sizeof(int));
-        in.read((char*)&numMaterials, sizeof(int));
-        model->meshes.resize(numMeshes);
 
-        std::vector<std::shared_ptr<Material>> materials;
-        materials.resize(numMeshes);
-
-        std::vector<std::shared_ptr<Material>> materials(numMaterials);
-        std::vector<std::string> diffuseTexNames;
-        std::string texName;
-        // parse all of the materials
-        for (int i = 0; i < numMaterials; ++i) {
-            auto mat = std::make_shared<Material>();
-
-            in.read((char*)&mat->ambient, sizeof(glm::vec3));
-            in.read((char*)&mat->diffuse, sizeof(glm::vec3));
-            in.read((char*)&mat->specular, sizeof(glm::vec3));
-            in.read((char*)&mat->emissive, sizeof(glm::vec3));
-            in.read((char*)&mat->shininess, sizeof(float));
-            unsigned int texNameSize;
-            in.read((char*)&texNameSize, sizeof(unsigned int));
-
-            if (texNameSize != 0) {
-                texName.resize(texNameSize);
-                in.read(&texName[0], sizeof(char) * texNameSize);
-                diffuseTexNames.push_back(texName);
-            } else {
-                diffuseTexNames.push_back("");
+        Model* loadModel(const std::string& fname, bool optimize, bool freeCPUCopy) {
+            if (getModel(fname)) {
+                LOG_WARN("Reloading model that is already loaded");
             }
 
-            materials[i] = mat;
-        }
-
-        // parse all of the meshes
-        for (int i = 0; i < numMeshes; ++i) {
-            auto mesh = std::make_shared<Mesh>();
-            unsigned int numVertices, numIndices, materialIndex;
-            bool textured;
-
-            in.read((char*)&numVertices, sizeof(unsigned int));
-            in.read((char*)&numIndices, sizeof(unsigned int));
-            in.read((char*)&materialIndex, sizeof(unsigned int));
-            in.read((char*)&textured, sizeof(bool));
-
-            mesh->vertices.resize(numVertices);
-            mesh->normals.resize(numVertices);
-            if (textured)
-                mesh->uvs.resize(numVertices);
-            if (numIndices)
-                mesh->indices.resize(numIndices);
-
-            // read in the mesh data
-            in.read((char*)&mesh->vertices[0], numVertices * sizeof(glm::vec3));
-            in.read((char*)&mesh->normals[0], numVertices * sizeof(glm::vec3));
-            if (textured)
-                in.read((char*)&mesh->uvs[0], numVertices * sizeof(glm::vec2));
-            if (numIndices)
-                in.read((char*)&mesh->indices[0], numIndices * sizeof(unsigned int));
-
-            // create and upload the mesh
-            mesh->UploadToGPU(true);
-
-            model->meshes[i] = mesh;
-            model->materials[i] = materials[materialIndex];
-        }
-        in.close();
-
-        for (int i = 0; i < numMaterials; ++i) {
-            if (diffuseTexNames[i] != "") {
-                materials[i]->diffuseTexture = std::make_shared<Texture2D>();
-                if (!materials[i]->diffuseTexture->Load(rootResourceDir + diffuseTexNames[i]))
-                    materials[i]->diffuseTexture = nullptr;
+            models_[fname] = std::move(Model());
+            if (!loadModelFromObj(models_[fname], fname, optimize, freeCPUCopy)) {
+                LOG("Could not load model file: ", fname);
+                models_.erase(fname);
+                return nullptr;
             }
+            return &models_[fname];
         }
 
-        return model;
-        */
-    }
-
-    std::shared_ptr<Model> ResourceManager::LoadOBJ(const std::string& relativePath) {
-
-    bool ResourceManager::ConvertOBJToPGModel(const std::string& fullPathToOBJ, const std::string& fullPathToMaterialDir, const std::string& fullOutputPath) {
-        UNUSED(fullPathToOBJ);
-        UNUSED(fullPathToMaterialDir);
-        UNUSED(fullOutputPath);
-        return false;
-        /*
-        std::ofstream outFile(fullOutputPath, std::ios::binary);
-        if (!outFile) {
-            LOG_ERR("Could not open output file:", fullOutputPath);
-            return false;
-        }
-        tinyobj::attrib_t attrib;
-        std::vector<tinyobj::shape_t> shapes;
-        std::vector<tinyobj::material_t> materials;
-        std::string err;
-        bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, fullPathToOBJ.c_str(), fullPathToMaterialDir.c_str(), true);
-
-        if (!err.empty()) {
-            LOG_WARN("Tinyobj warning:", err);
-        }
-
-        if (!ret) {
-            LOG_ERR("Failed to load the input OBJ:", fullPathToOBJ);
-            outFile.close();
-            return false;
-        }
-
-        std::vector<int> materialList;
-        std::vector<Mesh> meshList;
-        for (int currentMaterialID = -1; currentMaterialID < (int) materials.size(); ++currentMaterialID) {
-            std::vector<glm::vec3> verts;
-            std::vector<glm::vec3> normals;
-            std::vector<glm::vec2> uvs;
-            std::vector<unsigned int> indices;
-            std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
-            for (const auto& shape : shapes) {
-                // Loop over faces(polygon)
-                for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
-                    if (shape.mesh.material_ids[f] == currentMaterialID) {
-                        // Loop over vertices in the face. Each face should have 3 vertices from the LoadObj triangulation
-                        for (size_t v = 0; v < 3; v++) {
-                            tinyobj::index_t idx = shape.mesh.indices[3 * f + v];
-                            tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index + 0];
-                            tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
-                            tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
-                            //verts.emplace_back(vx, vy, vz);
-
-                            tinyobj::real_t nx = attrib.normals[3 * idx.normal_index + 0];
-                            tinyobj::real_t ny = attrib.normals[3 * idx.normal_index + 1];
-                            tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
-                            //normals.emplace_back(nx, ny, nz);
-
-                            tinyobj::real_t tx = 0, ty = 0;
-                            if (idx.texcoord_index != -1) {
-                                tx = attrib.texcoords[2 * idx.texcoord_index + 0];
-                                ty = attrib.texcoords[2 * idx.texcoord_index + 1];
-                                //uvs.emplace_back(tx, ty);
-                            }
-
-                            Vertex vertex(glm::vec3(vx, vy, vz), glm::vec3(nx, ny, nz), glm::vec2(ty, ty));
-                            if (uniqueVertices.count(vertex) == 0) {
-                                uniqueVertices[vertex] = static_cast<uint32_t>(verts.size());
-                                verts.emplace_back(vx, vy, vz);
-                                normals.emplace_back(nx, ny, nz);
-                                if (idx.texcoord_index != -1)
-                                    uvs.emplace_back(tx, ty);
-                            }
-
-                            indices.push_back(uniqueVertices[vertex]);
-                        }
-                    }
-                }
+        std::vector<Material*> loadMaterials(const std::string& fname) {
+            std::vector<std::pair<std::string, Material>> materials;
+            if (!loadMtlFile(materials, fname, PG_RESOURCE_DIR, textures2D_)) {
+                LOG("Could not load mtl file: ", fname);
+                return {};
             }
 
-            // create mesh
-            if (verts.size()) {
-                Mesh m;
+            std::vector<Material*> ret;
+            for (const auto& pair : materials) {
+                if (materials_.find(pair.first) != materials_.end())
+                    LOG_WARN("Resource manager already contains material with name: ", pair.first);
 
-                m.vertices = std::move(verts);
-                m.normals = std::move(normals);
-                if (uvs.size()) {
-                    m.uvs = std::move(uvs);
-                }
-                m.indices = std::move(indices);
-                meshList.emplace_back(std::move(m));
-                materialList.push_back(currentMaterialID);
+                materials_[pair.first] = std::move(pair.second);
+                ret.push_back(&materials_[pair.first]);
             }
+
+            return ret;
         }
 
-        std::map<int, int> usedMaterialMap;
-        for (const auto& matID : materialList) {
-            if (!usedMaterialMap.count(matID))
-                usedMaterialMap[matID] = usedMaterialMap.size();
-        }
-
-        unsigned int numMeshes = meshList.size();
-        unsigned int numMaterials = usedMaterialMap.size();
-        outFile.write((char*) &numMeshes, sizeof(unsigned int));
-        outFile.write((char*) &numMaterials, sizeof(unsigned int));
-
-        for (const auto& matID : usedMaterialMap) {
-            glm::vec3 ambient, diffuse, specular, emissive;
-            float shininess;
-            unsigned int diffuseNameLength = 0;
-            std::string diffuseTexName = "";
-
-            if (matID.first == -1) {
-                Material mat;
-                ambient = mat.ambient;
-                diffuse = mat.diffuse;
-                specular = mat.specular;
-                emissive = mat.emissive;
-                shininess = mat.shininess;
-            } else {
-                tinyobj::material_t& mat = materials[matID.first];
-                ambient = glm::vec3(mat.ambient[0], mat.ambient[1], mat.ambient[2]);
-                diffuse = glm::vec3(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
-                specular = glm::vec3(mat.specular[0], mat.specular[1], mat.specular[2]);
-                emissive = glm::vec3(mat.emission[0], mat.emission[1], mat.emission[2]);
-                shininess = mat.shininess;
-                diffuseTexName = mat.diffuse_texname;
-                diffuseNameLength = diffuseTexName.length();
+        Texture2D* loadTexture2D(const std::string& fname, const TextureUsageDesc& desc) {
+            if (getTexture2D(fname)) {
+                LOG_WARN("Reloading texture that is already loaded");
             }
-            outFile.write((char*) &ambient, sizeof(glm::vec3));
-            outFile.write((char*) &diffuse, sizeof(glm::vec3));
-            outFile.write((char*) &specular, sizeof(glm::vec3));
-            outFile.write((char*) &emissive, sizeof(glm::vec3));
-            outFile.write((char*) &shininess, sizeof(float));
-            outFile.write((char*) &diffuseNameLength, sizeof(unsigned int));
-            if (diffuseNameLength)
-                outFile.write((char*) &diffuseTexName[0], sizeof(char) * diffuseNameLength);
-        }
 
-        for (size_t i = 0; i < meshList.size(); ++i) {
-            const auto& mesh = meshList[i];
-            unsigned int numVerts = mesh.vertices.size();
-            unsigned int numIndices = mesh.indices.size();
-            outFile.write((char*) &numVerts, sizeof(unsigned int));
-            outFile.write((char*) &numIndices, sizeof(unsigned int));
-            outFile.write((char*) &usedMaterialMap[materialList[i]], sizeof(unsigned int));
-            bool textured = mesh.uvs.size() != 0;
-            outFile.write((char*) &textured, sizeof(bool));
-            outFile.write((char*) &mesh.vertices[0], sizeof(glm::vec3) * numVerts);
-            outFile.write((char*) &mesh.normals[0], sizeof(glm::vec3) * numVerts);
-            if (textured)
-                outFile.write((char*) &mesh.uvs[0], sizeof(glm::vec2) * numVerts);
-            outFile.write((char*) &mesh.indices[0], sizeof(unsigned int) * numIndices);
-        }
-
-        outFile.close();
-
-        return true;
-        */
-    }
-
-    std::shared_ptr<Skybox> ResourceManager::LoadSkybox(const std::string& name, const std::vector<std::string>& textures, bool addToManager) {
-        if (skyboxes_.find(name) == skyboxes_.end()) {
-            std::vector<std::string> fullTexturePaths; 
-            for (const auto& tex : textures)
-                fullTexturePaths.push_back(rootResourceDir + tex);
-            auto sp = std::make_shared<Skybox>();
-            if (!sp->Load({
-                    fullTexturePaths[0], // right
-                    fullTexturePaths[1], // left
-                    fullTexturePaths[2], // top
-                    fullTexturePaths[3], // bottom
-                    fullTexturePaths[4], // back
-                    fullTexturePaths[5] // front
-                }))
-            {
+            if (!loadTexture2D(textures2D_[fname], fname, desc)) {
+                LOG("Could not load texture file: ", fname);
+                textures2D_.erase(fname);
                 return nullptr;
             }
 
-            if (addToManager)
-                skyboxes_[name] = sp;
-            else
-                return sp;
+            return &textures2D_[fname];
         }
 
-        return skyboxes_[name];
-    }
+        Shader* loadShader(const std::string& name, const ShaderFileDesc& desc) {
+            if (getShader(name)) {
+                LOG_WARN("Reloading shader that is already loaded");
+            }
 
-    std::shared_ptr<Texture2D> ResourceManager::LoadTexture2D(const std::string& relativePath, bool addToManager) {
-        if (textures2D_.find(relativePath) == textures2D_.end()) {
-            auto sp = std::make_shared<Texture2D>();
-            if (!sp->Load(rootResourceDir + relativePath))
+            if (!loadShaderFromText(shaders_[name], desc)) {
+                LOG("Could not load shader ", name);
+                shaders_.erase(name);
                 return nullptr;
+            }
 
-            if (addToManager)
-                textures2D_[relativePath] = sp;
-            else
-                return sp;
+            return &shaders_[name];
         }
-        return textures2D_[relativePath];
-    }
 
-    std::shared_ptr<Material> ResourceManager::AddMaterial(Material& material, const std::string& name) {
-        if (materials_.find(name) != materials_.end())
-            return nullptr;
-        materials_[name] = std::make_shared<Material>(std::move(material));
-        return materials_[name];
-    }
-
-    std::shared_ptr<Shader> ResourceManager::AddShader(Shader&& shader, const std::string& name) {
-        if (shaders_.find(name) != shaders_.end())
-            return nullptr;
-        shaders_[name] = std::make_shared<Shader>(std::move(shader));
-        return shaders_[name];
-    }
-
-} // namespace Progression
+} } // namespace Progression::Resource

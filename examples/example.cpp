@@ -15,30 +15,20 @@ int main(int argc, char* argv[]) {
 
     Window::SetRelativeMouse(true);
 
-    Shader shader;
     ShaderFileDesc desc;
     desc.vertex = PG_RESOURCE_DIR "test.vert";
     desc.fragment = PG_RESOURCE_DIR "test.frag";
-    if (!loadShaderFromText(shader, desc)) {
-        LOG_ERR("Could not load the shader");
-        return 1;
-    }
+    Shader& shader = *Resource::loadShader("test", desc);
 
     // need this for images that dont have data/rows a multiple of the default (4)
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    // glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-    TextureUsageDesc texDesc;
-    Texture2D tex;
-    if (!loadTexture2D(tex, PG_RESOURCE_DIR "textures/chalet.jpg", texDesc, false)) {
-        LOG_ERR("Could not load image");
-        return 1;
-    }
-
-    Model model;
-    if (!loadModelFromObj(model, PG_RESOURCE_DIR "models/chalet2.obj", true, true)) {
-        LOG_ERR("Could not load model");
-        return 1;
-    }
+    // Model model;
+    // if (!loadModelFromObj(model, PG_RESOURCE_DIR "models/chalet2.obj", true, true)) {
+    //     LOG_ERR("Could not load model");
+    //     return 1;
+    // }
+    Model& model = *Resource::loadModel(PG_RESOURCE_DIR "models/chalet2.obj");
 
     graphicsApi::toggleDepthTest(true);
     graphicsApi::toggleDepthWrite(true);

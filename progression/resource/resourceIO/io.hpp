@@ -4,3 +4,4 @@
 #include "resource/resourceIO/shader_io.hpp"
 #include "resource/resourceIO/texture_io.hpp"
 #include "resource/resourceIO/model_io.hpp"
+#include "resource/resourceIO/material_io.hpp"

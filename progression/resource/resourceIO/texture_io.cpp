@@ -10,7 +10,7 @@ namespace Progression {
             LOG_ERR("Could not load texture image: ", fname);
             return false;
         }
-        texture = Texture2D(img, desc, freeCPUCopy);
+        texture = std::move(Texture2D(img, desc, freeCPUCopy));
 
         return true;
     }

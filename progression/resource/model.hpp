@@ -1,16 +1,18 @@
 #pragma once
 
 #include <vector>
+#include "resource/mesh.hpp"
+#include "utils/noncopyable.hpp"
 
 namespace Progression {
 
-    class Mesh;
     class Material;
 
-    class Model {
+    class Model : public NonCopyable {
     public:
         Model() = default;
-		~Model() = default;
+        Model(Model&& model);
+        Model& operator=(Model&& model);
 
         std::vector<Mesh> meshes;
         std::vector<Material*> materials;

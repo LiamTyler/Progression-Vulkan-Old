@@ -8,16 +8,15 @@
 - [x] load shader binary
 - [x] model loading
 - [x] model loading remove duplicate verts
-- [ ] mesh optimizer
-- [ ] material loader
-- [ ] skybox loading
-- [ ] resource manager
+- [x] mesh optimizer
+- [x] material loader
+- [x] resource manager
 - [ ] loading resource text file
-- [ ] save as one binary resource file
 - [ ] re-use materials when loading models if its already been loaded
 - [ ] detect changed files + reload them
 - [ ] convert resource file into 1 binary file
 - [ ] compress / decompress resource file
+- [ ] skybox loading
 - [ ] support per vertex colors
 - [ ] select different data types for mesh data (like shorts for indices)
 - [ ] select different mesh topology, like rendering with no index buffer, lines, etc
@@ -29,6 +28,10 @@
 - [ ] Normal maps
 - [ ] PBR
 - [ ] LOD system
+
+## Core
+- [ ] switch to using ECS
+- [ ] add in Lua scripting
 
 ## Low priority software engineering related
 - [ ] follow clang tidy

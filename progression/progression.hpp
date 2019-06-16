@@ -24,7 +24,7 @@
 // 
 // #include "graphics/lights.hpp"
 
-// #include "resource/resource_manager.hpp"
+#include "resource/resource_manager.hpp"
 #include "resource/mesh.hpp"
 #include "resource/model.hpp"
 #include "resource/image.hpp"

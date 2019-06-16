@@ -5,6 +5,7 @@
 #include "resource/texture2D.hpp"
 #include "resource/resourceIO/texture_io.hpp"
 #include "meshoptimizer/src/meshoptimizer.h"
+#include "core/common.hpp"
 #include "utils/logger.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -63,9 +64,9 @@ namespace Progression {
             LOG_ERR("Failed to load the obj file: ", fname);
             return false;
         }
+        model = std::move(Model());
 
         for (int currentMaterialID = -1; currentMaterialID < (int) materials.size(); ++currentMaterialID) {
-            LOG("Material id: ", currentMaterialID);
             Material currentMaterial;
             if (currentMaterialID == -1) {
                 // default material
@@ -169,7 +170,6 @@ namespace Progression {
 
             vertices.push_back(v);
         }
-
 
         // const size_t kCacheSize = 16;
         // meshopt_VertexCacheStatistics vcs = meshopt_analyzeVertexCache(&mesh.indices[0], mesh.indices.size(),

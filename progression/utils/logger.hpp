@@ -74,7 +74,7 @@ class Logger {
         template <typename T, typename U, typename... Args>
         static void printArgs(std::ostream& out, T t, U u, Args... args)
         {
-            out << t << " ";
+            out << t;
             printArgs(out, u, args...);
         }
 

@@ -88,7 +88,7 @@ namespace Progression {
             ret = ret && createAndLinkProgram(program, shaders);
             if (!ret)
                 return false;
-            shader = Shader(program);
+            shader = std::move(Shader(program));
             return true;
         }
 
@@ -117,7 +117,7 @@ namespace Progression {
         }
 
         if (createAndLinkProgram(program, shaders)) {
-            shader = Shader(program);
+            shader = std::move(Shader(program));
             return true;
         } else {
             return false;
