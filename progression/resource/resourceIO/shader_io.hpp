@@ -20,6 +20,6 @@ namespace Progression {
 
     char* getShaderBinary(const Shader& shader, GLint& len, GLenum& format);
 
-    bool getShaderInfoFromResourceFile(std::string& name, ShaderFileDesc& desc, std::istream& in);
+    bool loadShaderFromResourceFile(std::istream& in);
 
 } // namespace Progression

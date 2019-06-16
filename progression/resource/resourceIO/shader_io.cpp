@@ -1,4 +1,5 @@
 #include "resource/resourceIO/shader_io.hpp"
+#include "resource/resource_manager.hpp"
 #include "utils/logger.hpp"
 #include <fstream>
 #include "core/common.hpp"
@@ -164,10 +165,12 @@ namespace Progression {
         return binary;
     }
 
-    bool getShaderInfoFromResourceFile(std::string& name, ShaderFileDesc& desc, std::istream& in) {
+    bool loadShaderFromResourceFile(std::istream& in) {
         std::string line;
         std::string s;
         std::istringstream ss;
+        std::string name;
+        ShaderFileDesc desc;
 
         // shader name
         std::getline(in, line);
@@ -213,7 +216,9 @@ namespace Progression {
             ss >> desc.compute;
         PG_ASSERT(!in.fail() && !ss.fail());
 
-        return true;
+        addShaderRootDir(desc, PG_RESOURCE_DIR);
+
+        return Resource::loadShader(name, desc) != nullptr;
     }
 
 } // namespace Progression

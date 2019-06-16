@@ -223,10 +223,12 @@ namespace Progression {
             optimizeMesh(mesh);
     }
 
-    bool loadModelInfoFromResourceFile(std::string& fname, bool& optimize, bool& freeCPUCopy, std::istream& in) {
+    bool loadModelFromResourceFile(std::istream& in) {
         std::string line;
         std::string s;
         std::istringstream ss;
+        std::string fname;
+        bool optimize, freeCPUCopy;
 
         // model name
         std::getline(in, line);
@@ -256,7 +258,7 @@ namespace Progression {
         freeCPUCopy = s == "true";
         PG_ASSERT(!in.fail() && !ss.fail());
 
-        return true;
+        return Resource::loadModel(fname, PG_RESOURCE_DIR + fname, optimize, freeCPUCopy) != nullptr;
     }
 
 } // namespace Progression

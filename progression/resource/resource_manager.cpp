@@ -114,59 +114,23 @@ namespace Progression { namespace Resource {
             if (line[0] == '#')
                 continue;
             if (line == "Material") {
-                std::string name;
-                Material mat;
-                loadMaterialFromResourceFile(mat, name, in);
-                if (getMaterial(name))
-                    LOG_WARN("Reloading a material that is already in the manager: ", name);
-
-                materials_[name] = mat;
-            } else if (line == "Model") {
-                std::string name;
-                bool optimize, freeCPUCopy;
-                if (!loadModelInfoFromResourceFile(name, optimize, freeCPUCopy, in)) {
-                    LOG_ERR("Could not parse the model information in resource file");
+                if (!loadMaterialFromResourceFile(in)) {
+                    LOG_ERR("could not parse and create material");
                     return false;
                 }
-                if (getModel(name))
-                    LOG_WARN("Reloading a model that is already in the manager: ", name);
-        
-                if (!loadModel(name, PG_RESOURCE_DIR + name, optimize, freeCPUCopy)) {
-                    LOG_ERR("Could not load the model: ", PG_RESOURCE_DIR + fname);
+            } else if (line == "Model") {
+                if (!loadModelFromResourceFile(in)) {
+                    LOG_ERR("could not parse and load model");
                     return false;
                 }
             } else if (line == "Texture2D") {
-                std::string texFname;
-                TextureUsageDesc desc;
-                bool freeCPUCopy;
-                if (!getTextureInfoFromResourceFile(texFname, desc, freeCPUCopy, in)) {
-                    LOG_ERR("Could not parse texture2D info");
-                    return false;
-                }
-                if (getTexture2D(texFname))
-                    LOG_WARN("Reloading a texture that is already in the manager: ", texFname);
-
-                if (!loadTexture2D(textures2D_[texFname], PG_RESOURCE_DIR + texFname, desc, freeCPUCopy)) {
-                    LOG_ERR("Could not load the texture: ", PG_RESOURCE_DIR + texFname);
-                    textures2D_.erase(texFname);
+                if (!loadTextureFromResourceFile(in)) {
+                    LOG_ERR("Could not parse and load texture");
                     return false;
                 }
             } else if (line == "Shader") {
-                std::string name;
-                ShaderFileDesc desc;
-                if (!getShaderInfoFromResourceFile(name, desc, in)) {
-                    LOG_ERR("Could not parse the Shader info");
-                    return false;
-                }
-
-                if (getShader(name))
-                    LOG_WARN("Reloading a shader that is already in the manager");
-
-                addShaderRootDir(desc, PG_RESOURCE_DIR);
-
-                if (!loadShaderFromText(shaders_[name], desc)) {
-                    LOG_ERR("Could not load the shader: ", name);
-                    shaders_.erase(name);
+                if (!loadShaderFromResourceFile(in)) {
+                    LOG("could not parse and load shader");
                     return false;
                 }
             }

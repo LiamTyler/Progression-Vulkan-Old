@@ -66,11 +66,13 @@ namespace Progression {
         return true;
     }
 
-    bool loadMaterialFromResourceFile(Material& mat, std::string& name, std::istream& in)
+    bool loadMaterialFromResourceFile(std::istream& in)
     {
         std::string line;
         std::string s;
         std::istringstream ss;
+        std::string name;
+        Material mat;
 
         // material name
         std::getline(in, line);
@@ -136,6 +138,11 @@ namespace Progression {
             }
         }
         PG_ASSERT(!in.fail() && !ss.fail());
+
+        if (Resource::getMaterial(name))
+            LOG_WARN("Reloading a material that is already in the manager: ", name);
+
+        Resource::addMaterial(name, &mat);
 
         return true;
     }

@@ -12,6 +12,6 @@ namespace Progression {
 
     void optimizeModel(Model& model);
 
-    bool loadModelInfoFromResourceFile(std::string& fname, bool& optimize, bool& freeCPUCopy, std::istream& in);
+    bool loadModelFromResourceFile(std::istream& in);
 
 } // namespace Progression

@@ -11,8 +11,8 @@
 - [x] mesh optimizer
 - [x] material loader
 - [x] resource manager
-- [ ] loading resource text file
-- [ ] re-use materials when loading models if its already been loaded
+- [x] loading resource text file
+- [x] re-use materials when loading models if its already been loaded
 - [ ] detect changed files + reload them
 - [ ] convert resource file into 1 binary file
 - [ ] compress / decompress resource file

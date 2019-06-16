@@ -24,6 +24,6 @@ namespace Progression {
      *
      * Any textures encountered while parsing the material need to already be loaded into the manager
      */
-    bool loadMaterialFromResourceFile(Material& mat, std::string& name, std::istream& in);
+    bool loadMaterialFromResourceFile(std::istream& in);
 
 } // namespace Progression

@@ -1,5 +1,6 @@
 #include "resource/resourceIO/texture_io.hpp"
 #include "resource/resourceIO/image_io.hpp"
+#include "resource/resource_manager.hpp"
 #include "utils/logger.hpp"
 #include "core/common.hpp"
 
@@ -57,19 +58,14 @@ namespace Progression {
         { "mirror_clamp_to_edge", GL_MIRROR_CLAMP_TO_EDGE },
     };
 
-    // typedef struct TextureUsageDesc {
-    //     GLint internalFormat = GL_SRGB;
-    //     GLint minFilter      = GL_LINEAR;
-    //     GLint magFilter      = GL_LINEAR;
-    //     GLint wrapModeS      = GL_REPEAT;
-    //     GLint wrapModeT      = GL_REPEAT;
-    //     bool mipMapped       = true;
-    // } TextureUsageDesc;
-    bool getTextureInfoFromResourceFile(std::string& fname, TextureUsageDesc& desc, bool& freeCPUCopy, std::istream& in) {
+    bool loadTextureFromResourceFile(std::istream& in) {
         std::string line;
         std::string s;
         std::istringstream ss;
         std::unordered_map<std::string, GLint>::iterator it;
+        std::string fname;
+        TextureUsageDesc desc;
+        bool freeCPUCopy;
 
         // texture name
         std::getline(in, line);
@@ -173,7 +169,7 @@ namespace Progression {
         desc.wrapModeT = it->second;
         PG_ASSERT(!in.fail() && !ss.fail());
 
-        return true;
+        return Resource::loadTexture2D(fname, PG_RESOURCE_DIR + fname, desc, freeCPUCopy) != nullptr;
     }
 
 } // namespace Progression
