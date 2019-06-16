@@ -16,12 +16,12 @@ namespace Progression {
 			float ns = 0,
 			Texture2D* diffuseTex = nullptr);
 
-        glm::vec3 ambient;
-        glm::vec3 diffuse;
-        glm::vec3 specular;
-		glm::vec3 emissive;
-        float shininess;
-        Texture2D* diffuseTexture;
+        glm::vec3 Ka;
+        glm::vec3 Kd;
+        glm::vec3 Ks;
+		glm::vec3 Ke;
+        float Ns;
+        Texture2D* map_Kd;
     };
 
 } // namespace Progression

@@ -6,94 +6,198 @@
 
 namespace Progression { namespace Resource {
 
-        void init();
-        void shutdown() {
-            models_.clear();
-            materials_.clear();
-            textures2D_.clear();
-            shaders_.clear();
+    void init() {
+        // glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        materials_["default"] = Material();
+    }
+
+    void shutdown() {
+        models_.clear();
+        materials_.clear();
+        textures2D_.clear();
+        shaders_.clear();
+    }
+
+    Model* getModel(const std::string& name) {
+        auto it = models_.find(name);
+        return it == models_.end() ? nullptr : &it->second;
+    }
+
+    Material* getMaterial(const std::string& name) {
+        auto it = materials_.find(name);
+        return it == materials_.end() ? nullptr : &it->second;
+    }
+
+    Texture2D* getTexture2D(const std::string& name) {
+        auto it = textures2D_.find(name);
+        return it == textures2D_.end() ? nullptr : &it->second;
+    }
+
+    Shader* getShader(const std::string& name) {
+        auto it = shaders_.find(name);
+        return it == shaders_.end() ? nullptr : &it->second;
+    }
+
+
+    Model* loadModel(const std::string& name, const std::string& fname, bool optimize, bool freeCPUCopy) {
+        if (getModel(name)) {
+            LOG_WARN("Reloading model that is already loaded");
         }
 
-        Model* getModel(const std::string& name) {
-            auto it = models_.find(name);
-            return it == models_.end() ? nullptr : &it->second;
+        models_[name] = std::move(Model());
+        if (!loadModelFromObj(models_[name], fname, optimize, freeCPUCopy)) {
+            LOG("Could not load model file: ", fname);
+            models_.erase(name);
+            return nullptr;
+        }
+        return &models_[name];
+    }
+
+    std::vector<Material*> loadMaterials(const std::string& fname) {
+        std::vector<std::pair<std::string, Material>> materials;
+        if (!loadMtlFile(materials, fname, PG_RESOURCE_DIR)) {
+            LOG("Could not load mtl file: ", fname);
+            return {};
         }
 
-        Material* getMaterial(const std::string& name) {
-            auto it = materials_.find(name);
-            return it == materials_.end() ? nullptr : &it->second;
+        std::vector<Material*> ret;
+        for (const auto& pair : materials) {
+            if (materials_.find(pair.first) != materials_.end())
+                LOG_WARN("Resource manager already contains material with name: ", pair.first);
+
+            materials_[pair.first] = std::move(pair.second);
+            ret.push_back(&materials_[pair.first]);
         }
 
-        Texture2D* getTexture2D(const std::string& name) {
-            auto it = textures2D_.find(name);
-            return it == textures2D_.end() ? nullptr : &it->second;
+        return ret;
+    }
+
+    Texture2D* loadTexture2D(const std::string& name, const std::string& fname, const TextureUsageDesc& desc, bool freeCPUCopy) {
+        if (getTexture2D(name)) {
+            LOG_WARN("Reloading texture that is already loaded");
         }
 
-        Shader* getShader(const std::string& name) {
-            auto it = shaders_.find(name);
-            return it == shaders_.end() ? nullptr : &it->second;
+        if (!loadTexture2D(textures2D_[name], fname, desc, freeCPUCopy)) {
+            LOG("Could not load texture file: ", fname);
+            textures2D_.erase(name);
+            return nullptr;
         }
 
+        return &textures2D_[name];
+    }
 
-        Model* loadModel(const std::string& fname, bool optimize, bool freeCPUCopy) {
-            if (getModel(fname)) {
-                LOG_WARN("Reloading model that is already loaded");
+    Shader* loadShader(const std::string& name, const ShaderFileDesc& desc) {
+        if (getShader(name)) {
+            LOG_WARN("Reloading shader that is already loaded");
+        }
+
+        if (!loadShaderFromText(shaders_[name], desc)) {
+            LOG("Could not load shader ", name);
+            shaders_.erase(name);
+            return nullptr;
+        }
+
+        return &shaders_[name];
+    }
+
+    bool loadResourceFile(const std::string& fname) {
+        std::ifstream in(fname);
+        if (!in) {
+            LOG_ERR("Could not open resource file:", fname);
+            return false;
+        }
+
+        std::string line;
+        while (std::getline(in, line)) {
+            if (line == "")
+                continue;
+            if (line[0] == '#')
+                continue;
+            if (line == "Material") {
+                std::string name;
+                Material mat;
+                loadMaterialFromResourceFile(mat, name, in);
+                if (getMaterial(name))
+                    LOG_WARN("Reloading a material that is already in the manager: ", name);
+
+                materials_[name] = mat;
+            } else if (line == "Model") {
+                std::string name;
+                bool optimize, freeCPUCopy;
+                if (!loadModelInfoFromResourceFile(name, optimize, freeCPUCopy, in)) {
+                    LOG_ERR("Could not parse the model information in resource file");
+                    return false;
+                }
+                if (getModel(name))
+                    LOG_WARN("Reloading a model that is already in the manager: ", name);
+        
+                if (!loadModel(name, PG_RESOURCE_DIR + name, optimize, freeCPUCopy)) {
+                    LOG_ERR("Could not load the model: ", PG_RESOURCE_DIR + fname);
+                    return false;
+                }
+            } else if (line == "Texture2D") {
+                std::string texFname;
+                TextureUsageDesc desc;
+                bool freeCPUCopy;
+                if (!getTextureInfoFromResourceFile(texFname, desc, freeCPUCopy, in)) {
+                    LOG_ERR("Could not parse texture2D info");
+                    return false;
+                }
+                if (getTexture2D(texFname))
+                    LOG_WARN("Reloading a texture that is already in the manager: ", texFname);
+
+                if (!loadTexture2D(textures2D_[texFname], PG_RESOURCE_DIR + texFname, desc, freeCPUCopy)) {
+                    LOG_ERR("Could not load the texture: ", PG_RESOURCE_DIR + texFname);
+                    textures2D_.erase(texFname);
+                    return false;
+                }
+            } else if (line == "Shader") {
+                std::string name;
+                ShaderFileDesc desc;
+                if (!getShaderInfoFromResourceFile(name, desc, in)) {
+                    LOG_ERR("Could not parse the Shader info");
+                    return false;
+                }
+
+                if (getShader(name))
+                    LOG_WARN("Reloading a shader that is already in the manager");
+
+                addShaderRootDir(desc, PG_RESOURCE_DIR);
+
+                if (!loadShaderFromText(shaders_[name], desc)) {
+                    LOG_ERR("Could not load the shader: ", name);
+                    shaders_.erase(name);
+                    return false;
+                }
             }
-
-            models_[fname] = std::move(Model());
-            if (!loadModelFromObj(models_[fname], fname, optimize, freeCPUCopy)) {
-                LOG("Could not load model file: ", fname);
-                models_.erase(fname);
-                return nullptr;
-            }
-            return &models_[fname];
         }
 
-        std::vector<Material*> loadMaterials(const std::string& fname) {
-            std::vector<std::pair<std::string, Material>> materials;
-            if (!loadMtlFile(materials, fname, PG_RESOURCE_DIR, textures2D_)) {
-                LOG("Could not load mtl file: ", fname);
-                return {};
-            }
+        in.close();
+        return true;
+    }
 
-            std::vector<Material*> ret;
-            for (const auto& pair : materials) {
-                if (materials_.find(pair.first) != materials_.end())
-                    LOG_WARN("Resource manager already contains material with name: ", pair.first);
+    void addModel(const std::string& name, Model* model) {
+        if (models_.find(name) != models_.end())
+            LOG_WARN("Overriding model with name: ", name);
+        models_[name] = std::move(*model);
+    }
 
-                materials_[pair.first] = std::move(pair.second);
-                ret.push_back(&materials_[pair.first]);
-            }
+    void addMaterial(const std::string& name, Material* mat) {
+        if (materials_.find(name) != materials_.end())
+            LOG_WARN("Overriding material with name: ", name);
+        materials_[name] = std::move(*mat);
+    }
 
-            return ret;
-        }
+    void addTexture2D(const std::string& name, Texture2D* tex) {
+        if (textures2D_.find(name) != textures2D_.end())
+            LOG_WARN("Overriding texture2D with name: ", name);
+        textures2D_[name] = std::move(*tex);
+    }
 
-        Texture2D* loadTexture2D(const std::string& fname, const TextureUsageDesc& desc) {
-            if (getTexture2D(fname)) {
-                LOG_WARN("Reloading texture that is already loaded");
-            }
-
-            if (!loadTexture2D(textures2D_[fname], fname, desc)) {
-                LOG("Could not load texture file: ", fname);
-                textures2D_.erase(fname);
-                return nullptr;
-            }
-
-            return &textures2D_[fname];
-        }
-
-        Shader* loadShader(const std::string& name, const ShaderFileDesc& desc) {
-            if (getShader(name)) {
-                LOG_WARN("Reloading shader that is already loaded");
-            }
-
-            if (!loadShaderFromText(shaders_[name], desc)) {
-                LOG("Could not load shader ", name);
-                shaders_.erase(name);
-                return nullptr;
-            }
-
-            return &shaders_[name];
-        }
+    void addShader(const std::string& name, Shader* shader) {
+        if (shaders_.find(name) != shaders_.end())
+            LOG_WARN("Overriding shader with name: ", name);
+        shaders_[name] = std::move(*shader);
+    }
 
 } } // namespace Progression::Resource

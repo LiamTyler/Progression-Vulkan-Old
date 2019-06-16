@@ -15,20 +15,14 @@ int main(int argc, char* argv[]) {
 
     Window::SetRelativeMouse(true);
 
-    ShaderFileDesc desc;
-    desc.vertex = PG_RESOURCE_DIR "test.vert";
-    desc.fragment = PG_RESOURCE_DIR "test.frag";
-    Shader& shader = *Resource::loadShader("test", desc);
+    if (!Resource::loadResourceFile(PG_RESOURCE_DIR "resource.txt")) {
+        LOG_ERR("Could not load the resource file");
+        return 1;
+    }
 
-    // need this for images that dont have data/rows a multiple of the default (4)
-    // glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-    // Model model;
-    // if (!loadModelFromObj(model, PG_RESOURCE_DIR "models/chalet2.obj", true, true)) {
-    //     LOG_ERR("Could not load model");
-    //     return 1;
-    // }
-    Model& model = *Resource::loadModel(PG_RESOURCE_DIR "models/chalet2.obj");
+    Shader& shader = *Resource::getShader("test");
+    Model& model   = *Resource::getModel("models/chalet2.obj");
 
     graphicsApi::toggleDepthTest(true);
     graphicsApi::toggleDepthWrite(true);
@@ -68,13 +62,13 @@ int main(int argc, char* argv[]) {
             const auto& mesh = model.meshes[i];
             const auto& mat = *model.materials[i];
             graphicsApi::bindVao(mesh.vao);
-            shader.setUniform("kd", mat.diffuse);
-            shader.setUniform("ks", mat.specular);
-            shader.setUniform("ke", mat.emissive);
-            shader.setUniform("shininess", mat.shininess);
-            if (mat.diffuseTexture) {
+            shader.setUniform("kd", mat.Kd);
+            shader.setUniform("ks", mat.Ks);
+            shader.setUniform("ke", mat.Ke);
+            shader.setUniform("shininess", mat.Ns);
+            if (mat.map_Kd) {
                 shader.setUniform("textured", true);
-                graphicsApi::bind2DTexture(mat.diffuseTexture->gpuHandle(), shader.getUniform("diffuseTex"), 0);
+                graphicsApi::bind2DTexture(mat.map_Kd->gpuHandle(), shader.getUniform("diffuseTex"), 0);
             } else {
                 shader.setUniform("textured", false);
             }

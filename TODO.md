@@ -21,6 +21,8 @@
 - [ ] select different data types for mesh data (like shorts for indices)
 - [ ] select different mesh topology, like rendering with no index buffer, lines, etc
 - [ ] easy system for dynamic meshes
+- [ ] make sure all memory is properly released on failure cases in resource loadings
+- [ ] figure out the if really need to pass around the freeCPUCopy all the time
 
 ## Rendering
 - [ ] Meshes easily
@@ -28,6 +30,7 @@
 - [ ] Normal maps
 - [ ] PBR
 - [ ] LOD system
+- [ ] compress textures and vertex data
 
 ## Core
 - [ ] switch to using ECS

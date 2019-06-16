@@ -5,6 +5,7 @@
 #include "resource/texture2D.hpp"
 #include "resource/resourceIO/texture_io.hpp"
 #include "meshoptimizer/src/meshoptimizer.h"
+#include "resource/resource_manager.hpp"
 #include "core/common.hpp"
 #include "utils/logger.hpp"
 
@@ -67,30 +68,37 @@ namespace Progression {
         model = std::move(Model());
 
         for (int currentMaterialID = -1; currentMaterialID < (int) materials.size(); ++currentMaterialID) {
-            Material currentMaterial;
+            Material* currentMaterial = nullptr;
             if (currentMaterialID == -1) {
-                // default material
+                currentMaterial = Resource::getMaterial("default");
             } else {
                 tinyobj::material_t& mat  = materials[currentMaterialID];
-                currentMaterial.ambient   = glm::vec3(mat.ambient[0], mat.ambient[1], mat.ambient[2]);
-                currentMaterial.diffuse   = glm::vec3(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
-                currentMaterial.specular  = glm::vec3(mat.specular[0], mat.specular[1], mat.specular[2]);
-                currentMaterial.emissive  = glm::vec3(mat.emission[0], mat.emission[1], mat.emission[2]);
-                currentMaterial.shininess = mat.shininess;
-                if (mat.diffuse_texname != "") {
-                    currentMaterial.diffuseTexture = new Texture2D;
-                    std::string texName = mat.diffuse_texname;
-                    // TODO: if texture is already loaded, then use that one (able to specify usage desc)
-                    // if not then just use the default texture usage
-                    TextureUsageDesc texUsage;
-                    if (!loadTexture2D(*currentMaterial.diffuseTexture, PG_RESOURCE_DIR + mat.diffuse_texname, texUsage, freeCpuCopy)) {
-                        LOG_ERR("Unable to load material's texture: ", PG_RESOURCE_DIR + mat.diffuse_texname);
-                        delete currentMaterial.diffuseTexture;
-                        for (auto& m : model.materials)
-                            if (m->diffuseTexture)
-                                delete m->diffuseTexture;
-                        return false;
+                if (Resource::getMaterial(mat.name)) {
+                    currentMaterial = Resource::getMaterial(mat.name);
+                } else {
+                    currentMaterial = new Material;
+                    currentMaterial->Ka = glm::vec3(mat.ambient[0], mat.ambient[1], mat.ambient[2]);
+                    currentMaterial->Kd = glm::vec3(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
+                    currentMaterial->Ks = glm::vec3(mat.specular[0], mat.specular[1], mat.specular[2]);
+                    currentMaterial->Ke = glm::vec3(mat.emission[0], mat.emission[1], mat.emission[2]);
+                    currentMaterial->Ns = mat.shininess;
+                    if (mat.diffuse_texname != "") {
+                        if (Resource::getTexture2D(mat.diffuse_texname)) {
+                            currentMaterial->map_Kd = Resource::getTexture2D(mat.diffuse_texname);
+                        } else {
+                            std::string texName = mat.diffuse_texname;
+                            TextureUsageDesc texUsage;
+                            currentMaterial->map_Kd = Resource::loadTexture2D(
+                                    mat.diffuse_texname,PG_RESOURCE_DIR + mat.diffuse_texname, texUsage, freeCpuCopy);
+                            if (!currentMaterial->map_Kd) {
+                                LOG_ERR("Unable to load material's texture: ", PG_RESOURCE_DIR + mat.diffuse_texname);
+                                return false;
+                            }
+                        }
                     }
+                    Resource::addMaterial(mat.name, currentMaterial);
+                    delete currentMaterial;
+                    currentMaterial = Resource::getMaterial(mat.name);
                 }
             }
 
@@ -145,7 +153,7 @@ namespace Progression {
 
                 currentMesh.uploadToGpu(freeCpuCopy);
 
-                model.materials.push_back(new Material(currentMaterial));
+                model.materials.push_back(currentMaterial);
                 model.meshes.push_back(std::move(currentMesh));
             }
         }
@@ -213,6 +221,42 @@ namespace Progression {
     void optimizeModel(Model& model) {
         for (Mesh& mesh : model.meshes)
             optimizeMesh(mesh);
+    }
+
+    bool loadModelInfoFromResourceFile(std::string& fname, bool& optimize, bool& freeCPUCopy, std::istream& in) {
+        std::string line;
+        std::string s;
+        std::istringstream ss;
+
+        // model name
+        std::getline(in, line);
+        ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == "filename");
+        ss >> fname;
+        PG_ASSERT(!in.fail() && !ss.fail());
+
+        // optimize
+        std::getline(in, line);
+        ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == "optimize");
+        ss >> s;
+        PG_ASSERT(s == "true" || s == "false");
+        optimize = s == "true";
+        PG_ASSERT(!in.fail() && !ss.fail());
+
+        // freeCPUCopy
+        std::getline(in, line);
+        ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == "freeCPUCopy");
+        ss >> s;
+        PG_ASSERT(s == "true" || s == "false");
+        freeCPUCopy = s == "true";
+        PG_ASSERT(!in.fail() && !ss.fail());
+
+        return true;
     }
 
 } // namespace Progression

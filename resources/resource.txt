@@ -1,0 +1,30 @@
+Texture2D
+filename textures/chalet.jpg
+freeCPUCopy true
+mipmapped true
+internalFormat RGBA32F
+minFilter nearest
+magFilter linear
+wrapModeS clamp_to_edge
+wrapModeT clamp_to_border
+
+Material
+name chalet
+Ka 0.000000 0.000000 0.000000
+Kd 0.588000 0.588000 0.588000
+Ks 0.504000 0.504000 0.504000
+Ke 0.000000 0.000000 0.000000
+Ns 9.803922
+map_Kd textures/chalet.jpg
+
+Shader
+name test
+vertex test.vert
+geometry
+fragment test.frag
+compute
+
+Model
+filename models/chalet2.obj
+optimize true
+freeCPUCopy true

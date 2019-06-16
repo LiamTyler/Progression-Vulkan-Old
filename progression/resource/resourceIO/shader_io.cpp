@@ -11,7 +11,7 @@ namespace Progression {
         bool loadShaderTextFile(std::string& source, const std::string& filename) {
             std::ifstream in(filename);
             if (in.fail()) {
-                LOG_ERR("Failed to open the shader file:", filename);
+                LOG_ERR("Failed to open the shader file: ", filename);
                 return false; 
             }
             source = "";
@@ -73,6 +73,17 @@ namespace Progression {
         }
 
     } // namespace anonymous
+
+    void addShaderRootDir(ShaderFileDesc& desc, const std::string& root) {
+        if (desc.vertex.length() != 0)
+            desc.vertex = root + desc.vertex;
+        if (desc.geometry.length() != 0)
+            desc.geometry = root + desc.geometry;
+        if (desc.fragment.length() != 0)
+            desc.fragment = root + desc.fragment;
+        if (desc.compute.length() != 0)
+            desc.compute = root + desc.compute;
+    }
 
     bool loadShaderFromText(Shader& shader, const ShaderFileDesc& desc) {
         std::string shaderSource;
@@ -151,6 +162,58 @@ namespace Progression {
         glGetProgramBinary(shader.getProgram(), len, NULL, &format, binary);
 
         return binary;
+    }
+
+    bool getShaderInfoFromResourceFile(std::string& name, ShaderFileDesc& desc, std::istream& in) {
+        std::string line;
+        std::string s;
+        std::istringstream ss;
+
+        // shader name
+        std::getline(in, line);
+        ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == "name");
+        ss >> name;
+        PG_ASSERT(!in.fail() && !ss.fail());
+
+        // vertex
+        std::getline(in, line);
+        ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == "vertex");
+        if (!ss.eof())
+            ss >> desc.vertex;
+        PG_ASSERT(!in.fail() && !ss.fail());
+
+        // geometry
+        std::getline(in, line);
+        ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == "geometry");
+        if (!ss.eof())
+            ss >> desc.geometry;
+        PG_ASSERT(!in.fail() && !ss.fail());
+
+        // vertex
+        std::getline(in, line);
+        ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == "fragment");
+        if (!ss.eof())
+            ss >> desc.fragment;
+        PG_ASSERT(!in.fail() && !ss.fail());
+
+        // compute
+        std::getline(in, line);
+        ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == "compute");
+        if (!ss.eof())
+            ss >> desc.compute;
+        PG_ASSERT(!in.fail() && !ss.fail());
+
+        return true;
     }
 
 } // namespace Progression
