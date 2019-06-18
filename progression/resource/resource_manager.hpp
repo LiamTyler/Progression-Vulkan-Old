@@ -7,23 +7,19 @@
 #include "resource/texture2D.hpp"
 // #include "resource/skybox.hpp"
 #include <unordered_map>
+#include <unordered_set>
 #include <memory>
+
+
+
 
 namespace Progression {
 
-    namespace {
-
-        std::unordered_map<std::string, Model> models_;         // name = whatever specified
-        std::unordered_map<std::string, Material> materials_;   // name = name as seen in mtl file
-        std::unordered_map<std::string, Texture2D> textures2D_; // name = whatever specified 
-        std::unordered_map<std::string, Shader> shaders_;       // name = whatever specified
-        // std::unordered_map<std::string, Skybox> skyboxes_;   // name = whatever specified
-
-    } // namespace anonymous
-
-    namespace Resource{
+    namespace Resource {
 
         void init();
+        void update();
+        void join();
         void shutdown();
 
         Model*      getModel(const std::string& name);
@@ -36,7 +32,7 @@ namespace Progression {
         std::vector<Material*> loadMaterials(const std::string& fname);
         Texture2D*             loadTexture2D(const std::string& name, const std::string& fname,
                                              const TextureUsageDesc& desc, bool freeCPUCopy = true);
-        Shader*                loadShader(const std::string& name, const ShaderFilesDesc& desc);
+        Shader*                loadShader(const std::string& name, const ShaderFileDesc& desc);
 
         // for all the add functions, the resource will be moved into the manager, meaning that
         // any other reference to it will be invalidated. Get the newly managed copy with the get

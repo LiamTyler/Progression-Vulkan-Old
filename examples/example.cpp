@@ -42,8 +42,15 @@ int main(int argc, char* argv[]) {
         PG::Window::StartFrame();
         PG::Input::PollEvents();
 
+        Resource::update();
+
         if (PG::Input::GetKeyDown(PG::PG_K_ESC))
             PG::EngineShutdown = true;
+        if (PG::Input::GetKeyDown(PG::PG_K_U)) {
+            LOG("updating...");
+            Resource::join();
+            LOG("done");
+        }
 
         graphicsApi::clearColor(0, 0, 0, 0);
         graphicsApi::clearColorBuffer();

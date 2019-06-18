@@ -3,12 +3,104 @@
 #include "core/configuration.hpp"
 #include "resource/resourceIO/io.hpp"
 #include "utils/logger.hpp"
+#include <sys/stat.h>
 
-namespace Progression { namespace Resource {
+typedef struct TimeStamp {
+    TimeStamp() : valid(false) {}
+    TimeStamp(const std::string& fname) {
+        struct stat s;
+        valid = stat(fname.c_str(), &s) == 0;
+        if (valid)
+            timestamp = s.st_mtim.tv_sec;
+    }
+
+    bool operator==(const TimeStamp& ts) const {
+        return timestamp == ts.timestamp;
+    }
+    bool operator!=(const TimeStamp& ts) const {
+        return !(*this == ts);
+    }
+
+    bool outOfDate(const TimeStamp& ts) const {
+        return (!valid && ts.valid) || (valid && ts.valid && timestamp < ts.timestamp);
+    }
+
+    bool valid;
+    time_t timestamp;
+} TimeStamp;
+
+namespace Progression {
+
+    namespace {
+
+        std::unordered_map<std::string, Model> models_;         // name = whatever specified
+        std::unordered_map<std::string, Material> materials_;   // name = name as seen in mtl file
+        std::unordered_map<std::string, Texture2D> textures2D_; // name = whatever specified 
+        std::unordered_map<std::string, Shader> shaders_;       // name = whatever specified
+        // std::unordered_map<std::string, Skybox> skyboxes_;   // name = whatever specified
+        
+        std::unordered_map<std::string, Shader> updatedShaders_;
+
+        typedef struct ShaderTimeStamp {
+            ShaderTimeStamp() {}
+            ShaderTimeStamp(const ShaderFileDesc& d) :
+                desc(d),
+                vertex(TimeStamp(d.vertex)),
+                geometry(TimeStamp(d.geometry)),
+                fragment(TimeStamp(d.fragment)),
+                compute(TimeStamp(d.compute))
+            {
+            }
+
+            bool outOfDate(const ShaderTimeStamp& sts) {
+                return vertex.outOfDate(sts.vertex) ||
+                       geometry.outOfDate(sts.geometry) ||
+                       fragment.outOfDate(sts.fragment) ||
+                       compute.outOfDate(sts.compute);
+            }
+                    
+            ShaderFileDesc desc;
+            TimeStamp vertex;
+            TimeStamp geometry;
+            TimeStamp fragment;
+            TimeStamp compute;
+        } ShaderTimeStamp;
+
+        std::unordered_map<std::string, TimeStamp> resourceFiles_;
+        std::unordered_map<std::string, ShaderTimeStamp> shaderTimeStamps_;
+
+        bool loadShaderFromResourceFile(std::istream& in);
+    } // namespace anonymous
+
+namespace Resource {
 
     void init() {
         // glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         materials_["default"] = Material();
+    }
+
+    void update() {
+        for (const auto& pair : resourceFiles_) {
+            const auto& fname = pair.first;
+            const auto& savedTimeStamp = pair.second;
+            TimeStamp currentTimeStamp(fname);
+            // LOG(savedTimeStamp.timestamp.tv_sec, "  ", currentTimeStamp.timestamp.tv_sec);
+            if (savedTimeStamp.outOfDate(currentTimeStamp)) {
+                LOG("Need to reload the resource file: ", fname);
+                if (!loadResourceFile(fname)) {
+                    LOG_ERR("Could not reload the resource file during update");
+                }
+            }
+        }
+    }
+
+    void join() {
+        for (auto& pair : updatedShaders_) {
+            const auto& name = pair.first;
+            auto& shader = pair.second;
+            shaders_[name] = std::move(shader);
+        }
+        updatedShaders_.clear();
     }
 
     void shutdown() {
@@ -101,6 +193,8 @@ namespace Progression { namespace Resource {
     }
 
     bool loadResourceFile(const std::string& fname) {
+        static int load = 0;
+        load++;
         std::ifstream in(fname);
         if (!in) {
             LOG_ERR("Could not open resource file:", fname);
@@ -114,16 +208,22 @@ namespace Progression { namespace Resource {
             if (line[0] == '#')
                 continue;
             if (line == "Material") {
+                if (load > 1)
+                    continue;
                 if (!loadMaterialFromResourceFile(in)) {
                     LOG_ERR("could not parse and create material");
                     return false;
                 }
             } else if (line == "Model") {
+                if (load > 1)
+                    continue;
                 if (!loadModelFromResourceFile(in)) {
                     LOG_ERR("could not parse and load model");
                     return false;
                 }
             } else if (line == "Texture2D") {
+                if (load > 1)
+                    continue;
                 if (!loadTextureFromResourceFile(in)) {
                     LOG_ERR("Could not parse and load texture");
                     return false;
@@ -137,6 +237,8 @@ namespace Progression { namespace Resource {
         }
 
         in.close();
+
+        resourceFiles_[fname] = TimeStamp(fname);
         return true;
     }
 
@@ -165,3 +267,87 @@ namespace Progression { namespace Resource {
     }
 
 } } // namespace Progression::Resource
+
+namespace Progression { namespace {
+
+    bool loadShaderFromResourceFile(std::istream& in) {
+        std::string line;
+        std::string s;
+        std::istringstream ss;
+        std::string name;
+        ShaderFileDesc desc;
+
+        // shader name
+        std::getline(in, line);
+        ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == "name");
+        ss >> name;
+        PG_ASSERT(!in.fail() && !ss.fail());
+
+        // vertex
+        std::getline(in, line);
+        ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == "vertex");
+        if (!ss.eof())
+            ss >> desc.vertex;
+        PG_ASSERT(!in.fail() && !ss.fail());
+
+        // geometry
+        std::getline(in, line);
+        ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == "geometry");
+        if (!ss.eof())
+            ss >> desc.geometry;
+        PG_ASSERT(!in.fail() && !ss.fail());
+
+        // vertex
+        std::getline(in, line);
+        ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == "fragment");
+        if (!ss.eof())
+            ss >> desc.fragment;
+        PG_ASSERT(!in.fail() && !ss.fail());
+
+        // compute
+        std::getline(in, line);
+        ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == "compute");
+        if (!ss.eof())
+            ss >> desc.compute;
+        PG_ASSERT(!in.fail() && !ss.fail());
+
+        addShaderRootDir(desc, PG_RESOURCE_DIR);
+
+        ShaderTimeStamp newStamp = ShaderTimeStamp(desc);
+        if (Resource::getShader(name)) {
+            auto& currentStamp = shaderTimeStamps_[name];
+            if (desc != currentStamp.desc || currentStamp.outOfDate(newStamp)) {
+                LOG("Need to update shader: ", name);
+                currentStamp = newStamp;
+
+                Shader shader;
+                if (!loadShaderFromText(shader, desc)) {
+                    LOG("Could not load shader ", name);
+                    return false;
+                }
+                updatedShaders_[name] = std::move(shader);
+            } {
+                LOG("already up to date shader: ", name);
+            }
+        } else {
+            shaderTimeStamps_[name] = newStamp;
+            if (!loadShaderFromText(shaders_[name], desc)) {
+                LOG("Could not load shader ", name);
+                shaders_.erase(name);
+                return false;
+            }
+        }
+
+        return true;
+    }
+} }

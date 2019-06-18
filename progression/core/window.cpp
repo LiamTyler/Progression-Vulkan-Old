@@ -141,6 +141,7 @@ namespace Progression {
         } else {
             glfwSwapInterval(0);
         }
+        glfwSwapInterval(1);
 
         int fbW, fbH, wW, wH;
         glfwGetFramebufferSize(_mWindow, &fbW, &fbH);

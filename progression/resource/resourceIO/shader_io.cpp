@@ -5,6 +5,17 @@
 #include "core/common.hpp"
 
 namespace Progression {
+    
+    bool ShaderFileDesc::operator==(const ShaderFileDesc& desc) const {
+        return vertex == desc.vertex &&
+               geometry == desc.geometry &&
+               fragment == desc.fragment &&
+               compute == desc.compute;
+    }
+
+    bool ShaderFileDesc::operator!=(const ShaderFileDesc& desc) const {
+        return !(*this == desc);
+    }
 
     namespace {
 
@@ -163,62 +174,6 @@ namespace Progression {
         glGetProgramBinary(shader.getProgram(), len, NULL, &format, binary);
 
         return binary;
-    }
-
-    bool loadShaderFromResourceFile(std::istream& in) {
-        std::string line;
-        std::string s;
-        std::istringstream ss;
-        std::string name;
-        ShaderFileDesc desc;
-
-        // shader name
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "name");
-        ss >> name;
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        // vertex
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "vertex");
-        if (!ss.eof())
-            ss >> desc.vertex;
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        // geometry
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "geometry");
-        if (!ss.eof())
-            ss >> desc.geometry;
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        // vertex
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "fragment");
-        if (!ss.eof())
-            ss >> desc.fragment;
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        // compute
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "compute");
-        if (!ss.eof())
-            ss >> desc.compute;
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        addShaderRootDir(desc, PG_RESOURCE_DIR);
-
-        return Resource::loadShader(name, desc) != nullptr;
     }
 
 } // namespace Progression

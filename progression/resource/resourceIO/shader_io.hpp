@@ -5,7 +5,9 @@
 
 namespace Progression {
 
-    typedef struct ShaderFilesDesc {
+    typedef struct ShaderFileDesc {
+        bool operator==(const ShaderFileDesc& desc) const;
+        bool operator!=(const ShaderFileDesc& desc) const;
         std::string vertex;
         std::string geometry;
         std::string fragment;
@@ -19,7 +21,5 @@ namespace Progression {
     bool loadShaderFromBinary(Shader& shader, const char* binarySource, GLint len, GLenum format);
 
     char* getShaderBinary(const Shader& shader, GLint& len, GLenum& format);
-
-    bool loadShaderFromResourceFile(std::istream& in);
 
 } // namespace Progression
