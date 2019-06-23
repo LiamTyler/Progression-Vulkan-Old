@@ -3,7 +3,6 @@
 #include "resource/material.hpp"
 #include "resource/mesh.hpp"
 #include "resource/texture2D.hpp"
-#include "resource/resourceIO/texture_io.hpp"
 #include "meshoptimizer/src/meshoptimizer.h"
 #include "resource/resource_manager.hpp"
 #include "core/common.hpp"
@@ -70,11 +69,11 @@ namespace Progression {
         for (int currentMaterialID = -1; currentMaterialID < (int) materials.size(); ++currentMaterialID) {
             Material* currentMaterial = nullptr;
             if (currentMaterialID == -1) {
-                currentMaterial = Resource::getMaterial("default");
+                currentMaterial = ResourceManager::get<Material>("default");
             } else {
                 tinyobj::material_t& mat  = materials[currentMaterialID];
-                if (Resource::getMaterial(mat.name)) {
-                    currentMaterial = Resource::getMaterial(mat.name);
+                if (ResourceManager::get<Material>(mat.name)) {
+                    currentMaterial = ResourceManager::get<Material>(mat.name);
                 } else {
                     currentMaterial = new Material;
                     currentMaterial->Ka = glm::vec3(mat.ambient[0], mat.ambient[1], mat.ambient[2]);
@@ -83,22 +82,22 @@ namespace Progression {
                     currentMaterial->Ke = glm::vec3(mat.emission[0], mat.emission[1], mat.emission[2]);
                     currentMaterial->Ns = mat.shininess;
                     if (mat.diffuse_texname != "") {
-                        if (Resource::getTexture2D(mat.diffuse_texname)) {
-                            currentMaterial->map_Kd = Resource::getTexture2D(mat.diffuse_texname);
+                        if (ResourceManager::get<Texture2D>(mat.diffuse_texname)) {
+                            currentMaterial->map_Kd = ResourceManager::get<Texture2D>(mat.diffuse_texname);
                         } else {
                             std::string texName = mat.diffuse_texname;
-                            TextureUsageDesc texUsage;
-                            currentMaterial->map_Kd = Resource::loadTexture2D(
-                                    mat.diffuse_texname,PG_RESOURCE_DIR + mat.diffuse_texname, texUsage, freeCpuCopy);
+                            TextureMetaData texMetaData;
+                            texMetaData.file = TimeStampedFile(PG_RESOURCE_DIR + mat.diffuse_texname);
+                            currentMaterial->map_Kd = ResourceManager::loadTexture2D(mat.diffuse_texname, texMetaData);
                             if (!currentMaterial->map_Kd) {
                                 LOG_ERR("Unable to load material's texture: ", PG_RESOURCE_DIR + mat.diffuse_texname);
                                 return false;
                             }
                         }
                     }
-                    Resource::addMaterial(mat.name, currentMaterial);
+                    ResourceManager::add<Material>(mat.name, currentMaterial);
                     delete currentMaterial;
-                    currentMaterial = Resource::getMaterial(mat.name);
+                    currentMaterial = ResourceManager::get<Material>(mat.name);
                 }
             }
 

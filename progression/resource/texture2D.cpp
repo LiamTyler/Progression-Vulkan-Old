@@ -3,21 +3,23 @@
 
 namespace Progression {
 
-    Texture2D::Texture2D() {
+    Texture2D::Texture2D() :
+        Resource("")
+    {
         glGenTextures(1, &gpuHandle_);
     }
 
-    Texture2D::Texture2D(Image* img, const TextureUsageDesc& _desc, bool freeCPUCopy) :
-        image(img),
-        desc(_desc)
+    Texture2D::Texture2D(const std::string& _name, const TextureMetaData& data) :
+        Resource(_name),
+        metaData(data)
     {
         glGenTextures(1, &gpuHandle_);
-        uploadToGPU(freeCPUCopy);
+        uploadToGPU();
     }
 
     Texture2D::~Texture2D() {
-        if (image)
-            delete image;
+        if (metaData.image)
+            delete metaData.image;
         if (gpuHandle_ != (GLuint) -1)
             glDeleteTextures(1, &gpuHandle_);
     }
@@ -30,17 +32,33 @@ namespace Progression {
         gpuHandle_     = std::move(texture.gpuHandle_);
         width_         = std::move(texture.width_);
         height_        = std::move(texture.height_);
-        image          = std::move(texture.image);
-        desc           = std::move(texture.desc);
+        metaData       = std::move(texture.metaData);
 
-        texture.image  = nullptr;
+        texture.metaData.image  = nullptr;
         texture.gpuHandle_ = (GLuint) -1;
 
         return *this;
     }
 
+    bool Texture2D::load() {
+        Image* img = new Image;
+        if (!img->load(metaData.file.filename)) {
+            LOG_ERR("Could not load texture image: ", metaData.file.filename);
+            delete img;
+            return false;
+        }
+
+        if (metaData.image)
+            delete metaData.image;
+        metaData.image = img;
+        uploadToGPU();
+
+        return true;
+    }
+
     // TODO: Find out if mipmaps need to be regenerated
-    void Texture2D::uploadToGPU(bool freeCPUCopy) {
+    void Texture2D::uploadToGPU() {
+        Image* image = metaData.image;
         if (!image)
             return;
 
@@ -55,7 +73,7 @@ namespace Progression {
             glTexImage2D(
                     GL_TEXTURE_2D,
                     0,
-                    desc.internalFormat,
+                    metaData.internalFormat,
                     width_,
                     height_,
                     0,
@@ -63,7 +81,7 @@ namespace Progression {
                     GL_UNSIGNED_BYTE,
                     image->pixels()
                     );
-            if (desc.mipMapped)
+            if (metaData.mipMapped)
                 glGenerateMipmap(GL_TEXTURE_2D);
         } else { // otherwise just stream the data
             glTexSubImage2D(
@@ -79,9 +97,9 @@ namespace Progression {
                     );
         }
 
-        if (freeCPUCopy) {
+        if (metaData.freeCPUCopy) {
             delete image;
-            image = nullptr;
+            metaData.image = nullptr;
         }
     }
 

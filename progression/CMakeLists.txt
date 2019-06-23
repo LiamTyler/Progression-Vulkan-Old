@@ -41,11 +41,9 @@ set(
     resource/shader.cpp
     resource/texture2D.cpp
 
-    resource/resourceIO/image_io.cpp
-    resource/resourceIO/shader_io.cpp
-    resource/resourceIO/texture_io.cpp
-    resource/resourceIO/model_io.cpp
-    resource/resourceIO/material_io.cpp
+    #resource/resourceIO/shader_io.cpp
+    #resource/resourceIO/model_io.cpp
+    #resource/resourceIO/material_io.cpp
 
     #components/user_camera_component.cpp
 
@@ -83,6 +81,7 @@ set(
     graphics/graphics_api.hpp
 
     resource/resource_manager.hpp
+    resource/resource.hpp
     resource/image.hpp
     resource/material.hpp
     resource/mesh.hpp
@@ -90,12 +89,10 @@ set(
     resource/shader.hpp
     resource/texture2D.hpp
 
-    resource/resourceIO/image_io.hpp
-    resource/resourceIO/shader_io.hpp
-    resource/resourceIO/texture_io.hpp
-    resource/resourceIO/model_io.hpp
-    resource/resourceIO/material_io.hpp
-    resource/resourceIO/io.hpp
+    #resource/resourceIO/shader_io.hpp
+    #resource/resourceIO/model_io.hpp
+    #resource/resourceIO/material_io.hpp
+    #resource/resourceIO/io.hpp
 
     #components/user_camera_component.hpp
     

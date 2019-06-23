@@ -3,35 +3,40 @@
 #include "core/common.hpp"
 #include "resource/image.hpp"
 #include "utils/noncopyable.hpp"
+#include "resource/resource.hpp"
 
 namespace Progression {
 
-    typedef struct TextureUsageDesc {
+    typedef struct TextureMetaData {
+        TimeStampedFile file = TimeStampedFile();
+        Image* image         = nullptr;
         GLint internalFormat = GL_SRGB;
         GLint minFilter      = GL_LINEAR;
         GLint magFilter      = GL_LINEAR;
         GLint wrapModeS      = GL_REPEAT;
         GLint wrapModeT      = GL_REPEAT;
         bool mipMapped       = true;
+        bool freeCPUCopy     = true;
     } TextureUsageDesc;
 
-    class Texture2D : public NonCopyable {
+    class Texture2D : public NonCopyable, public Resource {
     public:
         Texture2D();
-        Texture2D(Image* image, const TextureUsageDesc& desc, bool freeCPUCopy = true);
+        Texture2D(const std::string& name, const TextureMetaData& data);
         ~Texture2D();
 
         Texture2D(Texture2D&& texture);
         Texture2D& operator=(Texture2D&& texture);
 
-        void uploadToGPU(bool freeCPUCopy = true);
+        // loads the texture according to the settings in metaData
+        bool load();
+        void uploadToGPU();
         
         GLuint gpuHandle() const { return gpuHandle_; }
         unsigned int width() const { return width_; }
         unsigned int height() const { return height_; }
 
-        Image* image         = nullptr;
-        TextureUsageDesc desc;
+        TextureMetaData metaData;
 
     private:
         GLuint gpuHandle_ = -1;

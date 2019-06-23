@@ -1,5 +1,6 @@
 #pragma once
 #include <cstring>
+#include <string>
 
 namespace Progression {
 
@@ -24,6 +25,9 @@ namespace Progression {
         Image& operator=(const Image& image);
         Image(Image&& src);
         Image& operator=(Image&& src);
+
+        bool load(const std::string& fname, bool flipVertically = true);
+        bool save(const std::string& fname, bool flipVertically = true);
 
 		int width() const { return width_; }
 		int height() const { return height_; }

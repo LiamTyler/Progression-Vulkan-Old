@@ -1,20 +1,15 @@
 #pragma once
 
 #include "core/common.hpp"
+#include "resource/resource.hpp"
 
 namespace Progression {
 
     class Texture2D;
 
-    class Material {
+    class Material : public Resource {
     public:
-		Material(
-			const glm::vec3& a = glm::vec3(0),
-			const glm::vec3& d = glm::vec3(0),
-			const glm::vec3& s = glm::vec3(0),
-			const glm::vec3& e = glm::vec3(0),
-			float ns = 0,
-			Texture2D* diffuseTex = nullptr);
+        Material() = default;
 
         glm::vec3 Ka;
         glm::vec3 Kd;

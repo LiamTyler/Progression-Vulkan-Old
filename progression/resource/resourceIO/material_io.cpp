@@ -1,5 +1,5 @@
 #include "resource/resourceIO/material_io.hpp"
-#include "resource/resourceIO/texture_io.hpp"
+#include "resource/texture2D.hpp"
 #include "resource/resource_manager.hpp"
 #include "utils/logger.hpp"
 #include <fstream>
@@ -47,8 +47,8 @@ namespace Progression {
             } else if (first == "map_Kd") {
                 std::string texName;
                 ss >> texName;
-                if (Resource::getTexture2D(texName)) {
-                    mat->map_Kd = Resource::getTexture2D(texName);
+                if (Resource::get<Texture2D>(texName)) {
+                    mat->map_Kd = Resource::get<Texture2D>(texName);
                     continue;
                 }
                 TextureUsageDesc texUsage;
@@ -130,8 +130,8 @@ namespace Progression {
         if (!ss.eof()) {
             ss >> s;
             PG_ASSERT(!in.fail() && !ss.fail());
-            if (Resource::getTexture2D(s)) {
-                mat.map_Kd = Resource::getTexture2D(s);
+            if (Resource::get<Texture2D>(s)) {
+                mat.map_Kd = Resource::get<Texture2D>(s);
             } else {
                 LOG_ERR("Diffuse texture '", s, "' for Material '", name, "' needs to be already loaded");
                 return false;
@@ -139,10 +139,10 @@ namespace Progression {
         }
         PG_ASSERT(!in.fail() && !ss.fail());
 
-        if (Resource::getMaterial(name))
+        if (Resource::get<Material>(name))
             LOG_WARN("Reloading a material that is already in the manager: ", name);
 
-        Resource::addMaterial(name, &mat);
+        Resource::add<Material>(name, &mat);
 
         return true;
     }

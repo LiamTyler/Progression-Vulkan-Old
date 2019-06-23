@@ -4,133 +4,80 @@
 #include "resource/resourceIO/io.hpp"
 #include "utils/logger.hpp"
 #include <sys/stat.h>
+#include <thread>
 
-typedef struct TimeStamp {
-    TimeStamp() : valid(false) {}
-    TimeStamp(const std::string& fname) {
-        struct stat s;
-        valid = stat(fname.c_str(), &s) == 0;
-        if (valid)
-            timestamp = s.st_mtim.tv_sec;
-    }
+namespace Progression { namespace ResourceManager {
 
-    bool operator==(const TimeStamp& ts) const {
-        return timestamp == ts.timestamp;
-    }
-    bool operator!=(const TimeStamp& ts) const {
-        return !(*this == ts);
-    }
-
-    bool outOfDate(const TimeStamp& ts) const {
-        return (!valid && ts.valid) || (valid && ts.valid && timestamp < ts.timestamp);
-    }
-
-    bool valid;
-    time_t timestamp;
-} TimeStamp;
-
-namespace Progression {
-
-    namespace {
-
-        std::unordered_map<std::string, Model> models_;         // name = whatever specified
-        std::unordered_map<std::string, Material> materials_;   // name = name as seen in mtl file
-        std::unordered_map<std::string, Texture2D> textures2D_; // name = whatever specified 
-        std::unordered_map<std::string, Shader> shaders_;       // name = whatever specified
-        // std::unordered_map<std::string, Skybox> skyboxes_;   // name = whatever specified
-        
-        std::unordered_map<std::string, Shader> updatedShaders_;
-
-        typedef struct ShaderTimeStamp {
-            ShaderTimeStamp() {}
-            ShaderTimeStamp(const ShaderFileDesc& d) :
-                desc(d),
-                vertex(TimeStamp(d.vertex)),
-                geometry(TimeStamp(d.geometry)),
-                fragment(TimeStamp(d.fragment)),
-                compute(TimeStamp(d.compute))
-            {
-            }
-
-            bool outOfDate(const ShaderTimeStamp& sts) {
-                return vertex.outOfDate(sts.vertex) ||
-                       geometry.outOfDate(sts.geometry) ||
-                       fragment.outOfDate(sts.fragment) ||
-                       compute.outOfDate(sts.compute);
-            }
-                    
-            ShaderFileDesc desc;
-            TimeStamp vertex;
-            TimeStamp geometry;
-            TimeStamp fragment;
-            TimeStamp compute;
-        } ShaderTimeStamp;
-
-        std::unordered_map<std::string, TimeStamp> resourceFiles_;
-        std::unordered_map<std::string, ShaderTimeStamp> shaderTimeStamps_;
-
-        bool loadShaderFromResourceFile(std::istream& in);
-    } // namespace anonymous
-
-namespace Resource {
+    std::vector<std::unordered_map<std::string, Resource*>> resources;
 
     void init() {
+        resources.resize(4);
         // glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        materials_["default"] = Material();
+        // materials_["default"] = Material();
+        // backgroundLoader_ = std::thread(loadBackgroundResources);
     }
 
     void update() {
-        for (const auto& pair : resourceFiles_) {
-            const auto& fname = pair.first;
-            const auto& savedTimeStamp = pair.second;
-            TimeStamp currentTimeStamp(fname);
-            // LOG(savedTimeStamp.timestamp.tv_sec, "  ", currentTimeStamp.timestamp.tv_sec);
-            if (savedTimeStamp.outOfDate(currentTimeStamp)) {
-                LOG("Need to reload the resource file: ", fname);
-                if (!loadResourceFile(fname)) {
-                    LOG_ERR("Could not reload the resource file during update");
-                }
-            }
-        }
     }
 
-    void join() {
-        for (auto& pair : updatedShaders_) {
-            const auto& name = pair.first;
-            auto& shader = pair.second;
-            shaders_[name] = std::move(shader);
-        }
-        updatedShaders_.clear();
-    }
 
     void shutdown() {
-        models_.clear();
-        materials_.clear();
-        textures2D_.clear();
-        shaders_.clear();
     }
 
-    Model* getModel(const std::string& name) {
-        auto it = models_.find(name);
-        return it == models_.end() ? nullptr : &it->second;
+    // Model* loadModel(const std::string& name, const std::string& fname, bool optimize, bool freeCPUCopy) {
+    //     return nullptr;
+    // }
+
+    // std::vector<Material*> loadMaterials(const std::string& fname) {
+    //     return {};
+    // }
+
+    Texture2D* loadTexture2D(const std::string& name, const TextureMetaData& metaData) {
+        auto resource = get<Texture2D>(name);
+        LOG("got resource");
+        if (resource) {
+            LOG_WARN("Reloading texture that is already loaded");
+        }
+
+        Texture2D tex;
+        tex.name = name;
+        tex.metaData = metaData;
+        if (!tex.load()) {
+            return nullptr;
+        }
+
+        auto& group = resources[getResourceTypeID<Texture2D>()];
+        if (resource)
+            *group[name] = std::move(tex);
+        else
+            group[name] = new Texture2D(std::move(tex));
+
+        return (Texture2D*) group[name];
     }
 
-    Material* getMaterial(const std::string& name) {
-        auto it = materials_.find(name);
-        return it == materials_.end() ? nullptr : &it->second;
+    Shader* loadShader(const std::string& name, const ShaderMetaData& metaData) {
+        auto resource = get<Shader>(name);
+        if (resource) {
+            LOG_WARN("Reloading texture that is already loaded");
+        }
+
+        Shader shader(name, metaData);
+        if (!shader.loadFromText()) {
+            LOG_ERR("Failed to load shader: ", name);
+            return nullptr;
+        }
+
+        auto& group = resources[getResourceTypeID<Shader>()];
+        if (resource)
+            *group[name] = std::move(shader);
+        else
+            group[name] = new Shader(std::move(shader));
+
+        return (Shader*) group[name];
     }
 
-    Texture2D* getTexture2D(const std::string& name) {
-        auto it = textures2D_.find(name);
-        return it == textures2D_.end() ? nullptr : &it->second;
-    }
 
-    Shader* getShader(const std::string& name) {
-        auto it = shaders_.find(name);
-        return it == shaders_.end() ? nullptr : &it->second;
-    }
-
-
+/*
     Model* loadModel(const std::string& name, const std::string& fname, bool optimize, bool freeCPUCopy) {
         if (getModel(name)) {
             LOG_WARN("Reloading model that is already loaded");
@@ -191,85 +138,64 @@ namespace Resource {
 
         return &shaders_[name];
     }
+    */
 
-    bool loadResourceFile(const std::string& fname) {
-        static int load = 0;
-        load++;
-        std::ifstream in(fname);
-        if (!in) {
-            LOG_ERR("Could not open resource file:", fname);
-            return false;
-        }
+    // bool loadResourceFile(const std::string& fname) {
+    //     static int load = 0;
+    //     load++;
+    //     std::ifstream in(fname);
+    //     if (!in) {
+    //         LOG_ERR("Could not open resource file:", fname);
+    //         return false;
+    //     }
 
-        std::string line;
-        while (std::getline(in, line)) {
-            if (line == "")
-                continue;
-            if (line[0] == '#')
-                continue;
-            if (line == "Material") {
-                if (load > 1)
-                    continue;
-                if (!loadMaterialFromResourceFile(in)) {
-                    LOG_ERR("could not parse and create material");
-                    return false;
-                }
-            } else if (line == "Model") {
-                if (load > 1)
-                    continue;
-                if (!loadModelFromResourceFile(in)) {
-                    LOG_ERR("could not parse and load model");
-                    return false;
-                }
-            } else if (line == "Texture2D") {
-                if (load > 1)
-                    continue;
-                if (!loadTextureFromResourceFile(in)) {
-                    LOG_ERR("Could not parse and load texture");
-                    return false;
-                }
-            } else if (line == "Shader") {
-                if (!loadShaderFromResourceFile(in)) {
-                    LOG("could not parse and load shader");
-                    return false;
-                }
-            }
-        }
+    //     std::string line;
+    //     while (std::getline(in, line)) {
+    //         if (line == "")
+    //             continue;
+    //         if (line[0] == '#')
+    //             continue;
+    //         if (line == "Material") {
+    //             if (load > 1)
+    //                 continue;
+    //             if (!loadMaterialFromResourceFile(in)) {
+    //                 LOG_ERR("could not parse and create material");
+    //                 return false;
+    //             }
+    //         } else if (line == "Model") {
+    //             if (load > 1)
+    //                 continue;
+    //             if (!loadModelFromResourceFile(in)) {
+    //                 LOG_ERR("could not parse and load model");
+    //                 return false;
+    //             }
+    //         } else if (line == "Texture2D") {
+    //             if (load > 1)
+    //                 continue;
+    //             if (!loadTextureFromResourceFile(in)) {
+    //                 LOG_ERR("Could not parse and load texture");
+    //                 return false;
+    //             }
+    //         } else if (line == "Shader") {
+    //             if (!loadShaderFromResourceFile(in)) {
+    //                 LOG("could not parse and load shader");
+    //                 return false;
+    //             }
+    //         }
+    //     }
 
-        in.close();
+    //     in.close();
 
-        resourceFiles_[fname] = TimeStamp(fname);
-        return true;
-    }
+    //     resourceFiles_[fname] = TimeStamp(fname);
+    //     return true;
+    // }
 
-    void addModel(const std::string& name, Model* model) {
-        if (models_.find(name) != models_.end())
-            LOG_WARN("Overriding model with name: ", name);
-        models_[name] = std::move(*model);
-    }
-
-    void addMaterial(const std::string& name, Material* mat) {
-        if (materials_.find(name) != materials_.end())
-            LOG_WARN("Overriding material with name: ", name);
-        materials_[name] = std::move(*mat);
-    }
-
-    void addTexture2D(const std::string& name, Texture2D* tex) {
-        if (textures2D_.find(name) != textures2D_.end())
-            LOG_WARN("Overriding texture2D with name: ", name);
-        textures2D_[name] = std::move(*tex);
-    }
-
-    void addShader(const std::string& name, Shader* shader) {
-        if (shaders_.find(name) != shaders_.end())
-            LOG_WARN("Overriding shader with name: ", name);
-        shaders_[name] = std::move(*shader);
-    }
 
 } } // namespace Progression::Resource
 
 namespace Progression { namespace {
 
+/*
     bool loadShaderFromResourceFile(std::istream& in) {
         std::string line;
         std::string s;
@@ -350,4 +276,160 @@ namespace Progression { namespace {
 
         return true;
     }
+    */
 } }
+
+
+    // static std::unordered_map<std::string, GLint> internalFormatMap = {
+    //     { "R8",      GL_R8 },
+    //     { "RG8",     GL_RG},
+    //     { "RGB8",    GL_RGB },
+    //     { "RGBA8",   GL_RGBA },
+    //     { "R16F",    GL_R16F },
+    //     { "RG16F",   GL_RG16F },
+    //     { "RGB16F",  GL_RGB16F },
+    //     { "RGBA16F", GL_RGBA16F },
+    //     { "R32F",    GL_R32F },
+    //     { "RG32F",   GL_RG32F },
+    //     { "RGB32F",  GL_RGB32F },
+    //     { "RGBA32F", GL_RGBA32F },
+    //     { "SRGB8",   GL_SRGB8 },
+    //     { "SRGBA8",  GL_SRGB8_ALPHA8 },
+    //     { "DEPTH",   GL_DEPTH_COMPONENT },
+    // };
+
+    // static std::unordered_map<std::string, GLint> minFilterMap = {
+    //     { "nearest", GL_NEAREST },
+    //     { "linear", GL_LINEAR },
+    //     { "nearest_mipmap_nearest", GL_NEAREST_MIPMAP_NEAREST },
+    //     { "linear_mipmap_nearest", GL_LINEAR_MIPMAP_NEAREST },
+    //     { "nearest_mipmap_linear", GL_NEAREST_MIPMAP_LINEAR },
+    //     { "linear_mipmap_linear", GL_LINEAR_MIPMAP_LINEAR },
+    // };
+
+    // static std::unordered_map<std::string, GLint> magFilterMap = {
+    //     { "nearest", GL_NEAREST },
+    //     { "linear", GL_LINEAR },
+    // };
+
+    // static std::unordered_map<std::string, GLint> wrapMap = {
+    //     { "clamp_to_edge", GL_CLAMP_TO_EDGE },
+    //     { "clamp_to_border", GL_CLAMP_TO_BORDER },
+    //     { "mirror_repeat", GL_MIRRORED_REPEAT },
+    //     { "repeat", GL_REPEAT },
+    //     { "mirror_clamp_to_edge", GL_MIRROR_CLAMP_TO_EDGE },
+    // };
+
+    // bool loadTextureFromResourceFile(std::istream& in) {
+    //     std::string line;
+    //     std::string s;
+    //     std::istringstream ss;
+    //     std::unordered_map<std::string, GLint>::iterator it;
+    //     std::string fname;
+    //     TextureUsageDesc desc;
+    //     bool freeCPUCopy;
+
+    //     // texture name
+    //     std::getline(in, line);
+    //     ss = std::istringstream(line);
+    //     ss >> s;
+    //     PG_ASSERT(s == "filename");
+    //     ss >> fname;
+    //     PG_ASSERT(!in.fail() && !ss.fail());
+
+    //     // freeCPUCopy
+    //     std::getline(in, line);
+    //     ss = std::istringstream(line);
+    //     ss >> s;
+    //     PG_ASSERT(s == "freeCPUCopy");
+    //     ss >> s;
+    //     PG_ASSERT(s == "true" || s == "false");
+    //     freeCPUCopy = s == "true";
+    //     PG_ASSERT(!in.fail() && !ss.fail());
+
+    //     // mipmaped
+    //     std::getline(in, line);
+    //     ss = std::istringstream(line);
+    //     ss >> s;
+    //     PG_ASSERT(s == "mipmapped");
+    //     ss >> s;
+    //     PG_ASSERT(s == "true" || s == "false");
+    //     desc.mipMapped = s == "true";
+    //     PG_ASSERT(!in.fail() && !ss.fail());
+
+    //     // internal format
+    //     std::getline(in, line);
+    //     ss = std::istringstream(line);
+    //     ss >> s;
+    //     PG_ASSERT(s == "internalFormat");
+    //     ss >> s;
+    //     it = internalFormatMap.find(s);
+    //     if (it == internalFormatMap.end()) {
+    //         LOG_ERR("Invalid texture format: ", s);
+    //         return false;
+    //     }
+    //     desc.internalFormat = it->second;
+    //     PG_ASSERT(!in.fail() && !ss.fail());
+
+
+    //     // min filter
+    //     std::getline(in, line);
+    //     ss = std::istringstream(line);
+    //     ss >> s;
+    //     PG_ASSERT(s == "minFilter");
+    //     ss >> s;
+    //     it = minFilterMap.find(s);
+    //     if (it == minFilterMap.end()) {
+    //         LOG_ERR("Invalid minFilter format: ", s);
+    //         return false;
+    //     }
+    //     if (!desc.mipMapped && (s != "nearest" && s != "linear")) {
+    //         LOG_WARN("Trying to use a mip map min filter when there is no mip map on texture: ", fname);
+    //     }
+    //     desc.minFilter = it->second;
+    //     PG_ASSERT(!in.fail() && !ss.fail());
+
+    //     // mag filter
+    //     std::getline(in, line);
+    //     ss = std::istringstream(line);
+    //     ss >> s;
+    //     PG_ASSERT(s == "magFilter");
+    //     ss >> s;
+    //     it = magFilterMap.find(s);
+    //     if (it == magFilterMap.end()) {
+    //         LOG_ERR("Invalid magFilter format: ", s);
+    //         return false;
+    //     }
+    //     desc.magFilter = it->second;
+    //     PG_ASSERT(!in.fail() && !ss.fail());
+
+    //     // wrapModeS
+    //     std::getline(in, line);
+    //     ss = std::istringstream(line);
+    //     ss >> s;
+    //     PG_ASSERT(s == "wrapModeS");
+    //     ss >> s;
+    //     it = wrapMap.find(s);
+    //     if (it == wrapMap.end()) {
+    //         LOG_ERR("Invalid wrapModeS format: ", s);
+    //         return false;
+    //     }
+    //     desc.wrapModeS = it->second;
+    //     PG_ASSERT(!in.fail() && !ss.fail());
+
+    //     // wrapModeT
+    //     std::getline(in, line);
+    //     ss = std::istringstream(line);
+    //     ss >> s;
+    //     PG_ASSERT(s == "wrapModeT");
+    //     ss >> s;
+    //     it = wrapMap.find(s);
+    //     if (it == wrapMap.end()) {
+    //         LOG_ERR("Invalid wrapModeT format: ", s);
+    //         return false;
+    //     }
+    //     desc.wrapModeT = it->second;
+    //     PG_ASSERT(!in.fail() && !ss.fail());
+
+    //     return Resource::loadTexture2D(fname, PG_RESOURCE_DIR + fname, desc, freeCPUCopy) != nullptr;
+    // }
