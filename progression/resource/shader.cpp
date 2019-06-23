@@ -104,7 +104,6 @@ namespace Progression {
         Resource(_name),
         metaData(data)
     {
-        queryUniforms();
     }
 
     Shader::Shader(const std::string& _name, GLuint program) :
@@ -181,7 +180,7 @@ namespace Progression {
     GLuint Shader::getUniform(const std::string& _name) const {
         auto it = uniforms_.find(_name);
         if (it == uniforms_.end()) {
-            LOG_WARN("Uniform:",_name,"is not present in the shader, using -1 instead");
+            LOG_WARN("Uniform: ", _name, " is not present in the shader, using -1 instead");
             return (GLuint) -1;
         } else {
             return it->second;
@@ -191,7 +190,7 @@ namespace Progression {
     GLuint Shader::getAttribute(const std::string& _name) const {
         GLuint loc = glGetAttribLocation(program_, _name.c_str());
         if (loc == (GLuint) -1)
-            LOG_WARN("Attribute:",_name,"is not present in the shader, using -1 instead");
+            LOG_WARN("Attribute: ", _name, " is not present in the shader, using -1 instead");
 
         return loc;
     }
@@ -290,6 +289,7 @@ namespace Progression {
 
         if (createAndLinkProgram(program, shaders)) {
             program_ = program;
+            queryUniforms();
             return true;
         } else {
             return false;

@@ -38,7 +38,7 @@ namespace Progression { namespace ResourceManager {
 
     template <typename T>
     T* get(const std::string& name) {
-        LOG("name group = ", getResourceTypeID<T>(), "res size: ", resource.size());
+        LOG("name group = ", getResourceTypeID<T>(), "res size: ", resources.size());
         auto& group = resources[getResourceTypeID<T>()];
         auto it = group.find(name);
         LOG("got it");

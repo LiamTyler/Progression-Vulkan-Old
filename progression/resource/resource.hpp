@@ -20,7 +20,7 @@ namespace Progression {
             if (filename != "") {
                 struct stat s;
                 valid = stat(fname.c_str(), &s) == 0;
-                timestamp = s.st_mtim.tv_sec;
+                timestamp = s.st_mtime;
             }
         }
         

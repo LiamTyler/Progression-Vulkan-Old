@@ -8,4 +8,6 @@ set_target_properties(
     DEBUG_POSTFIX _debug
 )
 
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example)
+
 target_link_libraries(example ${PROGRESSION_LIBS})

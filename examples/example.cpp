@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
     glBindBuffer(GL_ARRAY_BUFFER, quadVbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(quadVerts), quadVerts, GL_STATIC_DRAW);
     graphicsApi::describeAttribute(0, 3, GL_FLOAT, sizeof(GL_FLOAT) * 8, sizeof(float) * 0);
-    graphicsApi::describeAttribute(1, 3, GL_FLOAT, sizeof(GL_FLOAT) * 8, sizeof(float) * 2);
+    graphicsApi::describeAttribute(1, 3, GL_FLOAT, sizeof(GL_FLOAT) * 8, sizeof(float) * 3);
     graphicsApi::describeAttribute(2, 2, GL_FLOAT, sizeof(GL_FLOAT) * 8, sizeof(float) * 6);
 
     Material mat;
@@ -65,12 +65,12 @@ int main(int argc, char* argv[]) {
     PG::Input::PollEvents();
 
     Transform modelTransform(
-            glm::vec3(0, -0.5, -2),
-            glm::vec3(glm::radians(-90.0f), glm::radians(90.0f), glm::radians(0.0f)),
+            glm::vec3(0, 0, 0),
+            glm::vec3(0, 0, 0),
             glm::vec3(1));
-    Camera camera(glm::vec3(0), glm::vec3(0));
+    Camera camera(glm::vec3(0, 0, 5), glm::vec3(0));
 
-    glm::vec3 lightDir = -glm::normalize(glm::vec3(.5, -.2, -1));
+    glm::vec3 lightDir = -glm::normalize(glm::vec3(0, 0, -1));
 
     // Game loop
     while (!PG::EngineShutdown) {
@@ -97,6 +97,7 @@ int main(int argc, char* argv[]) {
         shader.setUniform("M", M);
         shader.setUniform("N", N);
         shader.setUniform("MVP", MVP);
+
         shader.setUniform("cameraPos", camera.position);
         shader.setUniform("lightDirInWorldSpace", lightDir);
 

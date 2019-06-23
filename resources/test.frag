@@ -22,7 +22,9 @@ in vec2 texCoord;
 
 out vec4 finalColor;
 
-void main() {    
+void main() {
+	//finalColor = vec4(1, 0, 0, 1);
+	//return;
     vec3 e = normalize(cameraPos - fragPosInWorldSpace);
     vec3 n = normalize(normalInWorldSpace);
     vec3 l = normalize(lightDirInWorldSpace);
@@ -33,7 +35,7 @@ void main() {
     vec3 diffuseColor = kd;
     if (textured)
         diffuseColor *= texture(diffuseTex, texCoord).rgb;
-    outColor += diffuseColor * max(0.0, dot(l, n));
+    outColor += diffuseColor * max(0.0, dot(n, vec3(0, 0, 1)));
 
     if (dot(l, n) > EPSILON)
         outColor += ks * pow(max(dot(h, n), 0.0), 4*shininess);        
