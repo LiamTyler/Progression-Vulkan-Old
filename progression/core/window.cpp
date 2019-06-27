@@ -1,6 +1,10 @@
 #include "core/window.hpp"
 #include "core/time.hpp"
 #include "utils/logger.hpp"
+#include <mutex>
+#include <array>
+
+#define BACKGROUND_WINDOWS 10
 
 // debug context log function just copied from learnopengl.com
 static void APIENTRY glDebugOutput(GLenum source,
@@ -52,27 +56,63 @@ static void APIENTRY glDebugOutput(GLenum source,
     std::cout << std::endl;
 }
 
+static void errorCallback(int err, const char* description) {
+    LOG("GLFW ERROR: ", err, ", ", description);
+}
+
 namespace Progression {
 
-    GLFWwindow* Window::_mWindow = nullptr;
+    namespace {
 
-    std::string Window::_mTitle = "";
-    glm::ivec2 Window::_mWindowSize = { 0, 0 };
+        Window* mainWindow = nullptr;
+        std::mutex glfwInitLock;
+        std::array<Window, BACKGROUND_WINDOWS> backgroundWindows;
 
-	void Window::Free() {
-        if (_mWindow)
-            glfwDestroyWindow(_mWindow);
+    } // namespace anonymous
 
-        glfwTerminate();
-        _mWindow = nullptr;
-	}
-
-
-	void Window::Init(const config::Config& config) {
+    // TODO: take in config info
+    void initWindowSystem() {
         if (!glfwInit()) {
             LOG_ERR("Could not initialize GLFW");
             exit(EXIT_FAILURE);
         }
+
+        mainWindow = new Window;
+        WindowCreateInfo info;
+        mainWindow->init(info);
+        // mainWindow->unbindContext();
+
+        // info.width = 1;
+        // info.height = 1;
+        // info.visible = false;
+        // for (auto& window : backgroundWindows) {
+        //     window.init(info);
+        //     LOG("created bg window");
+        // }
+        mainWindow->bindContext();
+    }
+
+    void shutdownWindowSystem() {
+        delete mainWindow;
+        glfwTerminate();
+    }
+
+    Window* getMainWindow() {
+        return mainWindow;
+    }
+
+    Window::~Window() {
+        if (window_) {
+            glfwDestroyWindow(window_);
+            window_ = nullptr;
+        }
+    }
+
+	void Window::init(const struct WindowCreateInfo& createInfo) {
+        title_ = createInfo.title;
+        width_ = createInfo.width;
+        height_ = createInfo.height;
+        visible_ = createInfo.visible;
 
         // default non-configurable settings
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -85,46 +125,26 @@ namespace Progression {
         glfwWindowHint(GLFW_STENCIL_BITS, 8);
         glfwWindowHint(GLFW_DEPTH_BITS, 24);
 
-        // default configurable settings
-		int glMajor;
-		int glMinor;
-		bool vsync;
-        bool debugContext;
-
-        // Grab the specified values in the config if available
-		auto winConfig = config->get_table("window");
-        if (!winConfig) {
-            LOG_ERR("Need to specify the 'window' in the config file");
-            exit(EXIT_FAILURE);
-        }
-
-		glMajor = winConfig->get_as<int>("glMajor").value_or(4);
-        glMinor = winConfig->get_as<int>("glMinor").value_or(3);
-        if (glMajor * 10 + glMinor < 43)
-            LOG_WARN("Using a version of OpenGL less that 4.3. Tiled deferred rendering relies on compute shaders, which is version 4.3 and up");
-
-		// resizeable = winConfig->get_as<bool>("resizeable").value_or(false);
-		_mTitle        = winConfig->get_as<std::string>("title").value_or("untitled");
-		_mWindowSize.x = winConfig->get_as<int>("width").value_or(640);
-		_mWindowSize.y = winConfig->get_as<int>("height").value_or(480);
-		vsync          = winConfig->get_as<bool>("vsync").value_or(false);
-		debugContext   = winConfig->get_as<bool>("debugContext").value_or(false);
-		
-
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, glMajor);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, glMinor);        
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);        
         glfwWindowHint(GLFW_RESIZABLE, false);
-        glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, debugContext);
+        glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, createInfo.debugContext);
 
-
-        _mWindow = glfwCreateWindow(_mWindowSize.x, _mWindowSize.y, _mTitle.c_str(), NULL, NULL);
-        if (!_mWindow) {
+        glfwWindowHint(GLFW_VISIBLE, visible_);
+        GLFWwindow* parentWindow = getMainWindow() == this ? NULL : getMainWindow()->getGLFWHandle();
+        window_ = glfwCreateWindow(width_, height_, title_.c_str(), NULL, parentWindow);
+        if (!window_) {
             LOG_ERR("Window or context creation failed");
             glfwTerminate();
             exit(EXIT_FAILURE);
         }
 
-        glfwMakeContextCurrent(_mWindow);
+        if (parentWindow)
+            return;
+
+        bindContext();
+
+        glfwSetErrorCallback(errorCallback);
 
         if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
             LOG_ERR("Failed to gladLoadGLLoader");
@@ -132,23 +152,25 @@ namespace Progression {
             exit(EXIT_FAILURE);
         }
 		
-        LOG("Vendor:", glGetString(GL_VENDOR));
-        LOG("Renderer:", glGetString(GL_RENDERER));
-        LOG("Version:", glGetString(GL_VERSION));
+        if (getMainWindow() == this) {
+            LOG("Vendor:", glGetString(GL_VENDOR));
+            LOG("Renderer:", glGetString(GL_RENDERER));
+            LOG("Version:", glGetString(GL_VERSION));
+        }
 
-        if (vsync) {
+        if (createInfo.vsync) {
             glfwSwapInterval(1);
         } else {
             glfwSwapInterval(0);
         }
 
         int fbW, fbH, wW, wH;
-        glfwGetFramebufferSize(_mWindow, &fbW, &fbH);
-        glfwGetWindowSize(_mWindow, &wW, &wH);
+        glfwGetFramebufferSize(window_, &fbW, &fbH);
+        glfwGetWindowSize(window_, &wW, &wH);
 
         glViewport(0, 0, fbW, fbH);
 
-        if (debugContext) {
+        if (createInfo.debugContext) {
             GLint flags; glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
             if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
                 LOG("enabling debug context");
@@ -160,29 +182,38 @@ namespace Progression {
         }
 	}
 
-	void Window::SwapWindow() {
-        glfwSwapBuffers(_mWindow);
+    void Window::bindContext() {
+        glfwMakeContextCurrent(window_);
+    }
+
+    void Window::unbindContext() {
+        glfwMakeContextCurrent(NULL);
+    }
+
+	void Window::swapWindow() {
+        glfwSwapBuffers(window_);
 	}
 
-	void Window::StartFrame() {
+	void Window::startFrame() {
         Time::StartFrame();
 	}
 
-	void Window::EndFrame() {
+	void Window::endFrame() {
         Time::EndFrame();
-		SwapWindow();
+		swapWindow();
 	}
 
-    void Window::SetRelativeMouse(bool b) {
+    void Window::setRelativeMouse(bool b) {
         if (b) {
-            glfwSetInputMode(_mWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         } else {
-            glfwSetInputMode(_mWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         }
     }
 
 	void Window::setTitle(const std::string& title) {
-		glfwSetWindowTitle(_mWindow, title.c_str());
+        title_ = title;
+		glfwSetWindowTitle(window_, title_.c_str());
 	}
 
 

@@ -83,16 +83,13 @@ namespace Progression {
         return !(*this == desc);
     }
 
-    void addShaderRootDir(ShaderMetaData& metaData, const std::string& root) {
-        if (metaData.vertex.filename.length() != 0)
-            metaData.vertex.filename = root + metaData.vertex.filename;
-        if (metaData.geometry.filename.length() != 0)
-            metaData.geometry.filename = root + metaData.geometry.filename;
-        if (metaData.fragment.filename.length() != 0)
-            metaData.fragment.filename = root + metaData.fragment.filename;
-        if (metaData.compute.filename.length() != 0)
-            metaData.compute.filename = root + metaData.compute.filename;
+    bool ShaderMetaData::outOfDate(const ShaderMetaData& metaData) const {
+        return vertex.outOfDate(metaData.vertex) ||
+               geometry.outOfDate(metaData.geometry) ||
+               fragment.outOfDate(metaData.fragment) ||
+               compute.outOfDate(metaData.compute );
     }
+
 
     Shader::Shader() :
         Resource(""),
@@ -102,7 +99,8 @@ namespace Progression {
 
     Shader::Shader(const std::string& _name, const ShaderMetaData& data) :
         Resource(_name),
-        metaData(data)
+        metaData(data),
+        program_((GLuint) -1)
     {
     }
 

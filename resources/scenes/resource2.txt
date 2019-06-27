@@ -1,0 +1,7 @@
+
+Shader
+name flat
+vertex shaders/flat.vert
+geometry
+fragment shaders/flat.frag
+compute

@@ -1,5 +1,6 @@
 #include "progression.hpp"
 #include <iomanip>
+#include <thread>
 
 #ifdef __linux__ 
 #pragma GCC diagnostic ignored "-Wunused-variable"
@@ -13,7 +14,8 @@ int main(int argc, char* argv[]) {
 
     PG::EngineInitialize();
 
-    Window::SetRelativeMouse(true);
+    Window* window = getMainWindow();
+    window->setRelativeMouse(true);
 
     ResourceManager::init();
 
@@ -26,11 +28,19 @@ int main(int argc, char* argv[]) {
     // Shader& shader = *ResourceManager::get<Shader>("test");
     // Model& model   = *ResourceManager::get<Model>("models/chalet2.obj");
 
+    ResourceManager::loadResourceFileAsync(PG_RESOURCE_DIR "scenes/resource.txt");
+    LOG("About to load 2");
+    ResourceManager::loadResourceFileAsync(PG_RESOURCE_DIR "scenes/resource2.txt");
+    LOG("About to wait");
+    ResourceManager::waitUntilLoadComplete();
+    LOG("Waiting done");
+
     ShaderMetaData smd;
     smd.vertex   = TimeStampedFile(PG_RESOURCE_DIR "test.vert");
     smd.fragment = TimeStampedFile(PG_RESOURCE_DIR "test.frag");
-    Shader& shader = *ResourceManager::loadShader("test", smd);
-    LOG("past shader load");
+    //Shader& shader = *ResourceManager::loadShader("test", smd);
+    Shader& shader = *ResourceManager::get<Shader>("test");
+    PG_ASSERT(ResourceManager::get<Shader>("flat"));
 
     float quadVerts[] = {
         -1, 1, 0,   0, 0, 1,    0, 1,
@@ -58,6 +68,10 @@ int main(int argc, char* argv[]) {
     mat.Ns = 50;
     mat.map_Kd = nullptr;
 
+    // TextureMetaData tmd;
+    // tmd.file.filename = PG_RESOURCE_DIR "textures/cockatoo.jpg";
+    // mat.map_Kd = ResourceManager::loadTexture2D("cockatoo", tmd);
+
 
     graphicsApi::toggleDepthTest(true);
     graphicsApi::toggleDepthWrite(true);
@@ -74,10 +88,10 @@ int main(int argc, char* argv[]) {
 
     // Game loop
     while (!PG::EngineShutdown) {
-        PG::Window::StartFrame();
+        window->startFrame();
         PG::Input::PollEvents();
 
-        // Resource::update();
+        ResourceManager::update();
 
         if (PG::Input::GetKeyDown(PG::PG_K_ESC))
             PG::EngineShutdown = true;
@@ -85,6 +99,10 @@ int main(int argc, char* argv[]) {
             LOG("updating...");
             //ResourceManager::join();
             LOG("done");
+        }
+        if (PG::Input::GetKeyDown(PG::PG_K_R)) {
+            ResourceManager::shutdown();
+            exit(EXIT_SUCCESS);
         }
 
         graphicsApi::clearColor(0, 0, 0, 0);
@@ -133,7 +151,7 @@ int main(int argc, char* argv[]) {
         //     glDrawElements(GL_TRIANGLES, mesh.getNumIndices(), GL_UNSIGNED_INT, 0);
         // }
 
-        PG::Window::EndFrame();
+        window->endFrame();
     }
 
 

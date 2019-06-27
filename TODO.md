@@ -35,6 +35,7 @@
 ## Core
 - [ ] switch to using ECS
 - [ ] add in Lua scripting
+- [ ] multi-threaded logger
 
 ## Low priority software engineering related
 - [ ] follow clang tidy

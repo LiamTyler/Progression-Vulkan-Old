@@ -19,10 +19,23 @@ namespace Progression {
         {
             if (filename != "") {
                 struct stat s;
-                valid = stat(fname.c_str(), &s) == 0;
+                valid = stat(filename.c_str(), &s) == 0;
                 timestamp = s.st_mtime;
             }
         }
+
+        bool update() {
+            if (filename != "") {
+                struct stat s;
+                valid = stat(filename.c_str(), &s) == 0;
+                time_t newTimestamp = s.st_mtime;
+                bool ret = timestamp != newTimestamp;
+                timestamp = newTimestamp;
+                return ret;
+            }
+            return false;
+        }
+
         
         // assumes that the filenames are the same
         bool outOfDate(const TimeStampedFile& ts) const {

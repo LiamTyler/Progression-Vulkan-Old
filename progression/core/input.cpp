@@ -13,7 +13,7 @@ namespace Progression {
 
     void Input::Init(const config::Config& config) {
         (void)config;
-        GLFWwindow* window = Window::getGLFWHandle();
+        GLFWwindow* window = getMainWindow()->getGLFWHandle();
         double x, y;
         glfwGetCursorPos(window, &x, &y);
         currentCursorPos_ = glm::ivec2(x, y);

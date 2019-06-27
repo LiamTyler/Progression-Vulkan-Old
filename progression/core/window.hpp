@@ -2,31 +2,48 @@
 
 #include "core/common.hpp"
 #include "core/config.hpp"
+#include "utils/noncopyable.hpp"
 
 namespace Progression {
 
-	class Window {
+    struct WindowCreateInfo {
+        std::string title = "Untitled";
+        int width         = 1280;
+        int height        = 720;
+        bool visible      = true;
+        bool debugContext = true;
+        bool vsync        = false;
+    };
+
+	class Window : public NonCopyable {
 	public:
-        Window() = delete;
-        ~Window() = delete;
+        Window() = default;
+        ~Window();
 
-        static void Init(const config::Config& config);
-        static void Free();
-        static void SwapWindow();
-		static void StartFrame();
-		static void EndFrame();
+        void init(const struct WindowCreateInfo& createInfo);
+        void shutdown();
+        void swapWindow();
+		void startFrame();
+		void endFrame();
 
-        static GLFWwindow* getGLFWHandle() { return _mWindow; }
-        static int width() { return _mWindowSize.x; }
-        static int height() { return _mWindowSize.y; }
-        static void SetRelativeMouse(bool b);
-		static void setTitle(const std::string& title);
+        GLFWwindow* getGLFWHandle() const { return window_; }
+        int width() const { return width_; }
+        int height() const { return height_; }
+        void setRelativeMouse(bool b);
+		void setTitle(const std::string& title);
+        void bindContext();
+        void unbindContext();
 
 	protected:
-        static GLFWwindow* _mWindow;
-
-		static std::string _mTitle;
-        static glm::ivec2 _mWindowSize;
+        GLFWwindow* window_ = nullptr;
+		std::string title_  = "";
+        int width_          = 0;
+        int height_         = 0;
+        bool visible_       = false;
 	};
+
+    void initWindowSystem();
+    void shutdownWindowSystem();
+    Window* getMainWindow();
 
 } // namespace Progression

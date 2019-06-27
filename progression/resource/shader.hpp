@@ -11,13 +11,12 @@ namespace Progression {
     typedef struct ShaderMetaData {
         bool operator==(const ShaderMetaData& desc) const;
         bool operator!=(const ShaderMetaData& desc) const;
+        bool outOfDate(const ShaderMetaData& metaData) const;
         TimeStampedFile vertex;
         TimeStampedFile geometry;
         TimeStampedFile fragment;
         TimeStampedFile compute;
     } ShaderMetaData;
-
-    void addShaderRootDir(ShaderMetaData& metaData, const std::string& root);
 
 	class Shader : public NonCopyable, public Resource {
 	public:

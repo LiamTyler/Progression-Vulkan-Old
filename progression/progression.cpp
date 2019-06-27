@@ -19,7 +19,7 @@ namespace Progression {
         srand(time(NULL));
         Logger::Init(conf);
         random::setSeed();
-        Window::Init(conf);
+        initWindowSystem();
         Time::Init(conf);
         Input::Init(conf);
         // ResourceManager::Init(conf);
@@ -37,7 +37,7 @@ namespace Progression {
         // ResourceManager::Free();
         Input::Free();
         Time::Free();
-        Window::Free();
+        shutdownWindowSystem();
         Logger::Free();
     }
 

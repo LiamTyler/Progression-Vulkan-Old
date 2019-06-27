@@ -28,7 +28,6 @@ namespace Progression {
         Texture2D(Texture2D&& texture);
         Texture2D& operator=(Texture2D&& texture);
 
-        // loads the texture according to the settings in metaData
         bool load();
         void uploadToGPU();
         
