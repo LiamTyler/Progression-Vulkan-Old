@@ -12,6 +12,7 @@ namespace Progression {
         bool operator==(const ShaderMetaData& desc) const;
         bool operator!=(const ShaderMetaData& desc) const;
         bool outOfDate(const ShaderMetaData& metaData) const;
+        bool update();
         TimeStampedFile vertex;
         TimeStampedFile geometry;
         TimeStampedFile fragment;
@@ -28,9 +29,13 @@ namespace Progression {
         Shader(Shader&& shader);
         Shader& operator=(Shader&& shader);
 
+        bool load() override;
         bool loadFromText();
         bool loadFromBinary(const char* binarySource, GLint len, GLenum format);
         char* getShaderBinary(GLint& len, GLenum& format);
+        bool loadMetaDataFromFile(std::istream& in);
+
+        Resource* needsReloading() override;
 
         void free();
 		void queryUniforms();

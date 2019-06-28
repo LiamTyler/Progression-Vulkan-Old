@@ -20,6 +20,8 @@
 - [ ] support per vertex colors
 - [ ] select different data types for mesh data (like shorts for indices)
 - [ ] select different mesh topology, like rendering with no index buffer, lines, etc
+- [ ] Texture Compression
+- [ ] offline mipmap generation
 - [ ] easy system for dynamic meshes
 - [ ] make sure all memory is properly released on failure cases in resource loadings
 - [ ] figure out the if really need to pass around the freeCPUCopy all the time

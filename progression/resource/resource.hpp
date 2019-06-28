@@ -2,6 +2,7 @@
 
 #include <string>
 #include <sys/stat.h>
+#include "utils/logger.hpp"
 
 namespace Progression {
 
@@ -17,29 +18,24 @@ namespace Progression {
             valid(false),
             filename(fname)
         {
-            if (filename != "") {
-                struct stat s;
-                valid = stat(filename.c_str(), &s) == 0;
-                timestamp = s.st_mtime;
-            }
+            struct stat s;
+            valid = stat(filename.c_str(), &s) == 0;
+            timestamp = s.st_mtime;
         }
 
         bool update() {
-            if (filename != "") {
-                struct stat s;
-                valid = stat(filename.c_str(), &s) == 0;
-                time_t newTimestamp = s.st_mtime;
-                bool ret = timestamp != newTimestamp;
-                timestamp = newTimestamp;
-                return ret;
-            }
-            return false;
+            struct stat s;
+            valid = stat(filename.c_str(), &s) == 0;
+            if (!valid)
+                return false;
+            time_t newTimestamp = s.st_mtime;
+            bool ret = timestamp != newTimestamp;
+            timestamp = newTimestamp;
+            return ret;
         }
 
-        
-        // assumes that the filenames are the same
         bool outOfDate(const TimeStampedFile& ts) const {
-            return (!valid && ts.valid) || (valid && ts.valid && timestamp < ts.timestamp);
+            return (filename != ts.filename) || (!valid && ts.valid) || (valid && ts.valid && timestamp < ts.timestamp);
         }
 
         bool operator==(const TimeStampedFile& f) const {
@@ -59,6 +55,10 @@ namespace Progression {
     public:
         Resource() : name("") {}
         Resource(const std::string& n) : name(n) {}
+        virtual ~Resource() = default;
+
+        virtual bool load() { return false; }
+        virtual Resource* needsReloading() { return nullptr; }
 
         std::string name;
     };

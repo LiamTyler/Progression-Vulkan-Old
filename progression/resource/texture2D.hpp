@@ -28,7 +28,9 @@ namespace Progression {
         Texture2D(Texture2D&& texture);
         Texture2D& operator=(Texture2D&& texture);
 
-        bool load();
+        bool load() override;
+        bool loadMetaDataFromFile(std::istream& in);
+        Resource* needsReloading() override;
         void uploadToGPU();
         
         GLuint gpuHandle() const { return gpuHandle_; }

@@ -13,10 +13,11 @@ namespace Progression {
     
 namespace ResourceManager {
 
-    using ResourceDB = std::vector<std::unordered_map<std::string, Resource*>>;
+    using ResourceMap = std::unordered_map<std::string, Resource*>;
+    using ResourceDB = std::vector<ResourceMap>;
     using FileMap = std::unordered_map<std::string, TimeStampedFile>;
     
-    ResourceDB resources;
+    ResourceDB f_resources;
 
     namespace {
 
@@ -32,74 +33,38 @@ namespace ResourceManager {
         std::thread bg_scanningThread_;
         ResourceDB bg_scanningResources_;
         bool bg_scanningThreadExit_;
+        std::mutex bg_lock_;
 
-        void freeResources(ResourceDB* db) {
-            for (const auto& resourceMap : *db) {
+        void freeResources(ResourceDB& db) {
+            for (const auto& resourceMap : db) {
                 for (auto& resourcePair : resourceMap) {
                     if (resourcePair.second)
                         delete resourcePair.second;
                 }
             }
+            db.clear();
         }
 
-        bool loadShaderMetaFromFile(std::istream& in, std::string& name, ShaderMetaData& metaData) {
-            std::string line;
-            std::string s;
-            std::istringstream ss;
-
-            std::getline(in, line);
-            ss = std::istringstream(line);
-            ss >> s;
-            PG_ASSERT(s == "name");
-            ss >> name;
-            PG_ASSERT(!in.fail() && !ss.fail());
-
-            std::getline(in, line);
-            ss = std::istringstream(line);
-            ss >> s;
-            PG_ASSERT(s == "vertex");
-            if (!ss.eof()) {
-                ss >> s;
-                metaData.vertex = TimeStampedFile(PG_RESOURCE_DIR + s);
+        Texture2D* loadTexture2DInternal(const std::string &name, const TextureMetaData &metaData, std::unordered_map<std::string, Resource*>& resources) {
+            Texture2D tex(name, metaData);
+            if (!tex.load())
+            {
+                LOG_ERR("Failed to load texture: ", name);
+                return nullptr;
             }
-            PG_ASSERT(!in.fail() && !ss.fail());
 
-            std::getline(in, line);
-            ss = std::istringstream(line);
-            ss >> s;
-            PG_ASSERT(s == "geometry");
-            if (!ss.eof()) {
-                ss >> s;
-                metaData.geometry = TimeStampedFile(PG_RESOURCE_DIR + s);
+            if (resources.find(name) != resources.end()) {
+                *resources[name] = std::move(tex);
+            } else {
+                resources[name] = new Texture2D(std::move(tex));
             }
-            PG_ASSERT(!in.fail() && !ss.fail());
 
-            std::getline(in, line);
-            ss = std::istringstream(line);
-            ss >> s;
-            PG_ASSERT(s == "fragment");
-            if (!ss.eof()) {
-                ss >> s;
-                metaData.fragment = TimeStampedFile(PG_RESOURCE_DIR + s);
-            }
-            PG_ASSERT(!in.fail() && !ss.fail());
-
-            std::getline(in, line);
-            ss = std::istringstream(line);
-            ss >> s;
-            PG_ASSERT(s == "compute");
-            if (!ss.eof()) {
-                ss >> s;
-                metaData.compute = TimeStampedFile(PG_RESOURCE_DIR + s);
-            }
-            PG_ASSERT(!in.fail() && !ss.fail());
-
-            return true;
+            return (Texture2D *)resources[name];
         }
 
         Shader* loadShaderInternal(const std::string &name, const ShaderMetaData &metaData, std::unordered_map<std::string, Resource*>& shaders) {
             Shader shader(name, metaData);
-            if (!shader.loadFromText())
+            if (!shader.load())
             {
                 LOG_ERR("Failed to load shader: ", name);
                 return nullptr;
@@ -132,20 +97,28 @@ namespace ResourceManager {
 
             std::string line;
             while (std::getline(in, line)) {
-                if (line == "")
+                if (line == "" || line[0] == '#'){
                     continue;
-                if (line[0] == '#')
-                    continue;
-                if (line == "Shader") {
-                    std::string name;
-                    ShaderMetaData metaData;
-                    if (!loadShaderMetaFromFile(in, name, metaData)) {
-                        LOG("could not parse shader: ", name);
+                } else if (line == "Shader") {
+                    Shader shader;
+                    if (!shader.loadMetaDataFromFile(in)) {
+                        LOG("could not parse shader: ", shader.name);
                         return false;
                     }
                     LOG("parsed shader meta");
-                    if (!loadShaderInternal(name, metaData, DB[getResourceTypeID<Shader>()])) {
-                        LOG("Could not load shader: ", name);
+                    if (!loadShaderInternal(shader.name, shader.metaData, DB[getResourceTypeID<Shader>()])) {
+                        LOG("Could not load shader: ", shader.name);
+                        return false;
+                    }
+                } else if (line == "Texture2D") {
+                    Texture2D tex;
+                    if (!tex.loadMetaDataFromFile(in)) {
+                        LOG("could not parse texture2D: ", tex.name);
+                        return false;
+                    }
+                    LOG("parsed shader meta");
+                    if (!loadTexture2DInternal(tex.name, tex.metaData, DB[getResourceTypeID<Texture2D>()])) {
+                        LOG("Could not load texture2D: ", tex.name);
                         return false;
                     }
                 }
@@ -174,46 +147,60 @@ namespace ResourceManager {
                 for (auto& [name, data] : resourceFiles_) {
                     if (data.update()) {
                         LOG("file: ", name, " was out of date");
-                        updateNeeded = true;
+                        if (!BG_LoadResources(name, &bg_scanningResources_))
+                            LOG("Could not reload the resource file: ", name);
                     }
                 }
 
-                if (!updateNeeded)
-                    continue;
-
+                uint32_t typeID = -1;
                 // shaders
-                // auto shaderID = getResourceTypeID<Shader>();
-                // for (const auto& resourcePair : resources[shaderID]) {
-                //     const auto& name = resourcePair.first;
-                //     Shader* shader = (Shader*) resourcePair.second;
-                //     ShaderMetaData newMetaData;
-                //     newMetaData.vertex   = fileTimeStamps_[shader->metaData.vertex.filename];
-                //     newMetaData.geometry = fileTimeStamps_[shader->metaData.geometry.filename];
-                //     newMetaData.fragment = fileTimeStamps_[shader->metaData.fragment.filename];
-                //     newMetaData.compute  = fileTimeStamps_[shader->metaData.compute.filename];
+                typeID = getResourceTypeID<Shader>();
+                for (const auto& [name, res]: f_resources[typeID]) {
+                    Shader* shader = (Shader*) res;
 
-                //     if (shader->metaData.outOfDate(newMetaData)) {
-                //         LOG("Reload needed for shader: ", name);
-                //         Shader* newShader = new Shader(name, newMetaData);
-                //         if (!newShader->loadFromText()) {
-                //             LOG_ERR("Failed to reload shader: ", name);
-                //             shader->metaData = newMetaData;
-                //             continue;
-                //         }
-                //         backgroundResources_[shaderID][name] = newShader;
-                //     }
-                // }
+                    auto newShader = shader->needsReloading();
+                    if (newShader) {
+                        LOG("Reload needed for shader: ", name);
+                        if (!newShader->load()) {
+                            LOG_ERR("Failed to reload shader: ", name);
+                            delete newShader;
+                            continue;
+                        }
+                        bg_lock_.lock();
+                        bg_scanningResources_[typeID][newShader->name] = newShader;
+                        bg_lock_.unlock();
+                    }
+                }
+
+                // texture2D
+                typeID = getResourceTypeID<Texture2D>();
+                for (const auto& [name, resource]: f_resources[typeID]) {
+                    Texture2D* shader = (Texture2D*) resource;
+
+                    auto newResource = shader->needsReloading();
+                    if (newResource) {
+                        LOG("Reload needed for texture2D: ", name);
+                        if (!newResource->load()) {
+                            LOG_ERR("Failed to reload texture2D: ", name);
+                            delete newResource;
+                            continue;
+                        }
+                        bg_lock_.lock();
+                        bg_scanningResources_[typeID][newResource->name] = newResource;
+                        bg_lock_.unlock();
+                    }
+                }
             }
 
             // exiting, clean up resources
-            freeResources(&bg_scanningResources_);
+            freeResources(bg_scanningResources_);
             bg_scanningResources_.clear();
         }
 
     } // namespace anonymous
 
     void init() {
-        resources.resize(TOTAL_RESOURCE_TYPES);
+        f_resources.resize(TOTAL_RESOURCE_TYPES);
         bg_scanningThreadExit_ = false;
         // glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         // materials_["default"] = Material();
@@ -222,20 +209,39 @@ namespace ResourceManager {
     }
 
     void moveBackgroundResources(ResourceDB& newResources) {
-        auto shaderID = getResourceTypeID<Shader>();
-        auto& currentResources = resources[shaderID];
-        for (auto& [name, res] : newResources[shaderID]) {
-            auto it = currentResources.find(name);
-            if (it == currentResources.end()) {
-                currentResources[name] = res;
+        uint32_t typeID = getResourceTypeID<Shader>();
+        ResourceMap* currentResources = &f_resources[typeID];
+        for (auto& [name, res] : newResources[typeID]) {
+            auto it = currentResources->find(name);
+            if (it == currentResources->end()) {
+                (*currentResources)[name] = res;
             } else {
                 *(Shader*) it->second = std::move(*(Shader*) res);
+                delete res;
+            }
+        }
+
+        typeID = getResourceTypeID<Texture2D>();
+        currentResources = &f_resources[typeID];
+        for (auto& [name, res] : newResources[typeID]) {
+            auto it = currentResources->find(name);
+            if (it == currentResources->end()) {
+                (*currentResources)[name] = res;
+            } else {
+                *(Texture2D*) it->second = std::move(*(Texture2D*) res);
                 delete res;
             }
         }
     }
 
     void update() {
+        if (!bg_lock_.try_lock())
+            return;
+
+        moveBackgroundResources(bg_scanningResources_);
+        bg_scanningResources_.clear();
+        bg_scanningResources_.resize(TOTAL_RESOURCE_TYPES);
+        bg_lock_.unlock();
     }
 
     void waitUntilLoadComplete(const std::string& resFile) {
@@ -246,7 +252,7 @@ namespace ResourceManager {
                     moveBackgroundResources(*data.db);
                     resourceFiles_[data.resFile.filename] = data.resFile;
                 } else {
-                    freeResources(data.db);
+                    freeResources(*(data.db));
                 }
                 delete data.db;
             }
@@ -257,20 +263,24 @@ namespace ResourceManager {
     void shutdown() {
         for (auto& [name, data]: loadingResourceFiles_) {
             data.retVal.wait();
-            freeResources(data.db);
+            freeResources(*(data.db));
             delete data.db;
         }
         loadingResourceFiles_.clear();
 
         bg_scanningThreadExit_ = true;
         bg_scanningThread_.join();
-        freeResources(&resources);
+        freeResources(f_resources);
         resourceFiles_.clear();
-        resources.clear();
+        f_resources.clear();
+    }
+
+    Texture2D* loadTexture2D(const std::string& name, const TextureMetaData& metaData) {
+        return loadTexture2DInternal(name, metaData, f_resources[getResourceTypeID<Texture2D>()]);
     }
 
     Shader* loadShader(const std::string& name, const ShaderMetaData& metaData) {
-        return loadShaderInternal(name, metaData, resources[getResourceTypeID<Shader>()]);
+        return loadShaderInternal(name, metaData, f_resources[getResourceTypeID<Shader>()]);
     }
 
     void loadResourceFileAsync(const std::string& fname) {
@@ -295,158 +305,3 @@ namespace ResourceManager {
     }
 
 } } // namespace Progression::ResourceManager
-
-
-    // static std::unordered_map<std::string, GLint> internalFormatMap = {
-    //     { "R8",      GL_R8 },
-    //     { "RG8",     GL_RG},
-    //     { "RGB8",    GL_RGB },
-    //     { "RGBA8",   GL_RGBA },
-    //     { "R16F",    GL_R16F },
-    //     { "RG16F",   GL_RG16F },
-    //     { "RGB16F",  GL_RGB16F },
-    //     { "RGBA16F", GL_RGBA16F },
-    //     { "R32F",    GL_R32F },
-    //     { "RG32F",   GL_RG32F },
-    //     { "RGB32F",  GL_RGB32F },
-    //     { "RGBA32F", GL_RGBA32F },
-    //     { "SRGB8",   GL_SRGB8 },
-    //     { "SRGBA8",  GL_SRGB8_ALPHA8 },
-    //     { "DEPTH",   GL_DEPTH_COMPONENT },
-    // };
-
-    // static std::unordered_map<std::string, GLint> minFilterMap = {
-    //     { "nearest", GL_NEAREST },
-    //     { "linear", GL_LINEAR },
-    //     { "nearest_mipmap_nearest", GL_NEAREST_MIPMAP_NEAREST },
-    //     { "linear_mipmap_nearest", GL_LINEAR_MIPMAP_NEAREST },
-    //     { "nearest_mipmap_linear", GL_NEAREST_MIPMAP_LINEAR },
-    //     { "linear_mipmap_linear", GL_LINEAR_MIPMAP_LINEAR },
-    // };
-
-    // static std::unordered_map<std::string, GLint> magFilterMap = {
-    //     { "nearest", GL_NEAREST },
-    //     { "linear", GL_LINEAR },
-    // };
-
-    // static std::unordered_map<std::string, GLint> wrapMap = {
-    //     { "clamp_to_edge", GL_CLAMP_TO_EDGE },
-    //     { "clamp_to_border", GL_CLAMP_TO_BORDER },
-    //     { "mirror_repeat", GL_MIRRORED_REPEAT },
-    //     { "repeat", GL_REPEAT },
-    //     { "mirror_clamp_to_edge", GL_MIRROR_CLAMP_TO_EDGE },
-    // };
-
-    // bool loadTextureFromResourceFile(std::istream& in) {
-    //     std::string line;
-    //     std::string s;
-    //     std::istringstream ss;
-    //     std::unordered_map<std::string, GLint>::iterator it;
-    //     std::string fname;
-    //     TextureUsageDesc desc;
-    //     bool freeCPUCopy;
-
-    //     // texture name
-    //     std::getline(in, line);
-    //     ss = std::istringstream(line);
-    //     ss >> s;
-    //     PG_ASSERT(s == "filename");
-    //     ss >> fname;
-    //     PG_ASSERT(!in.fail() && !ss.fail());
-
-    //     // freeCPUCopy
-    //     std::getline(in, line);
-    //     ss = std::istringstream(line);
-    //     ss >> s;
-    //     PG_ASSERT(s == "freeCPUCopy");
-    //     ss >> s;
-    //     PG_ASSERT(s == "true" || s == "false");
-    //     freeCPUCopy = s == "true";
-    //     PG_ASSERT(!in.fail() && !ss.fail());
-
-    //     // mipmaped
-    //     std::getline(in, line);
-    //     ss = std::istringstream(line);
-    //     ss >> s;
-    //     PG_ASSERT(s == "mipmapped");
-    //     ss >> s;
-    //     PG_ASSERT(s == "true" || s == "false");
-    //     desc.mipMapped = s == "true";
-    //     PG_ASSERT(!in.fail() && !ss.fail());
-
-    //     // internal format
-    //     std::getline(in, line);
-    //     ss = std::istringstream(line);
-    //     ss >> s;
-    //     PG_ASSERT(s == "internalFormat");
-    //     ss >> s;
-    //     it = internalFormatMap.find(s);
-    //     if (it == internalFormatMap.end()) {
-    //         LOG_ERR("Invalid texture format: ", s);
-    //         return false;
-    //     }
-    //     desc.internalFormat = it->second;
-    //     PG_ASSERT(!in.fail() && !ss.fail());
-
-
-    //     // min filter
-    //     std::getline(in, line);
-    //     ss = std::istringstream(line);
-    //     ss >> s;
-    //     PG_ASSERT(s == "minFilter");
-    //     ss >> s;
-    //     it = minFilterMap.find(s);
-    //     if (it == minFilterMap.end()) {
-    //         LOG_ERR("Invalid minFilter format: ", s);
-    //         return false;
-    //     }
-    //     if (!desc.mipMapped && (s != "nearest" && s != "linear")) {
-    //         LOG_WARN("Trying to use a mip map min filter when there is no mip map on texture: ", fname);
-    //     }
-    //     desc.minFilter = it->second;
-    //     PG_ASSERT(!in.fail() && !ss.fail());
-
-    //     // mag filter
-    //     std::getline(in, line);
-    //     ss = std::istringstream(line);
-    //     ss >> s;
-    //     PG_ASSERT(s == "magFilter");
-    //     ss >> s;
-    //     it = magFilterMap.find(s);
-    //     if (it == magFilterMap.end()) {
-    //         LOG_ERR("Invalid magFilter format: ", s);
-    //         return false;
-    //     }
-    //     desc.magFilter = it->second;
-    //     PG_ASSERT(!in.fail() && !ss.fail());
-
-    //     // wrapModeS
-    //     std::getline(in, line);
-    //     ss = std::istringstream(line);
-    //     ss >> s;
-    //     PG_ASSERT(s == "wrapModeS");
-    //     ss >> s;
-    //     it = wrapMap.find(s);
-    //     if (it == wrapMap.end()) {
-    //         LOG_ERR("Invalid wrapModeS format: ", s);
-    //         return false;
-    //     }
-    //     desc.wrapModeS = it->second;
-    //     PG_ASSERT(!in.fail() && !ss.fail());
-
-    //     // wrapModeT
-    //     std::getline(in, line);
-    //     ss = std::istringstream(line);
-    //     ss >> s;
-    //     PG_ASSERT(s == "wrapModeT");
-    //     ss >> s;
-    //     it = wrapMap.find(s);
-    //     if (it == wrapMap.end()) {
-    //         LOG_ERR("Invalid wrapModeT format: ", s);
-    //         return false;
-    //     }
-    //     desc.wrapModeT = it->second;
-    //     PG_ASSERT(!in.fail() && !ss.fail());
-
-    //     return Resource::loadTexture2D(fname, PG_RESOURCE_DIR + fname, desc, freeCPUCopy) != nullptr;
-    // }

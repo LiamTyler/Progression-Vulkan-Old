@@ -9,38 +9,23 @@
 using namespace Progression;
 
 int main(int argc, char* argv[]) {
-    (void)argc;
-    (void)argv;
+    UNUSED(argc);
+    UNUSED(argv);
 
     PG::EngineInitialize();
 
     Window* window = getMainWindow();
-    window->setRelativeMouse(true);
+    //window->setRelativeMouse(true);
 
     ResourceManager::init();
-
-    // if (!Resource::loadResourceFile(PG_RESOURCE_DIR "resource.txt")) {
-    //     LOG_ERR("Could not load the resource file");
-    //     return 1;
-    // }
-
 
     // Shader& shader = *ResourceManager::get<Shader>("test");
     // Model& model   = *ResourceManager::get<Model>("models/chalet2.obj");
 
     ResourceManager::loadResourceFileAsync(PG_RESOURCE_DIR "scenes/resource.txt");
-    LOG("About to load 2");
-    ResourceManager::loadResourceFileAsync(PG_RESOURCE_DIR "scenes/resource2.txt");
-    LOG("About to wait");
     ResourceManager::waitUntilLoadComplete();
-    LOG("Waiting done");
 
-    ShaderMetaData smd;
-    smd.vertex   = TimeStampedFile(PG_RESOURCE_DIR "test.vert");
-    smd.fragment = TimeStampedFile(PG_RESOURCE_DIR "test.frag");
-    //Shader& shader = *ResourceManager::loadShader("test", smd);
     Shader& shader = *ResourceManager::get<Shader>("test");
-    PG_ASSERT(ResourceManager::get<Shader>("flat"));
 
     float quadVerts[] = {
         -1, 1, 0,   0, 0, 1,    0, 1,
@@ -66,12 +51,7 @@ int main(int argc, char* argv[]) {
     mat.Ks = glm::vec3(0);
     mat.Ke = glm::vec3(0);
     mat.Ns = 50;
-    mat.map_Kd = nullptr;
-
-    // TextureMetaData tmd;
-    // tmd.file.filename = PG_RESOURCE_DIR "textures/cockatoo.jpg";
-    // mat.map_Kd = ResourceManager::loadTexture2D("cockatoo", tmd);
-
+    mat.map_Kd = ResourceManager::get<Texture2D>("cockatoo");
 
     graphicsApi::toggleDepthTest(true);
     graphicsApi::toggleDepthWrite(true);
@@ -95,15 +75,6 @@ int main(int argc, char* argv[]) {
 
         if (PG::Input::GetKeyDown(PG::PG_K_ESC))
             PG::EngineShutdown = true;
-        if (PG::Input::GetKeyDown(PG::PG_K_U)) {
-            LOG("updating...");
-            //ResourceManager::join();
-            LOG("done");
-        }
-        if (PG::Input::GetKeyDown(PG::PG_K_R)) {
-            ResourceManager::shutdown();
-            exit(EXIT_SUCCESS);
-        }
 
         graphicsApi::clearColor(0, 0, 0, 0);
         graphicsApi::clearColorBuffer();

@@ -42,5 +42,6 @@ void main() {
 
     
     finalColor.rgb = outColor;
+    // finalColor.g += 1;
     finalColor.a   = 1.0;
 }

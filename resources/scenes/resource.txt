@@ -1,5 +1,6 @@
 Texture2D
-filename textures/chalet.jpg
+name cockatoo
+filename textures/cockatoo.jpg
 freeCPUCopy true
 mipmapped true
 internalFormat RGBA32F

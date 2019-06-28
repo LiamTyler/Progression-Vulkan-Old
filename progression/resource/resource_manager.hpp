@@ -16,7 +16,6 @@ class ResourceTypeID {
 
 public:
 
-    /*! @brief Statically generated unique identifier for the given type. */
     template<typename... Type>
     inline static const uint32_t id = inner<std::decay_t<Type>...>;
 };
@@ -31,14 +30,12 @@ namespace Progression {
     enum ResourceTypes {
         SHADER = 0,
         TEXTURE2D,
-        MODEL,
-        MATERIAL,
         TOTAL_RESOURCE_TYPES
     };
     
 namespace ResourceManager {
 
-    extern std::vector<std::unordered_map<std::string, Resource*>> resources;
+    extern std::vector<std::unordered_map<std::string, Resource*>> f_resources;
 
     void init();
     void update();
@@ -47,13 +44,13 @@ namespace ResourceManager {
 
     template <typename T>
     T* get(const std::string& name) {
-        auto& group = resources[getResourceTypeID<T>()];
+        auto& group = f_resources[getResourceTypeID<T>()];
         auto it = group.find(name);
         return it == group.end() ? nullptr : (T*) it->second;
     }
 
     // std::vector<Material*> loadMaterials(const std::string& fname);
-    // Texture2D*             loadTexture2D(const std::string& name, const TextureMetaData& metaData);
+    Texture2D*             loadTexture2D(const std::string& name, const TextureMetaData& metaData);
     // Model*                 loadModel(const std::string& name, const std::string& fname,
     //                                  bool optimize = true, bool freeCPUCopy = true);
     Shader*                loadShader(const std::string& name, const ShaderMetaData& metaData);

@@ -90,6 +90,14 @@ namespace Progression {
                compute.outOfDate(metaData.compute );
     }
 
+    bool ShaderMetaData::update() {
+        bool r1 = vertex.update();
+        bool r2 = geometry.update();
+        bool r3 = fragment.update();
+        bool r4 = compute.update();
+        return r1 || r2 || r3 || r4;
+    }
+
 
     Shader::Shader() :
         Resource(""),
@@ -167,78 +175,15 @@ namespace Progression {
         delete[] uniformName;
     }
 
-    void Shader::enable() const {
-        glUseProgram(program_);
-    }
-
-    void Shader::disable() const {
-        glUseProgram(0);
-    }
-
-    GLuint Shader::getUniform(const std::string& _name) const {
-        auto it = uniforms_.find(_name);
-        if (it == uniforms_.end()) {
-            LOG_WARN("Uniform: ", _name, " is not present in the shader, using -1 instead");
-            return (GLuint) -1;
-        } else {
-            return it->second;
+    Resource* Shader::needsReloading() {
+        if (metaData.update()) {
+            return new Shader(name, metaData);
         }
-    }
+        return nullptr;
+    }    
 
-    GLuint Shader::getAttribute(const std::string& _name) const {
-        GLuint loc = glGetAttribLocation(program_, _name.c_str());
-        if (loc == (GLuint) -1)
-            LOG_WARN("Attribute: ", _name, " is not present in the shader, using -1 instead");
-
-        return loc;
-    }
-
-    void Shader::setUniform(const std::string& _name, const bool data) {
-        glUniform1i(getUniform(_name), data);
-    }
-
-    void Shader::setUniform(const std::string& _name, const int data) {
-        glUniform1i(getUniform(_name), data);
-    }
-
-    void Shader::setUniform(const std::string& _name, const float data) {
-        glUniform1f(getUniform(_name), data);
-    }
-
-    void Shader::setUniform(const std::string& _name, const glm::ivec2& data) {
-        glUniform2i(getUniform(_name), data.x, data.y);
-    }
-
-    void Shader::setUniform(const std::string& _name, const glm::vec2& data) {
-        glUniform2f(getUniform(_name), data.x, data.y);
-    }
-
-    void Shader::setUniform(const std::string& _name, const glm::vec3& data) {
-        glUniform3f(getUniform(_name), data.x, data.y, data.z);
-    }
-
-    void Shader::setUniform(const std::string& _name, const glm::vec4& data) {
-        glUniform4f(getUniform(_name), data.x, data.y, data.z, data.w);
-    }
-
-    void Shader::setUniform(const std::string& _name, const glm::mat3& data) {
-        glUniformMatrix3fv(getUniform(_name), 1, GL_FALSE, glm::value_ptr(data));
-    }
-
-    void Shader::setUniform(const std::string& _name, const glm::mat4& data) {
-        glUniformMatrix4fv(getUniform(_name), 1, GL_FALSE, glm::value_ptr(data));
-    }
-
-    void Shader::setUniform(const std::string& _name, const glm::mat4* data, int elements) {
-        glUniformMatrix4fv(getUniform(_name), elements, GL_FALSE, glm::value_ptr(data[0]));
-    }
-
-    void Shader::setUniform(const std::string& _name, const glm::vec3* data, int elements) {
-        glUniform3fv(getUniform(_name), elements, glm::value_ptr(data[0]));
-    }
-
-    void Shader::setUniform(const std::string& _name, const glm::vec4* data, int elements) {
-        glUniform4fv(getUniform(_name), elements, glm::value_ptr(data[0]));
+    bool Shader::load() {
+        return loadFromText();
     }
 
     bool Shader::loadFromText() {
@@ -322,6 +267,135 @@ namespace Progression {
         glGetProgramBinary(program_, len, NULL, &format, binary);
 
         return binary;
+    }
+
+    bool Shader::loadMetaDataFromFile(std::istream& in) {
+        std::string line;
+        std::string s;
+        std::istringstream ss;
+
+        std::getline(in, line);
+        ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == "name");
+        ss >> name;
+        PG_ASSERT(!in.fail() && !ss.fail());
+
+        std::getline(in, line);
+        ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == "vertex");
+        if (!ss.eof()) {
+            ss >> s;
+            metaData.vertex = TimeStampedFile(PG_RESOURCE_DIR + s);
+        }
+        PG_ASSERT(!in.fail() && !ss.fail());
+
+        std::getline(in, line);
+        ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == "geometry");
+        if (!ss.eof()) {
+            ss >> s;
+            metaData.geometry = TimeStampedFile(PG_RESOURCE_DIR + s);
+        }
+        PG_ASSERT(!in.fail() && !ss.fail());
+
+        std::getline(in, line);
+        ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == "fragment");
+        if (!ss.eof()) {
+            ss >> s;
+            metaData.fragment = TimeStampedFile(PG_RESOURCE_DIR + s);
+        }
+        PG_ASSERT(!in.fail() && !ss.fail());
+
+        std::getline(in, line);
+        ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == "compute");
+        if (!ss.eof()) {
+            ss >> s;
+            metaData.compute = TimeStampedFile(PG_RESOURCE_DIR + s);
+        }
+        PG_ASSERT(!in.fail() && !ss.fail());
+
+        return !in.fail() && !ss.fail();
+    }
+
+    void Shader::enable() const {
+        glUseProgram(program_);
+    }
+
+    void Shader::disable() const {
+        glUseProgram(0);
+    }
+
+    GLuint Shader::getUniform(const std::string& _name) const {
+        auto it = uniforms_.find(_name);
+        if (it == uniforms_.end()) {
+            LOG_WARN("Uniform: ", _name, " is not present in the shader, using -1 instead");
+            return (GLuint) -1;
+        } else {
+            return it->second;
+        }
+    }
+
+    GLuint Shader::getAttribute(const std::string& _name) const {
+        GLuint loc = glGetAttribLocation(program_, _name.c_str());
+        if (loc == (GLuint) -1)
+            LOG_WARN("Attribute: ", _name, " is not present in the shader, using -1 instead");
+
+        return loc;
+    }
+
+    void Shader::setUniform(const std::string& _name, const bool data) {
+        glUniform1i(getUniform(_name), data);
+    }
+
+    void Shader::setUniform(const std::string& _name, const int data) {
+        glUniform1i(getUniform(_name), data);
+    }
+
+    void Shader::setUniform(const std::string& _name, const float data) {
+        glUniform1f(getUniform(_name), data);
+    }
+
+    void Shader::setUniform(const std::string& _name, const glm::ivec2& data) {
+        glUniform2i(getUniform(_name), data.x, data.y);
+    }
+
+    void Shader::setUniform(const std::string& _name, const glm::vec2& data) {
+        glUniform2f(getUniform(_name), data.x, data.y);
+    }
+
+    void Shader::setUniform(const std::string& _name, const glm::vec3& data) {
+        glUniform3f(getUniform(_name), data.x, data.y, data.z);
+    }
+
+    void Shader::setUniform(const std::string& _name, const glm::vec4& data) {
+        glUniform4f(getUniform(_name), data.x, data.y, data.z, data.w);
+    }
+
+    void Shader::setUniform(const std::string& _name, const glm::mat3& data) {
+        glUniformMatrix3fv(getUniform(_name), 1, GL_FALSE, glm::value_ptr(data));
+    }
+
+    void Shader::setUniform(const std::string& _name, const glm::mat4& data) {
+        glUniformMatrix4fv(getUniform(_name), 1, GL_FALSE, glm::value_ptr(data));
+    }
+
+    void Shader::setUniform(const std::string& _name, const glm::mat4* data, int elements) {
+        glUniformMatrix4fv(getUniform(_name), elements, GL_FALSE, glm::value_ptr(data[0]));
+    }
+
+    void Shader::setUniform(const std::string& _name, const glm::vec3* data, int elements) {
+        glUniform3fv(getUniform(_name), elements, glm::value_ptr(data[0]));
+    }
+
+    void Shader::setUniform(const std::string& _name, const glm::vec4* data, int elements) {
+        glUniform4fv(getUniform(_name), elements, glm::value_ptr(data[0]));
     }
 
 } // namespace Progression
