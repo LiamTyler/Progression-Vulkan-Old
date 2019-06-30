@@ -7,7 +7,8 @@
 
 namespace Progression {
 
-    typedef struct TextureMetaData {
+    class TextureMetaData : public MetaData {
+    public:
         TimeStampedFile file = TimeStampedFile();
         Image* image         = nullptr;
         GLint internalFormat = GL_SRGB;
@@ -17,7 +18,7 @@ namespace Progression {
         GLint wrapModeT      = GL_REPEAT;
         bool mipMapped       = true;
         bool freeCPUCopy     = true;
-    } TextureUsageDesc;
+    };
 
     class Texture2D : public NonCopyable, public Resource {
     public:
@@ -28,8 +29,9 @@ namespace Progression {
         Texture2D(Texture2D&& texture);
         Texture2D& operator=(Texture2D&& texture);
 
-        bool load() override;
-        bool loadMetaDataFromFile(std::istream& in);
+        bool load(MetaData* metaData = nullptr) override;
+        bool loadFromResourceFile(std::istream& in) override;
+        void move(Resource* resource) override;
         Resource* needsReloading() override;
         void uploadToGPU();
         

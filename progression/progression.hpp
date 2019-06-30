@@ -31,7 +31,6 @@
 #include "resource/material.hpp"
 #include "resource/texture2D.hpp"
 #include "resource/shader.hpp"
-#include "resource/resourceIO/io.hpp"
 #include "utils/logger.hpp"
 #include "utils/random.hpp"
 

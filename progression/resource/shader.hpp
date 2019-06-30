@@ -8,7 +8,8 @@
 
 namespace Progression {
 
-    typedef struct ShaderMetaData {
+    class ShaderMetaData : public MetaData {
+    public:
         bool operator==(const ShaderMetaData& desc) const;
         bool operator!=(const ShaderMetaData& desc) const;
         bool outOfDate(const ShaderMetaData& metaData) const;
@@ -17,7 +18,7 @@ namespace Progression {
         TimeStampedFile geometry;
         TimeStampedFile fragment;
         TimeStampedFile compute;
-    } ShaderMetaData;
+    };
 
 	class Shader : public NonCopyable, public Resource {
 	public:
@@ -29,11 +30,12 @@ namespace Progression {
         Shader(Shader&& shader);
         Shader& operator=(Shader&& shader);
 
-        bool load() override;
+        bool load(MetaData* metaData = nullptr) override;
         bool loadFromText();
         bool loadFromBinary(const char* binarySource, GLint len, GLenum format);
         char* getShaderBinary(GLint& len, GLenum& format);
-        bool loadMetaDataFromFile(std::istream& in);
+        bool loadFromResourceFile(std::istream& in) override;
+        void move(Resource* resource) override;
 
         Resource* needsReloading() override;
 

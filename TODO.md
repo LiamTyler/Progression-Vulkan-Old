@@ -36,9 +36,10 @@
 
 ## Core
 - [ ] switch to using ECS
+- [ ] imgui
 - [ ] add in Lua scripting
 - [ ] multi-threaded logger
 
 ## Low priority software engineering related
-- [ ] follow clang tidy
+- [ ] follow style / clang tidy
 - [ ] doxygen comments fully

@@ -41,10 +41,6 @@ set(
     resource/shader.cpp
     resource/texture2D.cpp
 
-    #resource/resourceIO/shader_io.cpp
-    #resource/resourceIO/model_io.cpp
-    #resource/resourceIO/material_io.cpp
-
     #components/user_camera_component.cpp
 
     utils/logger.cpp
@@ -88,11 +84,6 @@ set(
     resource/model.hpp
     resource/shader.hpp
     resource/texture2D.hpp
-
-    #resource/resourceIO/shader_io.hpp
-    #resource/resourceIO/model_io.hpp
-    #resource/resourceIO/material_io.hpp
-    #resource/resourceIO/io.hpp
 
     #components/user_camera_component.hpp
     

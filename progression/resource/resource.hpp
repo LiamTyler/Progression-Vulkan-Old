@@ -51,13 +51,17 @@ namespace Progression {
         std::string filename;
     };
 
+    class MetaData {};
+
     class Resource {
     public:
         Resource() : name("") {}
         Resource(const std::string& n) : name(n) {}
         virtual ~Resource() = default;
 
-        virtual bool load() { return false; }
+        virtual bool load(MetaData* metaData = nullptr) = 0;
+        virtual bool loadFromResourceFile(std::istream& in) = 0;
+        virtual void move(Resource* resource) = 0;
         virtual Resource* needsReloading() { return nullptr; }
 
         std::string name;

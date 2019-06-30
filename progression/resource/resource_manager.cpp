@@ -1,20 +1,23 @@
 #include "resource/resource_manager.hpp"
-#include "resource/mesh.hpp"
+#include "resource/model.hpp"
+#include "resource/material.hpp"
+#include "resource/shader.hpp"
+#include "resource/texture2D.hpp"
 #include "core/configuration.hpp"
-#include "resource/resourceIO/io.hpp"
-#include "utils/logger.hpp"
 #include <sys/stat.h>
+#include "utils/logger.hpp"
 #include <thread>
 #include <mutex>
 #include <future>
+#include <tuple>
 #include "core/window.hpp"
+
+
 
 namespace Progression {
     
 namespace ResourceManager {
 
-    using ResourceMap = std::unordered_map<std::string, Resource*>;
-    using ResourceDB = std::vector<ResourceMap>;
     using FileMap = std::unordered_map<std::string, TimeStampedFile>;
     
     ResourceDB f_resources;
@@ -45,38 +48,22 @@ namespace ResourceManager {
             db.clear();
         }
 
-        Texture2D* loadTexture2DInternal(const std::string &name, const TextureMetaData &metaData, std::unordered_map<std::string, Resource*>& resources) {
-            Texture2D tex(name, metaData);
-            if (!tex.load())
-            {
-                LOG_ERR("Failed to load texture: ", name);
-                return nullptr;
-            }
-
-            if (resources.find(name) != resources.end()) {
-                *resources[name] = std::move(tex);
-            } else {
-                resources[name] = new Texture2D(std::move(tex));
-            }
-
-            return (Texture2D *)resources[name];
-        }
-
-        Shader* loadShaderInternal(const std::string &name, const ShaderMetaData &metaData, std::unordered_map<std::string, Resource*>& shaders) {
-            Shader shader(name, metaData);
-            if (!shader.load())
-            {
-                LOG_ERR("Failed to load shader: ", name);
-                return nullptr;
-            }
-
-            if (shaders.find(name) != shaders.end()) {
-                *shaders[name] = std::move(shader);
-            } else {
-                shaders[name] = new Shader(std::move(shader));
-            }
-
-            return (Shader *)shaders[name];
+        #define PARSE_AND_LOAD(TYPE) \
+        else if (line == #TYPE) \
+        { \
+            TYPE resource; \
+            if (!resource.loadFromResourceFile(in)) { \
+                LOG_ERR("Failed to load resource with name '", resource.name, "'"); \
+                return false; \
+            } \
+            \
+            ResourceMap& resMap = DB[getResourceTypeID<TYPE>()]; \
+            if (resMap.find(resource.name) != resMap.end()) { \
+                *(resMap[resource.name]) = std::move(resource); \
+            } else { \
+                std::string name = resource.name; \
+                resMap[name] = new TYPE(std::move(resource)); \
+            } \
         }
 
         bool BG_LoadResources(const std::string& fname, ResourceDB* db) {
@@ -96,36 +83,20 @@ namespace ResourceManager {
             }
 
             std::string line;
-            while (std::getline(in, line)) {
+            while (std::getline(in, line) && !bg_scanningThreadExit_) {
                 if (line == "" || line[0] == '#'){
                     continue;
-                } else if (line == "Shader") {
-                    Shader shader;
-                    if (!shader.loadMetaDataFromFile(in)) {
-                        LOG("could not parse shader: ", shader.name);
-                        return false;
-                    }
-                    LOG("parsed shader meta");
-                    if (!loadShaderInternal(shader.name, shader.metaData, DB[getResourceTypeID<Shader>()])) {
-                        LOG("Could not load shader: ", shader.name);
-                        return false;
-                    }
-                } else if (line == "Texture2D") {
-                    Texture2D tex;
-                    if (!tex.loadMetaDataFromFile(in)) {
-                        LOG("could not parse texture2D: ", tex.name);
-                        return false;
-                    }
-                    LOG("parsed shader meta");
-                    if (!loadTexture2DInternal(tex.name, tex.metaData, DB[getResourceTypeID<Texture2D>()])) {
-                        LOG("Could not load texture2D: ", tex.name);
-                        return false;
-                    }
+                }
+                PARSE_AND_LOAD(Shader)
+                PARSE_AND_LOAD(Texture2D)
+                PARSE_AND_LOAD(Material)
+                PARSE_AND_LOAD(Model)
+                else {
+                    LOG_WARN("Unrecognized line: ", line);
                 }
             }
 
             in.close();
-
             return true;
         }
 
@@ -140,7 +111,7 @@ namespace ResourceManager {
             bg_scanningResources_.resize(TOTAL_RESOURCE_TYPES);
 
             while (!bg_scanningThreadExit_) {
-                std::this_thread::sleep_for(std::chrono::seconds(1));
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
                 // update file timestamps
                 bool updateNeeded = false;
@@ -152,46 +123,28 @@ namespace ResourceManager {
                     }
                 }
 
-                uint32_t typeID = -1;
-                // shaders
-                typeID = getResourceTypeID<Shader>();
-                for (const auto& [name, res]: f_resources[typeID]) {
-                    Shader* shader = (Shader*) res;
-
-                    auto newShader = shader->needsReloading();
-                    if (newShader) {
-                        LOG("Reload needed for shader: ", name);
-                        if (!newShader->load()) {
-                            LOG_ERR("Failed to reload shader: ", name);
-                            delete newShader;
-                            continue;
+                for (size_t typeID = 0; typeID < f_resources.size() && !bg_scanningThreadExit_; ++typeID) {
+                    auto& bg_map = bg_scanningResources_[typeID];
+                    for (const auto& [resName, resPtr] : f_resources[typeID]) {
+                        if (bg_scanningThreadExit_)
+                            break;
+                        auto newRes = resPtr->needsReloading();
+                        if (newRes) {
+                            LOG("Reload needed for resource: ", resName);
+                            if (!newRes->load()) {
+                                LOG_ERR("Failed to reload shader: ", resName);
+                                delete newRes;
+                                continue;
+                            }
+                            bg_lock_.lock();
+                            if (bg_map.find(resName) != bg_map.end())
+                                delete bg_map[resName];
+                            bg_map[resName] = newRes;
+                            bg_lock_.unlock();
                         }
-                        bg_lock_.lock();
-                        bg_scanningResources_[typeID][newShader->name] = newShader;
-                        bg_lock_.unlock();
-                    }
-                }
-
-                // texture2D
-                typeID = getResourceTypeID<Texture2D>();
-                for (const auto& [name, resource]: f_resources[typeID]) {
-                    Texture2D* shader = (Texture2D*) resource;
-
-                    auto newResource = shader->needsReloading();
-                    if (newResource) {
-                        LOG("Reload needed for texture2D: ", name);
-                        if (!newResource->load()) {
-                            LOG_ERR("Failed to reload texture2D: ", name);
-                            delete newResource;
-                            continue;
-                        }
-                        bg_lock_.lock();
-                        bg_scanningResources_[typeID][newResource->name] = newResource;
-                        bg_lock_.unlock();
                     }
                 }
             }
-
             // exiting, clean up resources
             freeResources(bg_scanningResources_);
             bg_scanningResources_.clear();
@@ -203,33 +156,23 @@ namespace ResourceManager {
         f_resources.resize(TOTAL_RESOURCE_TYPES);
         bg_scanningThreadExit_ = false;
         // glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        // materials_["default"] = Material();
-
+        auto defaultMat = new Material;
+        defaultMat->Kd = glm::vec3(1, 1, 0);
+        f_resources[getResourceTypeID<Material>()]["default"] = defaultMat;
         bg_scanningThread_ = std::thread(scanResources);
     }
 
     void moveBackgroundResources(ResourceDB& newResources) {
-        uint32_t typeID = getResourceTypeID<Shader>();
-        ResourceMap* currentResources = &f_resources[typeID];
-        for (auto& [name, res] : newResources[typeID]) {
-            auto it = currentResources->find(name);
-            if (it == currentResources->end()) {
-                (*currentResources)[name] = res;
-            } else {
-                *(Shader*) it->second = std::move(*(Shader*) res);
-                delete res;
-            }
-        }
-
-        typeID = getResourceTypeID<Texture2D>();
-        currentResources = &f_resources[typeID];
-        for (auto& [name, res] : newResources[typeID]) {
-            auto it = currentResources->find(name);
-            if (it == currentResources->end()) {
-                (*currentResources)[name] = res;
-            } else {
-                *(Texture2D*) it->second = std::move(*(Texture2D*) res);
-                delete res;
+        for (size_t typeID = 0; typeID < TOTAL_RESOURCE_TYPES; ++typeID) {
+            ResourceMap& currentResources = f_resources[typeID];
+            for (auto& [name, res] : newResources[typeID]) {
+                auto it = currentResources.find(name);
+                if (it == currentResources.end()) {
+                    currentResources[name] = res;
+                } else {
+                    res->move(it->second);
+                    delete res;
+                }
             }
         }
     }
@@ -242,6 +185,47 @@ namespace ResourceManager {
         bg_scanningResources_.clear();
         bg_scanningResources_.resize(TOTAL_RESOURCE_TYPES);
         bg_lock_.unlock();
+    }
+
+    void resolveSoftLinks() {
+        auto resolveMaterialTextures = [](Material* mat) {
+            auto& texName = mat->map_Kd_name;
+            if (texName != "") {
+                if (ResourceManager::get<Texture2D>(texName)) {
+                    mat->map_Kd = ResourceManager::get<Texture2D>(texName);
+                } else {
+                    TextureMetaData data;
+                    data.file = TimeStampedFile(PG_RESOURCE_DIR + texName);
+                    mat->map_Kd = ResourceManager::load<Texture2D>(texName, &data);
+                }
+            }
+        };
+
+        auto typeID = getResourceTypeID<Material>();
+        for (auto& [name, res] : f_resources[typeID]) {
+            resolveMaterialTextures((Material*) res);
+        }
+
+        typeID = getResourceTypeID<Model>();
+        for (auto& [name, res] : f_resources[typeID]) {
+            Model* model = (Model*) res;
+            for (size_t i = 0; i < model->materials.size(); ++i) {
+                Material* mat = model->materials[i];
+                if (get<Material>(mat->name)) {
+                    model->materials[i] = get<Material>(mat->name);
+                    delete mat;
+                    continue;
+                }
+                LOG("Loading material: ", mat->name);
+
+                // TODO (?) add to manager
+                resolveMaterialTextures(mat);
+            }
+
+            for (auto& mesh : model->meshes) {
+                mesh.uploadToGpu(model->metaData.freeCpuCopy);
+            }
+        }
     }
 
     void waitUntilLoadComplete(const std::string& resFile) {
@@ -258,6 +242,8 @@ namespace ResourceManager {
             }
         }
         loadingResourceFiles_.clear();
+
+        resolveSoftLinks();
     }
 
     void shutdown() {
@@ -273,14 +259,6 @@ namespace ResourceManager {
         freeResources(f_resources);
         resourceFiles_.clear();
         f_resources.clear();
-    }
-
-    Texture2D* loadTexture2D(const std::string& name, const TextureMetaData& metaData) {
-        return loadTexture2DInternal(name, metaData, f_resources[getResourceTypeID<Texture2D>()]);
-    }
-
-    Shader* loadShader(const std::string& name, const ShaderMetaData& metaData) {
-        return loadShaderInternal(name, metaData, f_resources[getResourceTypeID<Shader>()]);
     }
 
     void loadResourceFileAsync(const std::string& fname) {

@@ -182,8 +182,15 @@ namespace Progression {
         return nullptr;
     }    
 
-    bool Shader::load() {
+    bool Shader::load(MetaData* data) {
+        if (data)
+            metaData = *(ShaderMetaData*) data;
         return loadFromText();
+    }
+
+    void Shader::move(Resource* resource) {
+        Shader& newShader = *(Shader*) resource;
+        newShader = std::move(*this);
     }
 
     bool Shader::loadFromText() {
@@ -269,7 +276,7 @@ namespace Progression {
         return binary;
     }
 
-    bool Shader::loadMetaDataFromFile(std::istream& in) {
+    bool Shader::loadFromResourceFile(std::istream& in) {
         std::string line;
         std::string s;
         std::istringstream ss;
@@ -321,7 +328,10 @@ namespace Progression {
         }
         PG_ASSERT(!in.fail() && !ss.fail());
 
-        return !in.fail() && !ss.fail();
+        if (in.fail() || ss.fail())
+            return false;
+
+        return load();
     }
 
     void Shader::enable() const {

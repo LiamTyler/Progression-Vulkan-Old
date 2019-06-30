@@ -1,6 +1,7 @@
 #include "progression.hpp"
 #include <iomanip>
 #include <thread>
+#include <future>
 
 #ifdef __linux__ 
 #pragma GCC diagnostic ignored "-Wunused-variable"
@@ -17,15 +18,22 @@ int main(int argc, char* argv[]) {
     Window* window = getMainWindow();
     //window->setRelativeMouse(true);
 
-    ResourceManager::init();
-
-    // Shader& shader = *ResourceManager::get<Shader>("test");
-    // Model& model   = *ResourceManager::get<Model>("models/chalet2.obj");
-
     ResourceManager::loadResourceFileAsync(PG_RESOURCE_DIR "scenes/resource.txt");
     ResourceManager::waitUntilLoadComplete();
 
+    Model& model = *ResourceManager::get<Model>("chalet");
     Shader& shader = *ResourceManager::get<Shader>("test");
+
+    LOG("Num mats = ", model.materials.size());
+    auto m = *model.materials[0];
+    LOG("Ka = ", m.Ka);
+    LOG("Kd = ", m.Kd);
+    LOG("Ks = ", m.Ks);
+    LOG("Ke = ", m.Ke);
+    LOG("Ns = ", m.Ns);
+    LOG("map_kd_name = ", m.map_Kd_name);
+    LOG("map_kd = ", m.map_Kd);
+
 
     float quadVerts[] = {
         -1, 1, 0,   0, 0, 1,    0, 1,
@@ -45,13 +53,14 @@ int main(int argc, char* argv[]) {
     graphicsApi::describeAttribute(1, 3, GL_FLOAT, sizeof(GL_FLOAT) * 8, sizeof(float) * 3);
     graphicsApi::describeAttribute(2, 2, GL_FLOAT, sizeof(GL_FLOAT) * 8, sizeof(float) * 6);
 
-    Material mat;
-    mat.Ka = glm::vec3(0);
-    mat.Kd = glm::vec3(1, 0, 0);
-    mat.Ks = glm::vec3(0);
-    mat.Ke = glm::vec3(0);
-    mat.Ns = 50;
-    mat.map_Kd = ResourceManager::get<Texture2D>("cockatoo");
+    // Material mat;
+    // mat.Ka = glm::vec3(0);
+    // mat.Kd = glm::vec3(1, 0, 0);
+    // mat.Ks = glm::vec3(0);
+    // mat.Ke = glm::vec3(0);
+    // mat.Ns = 50;
+    // mat.map_Kd = ResourceManager::get<Texture2D>("cockatoo");
+    // Material& mat = *ResourceManager::get<Material>("chalet");
 
     graphicsApi::toggleDepthTest(true);
     graphicsApi::toggleDepthWrite(true);
@@ -60,9 +69,9 @@ int main(int argc, char* argv[]) {
 
     Transform modelTransform(
             glm::vec3(0, 0, 0),
-            glm::vec3(0, 0, 0),
+            glm::vec3(glm::radians(-90.0f), glm::radians(90.0f), glm::radians(-0.0f)),
             glm::vec3(1));
-    Camera camera(glm::vec3(0, 0, 5), glm::vec3(0));
+    Camera camera(glm::vec3(0, 0, 3), glm::vec3(0));
 
     glm::vec3 lightDir = -glm::normalize(glm::vec3(0, 0, -1));
 
@@ -73,8 +82,9 @@ int main(int argc, char* argv[]) {
 
         ResourceManager::update();
 
-        if (PG::Input::GetKeyDown(PG::PG_K_ESC))
+        if (PG::Input::GetKeyDown(PG::PG_K_ESC)) {
             PG::EngineShutdown = true;
+        }
 
         graphicsApi::clearColor(0, 0, 0, 0);
         graphicsApi::clearColorBuffer();
@@ -86,45 +96,42 @@ int main(int argc, char* argv[]) {
         shader.setUniform("M", M);
         shader.setUniform("N", N);
         shader.setUniform("MVP", MVP);
-
         shader.setUniform("cameraPos", camera.position);
         shader.setUniform("lightDirInWorldSpace", lightDir);
 
-        graphicsApi::bindVao(quadVao);
-        shader.setUniform("kd", mat.Kd);
-        shader.setUniform("ks", mat.Ks);
-        shader.setUniform("ke", mat.Ke);
-        shader.setUniform("shininess", mat.Ns);
-        if (mat.map_Kd) {
-            shader.setUniform("textured", true);
-            graphicsApi::bind2DTexture(mat.map_Kd->gpuHandle(), shader.getUniform("diffuseTex"), 0);
-        } else {
-            shader.setUniform("textured", false);
-        }
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        //     glDrawElements(GL_TRIANGLES, mesh.getNumIndices(), GL_UNSIGNED_INT, 0);
-        // for (size_t i = 0; i < model.meshes.size(); ++i) {
-        //     const auto& mesh = model.meshes[i];
-        //     const auto& mat = *model.materials[i];
-        //     graphicsApi::bindVao(mesh.vao);
-        //     shader.setUniform("kd", mat.Kd);
-        //     shader.setUniform("ks", mat.Ks);
-        //     shader.setUniform("ke", mat.Ke);
-        //     shader.setUniform("shininess", mat.Ns);
-        //     if (mat.map_Kd) {
-        //         shader.setUniform("textured", true);
-        //         graphicsApi::bind2DTexture(mat.map_Kd->gpuHandle(), shader.getUniform("diffuseTex"), 0);
-        //     } else {
-        //         shader.setUniform("textured", false);
-        //     }
-
-        //     glDrawElements(GL_TRIANGLES, mesh.getNumIndices(), GL_UNSIGNED_INT, 0);
+        // graphicsApi::bindVao(quadVao);
+        // shader.setUniform("kd", mat.Kd);
+        // shader.setUniform("ks", mat.Ks);
+        // shader.setUniform("ke", mat.Ke);
+        // shader.setUniform("shininess", mat.Ns);
+        // if (mat.map_Kd) {
+        //     shader.setUniform("textured", true);
+        //     graphicsApi::bind2DTexture(mat.map_Kd->gpuHandle(), shader.getUniform("diffuseTex"), 0);
+        // } else {
+        //     shader.setUniform("textured", false);
         // }
+        // glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        for (size_t i = 0; i < model.meshes.size(); ++i) {
+            const auto& mesh = model.meshes[i];
+            const auto& mat = *model.materials[i];
+            graphicsApi::bindVao(mesh.vao);
+            shader.setUniform("kd", mat.Kd);
+            shader.setUniform("ks", mat.Ks);
+            shader.setUniform("ke", mat.Ke);
+            shader.setUniform("shininess", mat.Ns);
+            if (mat.map_Kd) {
+                shader.setUniform("textured", true);
+                graphicsApi::bind2DTexture(mat.map_Kd->gpuHandle(), shader.getUniform("diffuseTex"), 0);
+            } else {
+                shader.setUniform("textured", false);
+            }
+
+            glDrawElements(GL_TRIANGLES, mesh.getNumIndices(), GL_UNSIGNED_INT, 0);
+        }
 
         window->endFrame();
     }
-
 
     PG::EngineQuit();
 

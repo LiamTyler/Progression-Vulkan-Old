@@ -22,7 +22,7 @@ namespace Progression {
         initWindowSystem();
         Time::Init(conf);
         Input::Init(conf);
-        // ResourceManager::Init(conf);
+        ResourceManager::init();
         // RenderSystem::Init(conf);
 #if PG_AUDIO_ENABLED
         AudioSystem::Init(conf);
@@ -34,7 +34,7 @@ namespace Progression {
         AudioSystem::Free();
 #endif
         // RenderSystem::Free();
-        // ResourceManager::Free();
+        ResourceManager::shutdown();
         Input::Free();
         Time::Free();
         shutdownWindowSystem();

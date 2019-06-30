@@ -1,9 +1,6 @@
 #pragma once
 
 #include "resource/resource.hpp"
-#include "resource/material.hpp"
-#include "resource/shader.hpp"
-#include "resource/texture2D.hpp"
 #include <unordered_map>
 #include <vector>
 #include "utils/logger.hpp"
@@ -30,15 +27,21 @@ namespace Progression {
     enum ResourceTypes {
         SHADER = 0,
         TEXTURE2D,
+        MATERIAL,
+        MODEL,
         TOTAL_RESOURCE_TYPES
     };
     
 namespace ResourceManager {
 
-    extern std::vector<std::unordered_map<std::string, Resource*>> f_resources;
+    using ResourceMap = std::unordered_map<std::string, Resource*>;
+    using ResourceDB = std::vector<ResourceMap>;
+
+    extern ResourceDB f_resources;
 
     void init();
     void update();
+    void resolveSoftLinks();
     void waitUntilLoadComplete(const std::string& fname = "");
     void shutdown();
 
@@ -49,11 +52,30 @@ namespace ResourceManager {
         return it == group.end() ? nullptr : (T*) it->second;
     }
 
-    // std::vector<Material*> loadMaterials(const std::string& fname);
-    Texture2D*             loadTexture2D(const std::string& name, const TextureMetaData& metaData);
-    // Model*                 loadModel(const std::string& name, const std::string& fname,
-    //                                  bool optimize = true, bool freeCPUCopy = true);
-    Shader*                loadShader(const std::string& name, const ShaderMetaData& metaData);
+    template <typename T>
+    T* loadInternal(const std::string& name, MetaData* metaData, ResourceDB* db) {
+        static_assert(std::is_base_of<Resource, T>::value && !std::is_same<Resource, T>::value, "Can only call load with a class that inherits from Resource");
+        auto& DB = (*db)[getResourceTypeID<T>()];
+        T resource;
+        resource.name = name;
+        if (!resource.load(metaData)) {
+            LOG_ERR("Failed to load resource with name '", name, "'");
+            return nullptr;
+        }
+
+        if (DB.find(name) != DB.end()) {
+            *(DB[name]) = std::move(resource);
+        } else {
+            DB[name] = new T(std::move(resource));
+        }
+
+        return (T*) DB[name];
+    }
+
+    template <typename T>
+    T* load(const std::string& name, MetaData* metaData = nullptr) {
+        return loadInternal<T>(name, metaData, &f_resources);
+    }
 
     // for all the add functions, the resource will be moved into the manager, meaning that
     // any other reference to it will be invalidated. Get the newly managed copy with the get

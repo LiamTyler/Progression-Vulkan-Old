@@ -1,12 +1,50 @@
 #include "resource/mesh.hpp"
 #include "graphics/graphics_api.hpp"
+#include "utils/logger.hpp"
+#include "meshoptimizer/src/meshoptimizer.h"
+
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
+
+class Vertex {
+public:
+    Vertex() :
+        vertex(glm::vec3(0)),
+        normal(glm::vec3(0)),
+        uv(glm::vec3(0))
+    {
+    }
+
+    Vertex(const glm::vec3& vert, const glm::vec3& norm, const glm::vec2& tex) :
+        vertex(vert),
+        normal(norm),
+        uv(tex)
+    {
+    }
+
+    bool operator==(const Vertex& other) const {
+        return vertex == other.vertex && normal == other.normal && uv == other.uv;
+    }
+
+    glm::vec3 vertex;
+    glm::vec3 normal;
+    glm::vec2 uv;
+};
+
+namespace std {
+    template<> struct hash<Vertex> {
+        size_t operator()(Vertex const& vertex) const {
+            return ((hash<glm::vec3>()(vertex.vertex) ^
+                        (hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^
+                (hash<glm::vec2>()(vertex.uv) << 1);
+        }
+    };
+}        
+
 
 namespace Progression {
 
     Mesh::Mesh() {
-        graphicsApi::createBuffers(&vertexBuffer, 1);
-        graphicsApi::createBuffers(&indexBuffer, 1);
-        vao = graphicsApi::createVao();
     }
 
     Mesh::~Mesh() {
@@ -31,6 +69,7 @@ namespace Progression {
         numIndices_    = std::move(mesh.numIndices_);
         normalOffset_  = std::move(mesh.normalOffset_);
         textureOffset_ = std::move(mesh.textureOffset_);
+        gpuDataCreated = std::move(mesh.gpuDataCreated);
 
         vertexBuffer = std::move(mesh.vertexBuffer);
         indexBuffer  = std::move(mesh.indexBuffer);
@@ -43,8 +82,72 @@ namespace Progression {
         return *this;
     }
 
+    void Mesh::optimize() {
+        if (vertices.size() == 0) {
+            LOG_ERR("Trying to optimize a mesh with no vertices. Did you free them after uploading to the GPU?");
+            return;
+        }
+        // collect everything back into interleaved data
+        std::vector<Vertex> opt_vertices;
+        for (size_t i = 0; i < vertices.size(); ++i) {
+            Vertex v;
+            v.vertex = vertices[i];
+            if (normals.size())
+                v.normal = normals[i];
+            if (uvs.size())
+                v.uv = uvs[i];
+
+            opt_vertices.push_back(v);
+        }
+
+        // const size_t kCacheSize = 16;
+        // meshopt_VertexCacheStatistics vcs = meshopt_analyzeVertexCache(&mesh.indices[0], mesh.indices.size(),
+        //         mesh.vertices.size(), kCacheSize, 0, 0);
+        // meshopt_OverdrawStatistics os = meshopt_analyzeOverdraw(&mesh.indices[0], mesh.indices.size(),
+        //         &vertices[0].vertex.x, mesh.vertices.size(), sizeof(Vertex));
+        // meshopt_VertexFetchStatistics vfs = meshopt_analyzeVertexFetch(&mesh.indices[0], mesh.indices.size(),
+        //         mesh.vertices.size(), sizeof(Vertex));
+        // LOG("Before:");
+        // LOG("ACMR: ", vcs.acmr, ", ATVR: ", vcs.atvr, ", avg overdraw: ", os.overdraw, " avg # fetched: ", vfs.overfetch);
+
+        // vertex cache optimization should go first as it provides starting order for overdraw
+        meshopt_optimizeVertexCache(&indices[0], &indices[0], indices.size(), opt_vertices.size());
+
+        // reorder indices for overdraw, balancing overdraw and vertex cache efficiency
+        const float kThreshold = 1.01f; // allow up to 1% worse ACMR to get more reordering opportunities for overdraw
+        meshopt_optimizeOverdraw(&indices[0], &indices[0], indices.size(),
+                                 &opt_vertices[0].vertex.x, opt_vertices.size(), sizeof(Vertex), kThreshold);
+
+        // vertex fetch optimization should go last as it depends on the final index order
+        meshopt_optimizeVertexFetch(&opt_vertices[0].vertex.x, &indices[0], indices.size(),
+                                    &opt_vertices[0].vertex.x, opt_vertices.size(), sizeof(Vertex));
+
+        // vcs = meshopt_analyzeVertexCache(&indices[0], indices.size(), vertices.size(), kCacheSize, 0, 0);
+        // os = meshopt_analyzeOverdraw(&indices[0], indices.size(), &vertices[0].vertex.x, vertices.size(), sizeof(Vertex));
+        // vfs = meshopt_analyzeVertexFetch(&indices[0], indices.size(), vertices.size(), sizeof(Vertex));
+        // LOG("After:");
+        // LOG("ACMR: ", vcs.acmr, ", ATVR: ", vcs.atvr, ", avg overdraw: ", os.overdraw, " avg # fetched: ", vfs.overfetch);
+
+        // collect back into mesh structure
+        for (size_t i = 0; i < opt_vertices.size(); ++i) {
+            const auto& v = opt_vertices[i];
+            vertices[i] = v.vertex;
+            if (normals.size())
+                normals[i] = v.normal;
+            if (uvs.size())
+                uvs[i] = v.uv;
+        }
+    }
+
     // TODO: dynamic meshes + usage
     void Mesh::uploadToGpu(bool freeCPUCopy) {
+        if (!gpuDataCreated) {
+            gpuDataCreated = true;
+            graphicsApi::createBuffers(&vertexBuffer, 1);
+            graphicsApi::createBuffers(&indexBuffer, 1);
+            vao = graphicsApi::createVao();
+        }
+
         GLenum usage = GL_STATIC_DRAW;
         numVertices_ = vertices.size();
         numIndices_  = indices.size();

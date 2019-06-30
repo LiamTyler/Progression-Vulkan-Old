@@ -47,7 +47,10 @@ namespace Progression {
         return tex;
     }
 
-    bool Texture2D::load() {
+    bool Texture2D::load(MetaData* data) {
+        if (data)
+            metaData = *(TextureMetaData*) data;
+        
         Image* img = new Image;
         if (!img->load(metaData.file.filename)) {
             LOG_ERR("Could not load texture image: ", metaData.file.filename);
@@ -110,6 +113,11 @@ namespace Progression {
         }
     }
 
+    void Texture2D::move(Resource* resource) {
+        Texture2D& newShader = *(Texture2D*) resource;
+        newShader = std::move(*this);
+    }
+
     static std::unordered_map<std::string, GLint> internalFormatMap = {
         { "R8",      GL_R8 },
         { "RG8",     GL_RG},
@@ -150,7 +158,7 @@ namespace Progression {
         { "mirror_clamp_to_edge", GL_MIRROR_CLAMP_TO_EDGE },
     };
 
-    bool Texture2D::loadMetaDataFromFile(std::istream& in) {
+    bool Texture2D::loadFromResourceFile(std::istream& in) {
         std::string line;
         std::string s;
         std::istringstream ss;
@@ -267,7 +275,10 @@ namespace Progression {
         metaData.wrapModeT = it->second;
         PG_ASSERT(!in.fail() && !ss.fail());
 
-        return !in.fail() && !ss.fail();
+        if (in.fail() || ss.fail())
+            return false;
+
+        return load();
     }
 
 } // namespace Progression
