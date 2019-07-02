@@ -1,8 +1,6 @@
 #include "core/window.hpp"
 #include "core/time.hpp"
 #include "utils/logger.hpp"
-#include <mutex>
-#include <array>
 
 #define BACKGROUND_WINDOWS 10
 
@@ -65,30 +63,19 @@ namespace Progression {
     namespace {
 
         Window* mainWindow = nullptr;
-        std::mutex glfwInitLock;
-        std::array<Window, BACKGROUND_WINDOWS> backgroundWindows;
 
     } // namespace anonymous
 
     // TODO: take in config info
-    void initWindowSystem() {
+    void initWindowSystem(const WindowCreateInfo& info) {
         if (!glfwInit()) {
             LOG_ERR("Could not initialize GLFW");
             exit(EXIT_FAILURE);
         }
 
         mainWindow = new Window;
-        WindowCreateInfo info;
         mainWindow->init(info);
-        // mainWindow->unbindContext();
 
-        // info.width = 1;
-        // info.height = 1;
-        // info.visible = false;
-        // for (auto& window : backgroundWindows) {
-        //     window.init(info);
-        //     LOG("created bg window");
-        // }
         mainWindow->bindContext();
     }
 

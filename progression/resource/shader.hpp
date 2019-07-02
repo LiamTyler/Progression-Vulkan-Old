@@ -37,7 +37,7 @@ namespace Progression {
         bool loadFromResourceFile(std::istream& in) override;
         void move(Resource* resource) override;
 
-        Resource* needsReloading() override;
+        std::shared_ptr<Resource> needsReloading() override;
 
         void free();
 		void queryUniforms();

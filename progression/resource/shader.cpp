@@ -175,9 +175,9 @@ namespace Progression {
         delete[] uniformName;
     }
 
-    Resource* Shader::needsReloading() {
+    std::shared_ptr<Resource> Shader::needsReloading() {
         if (metaData.update()) {
-            return new Shader(name, metaData);
+            return std::make_shared<Shader>(name, metaData);
         }
         return nullptr;
     }    

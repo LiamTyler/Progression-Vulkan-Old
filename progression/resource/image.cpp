@@ -80,7 +80,6 @@ namespace Progression {
         stbi_set_flip_vertically_on_load(flip_vertically);
         int width, height, numComponents;
         unsigned char* pixels = stbi_load(fname.c_str(), &width, &height, &numComponents, 0);
-        LOG("num components = ", numComponents);
 
         if (!pixels) {
             LOG_ERR("Failed to load image:", fname);

@@ -19,7 +19,17 @@ namespace Progression {
         srand(time(NULL));
         Logger::Init(conf);
         random::setSeed();
-        initWindowSystem();
+        auto winConfig = conf->get_table("window");
+        if (!winConfig) {
+            LOG_ERR("Need to specify the 'window' in the config file");
+            exit(EXIT_FAILURE);
+        }
+        WindowCreateInfo winCreate;
+		winCreate.title = winConfig->get_as<std::string>("title").value_or("Untitled");
+		winCreate.width = winConfig->get_as<int>("width").value_or(1280);
+		winCreate.height = winConfig->get_as<int>("height").value_or(720);
+		winCreate.visible = winConfig->get_as<bool>("visible").value_or(true);
+        initWindowSystem(winCreate);
         Time::Init(conf);
         Input::Init(conf);
         ResourceManager::init();

@@ -39,13 +39,8 @@ namespace ResourceManager {
         std::mutex bg_lock_;
 
         void freeResources(ResourceDB& db) {
-            for (const auto& resourceMap : db) {
-                for (auto& resourcePair : resourceMap) {
-                    if (resourcePair.second)
-                        delete resourcePair.second;
-                }
-            }
             db.clear();
+            db.resize(TOTAL_RESOURCE_TYPES);
         }
 
         #define PARSE_AND_LOAD(TYPE) \
@@ -62,7 +57,7 @@ namespace ResourceManager {
                 *(resMap[resource.name]) = std::move(resource); \
             } else { \
                 std::string name = resource.name; \
-                resMap[name] = new TYPE(std::move(resource)); \
+                resMap[name] = std::make_shared<TYPE>(std::move(resource)); \
             } \
         }
 
@@ -84,7 +79,7 @@ namespace ResourceManager {
 
             std::string line;
             while (std::getline(in, line) && !bg_scanningThreadExit_) {
-                if (line == "" || line[0] == '#'){
+                if (line == "" || line[0] == '#') {
                     continue;
                 }
                 PARSE_AND_LOAD(Shader)
@@ -133,12 +128,9 @@ namespace ResourceManager {
                             LOG("Reload needed for resource: ", resName);
                             if (!newRes->load()) {
                                 LOG_ERR("Failed to reload shader: ", resName);
-                                delete newRes;
                                 continue;
                             }
                             bg_lock_.lock();
-                            if (bg_map.find(resName) != bg_map.end())
-                                delete bg_map[resName];
                             bg_map[resName] = newRes;
                             bg_lock_.unlock();
                         }
@@ -152,14 +144,15 @@ namespace ResourceManager {
 
     } // namespace anonymous
 
-    void init() {
+    void init(bool scanner) {
         f_resources.resize(TOTAL_RESOURCE_TYPES);
         bg_scanningThreadExit_ = false;
         // glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        auto defaultMat = new Material;
+        auto defaultMat = std::make_shared<Material>();
         defaultMat->Kd = glm::vec3(1, 1, 0);
         f_resources[getResourceTypeID<Material>()]["default"] = defaultMat;
-        bg_scanningThread_ = std::thread(scanResources);
+        if (scanner)
+            bg_scanningThread_ = std::thread(scanResources);
     }
 
     void moveBackgroundResources(ResourceDB& newResources) {
@@ -170,11 +163,12 @@ namespace ResourceManager {
                 if (it == currentResources.end()) {
                     currentResources[name] = res;
                 } else {
-                    res->move(it->second);
-                    delete res;
+                    res->move(it->second.get());
+                    it->second = res;
                 }
             }
         }
+        resolveSoftLinks(newResources);
     }
 
     void update() {
@@ -187,48 +181,57 @@ namespace ResourceManager {
         bg_lock_.unlock();
     }
 
-    void resolveSoftLinks() {
+    bool resolveSoftLinks(ResourceDB& db) {
         auto resolveMaterialTextures = [](Material* mat) {
             auto& texName = mat->map_Kd_name;
             if (texName != "") {
                 if (ResourceManager::get<Texture2D>(texName)) {
-                    mat->map_Kd = ResourceManager::get<Texture2D>(texName);
+                    mat->map_Kd = ResourceManager::get<Texture2D>(texName).get();
                 } else {
                     TextureMetaData data;
                     data.file = TimeStampedFile(PG_RESOURCE_DIR + texName);
-                    mat->map_Kd = ResourceManager::load<Texture2D>(texName, &data);
+                    mat->map_Kd = ResourceManager::load<Texture2D>(texName, &data).get();
+                    if (!mat->map_Kd)
+                        return false;
                 }
             }
+            return true;
         };
 
+        bool ret = true;
         auto typeID = getResourceTypeID<Material>();
-        for (auto& [name, res] : f_resources[typeID]) {
-            resolveMaterialTextures((Material*) res);
+        for (auto& [name, res] : db[typeID]) {
+            LOG("Resolving mat: ", name);
+            ret = ret && resolveMaterialTextures((Material*) res.get());
         }
 
         typeID = getResourceTypeID<Model>();
-        for (auto& [name, res] : f_resources[typeID]) {
-            Model* model = (Model*) res;
+        for (auto& [name, res] : db[typeID]) {
+            LOG("starting resolve for model: ", name);
+            //Model* model = (Model*) res.get();
+            std::shared_ptr<Model> model = std::static_pointer_cast<Model>(res);
             for (size_t i = 0; i < model->materials.size(); ++i) {
-                Material* mat = model->materials[i];
+                auto& mat = model->materials[i];
                 if (get<Material>(mat->name)) {
                     model->materials[i] = get<Material>(mat->name);
-                    delete mat;
                     continue;
                 }
-                LOG("Loading material: ", mat->name);
 
                 // TODO (?) add to manager
-                resolveMaterialTextures(mat);
+                ret = ret && resolveMaterialTextures(mat.get());
             }
+            LOG("Uploading meshes for model: ", name);
 
             for (auto& mesh : model->meshes) {
                 mesh.uploadToGpu(model->metaData.freeCpuCopy);
             }
         }
+
+        return ret;
     }
 
-    void waitUntilLoadComplete(const std::string& resFile) {
+    bool waitUntilLoadComplete(const std::string& resFile) {\
+        bool ret = true;
         for (auto& [name, data] : loadingResourceFiles_) {
             if (resFile == "" || name == resFile) {
                 data.retVal.wait();
@@ -237,13 +240,16 @@ namespace ResourceManager {
                     resourceFiles_[data.resFile.filename] = data.resFile;
                 } else {
                     freeResources(*(data.db));
+                    ret = false;
                 }
                 delete data.db;
             }
         }
         loadingResourceFiles_.clear();
 
-        resolveSoftLinks();
+        //resolveSoftLinks();
+
+        return ret;
     }
 
     void shutdown() {
@@ -280,6 +286,18 @@ namespace ResourceManager {
         data.retVal = std::async(std::launch::async, BG_LoadResources, fname, data.db);
         data.resFile = TimeStampedFile(fname);
         loadingResourceFiles_[fname] = std::move(data);
+    }
+
+    bool createFastFile(const std::string& resourceFile) {
+        shutdown();
+        init(false);
+        loadResourceFileAsync(resourceFile);
+        if (!waitUntilLoadComplete()) {
+            LOG_ERR("Failed to properly load all of the resource");
+            return false;
+        }
+
+        return true;
     }
 
 } } // namespace Progression::ResourceManager

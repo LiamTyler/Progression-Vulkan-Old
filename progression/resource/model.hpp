@@ -27,14 +27,14 @@ namespace Progression {
         virtual bool load(MetaData* metaData = nullptr) override;
         virtual bool loadFromResourceFile(std::istream& in) override;
         virtual void move(Resource* resource) override;
-        virtual Resource* needsReloading() override;
+        virtual std::shared_ptr<Resource> needsReloading() override;
 
         bool loadFromObj();
         void optimize();
 
         ModelMetaData metaData;
         std::vector<Mesh> meshes;
-        std::vector<Material*> materials;
+        std::vector<std::shared_ptr<Material>> materials;
     };
 
 } // namespace Progression

@@ -76,9 +76,10 @@ namespace Progression {
         *model = std::move(*this);
     }
 
-    Resource* Model::needsReloading() {
+    std::shared_ptr<Resource> Model::needsReloading() {
         if (metaData.update()) {
-            return new Model(name, metaData);
+            LOG("Need to reload model");
+            return std::make_shared<Model>(name, metaData);
         }
         return nullptr;
     }
@@ -126,7 +127,7 @@ namespace Progression {
         std::getline(in, line);
         ss = std::istringstream(line);
         ss >> s;
-        PG_ASSERT(s == "freeCPUCopy");
+        PG_ASSERT(s == "freeCpuCopy");
         ss >> s;
         PG_ASSERT(s == "true" || s == "false");
         metaData.freeCpuCopy = s == "true";
@@ -159,7 +160,7 @@ namespace Progression {
         materials.clear();
 
         for (int currentMaterialID = -1; currentMaterialID < (int) tiny_materials.size(); ++currentMaterialID) {
-            Material* currentMaterial = new Material;
+            auto currentMaterial = std::make_shared<Material>();
             if (currentMaterialID == -1) {
                 currentMaterial->name = "default";
             } else {

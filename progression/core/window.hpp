@@ -42,7 +42,7 @@ namespace Progression {
         bool visible_       = false;
 	};
 
-    void initWindowSystem();
+    void initWindowSystem(const WindowCreateInfo& info);
     void shutdownWindowSystem();
     Window* getMainWindow();
 

@@ -130,12 +130,12 @@ namespace Progression {
                 std::string texName;
                 ss >> texName;
                 if (ResourceManager::get<Texture2D>(texName)) {
-                    mat->map_Kd = ResourceManager::get<Texture2D>(texName);
+                    mat->map_Kd = ResourceManager::get<Texture2D>(texName).get();
                     continue;
                 }
                 TextureMetaData meta;
                 meta.file = TimeStampedFile(rootTexDir + texName);
-                mat->map_Kd = ResourceManager::load<Texture2D>(texName, &meta);
+                mat->map_Kd = ResourceManager::load<Texture2D>(texName, &meta).get();
                 if (!mat->map_Kd) {
                     LOG_ERR("Unable to load material's texture: ", rootTexDir + texName);
                     // cleanup newly created textures

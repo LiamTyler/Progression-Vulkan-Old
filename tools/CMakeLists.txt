@@ -1,11 +1,11 @@
 include(Progression)
 
-add_executable(objToPGModel objToPGModel.cpp)
+add_executable(createFastFile createFastFile.cpp)
 
 set_target_properties(
-    objToPGModel
+    createFastFile
     PROPERTIES
     DEBUG_POSTFIX _debug
     )
 
-target_link_libraries(objToPGModel ${PROGRESSION_LIBS})
+target_link_libraries(createFastFile ${PROGRESSION_LIBS})

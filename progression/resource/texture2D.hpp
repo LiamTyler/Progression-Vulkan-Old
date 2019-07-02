@@ -32,7 +32,7 @@ namespace Progression {
         bool load(MetaData* metaData = nullptr) override;
         bool loadFromResourceFile(std::istream& in) override;
         void move(Resource* resource) override;
-        Resource* needsReloading() override;
+        std::shared_ptr<Resource> needsReloading() override;
         void uploadToGPU();
         
         GLuint gpuHandle() const { return gpuHandle_; }

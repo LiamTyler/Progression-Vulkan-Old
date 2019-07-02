@@ -40,9 +40,9 @@ add_subdirectory(progression)
 
 if (PROGRESSION_BUILD_EXAMPLES)
     add_subdirectory(examples/)
-    #set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT demo)
+    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT demo)
 endif()
 
-#if (PROGRESSION_BUILD_TOOLS)
-#    add_subdirectory(tools/)
-#endif()
+if (PROGRESSION_BUILD_TOOLS)
+    add_subdirectory(tools/)
+endif()

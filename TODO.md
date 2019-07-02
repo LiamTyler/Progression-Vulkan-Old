@@ -13,18 +13,18 @@
 - [x] resource manager
 - [x] loading resource text file
 - [x] re-use materials when loading models if its already been loaded
-- [ ] detect changed files + reload them
+- [x] detect changed files + reload them
 - [ ] convert resource file into 1 binary file
 - [ ] compress / decompress resource file
 - [ ] skybox loading
-- [ ] support per vertex colors
 - [ ] select different data types for mesh data (like shorts for indices)
 - [ ] select different mesh topology, like rendering with no index buffer, lines, etc
-- [ ] Texture Compression
+- [ ] Texture Compression (at least BC7)
 - [ ] offline mipmap generation
-- [ ] easy system for dynamic meshes
 - [ ] make sure all memory is properly released on failure cases in resource loadings
-- [ ] figure out the if really need to pass around the freeCPUCopy all the time
+- [ ] automatic LOD creation for models
+- [ ] support per vertex colors
+- [ ] easy system for dynamic meshes
 
 ## Rendering
 - [ ] Meshes easily

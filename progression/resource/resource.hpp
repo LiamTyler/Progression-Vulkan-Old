@@ -62,7 +62,7 @@ namespace Progression {
         virtual bool load(MetaData* metaData = nullptr) = 0;
         virtual bool loadFromResourceFile(std::istream& in) = 0;
         virtual void move(Resource* resource) = 0;
-        virtual Resource* needsReloading() { return nullptr; }
+        virtual std::shared_ptr<Resource> needsReloading() { return nullptr; }
 
         std::string name;
     };

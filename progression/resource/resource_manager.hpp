@@ -3,6 +3,7 @@
 #include "resource/resource.hpp"
 #include <unordered_map>
 #include <vector>
+#include <memory>
 #include "utils/logger.hpp"
 
 class ResourceTypeID {
@@ -34,26 +35,26 @@ namespace Progression {
     
 namespace ResourceManager {
 
-    using ResourceMap = std::unordered_map<std::string, Resource*>;
+    using ResourceMap = std::unordered_map<std::string, std::shared_ptr<Resource>>;
     using ResourceDB = std::vector<ResourceMap>;
 
     extern ResourceDB f_resources;
 
-    void init();
+    void init(bool scanner = true);
     void update();
-    void resolveSoftLinks();
-    void waitUntilLoadComplete(const std::string& fname = "");
+    bool resolveSoftLinks(ResourceDB& db);
+    bool waitUntilLoadComplete(const std::string& fname = "");
     void shutdown();
 
     template <typename T>
-    T* get(const std::string& name) {
+    std::shared_ptr<T> get(const std::string& name) {
         auto& group = f_resources[getResourceTypeID<T>()];
         auto it = group.find(name);
-        return it == group.end() ? nullptr : (T*) it->second;
+        return it == group.end() ? nullptr : std::static_pointer_cast<T>(it->second);
     }
 
     template <typename T>
-    T* loadInternal(const std::string& name, MetaData* metaData, ResourceDB* db) {
+    std::shared_ptr<T> loadInternal(const std::string& name, MetaData* metaData, ResourceDB* db) {
         static_assert(std::is_base_of<Resource, T>::value && !std::is_same<Resource, T>::value, "Can only call load with a class that inherits from Resource");
         auto& DB = (*db)[getResourceTypeID<T>()];
         T resource;
@@ -66,14 +67,14 @@ namespace ResourceManager {
         if (DB.find(name) != DB.end()) {
             *(DB[name]) = std::move(resource);
         } else {
-            DB[name] = new T(std::move(resource));
+            DB[name] = std::make_shared<T>(std::move(resource));
         }
 
-        return (T*) DB[name];
+        return std::static_pointer_cast<T>(DB[name]);
     }
 
     template <typename T>
-    T* load(const std::string& name, MetaData* metaData = nullptr) {
+    std::shared_ptr<T> load(const std::string& name, MetaData* metaData = nullptr) {
         return loadInternal<T>(name, metaData, &f_resources);
     }
 
@@ -84,5 +85,8 @@ namespace ResourceManager {
     // void add(const std::string& name, T* resource) {}
 
     void loadResourceFileAsync(const std::string& fname);
+
+    // meant to be called without any other resources loaded already
+    bool createFastFile(const std::string& resourceFile);
 
 } } // namespace Progression::Resource

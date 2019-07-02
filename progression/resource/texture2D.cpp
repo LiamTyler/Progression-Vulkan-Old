@@ -39,12 +39,11 @@ namespace Progression {
         return *this;
     }
 
-    Resource* Texture2D::needsReloading() {
-        Texture2D* tex = nullptr;
+    std::shared_ptr<Resource> Texture2D::needsReloading() {
         if (metaData.file.update()) {
-            tex = new Texture2D(name, metaData);
+            return std::make_shared<Texture2D>(name, metaData);
         }
-        return tex;
+        return nullptr;
     }
 
     bool Texture2D::load(MetaData* data) {
@@ -178,6 +177,7 @@ namespace Progression {
         ss >> s;
         PG_ASSERT(s == "filename");
         ss >> s;
+        LOG("FILENAME = ", s);
         PG_ASSERT(!in.fail() && !ss.fail());
         metaData.file = TimeStampedFile(PG_RESOURCE_DIR + s);
 
