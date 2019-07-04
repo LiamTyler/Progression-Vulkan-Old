@@ -21,6 +21,7 @@
 - [ ] select different mesh topology, like rendering with no index buffer, lines, etc
 - [ ] Texture Compression (at least BC7)
 - [ ] offline mipmap generation
+- [ ] Change the resource DB types so that you dont have to resize by hand / forget
 - [ ] make sure all memory is properly released on failure cases in resource loadings
 - [ ] automatic LOD creation for models
 - [ ] support per vertex colors

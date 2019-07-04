@@ -5,6 +5,15 @@
 #include "resource/resource.hpp"
 #include "core/common.hpp"
 #include "utils/noncopyable.hpp"
+#include <unordered_set>
+
+#define PG_SHADER_WARNINGS
+
+#ifndef PG_SHADER_WARNINGS
+#define PG_SHADER_GETTER_CONST const
+#else
+#define PG_SHADER_GETTER_CONST
+#endif
 
 namespace Progression {
 
@@ -34,7 +43,7 @@ namespace Progression {
         bool loadFromText();
         bool loadFromBinary(const char* binarySource, GLint len, GLenum format);
         char* getShaderBinary(GLint& len, GLenum& format);
-        bool loadFromResourceFile(std::istream& in) override;
+        ResUpdateStatus loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) override;
         void move(Resource* resource) override;
 
         std::shared_ptr<Resource> needsReloading() override;
@@ -43,8 +52,8 @@ namespace Progression {
 		void queryUniforms();
 		void enable() const;
 		void disable() const;
-		GLuint getUniform(const std::string& name) const;
-		GLuint getAttribute(const std::string& name) const;
+		GLuint getUniform(const std::string& name) PG_SHADER_GETTER_CONST;
+		GLuint getAttribute(const std::string& name) PG_SHADER_GETTER_CONST;
 		GLuint getProgram() const { return program_; }
 
         void setUniform(const std::string& name, const bool data);
@@ -66,6 +75,9 @@ namespace Progression {
 	protected:
 		GLuint program_;
 		std::unordered_map<std::string, GLuint> uniforms_;
+        #ifdef PG_SHADER_WARNINGS
+        std::unordered_set<size_t> warnings_;
+        #endif
 	};
 
 } // namespace Progression

@@ -14,7 +14,7 @@ namespace Progression {
         newResource = std::move(*this);
     }
 
-    bool Material::loadFromResourceFile(std::istream& in)
+    ResUpdateStatus Material::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc)
     {
         std::string line;
         std::string s;
@@ -77,16 +77,14 @@ namespace Progression {
             ss >> s;
             PG_ASSERT(!in.fail() && !ss.fail());
             map_Kd_name = s;
-            // if (ResourceManager::get<Texture2D>(s)) {
-            //     map_Kd = ResourceManager::get<Texture2D>(s);
-            // } else {
-            //     LOG_ERR("Diffuse texture '", s, "' for Material '", name, "' needs to be already loaded");
-            //     return false;
-            // }
         }
         PG_ASSERT(!in.fail() && !ss.fail());
 
-        return !in.fail() && !ss.fail();
+        if (in.fail() || ss.fail())
+            return RES_PARSE_ERROR;
+
+        UNUSED(updateFunc);
+        return RES_RELOAD_SUCCESS;
     }
 
     bool Material::loadMtlFile(
@@ -142,6 +140,8 @@ namespace Progression {
                     for (const auto& t : newTextures)
                         delete t;
                     return false;
+                } else {
+                    newTextures.push_back(mat->map_Kd);
                 }
             }
         }

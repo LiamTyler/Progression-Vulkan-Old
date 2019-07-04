@@ -65,8 +65,10 @@ namespace Progression {
     }
 
     Model& Model::operator=(Model&& model) {
+        name = std::move(model.name);
         meshes = std::move(model.meshes);
         materials = std::move(model.materials);
+        metaData = std::move(model.metaData);
 
         return *this;
     }
@@ -78,9 +80,9 @@ namespace Progression {
 
     std::shared_ptr<Resource> Model::needsReloading() {
         if (metaData.update()) {
-            LOG("Need to reload model");
             return std::make_shared<Model>(name, metaData);
         }
+        
         return nullptr;
     }
 
@@ -91,7 +93,7 @@ namespace Progression {
         return loadFromObj();
     }
 
-    bool Model::loadFromResourceFile(std::istream& in) {
+    ResUpdateStatus Model::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) {
         std::string line;
         std::string s;
         std::istringstream ss;
@@ -133,7 +135,19 @@ namespace Progression {
         metaData.freeCpuCopy = s == "true";
         PG_ASSERT(!in.fail() && !ss.fail());
 
-        return load();
+        UNUSED(updateFunc);
+        auto curr = std::static_pointer_cast<Model>(ResourceManager::get<Model>(name));
+        if (curr) {
+            return RES_UP_TO_DATE;
+            if (curr->metaData.file.outOfDate(metaData.file)) {
+                bool success = load();
+                return success ? RES_RELOAD_SUCCESS : RES_RELOAD_FAILED;
+            }
+            return RES_UP_TO_DATE;
+        }
+
+        bool success = load();
+        return success ? RES_RELOAD_SUCCESS : RES_RELOAD_FAILED;
     }
 
     // fname is full path
@@ -152,9 +166,6 @@ namespace Progression {
             LOG_ERR("Failed to load the obj file: ", metaData.file.filename);
             return false;
         }
-
-        LOG("loading model = ", metaData.file.filename);
-        LOG("loaded materials = ", tiny_materials.size());
 
         meshes.clear();
         materials.clear();

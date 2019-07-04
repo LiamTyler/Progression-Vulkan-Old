@@ -4,6 +4,7 @@
 #include <fstream>
 #include "core/config.hpp"
 #include "core/configuration.hpp"
+#include <mutex>
 
 #define LOG(...)      Logger::Write(Logger::DEBUG, __VA_ARGS__);
 #define LOG_WARN(...) Logger::Write(Logger::WARN, __VA_ARGS__);
@@ -96,6 +97,7 @@ class Logger {
                     mod = Modifier(Modifier::RED, Modifier::NONE);
                     break;
             }
+            lock_.lock();
             if (out_) {
                 printArgs(*out_, severity, args...);
                 (*out_) << std::endl;
@@ -110,6 +112,7 @@ class Logger {
                     std::cout << std::endl;
                 }
             }
+            lock_.unlock();
         }
 
         static void Free() {
@@ -122,4 +125,5 @@ class Logger {
     private:
         static bool useColors_;
         static std::unique_ptr<std::ofstream> out_;
+        static std::mutex lock_;
 };

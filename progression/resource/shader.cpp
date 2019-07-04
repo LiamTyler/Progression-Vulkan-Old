@@ -1,5 +1,6 @@
 #include "resource/shader.hpp"
 #include "utils/logger.hpp"
+#include "resource/resource_manager.hpp"
 
 namespace Progression {
 
@@ -276,7 +277,7 @@ namespace Progression {
         return binary;
     }
 
-    bool Shader::loadFromResourceFile(std::istream& in) {
+    ResUpdateStatus Shader::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) {
         std::string line;
         std::string s;
         std::istringstream ss;
@@ -329,9 +330,18 @@ namespace Progression {
         PG_ASSERT(!in.fail() && !ss.fail());
 
         if (in.fail() || ss.fail())
-            return false;
+            return RES_PARSE_ERROR;
 
-        return load();
+        UNUSED(updateFunc);
+        auto curr = std::static_pointer_cast<Shader>(ResourceManager::get<Shader>(name));
+        if (curr) {
+            if (curr->metaData.outOfDate(metaData)) {
+                return load() ? RES_RELOAD_SUCCESS : RES_RELOAD_FAILED;
+            }
+            return RES_UP_TO_DATE;
+        }
+        bool success = load();
+        return success ? RES_RELOAD_SUCCESS : RES_RELOAD_FAILED;
     }
 
     void Shader::enable() const {
@@ -342,20 +352,36 @@ namespace Progression {
         glUseProgram(0);
     }
 
-    GLuint Shader::getUniform(const std::string& _name) const {
+    GLuint Shader::getUniform(const std::string& _name) PG_SHADER_GETTER_CONST {
         auto it = uniforms_.find(_name);
         if (it == uniforms_.end()) {
-            LOG_WARN("Uniform: ", _name, " is not present in the shader, using -1 instead");
+            #ifdef PG_SHADER_WARNINGS
+                std::hash<std::string> hasher;
+                auto hash = hasher(_name);
+                if (warnings_.find(hash) == warnings_.end()) {
+                    LOG_WARN("Uniform: ", _name, " is not present in the shader: ", program_, ", using -1 instead");
+                    warnings_.insert(hash);
+                }
+            #endif
+
             return (GLuint) -1;
         } else {
             return it->second;
         }
     }
 
-    GLuint Shader::getAttribute(const std::string& _name) const {
+    GLuint Shader::getAttribute(const std::string& _name) PG_SHADER_GETTER_CONST {
         GLuint loc = glGetAttribLocation(program_, _name.c_str());
-        if (loc == (GLuint) -1)
-            LOG_WARN("Attribute: ", _name, " is not present in the shader, using -1 instead");
+        #ifdef PG_SHADER_WARNINGS
+            if (loc == (GLuint) -1) {
+                std::hash<std::string> hasher;
+                size_t hash = hasher(_name);
+                if (warnings_.find(hash) == warnings_.end()) {
+                    LOG_WARN("Attribute: ", _name, " is not present in the shader, using -1 instead");
+                    warnings_.insert(hash);
+                }
+            }
+        #endif
 
         return loc;
     }

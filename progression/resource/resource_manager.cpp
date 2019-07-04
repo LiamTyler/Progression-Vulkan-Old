@@ -25,9 +25,15 @@ namespace ResourceManager {
     namespace {
 
         struct BG_LoaderData {
+            BG_LoaderData() {
+                db.resize(TOTAL_RESOURCE_TYPES);
+                updateDB.resize(TOTAL_RESOURCE_TYPES);
+            }
+
             std::future<bool> retVal;
-            ResourceDB* db;
             TimeStampedFile resFile;
+            ResourceDB db;
+            UpdateDB updateDB;
         };
 
         std::unordered_map<std::string, TimeStampedFile> resourceFiles_;
@@ -35,6 +41,7 @@ namespace ResourceManager {
 
         std::thread bg_scanningThread_;
         ResourceDB bg_scanningResources_;
+        UpdateDB bg_scanningUpdateDB_;
         bool bg_scanningThreadExit_;
         std::mutex bg_lock_;
 
@@ -46,23 +53,35 @@ namespace ResourceManager {
         #define PARSE_AND_LOAD(TYPE) \
         else if (line == #TYPE) \
         { \
+            std::function<void()> updateFunc; \
             TYPE resource; \
-            if (!resource.loadFromResourceFile(in)) { \
-                LOG_ERR("Failed to load resource with name '", resource.name, "'"); \
+            ResUpdateStatus status = resource.loadFromResourceFile(in, updateFunc); \
+            if (status == RES_UP_TO_DATE) { \
+                continue; \
+            } else if (status == RES_PARSE_ERROR) { \
+                LOG("Error while parsing resource: ", resource.name); \
                 return false; \
-            } \
-            \
-            ResourceMap& resMap = DB[getResourceTypeID<TYPE>()]; \
-            if (resMap.find(resource.name) != resMap.end()) { \
-                *(resMap[resource.name]) = std::move(resource); \
+            } else if (status == RES_RELOAD_FAILED) { \
+                LOG("Reload failed for resource: ", resource.name); \
+                return false; \
+            } else if (status == RES_RELOAD_SUCCESS) { \
+                /* TODO: is this check for in the DB even needed? */ \
+                ResourceMap& resMap = DB[getResourceTypeID<TYPE>()]; \
+                if (resMap.find(resource.name) != resMap.end()) { \
+                    *(resMap[resource.name]) = std::move(resource); \
+                } else { \
+                    std::string name = resource.name; \
+                    resMap[name] = std::make_shared<TYPE>(std::move(resource)); \
+                } \
             } else { \
-                std::string name = resource.name; \
-                resMap[name] = std::make_shared<TYPE>(std::move(resource)); \
+                LOG("Adding resource func for res: ", resource.name); \
+                updateDB[getResourceTypeID<TYPE>()][resource.name] = updateFunc; \
             } \
         }
 
-        bool BG_LoadResources(const std::string& fname, ResourceDB* db) {
+        bool BG_LoadResources(const std::string& fname, ResourceDB* db, UpdateDB* _updateDB) {
             auto& DB = *db;
+            auto& updateDB = *_updateDB;
             Window window;
             WindowCreateInfo createInfo;
             createInfo.width = 1;
@@ -104,6 +123,7 @@ namespace ResourceManager {
             window.init(createInfo);
             window.bindContext();
             bg_scanningResources_.resize(TOTAL_RESOURCE_TYPES);
+            bg_scanningUpdateDB_.resize(TOTAL_RESOURCE_TYPES);
 
             while (!bg_scanningThreadExit_) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -113,8 +133,10 @@ namespace ResourceManager {
                 for (auto& [name, data] : resourceFiles_) {
                     if (data.update()) {
                         LOG("file: ", name, " was out of date");
-                        if (!BG_LoadResources(name, &bg_scanningResources_))
+                        bg_lock_.lock();
+                        if (!BG_LoadResources(name, &bg_scanningResources_, &bg_scanningUpdateDB_))
                             LOG("Could not reload the resource file: ", name);
+                        bg_lock_.unlock();
                     }
                 }
 
@@ -125,9 +147,8 @@ namespace ResourceManager {
                             break;
                         auto newRes = resPtr->needsReloading();
                         if (newRes) {
-                            LOG("Reload needed for resource: ", resName);
                             if (!newRes->load()) {
-                                LOG_ERR("Failed to reload shader: ", resName);
+                                LOG_ERR("Failed to reload resource: ", resName);
                                 continue;
                             }
                             bg_lock_.lock();
@@ -155,7 +176,7 @@ namespace ResourceManager {
             bg_scanningThread_ = std::thread(scanResources);
     }
 
-    void moveBackgroundResources(ResourceDB& newResources) {
+    void moveBackgroundData(ResourceDB& newResources, UpdateDB& newUpdates) {
         for (size_t typeID = 0; typeID < TOTAL_RESOURCE_TYPES; ++typeID) {
             ResourceMap& currentResources = f_resources[typeID];
             for (auto& [name, res] : newResources[typeID]) {
@@ -164,10 +185,15 @@ namespace ResourceManager {
                     currentResources[name] = res;
                 } else {
                     res->move(it->second.get());
-                    it->second = res;
+                    res = it->second;
                 }
             }
+
+            for (auto& [name, updateFunc] : newUpdates[typeID]) {
+                updateFunc();
+            }
         }
+        
         resolveSoftLinks(newResources);
     }
 
@@ -175,9 +201,11 @@ namespace ResourceManager {
         if (!bg_lock_.try_lock())
             return;
 
-        moveBackgroundResources(bg_scanningResources_);
+        moveBackgroundData(bg_scanningResources_, bg_scanningUpdateDB_);
         bg_scanningResources_.clear();
         bg_scanningResources_.resize(TOTAL_RESOURCE_TYPES);
+        bg_scanningUpdateDB_.clear();
+        bg_scanningUpdateDB_.resize(TOTAL_RESOURCE_TYPES);
         bg_lock_.unlock();
     }
 
@@ -201,14 +229,11 @@ namespace ResourceManager {
         bool ret = true;
         auto typeID = getResourceTypeID<Material>();
         for (auto& [name, res] : db[typeID]) {
-            LOG("Resolving mat: ", name);
             ret = ret && resolveMaterialTextures((Material*) res.get());
         }
 
         typeID = getResourceTypeID<Model>();
         for (auto& [name, res] : db[typeID]) {
-            LOG("starting resolve for model: ", name);
-            //Model* model = (Model*) res.get();
             std::shared_ptr<Model> model = std::static_pointer_cast<Model>(res);
             for (size_t i = 0; i < model->materials.size(); ++i) {
                 auto& mat = model->materials[i];
@@ -220,7 +245,6 @@ namespace ResourceManager {
                 // TODO (?) add to manager
                 ret = ret && resolveMaterialTextures(mat.get());
             }
-            LOG("Uploading meshes for model: ", name);
 
             for (auto& mesh : model->meshes) {
                 mesh.uploadToGpu(model->metaData.freeCpuCopy);
@@ -236,13 +260,12 @@ namespace ResourceManager {
             if (resFile == "" || name == resFile) {
                 data.retVal.wait();
                 if (data.retVal.get()) {
-                    moveBackgroundResources(*data.db);
+                    moveBackgroundData(data.db, data.updateDB);
                     resourceFiles_[data.resFile.filename] = data.resFile;
                 } else {
-                    freeResources(*(data.db));
+                    freeResources(data.db);
                     ret = false;
                 }
-                delete data.db;
             }
         }
         loadingResourceFiles_.clear();
@@ -255,8 +278,8 @@ namespace ResourceManager {
     void shutdown() {
         for (auto& [name, data]: loadingResourceFiles_) {
             data.retVal.wait();
-            freeResources(*(data.db));
-            delete data.db;
+            freeResources(data.db);
+            // delete data.db;
         }
         loadingResourceFiles_.clear();
 
@@ -280,12 +303,12 @@ namespace ResourceManager {
                 return;
         }
 
-        struct BG_LoaderData data;
-        data.db = new ResourceDB;
-        data.db->resize(TOTAL_RESOURCE_TYPES);
-        data.retVal = std::async(std::launch::async, BG_LoadResources, fname, data.db);
+        struct BG_LoaderData& data = loadingResourceFiles_[fname];
+        //data.db = new ResourceDB;
+        data.db.resize(TOTAL_RESOURCE_TYPES);
+        data.updateDB.resize(TOTAL_RESOURCE_TYPES);
+        data.retVal = std::async(std::launch::async, BG_LoadResources, fname, &data.db, &data.updateDB);
         data.resFile = TimeStampedFile(fname);
-        loadingResourceFiles_[fname] = std::move(data);
     }
 
     bool createFastFile(const std::string& resourceFile) {

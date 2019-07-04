@@ -36,7 +36,9 @@ namespace Progression {
 namespace ResourceManager {
 
     using ResourceMap = std::unordered_map<std::string, std::shared_ptr<Resource>>;
+    using UpdateMap = std::unordered_map<std::string, std::function<void()>>;
     using ResourceDB = std::vector<ResourceMap>;
+    using UpdateDB = std::vector<UpdateMap>;
 
     extern ResourceDB f_resources;
 

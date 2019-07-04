@@ -1,7 +1,23 @@
 #include "resource/texture2D.hpp"
 #include "utils/logger.hpp"
+#include "resource/resource_manager.hpp"
 
 namespace Progression {
+
+    bool TextureMetaData::operator==(const TextureMetaData& meta) const {
+        return file.filename == meta.file.filename &&
+               internalFormat == meta.internalFormat &&
+               minFilter == meta.minFilter &&
+               magFilter == meta.magFilter &&
+               wrapModeS == meta.wrapModeS &&
+               wrapModeT == meta.wrapModeT &&
+               mipMapped == meta.mipMapped &&
+               freeCpuCopy == meta.freeCpuCopy;
+    }
+
+    bool TextureMetaData::operator!=(const TextureMetaData& meta) const {
+        return !(*this == meta);
+    }
 
     Texture2D::Texture2D() :
         Resource("")
@@ -28,6 +44,7 @@ namespace Progression {
     }
 
     Texture2D& Texture2D::operator=(Texture2D&& texture) {
+        name           = std::move(texture.name);
         gpuHandle_     = std::move(texture.gpuHandle_);
         width_         = std::move(texture.width_);
         height_        = std::move(texture.height_);
@@ -90,8 +107,6 @@ namespace Progression {
                     GL_UNSIGNED_BYTE,
                     image->pixels()
                     );
-            if (metaData.mipMapped)
-                glGenerateMipmap(GL_TEXTURE_2D);
         } else { // otherwise just stream the data
             glTexSubImage2D(
                     GL_TEXTURE_2D,
@@ -105,8 +120,15 @@ namespace Progression {
                     image->pixels()
                     );
         }
+        if (metaData.mipMapped)
+            glGenerateMipmap(GL_TEXTURE_2D);
 
-        if (metaData.freeCPUCopy) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, metaData.wrapModeS);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, metaData.wrapModeT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, metaData.minFilter);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, metaData.magFilter);
+
+        if (metaData.freeCpuCopy) {
             delete image;
             metaData.image = nullptr;
         }
@@ -157,7 +179,7 @@ namespace Progression {
         { "mirror_clamp_to_edge", GL_MIRROR_CLAMP_TO_EDGE },
     };
 
-    bool Texture2D::loadFromResourceFile(std::istream& in) {
+    ResUpdateStatus Texture2D::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) {
         std::string line;
         std::string s;
         std::istringstream ss;
@@ -177,7 +199,6 @@ namespace Progression {
         ss >> s;
         PG_ASSERT(s == "filename");
         ss >> s;
-        LOG("FILENAME = ", s);
         PG_ASSERT(!in.fail() && !ss.fail());
         metaData.file = TimeStampedFile(PG_RESOURCE_DIR + s);
 
@@ -188,7 +209,7 @@ namespace Progression {
         PG_ASSERT(s == "freeCPUCopy");
         ss >> s;
         PG_ASSERT(s == "true" || s == "false");
-        metaData.freeCPUCopy = s == "true";
+        metaData.freeCpuCopy = s == "true";
         PG_ASSERT(!in.fail() && !ss.fail());
 
         // mipmaped
@@ -210,7 +231,7 @@ namespace Progression {
         it = internalFormatMap.find(s);
         if (it == internalFormatMap.end()) {
             LOG_ERR("Invalid texture format: ", s);
-            return false;
+            return RES_PARSE_ERROR;
         }
         metaData.internalFormat = it->second;
         PG_ASSERT(!in.fail() && !ss.fail());
@@ -225,7 +246,7 @@ namespace Progression {
         it = minFilterMap.find(s);
         if (it == minFilterMap.end()) {
             LOG_ERR("Invalid minFilter format: ", s);
-            return false;
+            return RES_PARSE_ERROR;
         }
         if (!metaData.mipMapped && (s != "nearest" && s != "linear")) {
             LOG_WARN("Trying to use a mip map min filter when there is no mip map on texture: ", metaData.file.filename);
@@ -242,7 +263,7 @@ namespace Progression {
         it = magFilterMap.find(s);
         if (it == magFilterMap.end()) {
             LOG_ERR("Invalid magFilter format: ", s);
-            return false;
+            return RES_PARSE_ERROR;
         }
         metaData.magFilter = it->second;
         PG_ASSERT(!in.fail() && !ss.fail());
@@ -256,7 +277,7 @@ namespace Progression {
         it = wrapMap.find(s);
         if (it == wrapMap.end()) {
             LOG_ERR("Invalid wrapModeS format: ", s);
-            return false;
+            return RES_PARSE_ERROR;
         }
         metaData.wrapModeS = it->second;
         PG_ASSERT(!in.fail() && !ss.fail());
@@ -270,15 +291,36 @@ namespace Progression {
         it = wrapMap.find(s);
         if (it == wrapMap.end()) {
             LOG_ERR("Invalid wrapModeT format: ", s);
-            return false;
+            return RES_PARSE_ERROR;
         }
         metaData.wrapModeT = it->second;
         PG_ASSERT(!in.fail() && !ss.fail());
 
         if (in.fail() || ss.fail())
-            return false;
+            return RES_PARSE_ERROR;
 
-        return load();
+        auto currTex = std::static_pointer_cast<Texture2D>(ResourceManager::get<Texture2D>(name));
+        if (currTex) {
+            if (currTex->metaData.file.outOfDate(metaData.file)) {
+                return load() ? RES_RELOAD_SUCCESS : RES_RELOAD_FAILED;
+            } else if (currTex->metaData != metaData) {
+                updateFunc = [metaData = metaData, currTex]() {
+                    glBindTexture(GL_TEXTURE_2D, currTex->gpuHandle());
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, metaData.wrapModeS);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, metaData.wrapModeT);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, metaData.minFilter);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, metaData.magFilter);
+                    if (!currTex->metaData.mipMapped && metaData.mipMapped) {
+                        glGenerateMipmap(GL_TEXTURE_2D);
+                    }
+                };
+                return RES_UPDATED;
+            } else {
+                return RES_UP_TO_DATE;
+            }
+        }
+
+        return load() ? RES_RELOAD_SUCCESS : RES_RELOAD_FAILED;
     }
 
 } // namespace Progression

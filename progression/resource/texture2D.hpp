@@ -9,6 +9,14 @@ namespace Progression {
 
     class TextureMetaData : public MetaData {
     public:
+        bool operator==(const TextureMetaData& meta) const;
+        bool operator!=(const TextureMetaData& meta) const;
+        friend std::ostream& operator<<(std::ostream& out, const TextureMetaData& meta) {
+            return out << meta.file.filename << " " << meta.internalFormat << " " << meta.minFilter << " "
+                    << meta.magFilter << " " << meta.wrapModeS << " " << meta.wrapModeT << " " <<
+                    meta.mipMapped << " " << meta.freeCpuCopy;
+        }
+
         TimeStampedFile file = TimeStampedFile();
         Image* image         = nullptr;
         GLint internalFormat = GL_SRGB;
@@ -17,7 +25,7 @@ namespace Progression {
         GLint wrapModeS      = GL_REPEAT;
         GLint wrapModeT      = GL_REPEAT;
         bool mipMapped       = true;
-        bool freeCPUCopy     = true;
+        bool freeCpuCopy     = true;
     };
 
     class Texture2D : public NonCopyable, public Resource {
@@ -30,7 +38,7 @@ namespace Progression {
         Texture2D& operator=(Texture2D&& texture);
 
         bool load(MetaData* metaData = nullptr) override;
-        bool loadFromResourceFile(std::istream& in) override;
+        ResUpdateStatus loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) override;
         void move(Resource* resource) override;
         std::shared_ptr<Resource> needsReloading() override;
         void uploadToGPU();

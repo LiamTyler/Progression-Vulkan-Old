@@ -24,10 +24,10 @@ namespace Progression {
         Model(Model&& model);
         Model& operator=(Model&& model);
 
-        virtual bool load(MetaData* metaData = nullptr) override;
-        virtual bool loadFromResourceFile(std::istream& in) override;
-        virtual void move(Resource* resource) override;
-        virtual std::shared_ptr<Resource> needsReloading() override;
+        bool load(MetaData* metaData = nullptr) override;
+        ResUpdateStatus loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) override;
+        void move(Resource* resource) override;
+        std::shared_ptr<Resource> needsReloading() override;
 
         bool loadFromObj();
         void optimize();

@@ -3,6 +3,7 @@
 #include <string>
 #include <sys/stat.h>
 #include "utils/logger.hpp"
+#include <functional>
 
 namespace Progression {
 
@@ -53,6 +54,14 @@ namespace Progression {
 
     class MetaData {};
 
+    enum ResUpdateStatus {
+        RES_PARSE_ERROR,
+        RES_RELOAD_SUCCESS,
+        RES_RELOAD_FAILED,
+        RES_UPDATED,
+        RES_UP_TO_DATE
+    };
+
     class Resource {
     public:
         Resource() : name("") {}
@@ -60,7 +69,7 @@ namespace Progression {
         virtual ~Resource() = default;
 
         virtual bool load(MetaData* metaData = nullptr) = 0;
-        virtual bool loadFromResourceFile(std::istream& in) = 0;
+        virtual ResUpdateStatus loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) = 0;
         virtual void move(Resource* resource) = 0;
         virtual std::shared_ptr<Resource> needsReloading() { return nullptr; }
 

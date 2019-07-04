@@ -1,8 +1,9 @@
 #include "core/window.hpp"
 #include "core/time.hpp"
 #include "utils/logger.hpp"
+#include <unordered_set>
 
-#define BACKGROUND_WINDOWS 10
+static std::unordered_set<size_t> s_debugMessages;
 
 // debug context log function just copied from learnopengl.com
 static void APIENTRY glDebugOutput(GLenum source,
@@ -17,6 +18,13 @@ static void APIENTRY glDebugOutput(GLenum source,
     UNUSED(userParam);
     // ignore non-significant error/warning codes
     if(id == 131169 || id == 131185 || id == 131218 || id == 131204) return;
+
+    std::hash<std::string> hasher;
+    auto hash = hasher(std::string(message));
+    if (s_debugMessages.find(hash) != s_debugMessages.end())
+        return;
+    else
+        s_debugMessages.insert(hash);
 
     std::cout << "---------------" << std::endl;
     std::cout << "Debug message (" << id << "): " <<  message << std::endl;
