@@ -179,7 +179,7 @@ namespace Progression {
         { "mirror_clamp_to_edge", GL_MIRROR_CLAMP_TO_EDGE },
     };
 
-    ResUpdateStatus Texture2D::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) {
+    bool Texture2D::readMetaData(std::istream& in) {
         std::string line;
         std::string s;
         std::istringstream ss;
@@ -231,7 +231,7 @@ namespace Progression {
         it = internalFormatMap.find(s);
         if (it == internalFormatMap.end()) {
             LOG_ERR("Invalid texture format: ", s);
-            return RES_PARSE_ERROR;
+            return false;
         }
         metaData.internalFormat = it->second;
         PG_ASSERT(!in.fail() && !ss.fail());
@@ -246,7 +246,7 @@ namespace Progression {
         it = minFilterMap.find(s);
         if (it == minFilterMap.end()) {
             LOG_ERR("Invalid minFilter format: ", s);
-            return RES_PARSE_ERROR;
+            return false;
         }
         if (!metaData.mipMapped && (s != "nearest" && s != "linear")) {
             LOG_WARN("Trying to use a mip map min filter when there is no mip map on texture: ", metaData.file.filename);
@@ -263,7 +263,7 @@ namespace Progression {
         it = magFilterMap.find(s);
         if (it == magFilterMap.end()) {
             LOG_ERR("Invalid magFilter format: ", s);
-            return RES_PARSE_ERROR;
+            return false;
         }
         metaData.magFilter = it->second;
         PG_ASSERT(!in.fail() && !ss.fail());
@@ -277,7 +277,7 @@ namespace Progression {
         it = wrapMap.find(s);
         if (it == wrapMap.end()) {
             LOG_ERR("Invalid wrapModeS format: ", s);
-            return RES_PARSE_ERROR;
+            return false;
         }
         metaData.wrapModeS = it->second;
         PG_ASSERT(!in.fail() && !ss.fail());
@@ -291,12 +291,16 @@ namespace Progression {
         it = wrapMap.find(s);
         if (it == wrapMap.end()) {
             LOG_ERR("Invalid wrapModeT format: ", s);
-            return RES_PARSE_ERROR;
+            return false;
         }
         metaData.wrapModeT = it->second;
         PG_ASSERT(!in.fail() && !ss.fail());
 
-        if (in.fail() || ss.fail())
+        return !in.fail() && !ss.fail();
+    }
+
+    ResUpdateStatus Texture2D::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) {
+        if (!readMetaData(in))
             return RES_PARSE_ERROR;
 
         auto currTex = std::static_pointer_cast<Texture2D>(ResourceManager::get<Texture2D>(name));

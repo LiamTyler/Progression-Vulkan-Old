@@ -12,6 +12,7 @@ namespace Progression {
         Material() = default;
 
         bool load(MetaData* metaData = nullptr) override;
+        bool readMetaData(std::istream& in) override;
         ResUpdateStatus loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) override;
         void move(Resource* resource) override;
         static bool loadMtlFile(

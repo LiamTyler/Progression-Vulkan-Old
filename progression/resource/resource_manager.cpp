@@ -279,7 +279,6 @@ namespace ResourceManager {
         for (auto& [name, data]: loadingResourceFiles_) {
             data.retVal.wait();
             freeResources(data.db);
-            // delete data.db;
         }
         loadingResourceFiles_.clear();
 
@@ -311,15 +310,101 @@ namespace ResourceManager {
         data.resFile = TimeStampedFile(fname);
     }
 
+    #define PARSE_THEN_LOAD(TYPE) \
+        else if (line == #TYPE) \
+        { \
+            TYPE resource; \
+            if (!resource.readMetaData(in)) { \
+                LOG("Could not parse metaData for resource: ", resource.name); \
+                return false; \
+            } \
+            if (!resource.load()) { \
+                LOG("Could not load resource: ", resource.name); \
+                return false; \
+            } \
+            std::string name = resource.name; \
+            DB[getResourceTypeID<TYPE>()][name] = std::make_shared<TYPE>(std::move(resource)); \
+        }
+
+    // TODO: factor out the parsing and loading of a resource file into two steps to avoid code duplication
+    // with BG_LoadResources.
     bool createFastFile(const std::string& resourceFile) {
-        shutdown();
-        init(false);
-        loadResourceFileAsync(resourceFile);
-        if (!waitUntilLoadComplete()) {
-            LOG_ERR("Failed to properly load all of the resource");
+        ResourceDB DB;
+        DB.resize(TOTAL_RESOURCE_TYPES);
+        std::ifstream in(resourceFile);
+        if (!in) {
+            LOG_ERR("Could not open resource file:", resourceFile);
             return false;
         }
 
+        std::string line;
+        while (std::getline(in, line)) {
+            if (line == "" || line[0] == '#') {
+                continue;
+            }
+            PARSE_THEN_LOAD(Shader)
+            else {
+                LOG_WARN("Unrecognized line: ", line);
+            }
+        }
+
+        in.close();
+
+        if (!resolveSoftLinks(DB)) {
+            LOG("Could not resolve the soft links while parsing resource file: ", resourceFile);
+            return false;
+        }
+
+        std::string fastFileName = resourceFile + ".ff";
+        std::ofstream out(fastFileName, std::ios::binary);
+        // for (size_t typeID = 0; typeID < TOTAL_RESOURCE_TYPES; ++typeID) {
+        //     out << typeID << DB[typeID].size();
+        // }
+        ResourceMap& shaders = DB[getResourceTypeID<Shader>()];
+        uint32_t numShaders = shaders.size();
+        out.write((char*) &numShaders, sizeof(uint32_t));
+        LOG("Num shaders: ", numShaders);
+        for (const auto& [name, shader] : shaders) {
+            LOG("writing shader: ", name);
+            if (!shader->saveToFastFile(out)) {
+                LOG("Could not write shader: ", shader->name, " to fast file");
+                return false;
+            }
+        }
+
+        //out.close();
+        return true;
+    }
+
+    bool loadFastFile(const std::string& fastFile) {
+        std::ifstream in(fastFile, std::ios::binary);
+        if (!in) {
+            LOG_ERR("Could not open fastfile:", fastFile);
+            return false;
+        }
+
+        // std::vector<size_t> numTypes(TOTAL_RESOURCE_TYPES); 
+
+        // for (size_t typeID = 0; typeID < TOTAL_RESOURCE_TYPES; ++typeID) {
+        //     in >> numTypes[typeID];
+        // }
+        uint32_t numShaders;
+        in.read((char*) &numShaders, sizeof(uint32_t));
+        ResourceMap& shaders = f_resources[getResourceTypeID<Shader>()];
+        for (uint32_t i = 0; i < numShaders; ++i) {
+            auto shader = std::make_shared<Shader>();
+            if (!shader->loadFromFastFile(in)) {
+                LOG_ERR("Failed to load shader from fastfile");
+                return false;
+            }
+            if (shaders.find(shader->name) != shaders.end()) {
+                shader->move(shaders[shader->name].get());
+            } else {
+                shaders[shader->name] = shader;
+            }
+        }
+
+        in.close();
         return true;
     }
 

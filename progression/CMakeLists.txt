@@ -33,6 +33,7 @@ set(
     #graphics/shadow_map.cpp
     graphics/graphics_api.cpp
 
+    resource/resource.cpp
     resource/resource_manager.cpp
     resource/image.cpp
     resource/material.cpp

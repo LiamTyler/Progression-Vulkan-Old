@@ -20,20 +20,24 @@ int main(int argc, char* argv[]) {
 
     ResourceManager::loadResourceFileAsync(PG_RESOURCE_DIR "scenes/resource.txt");
     ResourceManager::waitUntilLoadComplete();
+    LOG("Loading fast file");
+    ResourceManager::loadFastFile(PG_RESOURCE_DIR "scenes/resource2.txt.ff");
 
     Model& model = *ResourceManager::get<Model>("chalet");
+
+    // Shader shader;
+    // {
+    //     Shader s2;
+    //     s2.metaData.vertex.filename = PG_RESOURCE_DIR "test.vert";
+    //     s2.metaData.fragment.filename = PG_RESOURCE_DIR "test.frag";
+    //     s2.load();
+    //     GLint len;
+    //     GLenum format;
+    //     auto binary = s2.getShaderBinary(len, format);
+    //     shader.loadFromBinary(binary.data(), len, format);
+    //     shader.queryUniforms();
+    // }
     Shader& shader = *ResourceManager::get<Shader>("test");
-
-    LOG("Num mats = ", model.materials.size());
-    auto m = *model.materials[0];
-    LOG("Ka = ", m.Ka);
-    LOG("Kd = ", m.Kd);
-    LOG("Ks = ", m.Ks);
-    LOG("Ke = ", m.Ke);
-    LOG("Ns = ", m.Ns);
-    LOG("map_kd_name = ", m.map_Kd_name);
-    LOG("map_kd = ", m.map_Kd);
-
 
     float quadVerts[] = {
         -1, 1, 0,   0, 0, 1,    0, 1,

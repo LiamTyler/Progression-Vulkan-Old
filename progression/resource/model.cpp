@@ -93,7 +93,7 @@ namespace Progression {
         return loadFromObj();
     }
 
-    ResUpdateStatus Model::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) {
+    bool Model::readMetaData(std::istream& in) {
         std::string line;
         std::string s;
         std::istringstream ss;
@@ -135,7 +135,14 @@ namespace Progression {
         metaData.freeCpuCopy = s == "true";
         PG_ASSERT(!in.fail() && !ss.fail());
 
+        return !in.fail() && !ss.fail();
+    }
+
+    ResUpdateStatus Model::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) {
         UNUSED(updateFunc);
+        if (!readMetaData(in))
+            return RES_PARSE_ERROR;
+        
         auto curr = std::static_pointer_cast<Model>(ResourceManager::get<Model>(name));
         if (curr) {
             return RES_UP_TO_DATE;

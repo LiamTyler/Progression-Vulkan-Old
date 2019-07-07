@@ -1,7 +1,6 @@
-
 Shader
-name flat
-vertex shaders/flat.vert
+name test
+vertex test.vert
 geometry
-fragment shaders/flat.frag
+fragment test.frag
 compute

@@ -7,3 +7,6 @@
 [logger]
     file = ""
     useColors = true
+
+[time]
+    displayFPS = false

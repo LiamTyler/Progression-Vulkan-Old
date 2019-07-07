@@ -14,8 +14,7 @@ namespace Progression {
         newResource = std::move(*this);
     }
 
-    ResUpdateStatus Material::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc)
-    {
+    bool Material::readMetaData(std::istream& in) {
         std::string line;
         std::string s;
         std::istringstream ss;
@@ -80,11 +79,13 @@ namespace Progression {
         }
         PG_ASSERT(!in.fail() && !ss.fail());
 
-        if (in.fail() || ss.fail())
-            return RES_PARSE_ERROR;
+        return !in.fail() && !ss.fail();
+    }
 
+    ResUpdateStatus Material::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc)
+    {
         UNUSED(updateFunc);
-        return RES_RELOAD_SUCCESS;
+        return readMetaData(in) ? RES_RELOAD_SUCCESS : RES_PARSE_ERROR;
     }
 
     bool Material::loadMtlFile(

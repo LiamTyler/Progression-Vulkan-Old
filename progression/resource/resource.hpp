@@ -9,43 +9,15 @@ namespace Progression {
 
     class TimeStampedFile {
     public:
-        TimeStampedFile() :
-            valid(false),
-            filename("")
-        {
-        }
-
-        TimeStampedFile(const std::string& fname) :
-            valid(false),
-            filename(fname)
-        {
-            struct stat s;
-            valid = stat(filename.c_str(), &s) == 0;
-            timestamp = s.st_mtime;
-        }
-
-        bool update() {
-            struct stat s;
-            valid = stat(filename.c_str(), &s) == 0;
-            if (!valid)
-                return false;
-            time_t newTimestamp = s.st_mtime;
-            bool ret = timestamp != newTimestamp;
-            timestamp = newTimestamp;
-            return ret;
-        }
-
-        bool outOfDate(const TimeStampedFile& ts) const {
-            return (filename != ts.filename) || (!valid && ts.valid) || (valid && ts.valid && timestamp < ts.timestamp);
-        }
-
-        bool operator==(const TimeStampedFile& f) const {
-            return filename == f.filename && valid == f.valid && timestamp == f.timestamp;
-        }
-
-        bool operator!=(const TimeStampedFile& f) const {
-            return !(*this == f);
-        }
+        TimeStampedFile();
+        TimeStampedFile(const std::string& fname);
+        bool update();
+        bool outOfDate(const TimeStampedFile& ts) const;
+        bool operator==(const TimeStampedFile& f) const;
+        bool operator!=(const TimeStampedFile& f) const;
+        void save(std::ofstream& out) const;
+        void load(std::ifstream& in);
+        friend std::ostream& operator<<(std::ostream& out, const TimeStampedFile& ts);
 
         time_t timestamp;
         bool valid;
@@ -69,9 +41,12 @@ namespace Progression {
         virtual ~Resource() = default;
 
         virtual bool load(MetaData* metaData = nullptr) = 0;
+        virtual bool readMetaData(std::istream& in) = 0;
         virtual ResUpdateStatus loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) = 0;
         virtual void move(Resource* resource) = 0;
         virtual std::shared_ptr<Resource> needsReloading() { return nullptr; }
+        virtual bool saveToFastFile(std::ofstream& outFile) const { (void)outFile; return false; }
+        virtual bool loadFromFastFile(std::ifstream& in) { (void)(in); return false; }
 
         std::string name;
     };

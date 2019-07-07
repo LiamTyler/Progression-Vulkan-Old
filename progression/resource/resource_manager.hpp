@@ -91,4 +91,6 @@ namespace ResourceManager {
     // meant to be called without any other resources loaded already
     bool createFastFile(const std::string& resourceFile);
 
+    bool loadFastFile(const std::string& fastFile);
+
 } } // namespace Progression::Resource

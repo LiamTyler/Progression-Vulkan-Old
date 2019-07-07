@@ -40,11 +40,14 @@ namespace Progression {
         Shader& operator=(Shader&& shader);
 
         bool load(MetaData* metaData = nullptr) override;
+        bool readMetaData(std::istream& in) override;
         bool loadFromText();
         bool loadFromBinary(const char* binarySource, GLint len, GLenum format);
-        char* getShaderBinary(GLint& len, GLenum& format);
+        std::vector<char> getShaderBinary(GLint& len, GLenum& format) const;
         ResUpdateStatus loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) override;
         void move(Resource* resource) override;
+        bool loadFromFastFile(std::ifstream& in) override;
+        bool saveToFastFile(std::ofstream& out) const override;
 
         std::shared_ptr<Resource> needsReloading() override;
 

@@ -18,13 +18,6 @@ Ke 0.000000 0.000000 0.000000
 Ns 9.803922
 map_Kd cockatoo
 
-Shader
-name test
-vertex test.vert
-geometry
-fragment test.frag
-compute
-
 Model
 name chalet
 filename models/chalet2.obj

@@ -166,7 +166,7 @@ namespace Progression {
             if (len > 3) {
                 if (sName[len - 1] == ']' && sName[len - 3] == '[') {
                     uniforms_[sName.substr(0, len - 3)] = location;
-                    LOG("Uniform:", location, "=", sName.substr(0, len - 3));
+                    LOG("Uniform: ", location, " = ", sName.substr(0, len - 3));
                 }
             }
             uniforms_[sName] = location;
@@ -255,29 +255,100 @@ namespace Progression {
         GLint status;
         glGetProgramiv(program, GL_LINK_STATUS, &status);
         if( GL_FALSE == status ) {
-            LOG("Failed to create program from the binary");
+            LOG_ERR("Failed to create program from the binary");
             return false;
         }
         program_ = program;
         return true;
     }
 
-    char* Shader::getShaderBinary(GLint& len, GLenum& format) {
+    std::vector<char> Shader::getShaderBinary(GLint& len, GLenum& format) const {
         GLint formats = 0;
         glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS, &formats);
         if (formats < 1) {
-            LOG("No binary formats supported with this driver");
-            return nullptr;
+            LOG_ERR("No binary formats supported with this driver");
+            return {};
         }
 
         glGetProgramiv(program_, GL_PROGRAM_BINARY_LENGTH, &len);
-        char* binary = new char[len];
-        glGetProgramBinary(program_, len, NULL, &format, binary);
+        auto binary = std::vector<char>(len);
+        glGetProgramBinary(program_, len, NULL, &format, binary.data());
 
         return binary;
     }
 
-    ResUpdateStatus Shader::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) {
+    bool Shader::saveToFastFile(std::ofstream& out) const {
+        uint32_t nLen = name.length();
+        out.write((char*) &nLen, sizeof(uint32_t));
+        out.write(name.c_str(), nLen);
+        GLint len;
+        GLenum format;
+        auto binary = getShaderBinary(len, format);
+        if (!binary.size())
+            return false;
+        
+        out.write((char*) &len, sizeof(GLint));
+        out.write((char*) &format, sizeof(GLenum));
+        out.write(binary.data(), len);
+
+        metaData.vertex.save(out);
+        metaData.geometry.save(out);
+        metaData.compute.save(out);
+        metaData.fragment.save(out);
+
+
+        uint32_t numUniforms = (uint32_t) uniforms_.size();
+        out.write((char*) &numUniforms, sizeof(uint32_t));
+        for (const auto& [uName, loc] : uniforms_) {
+            uint32_t sLen = uName.length();
+            out.write((char*) &sLen, sizeof(uint32_t));
+            out.write(uName.c_str(), sLen);
+            out.write((char*) &loc, sizeof(GLuint));
+        }
+
+        return !out.fail();
+    }
+
+    bool Shader::loadFromFastFile(std::ifstream& in) {
+        uint32_t nLen;
+        in.read((char*) &nLen, sizeof(uint32_t));
+        name.resize(nLen);
+        in.read(&name[0], nLen);
+        GLint len;
+        GLenum format;
+        in.read((char*) &len, sizeof(GLint));
+        in.read((char*) &format, sizeof(GLenum));
+        std::vector<char> binary(len);
+        in.read(binary.data(), len);
+        if (!loadFromBinary(binary.data(), len, format)) {
+            LOG_ERR("Failed to load shader from binary");
+            return false;
+        }
+
+        metaData.vertex.load(in);
+        metaData.geometry.load(in);
+        metaData.compute.load(in);
+        metaData.fragment.load(in);
+
+        //queryUniforms();
+
+        uint32_t numUniforms;
+        in.read((char*) &numUniforms, sizeof(uint32_t));
+        for (uint32_t i =0; i < numUniforms; ++i) {
+            uint32_t sLen;
+            in.read((char*) &sLen, sizeof(uint32_t));
+            std::string uName;
+            uName.resize(sLen);
+            in.read(&uName[0], sLen);
+            GLuint loc;
+            in.read((char*) &loc, sizeof(GLuint));
+            uniforms_[uName] = loc;
+        }
+
+        return !in.fail();
+    }
+    
+    bool Shader::readMetaData(std::istream& in) {
         std::string line;
         std::string s;
         std::istringstream ss;
@@ -329,10 +400,15 @@ namespace Progression {
         }
         PG_ASSERT(!in.fail() && !ss.fail());
 
-        if (in.fail() || ss.fail())
-            return RES_PARSE_ERROR;
+        return !in.fail() && !ss.fail();
+    }
 
+    ResUpdateStatus Shader::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) {
         UNUSED(updateFunc);
+
+        if (!readMetaData(in))
+            return RES_PARSE_ERROR;
+            
         auto curr = std::static_pointer_cast<Shader>(ResourceManager::get<Shader>(name));
         if (curr) {
             if (curr->metaData.outOfDate(metaData)) {
