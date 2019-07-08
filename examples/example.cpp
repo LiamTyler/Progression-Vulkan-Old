@@ -57,14 +57,8 @@ int main(int argc, char* argv[]) {
     graphicsApi::describeAttribute(1, 3, GL_FLOAT, sizeof(GL_FLOAT) * 8, sizeof(float) * 3);
     graphicsApi::describeAttribute(2, 2, GL_FLOAT, sizeof(GL_FLOAT) * 8, sizeof(float) * 6);
 
-    // Material mat;
-    // mat.Ka = glm::vec3(0);
-    // mat.Kd = glm::vec3(1, 0, 0);
-    // mat.Ks = glm::vec3(0);
-    // mat.Ke = glm::vec3(0);
-    // mat.Ns = 50;
-    // mat.map_Kd = ResourceManager::get<Texture2D>("cockatoo");
-    // Material& mat = *ResourceManager::get<Material>("chalet");
+    PG_ASSERT(ResourceManager::get<Material>("cockatoo") != nullptr);
+    Material& mat = *ResourceManager::get<Material>("cockatoo");
 
     graphicsApi::toggleDepthTest(true);
     graphicsApi::toggleDepthWrite(true);
@@ -73,7 +67,8 @@ int main(int argc, char* argv[]) {
 
     Transform modelTransform(
             glm::vec3(0, 0, 0),
-            glm::vec3(glm::radians(-90.0f), glm::radians(90.0f), glm::radians(-0.0f)),
+            glm::vec3(0),
+            //glm::vec3(glm::radians(-90.0f), glm::radians(90.0f), glm::radians(-0.0f)),
             glm::vec3(1));
     Camera camera(glm::vec3(0, 0, 3), glm::vec3(0));
 
@@ -103,36 +98,36 @@ int main(int argc, char* argv[]) {
         shader.setUniform("cameraPos", camera.position);
         shader.setUniform("lightDirInWorldSpace", lightDir);
 
-        // graphicsApi::bindVao(quadVao);
-        // shader.setUniform("kd", mat.Kd);
-        // shader.setUniform("ks", mat.Ks);
-        // shader.setUniform("ke", mat.Ke);
-        // shader.setUniform("shininess", mat.Ns);
-        // if (mat.map_Kd) {
-        //     shader.setUniform("textured", true);
-        //     graphicsApi::bind2DTexture(mat.map_Kd->gpuHandle(), shader.getUniform("diffuseTex"), 0);
-        // } else {
-        //     shader.setUniform("textured", false);
-        // }
-        // glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        for (size_t i = 0; i < model.meshes.size(); ++i) {
-            const auto& mesh = model.meshes[i];
-            const auto& mat = *model.materials[i];
-            graphicsApi::bindVao(mesh.vao);
-            shader.setUniform("kd", mat.Kd);
-            shader.setUniform("ks", mat.Ks);
-            shader.setUniform("ke", mat.Ke);
-            shader.setUniform("shininess", mat.Ns);
-            if (mat.map_Kd) {
-                shader.setUniform("textured", true);
-                graphicsApi::bind2DTexture(mat.map_Kd->gpuHandle(), shader.getUniform("diffuseTex"), 0);
-            } else {
-                shader.setUniform("textured", false);
-            }
-
-            glDrawElements(GL_TRIANGLES, mesh.getNumIndices(), GL_UNSIGNED_INT, 0);
+        graphicsApi::bindVao(quadVao);
+        shader.setUniform("kd", mat.Kd);
+        shader.setUniform("ks", mat.Ks);
+        shader.setUniform("ke", mat.Ke);
+        shader.setUniform("shininess", mat.Ns);
+        if (mat.map_Kd) {
+            shader.setUniform("textured", true);
+            graphicsApi::bind2DTexture(mat.map_Kd->gpuHandle(), shader.getUniform("diffuseTex"), 0);
+        } else {
+            shader.setUniform("textured", false);
         }
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        // for (size_t i = 0; i < model.meshes.size(); ++i) {
+        //     const auto& mesh = model.meshes[i];
+        //     const auto& m = *model.materials[i];
+        //     graphicsApi::bindVao(mesh.vao);
+        //     shader.setUniform("kd", m.Kd);
+        //     shader.setUniform("ks", m.Ks);
+        //     shader.setUniform("ke", m.Ke);
+        //     shader.setUniform("shininess", m.Ns);
+        //     if (m.map_Kd) {
+        //         shader.setUniform("textured", true);
+        //         graphicsApi::bind2DTexture(m.map_Kd->gpuHandle(), shader.getUniform("diffuseTex"), 0);
+        //     } else {
+        //         shader.setUniform("textured", false);
+        //     }
+
+        //     glDrawElements(GL_TRIANGLES, mesh.getNumIndices(), GL_UNSIGNED_INT, 0);
+        // }
 
         window->endFrame();
     }

@@ -1,4 +1,5 @@
 #include "resource/resource.hpp"
+#include "utils/serialize.hpp"
 
 namespace Progression {
 
@@ -41,19 +42,14 @@ namespace Progression {
     }
 
     void TimeStampedFile::save(std::ofstream& out) const {
-        out.write((char*) &timestamp, sizeof(time_t));
-        ushort len = (ushort) filename.length();
-        out.write((char*) &len, sizeof(ushort));
-        out.write(filename.c_str(), len);
+        serialize::write(out, timestamp);
+        serialize::write(out, filename);
     }
 
     void TimeStampedFile::load(std::ifstream& in) {
         time_t ts;
-        in.read((char*) &ts, sizeof(time_t));
-        ushort len;
-        in.read((char*) &len, sizeof(ushort));
-        filename.resize(len);
-        in.read(&filename[0], len);
+        serialize::read(in, ts);
+        serialize::read(in, filename);
         *this = TimeStampedFile(filename);
         timestamp = ts;
     }

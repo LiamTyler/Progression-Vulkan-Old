@@ -1,17 +1,42 @@
 #include "resource/material.hpp"
 #include "resource/resource_manager.hpp"
 #include "resource/texture2D.hpp"
+#include "utils/serialize.hpp"
 
 namespace Progression {
 
     bool Material::load(MetaData* metaData) {
         UNUSED(metaData);
-        return false;
+        return true;
     }
 
     void Material::move(Resource* resource) {
         Material& newResource = *(Material*) resource;
         newResource = std::move(*this);
+    }
+
+    bool Material::saveToFastFile(std::ofstream& out) const {
+        serialize::write(out, name);
+        serialize::write(out, Ka);
+        serialize::write(out, Kd);
+        serialize::write(out, Ks);
+        serialize::write(out, Ke);
+        serialize::write(out, Ns);
+        serialize::write(out, map_Kd_name);
+
+        return !out.fail();
+    }
+
+    bool Material::loadFromFastFile(std::ifstream& in) {
+        serialize::read(in, name);
+        serialize::read(in, Ka);
+        serialize::read(in, Kd);
+        serialize::read(in, Ks);
+        serialize::read(in, Ke);
+        serialize::read(in, Ns);
+        serialize::read(in, map_Kd_name);
+
+        return !in.fail();
     }
 
     bool Material::readMetaData(std::istream& in) {

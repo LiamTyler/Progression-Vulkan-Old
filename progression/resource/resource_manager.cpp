@@ -11,8 +11,7 @@
 #include <future>
 #include <tuple>
 #include "core/window.hpp"
-
-
+#include "utils/serialize.hpp"
 
 namespace Progression {
     
@@ -24,17 +23,12 @@ namespace ResourceManager {
 
     namespace {
 
-        struct BG_LoaderData {
-            BG_LoaderData() {
-                db.resize(TOTAL_RESOURCE_TYPES);
-                updateDB.resize(TOTAL_RESOURCE_TYPES);
-            }
-
+        typedef struct BG_LoaderData {
             std::future<bool> retVal;
             TimeStampedFile resFile;
             ResourceDB db;
             UpdateDB updateDB;
-        };
+        } BG_LoaderData;
 
         std::unordered_map<std::string, TimeStampedFile> resourceFiles_;
         std::unordered_map<std::string, struct BG_LoaderData> loadingResourceFiles_;
@@ -44,11 +38,6 @@ namespace ResourceManager {
         UpdateDB bg_scanningUpdateDB_;
         bool bg_scanningThreadExit_;
         std::mutex bg_lock_;
-
-        void freeResources(ResourceDB& db) {
-            db.clear();
-            db.resize(TOTAL_RESOURCE_TYPES);
-        }
 
         #define PARSE_AND_LOAD(TYPE) \
         else if (line == #TYPE) \
@@ -66,16 +55,16 @@ namespace ResourceManager {
                 return false; \
             } else if (status == RES_RELOAD_SUCCESS) { \
                 /* TODO: is this check for in the DB even needed? */ \
-                ResourceMap& resMap = DB[getResourceTypeID<TYPE>()]; \
+                ResourceMap& resMap = DB.getMap<TYPE>(); \
                 if (resMap.find(resource.name) != resMap.end()) { \
-                    *(resMap[resource.name]) = std::move(resource); \
+                    resource.move(resMap[resource.name].get()); \
                 } else { \
                     std::string name = resource.name; \
                     resMap[name] = std::make_shared<TYPE>(std::move(resource)); \
                 } \
             } else { \
                 LOG("Adding resource func for res: ", resource.name); \
-                updateDB[getResourceTypeID<TYPE>()][resource.name] = updateFunc; \
+                updateDB.getMap<TYPE>()[resource.name] = updateFunc; \
             } \
         }
 
@@ -122,8 +111,6 @@ namespace ResourceManager {
             createInfo.visible = false;
             window.init(createInfo);
             window.bindContext();
-            bg_scanningResources_.resize(TOTAL_RESOURCE_TYPES);
-            bg_scanningUpdateDB_.resize(TOTAL_RESOURCE_TYPES);
 
             while (!bg_scanningThreadExit_) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -140,7 +127,7 @@ namespace ResourceManager {
                     }
                 }
 
-                for (size_t typeID = 0; typeID < f_resources.size() && !bg_scanningThreadExit_; ++typeID) {
+                for (size_t typeID = 0; typeID < TOTAL_RESOURCE_TYPES && !bg_scanningThreadExit_; ++typeID) {
                     auto& bg_map = bg_scanningResources_[typeID];
                     for (const auto& [resName, resPtr] : f_resources[typeID]) {
                         if (bg_scanningThreadExit_)
@@ -159,14 +146,12 @@ namespace ResourceManager {
                 }
             }
             // exiting, clean up resources
-            freeResources(bg_scanningResources_);
             bg_scanningResources_.clear();
         }
 
     } // namespace anonymous
 
     void init(bool scanner) {
-        f_resources.resize(TOTAL_RESOURCE_TYPES);
         bg_scanningThreadExit_ = false;
         // glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         auto defaultMat = std::make_shared<Material>();
@@ -203,16 +188,14 @@ namespace ResourceManager {
 
         moveBackgroundData(bg_scanningResources_, bg_scanningUpdateDB_);
         bg_scanningResources_.clear();
-        bg_scanningResources_.resize(TOTAL_RESOURCE_TYPES);
         bg_scanningUpdateDB_.clear();
-        bg_scanningUpdateDB_.resize(TOTAL_RESOURCE_TYPES);
         bg_lock_.unlock();
     }
 
     bool resolveSoftLinks(ResourceDB& db) {
         auto resolveMaterialTextures = [](Material* mat) {
             auto& texName = mat->map_Kd_name;
-            if (texName != "") {
+            if (texName != "" && !mat->map_Kd) {
                 if (ResourceManager::get<Texture2D>(texName)) {
                     mat->map_Kd = ResourceManager::get<Texture2D>(texName).get();
                 } else {
@@ -263,14 +246,11 @@ namespace ResourceManager {
                     moveBackgroundData(data.db, data.updateDB);
                     resourceFiles_[data.resFile.filename] = data.resFile;
                 } else {
-                    freeResources(data.db);
                     ret = false;
                 }
             }
         }
         loadingResourceFiles_.clear();
-
-        //resolveSoftLinks();
 
         return ret;
     }
@@ -278,13 +258,11 @@ namespace ResourceManager {
     void shutdown() {
         for (auto& [name, data]: loadingResourceFiles_) {
             data.retVal.wait();
-            freeResources(data.db);
         }
         loadingResourceFiles_.clear();
 
         bg_scanningThreadExit_ = true;
         bg_scanningThread_.join();
-        freeResources(f_resources);
         resourceFiles_.clear();
         f_resources.clear();
     }
@@ -302,10 +280,7 @@ namespace ResourceManager {
                 return;
         }
 
-        struct BG_LoaderData& data = loadingResourceFiles_[fname];
-        //data.db = new ResourceDB;
-        data.db.resize(TOTAL_RESOURCE_TYPES);
-        data.updateDB.resize(TOTAL_RESOURCE_TYPES);
+        BG_LoaderData& data = loadingResourceFiles_[fname];
         data.retVal = std::async(std::launch::async, BG_LoadResources, fname, &data.db, &data.updateDB);
         data.resFile = TimeStampedFile(fname);
     }
@@ -313,24 +288,22 @@ namespace ResourceManager {
     #define PARSE_THEN_LOAD(TYPE) \
         else if (line == #TYPE) \
         { \
-            TYPE resource; \
-            if (!resource.readMetaData(in)) { \
-                LOG("Could not parse metaData for resource: ", resource.name); \
+            auto resource = std::make_shared<TYPE>(); \
+            if (!resource->readMetaData(in)) { \
+                LOG("Could not parse metaData for resource: ", resource->name); \
                 return false; \
             } \
-            if (!resource.load()) { \
-                LOG("Could not load resource: ", resource.name); \
+            if (!resource->load()) { \
+                LOG("Could not load resource: ", resource->name); \
                 return false; \
             } \
-            std::string name = resource.name; \
-            DB[getResourceTypeID<TYPE>()][name] = std::make_shared<TYPE>(std::move(resource)); \
+            DB.getMap<TYPE>()[resource->name] = resource; \
         }
 
     // TODO: factor out the parsing and loading of a resource file into two steps to avoid code duplication
     // with BG_LoadResources.
     bool createFastFile(const std::string& resourceFile) {
         ResourceDB DB;
-        DB.resize(TOTAL_RESOURCE_TYPES);
         std::ifstream in(resourceFile);
         if (!in) {
             LOG_ERR("Could not open resource file:", resourceFile);
@@ -343,6 +316,7 @@ namespace ResourceManager {
                 continue;
             }
             PARSE_THEN_LOAD(Shader)
+            PARSE_THEN_LOAD(Material)
             else {
                 LOG_WARN("Unrecognized line: ", line);
             }
@@ -350,24 +324,29 @@ namespace ResourceManager {
 
         in.close();
 
-        if (!resolveSoftLinks(DB)) {
-            LOG("Could not resolve the soft links while parsing resource file: ", resourceFile);
-            return false;
-        }
+        // if (!resolveSoftLinks(DB)) {
+        //     LOG("Could not resolve the soft links while parsing resource file: ", resourceFile);
+        //     return false;
+        // }
 
         std::string fastFileName = resourceFile + ".ff";
         std::ofstream out(fastFileName, std::ios::binary);
-        // for (size_t typeID = 0; typeID < TOTAL_RESOURCE_TYPES; ++typeID) {
-        //     out << typeID << DB[typeID].size();
-        // }
-        ResourceMap& shaders = DB[getResourceTypeID<Shader>()];
+        ResourceMap& shaders = DB.getMap<Shader>();
         uint32_t numShaders = shaders.size();
-        out.write((char*) &numShaders, sizeof(uint32_t));
-        LOG("Num shaders: ", numShaders);
+        serialize::write(out, numShaders);
         for (const auto& [name, shader] : shaders) {
-            LOG("writing shader: ", name);
             if (!shader->saveToFastFile(out)) {
                 LOG("Could not write shader: ", shader->name, " to fast file");
+                return false;
+            }
+        }
+
+        ResourceMap& materials = DB.getMap<Material>();
+        uint32_t numMaterials = materials.size();
+        serialize::write(out, numMaterials);
+        for (const auto& [name, material] : materials) {
+            if (!material->saveToFastFile(out)) {
+                LOG("Could not write materials: ", material->name, " to fast file");
                 return false;
             }
         }
@@ -383,14 +362,11 @@ namespace ResourceManager {
             return false;
         }
 
-        // std::vector<size_t> numTypes(TOTAL_RESOURCE_TYPES); 
+        ResourceDB DB;
 
-        // for (size_t typeID = 0; typeID < TOTAL_RESOURCE_TYPES; ++typeID) {
-        //     in >> numTypes[typeID];
-        // }
         uint32_t numShaders;
-        in.read((char*) &numShaders, sizeof(uint32_t));
-        ResourceMap& shaders = f_resources[getResourceTypeID<Shader>()];
+        serialize::read(in, numShaders);
+        ResourceMap& shaders = DB.getMap<Shader>();
         for (uint32_t i = 0; i < numShaders; ++i) {
             auto shader = std::make_shared<Shader>();
             if (!shader->loadFromFastFile(in)) {
@@ -404,7 +380,26 @@ namespace ResourceManager {
             }
         }
 
+        uint32_t numMaterials;
+        serialize::read(in, numMaterials);
+        ResourceMap& materials = DB.getMap<Material>();
+        for (uint32_t i = 0; i < numMaterials; ++i) {
+            auto material = std::make_shared<Material>();
+            if (!material->loadFromFastFile(in)) {
+                LOG_ERR("Failed to load shader from fastfile");
+                return false;
+            }
+            if (materials.find(material->name) != materials.end()) {
+                material->move(materials[material->name].get());
+            } else {
+                materials[material->name] = material;
+            }
+        }
+
         in.close();
+
+        UpdateDB updateDB;
+        moveBackgroundData(DB, updateDB);
         return true;
     }
 

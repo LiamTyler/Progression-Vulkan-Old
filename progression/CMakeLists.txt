@@ -45,6 +45,7 @@ set(
     #components/user_camera_component.cpp
 
     utils/logger.cpp
+    utils/serialize.cpp
 
     ${PROGRESSION_DIR}/ext/tinyobjloader/tiny_obj_loader.cc
     ${PROGRESSION_DIR}/ext/memory_map/MemoryMapped.cpp    
@@ -88,6 +89,7 @@ set(
 
     #components/user_camera_component.hpp
     
+    utils/serialize.hpp
     utils/noncopyable.hpp
     utils/logger.hpp
     utils/random.hpp

@@ -1,6 +1,7 @@
 #include "resource/shader.hpp"
 #include "utils/logger.hpp"
 #include "resource/resource_manager.hpp"
+#include "utils/serialize.hpp"
 
 namespace Progression {
 
@@ -278,48 +279,39 @@ namespace Progression {
     }
 
     bool Shader::saveToFastFile(std::ofstream& out) const {
-        uint32_t nLen = name.length();
-        out.write((char*) &nLen, sizeof(uint32_t));
-        out.write(name.c_str(), nLen);
         GLint len;
         GLenum format;
         auto binary = getShaderBinary(len, format);
         if (!binary.size())
             return false;
-        
-        out.write((char*) &len, sizeof(GLint));
-        out.write((char*) &format, sizeof(GLenum));
-        out.write(binary.data(), len);
 
+        serialize::write(out, name);
+        serialize::write(out, len);
+        serialize::write(out, format);
+        serialize::write(out, binary.data(), len);
         metaData.vertex.save(out);
         metaData.geometry.save(out);
         metaData.compute.save(out);
         metaData.fragment.save(out);
 
-
         uint32_t numUniforms = (uint32_t) uniforms_.size();
-        out.write((char*) &numUniforms, sizeof(uint32_t));
+        serialize::write(out, numUniforms);
         for (const auto& [uName, loc] : uniforms_) {
-            uint32_t sLen = uName.length();
-            out.write((char*) &sLen, sizeof(uint32_t));
-            out.write(uName.c_str(), sLen);
-            out.write((char*) &loc, sizeof(GLuint));
+            serialize::write(out, uName);
+            serialize::write(out, loc);
         }
 
         return !out.fail();
     }
 
     bool Shader::loadFromFastFile(std::ifstream& in) {
-        uint32_t nLen;
-        in.read((char*) &nLen, sizeof(uint32_t));
-        name.resize(nLen);
-        in.read(&name[0], nLen);
+        serialize::read(in, name);
         GLint len;
         GLenum format;
-        in.read((char*) &len, sizeof(GLint));
-        in.read((char*) &format, sizeof(GLenum));
+        serialize::read(in, len);
+        serialize::read(in, format);
         std::vector<char> binary(len);
-        in.read(binary.data(), len);
+        serialize::read(in, binary.data(), len);
         if (!loadFromBinary(binary.data(), len, format)) {
             LOG_ERR("Failed to load shader from binary");
             return false;
@@ -330,18 +322,13 @@ namespace Progression {
         metaData.compute.load(in);
         metaData.fragment.load(in);
 
-        //queryUniforms();
-
         uint32_t numUniforms;
-        in.read((char*) &numUniforms, sizeof(uint32_t));
+        serialize::read(in, numUniforms);
         for (uint32_t i =0; i < numUniforms; ++i) {
-            uint32_t sLen;
-            in.read((char*) &sLen, sizeof(uint32_t));
             std::string uName;
-            uName.resize(sLen);
-            in.read(&uName[0], sLen);
             GLuint loc;
-            in.read((char*) &loc, sizeof(GLuint));
+            serialize::read(in, uName);
+            serialize::read(in, loc);
             uniforms_[uName] = loc;
         }
 

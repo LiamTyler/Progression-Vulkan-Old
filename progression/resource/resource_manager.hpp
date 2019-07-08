@@ -37,8 +37,32 @@ namespace ResourceManager {
 
     using ResourceMap = std::unordered_map<std::string, std::shared_ptr<Resource>>;
     using UpdateMap = std::unordered_map<std::string, std::function<void()>>;
-    using ResourceDB = std::vector<ResourceMap>;
-    using UpdateDB = std::vector<UpdateMap>;
+
+    class ResourceDB {
+    public:
+        ResourceDB() {
+            maps.resize(TOTAL_RESOURCE_TYPES);
+        }
+        template <typename T>
+        ResourceMap& getMap() { return maps[getResourceTypeID<T>()]; }
+        ResourceMap& operator[](uint32_t typeID) { return maps[typeID]; }
+        void clear() { maps.clear(); maps.resize(TOTAL_RESOURCE_TYPES); }
+
+        std::vector<ResourceMap> maps;
+    };
+
+    class UpdateDB {
+    public:
+        UpdateDB() {
+            maps.resize(TOTAL_RESOURCE_TYPES);
+        }
+        template <typename T>
+        UpdateMap& getMap() { return maps[getResourceTypeID<T>()]; }
+        UpdateMap& operator[](uint32_t typeID) { return maps[typeID]; }
+
+        void clear() { maps.clear(); maps.resize(TOTAL_RESOURCE_TYPES); }
+        std::vector<UpdateMap> maps;
+    };
 
     extern ResourceDB f_resources;
 
@@ -58,21 +82,21 @@ namespace ResourceManager {
     template <typename T>
     std::shared_ptr<T> loadInternal(const std::string& name, MetaData* metaData, ResourceDB* db) {
         static_assert(std::is_base_of<Resource, T>::value && !std::is_same<Resource, T>::value, "Can only call load with a class that inherits from Resource");
-        auto& DB = (*db)[getResourceTypeID<T>()];
-        T resource;
-        resource.name = name;
-        if (!resource.load(metaData)) {
+        ResourceMap& map = db->getMap<T>();
+        auto resource = std::make_shared<T>();
+        resource->name = name;
+        if (!resource->load(metaData)) {
             LOG_ERR("Failed to load resource with name '", name, "'");
             return nullptr;
         }
 
-        if (DB.find(name) != DB.end()) {
-            *(DB[name]) = std::move(resource);
+        if (map.find(name) != map.end()) {
+            resource->move(map[name].get());
         } else {
-            DB[name] = std::make_shared<T>(std::move(resource));
+            map[name] = resource;
         }
 
-        return std::static_pointer_cast<T>(DB[name]);
+        return std::static_pointer_cast<T>(map[name]);
     }
 
     template <typename T>

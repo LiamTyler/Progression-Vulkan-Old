@@ -17,7 +17,7 @@
 #define PG_DEBUG_MODE
 
 #ifdef PG_DEBUG_MODE
-#define PG_ASSERT(x) if (!(x)) { printf("(%s) at line %d in file %s.\n", #x, __LINE__, __FILE__); abort(); }
+#define PG_ASSERT(x) if (!(x)) { printf("Failed assertion: (%s) at line %d in file %s.\n", #x, __LINE__, __FILE__); abort(); }
 #else
 #define PG_ASSERT(x)
 #endif
