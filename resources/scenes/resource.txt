@@ -8,9 +8,3 @@ minFilter nearest
 magFilter linear
 wrapModeS clamp_to_edge
 wrapModeT clamp_to_border
-
-Model
-name chalet
-filename models/chalet2.obj
-optimize true
-freeCpuCopy true

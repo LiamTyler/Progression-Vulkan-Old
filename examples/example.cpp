@@ -98,36 +98,36 @@ int main(int argc, char* argv[]) {
         shader.setUniform("cameraPos", camera.position);
         shader.setUniform("lightDirInWorldSpace", lightDir);
 
-        graphicsApi::bindVao(quadVao);
-        shader.setUniform("kd", mat.Kd);
-        shader.setUniform("ks", mat.Ks);
-        shader.setUniform("ke", mat.Ke);
-        shader.setUniform("shininess", mat.Ns);
-        if (mat.map_Kd) {
-            shader.setUniform("textured", true);
-            graphicsApi::bind2DTexture(mat.map_Kd->gpuHandle(), shader.getUniform("diffuseTex"), 0);
-        } else {
-            shader.setUniform("textured", false);
-        }
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        // for (size_t i = 0; i < model.meshes.size(); ++i) {
-        //     const auto& mesh = model.meshes[i];
-        //     const auto& m = *model.materials[i];
-        //     graphicsApi::bindVao(mesh.vao);
-        //     shader.setUniform("kd", m.Kd);
-        //     shader.setUniform("ks", m.Ks);
-        //     shader.setUniform("ke", m.Ke);
-        //     shader.setUniform("shininess", m.Ns);
-        //     if (m.map_Kd) {
-        //         shader.setUniform("textured", true);
-        //         graphicsApi::bind2DTexture(m.map_Kd->gpuHandle(), shader.getUniform("diffuseTex"), 0);
-        //     } else {
-        //         shader.setUniform("textured", false);
-        //     }
-
-        //     glDrawElements(GL_TRIANGLES, mesh.getNumIndices(), GL_UNSIGNED_INT, 0);
+        // graphicsApi::bindVao(quadVao);
+        // shader.setUniform("kd", mat.Kd);
+        // shader.setUniform("ks", mat.Ks);
+        // shader.setUniform("ke", mat.Ke);
+        // shader.setUniform("shininess", mat.Ns);
+        // if (mat.map_Kd) {
+        //     shader.setUniform("textured", true);
+        //     graphicsApi::bind2DTexture(mat.map_Kd->gpuHandle(), shader.getUniform("diffuseTex"), 0);
+        // } else {
+        //     shader.setUniform("textured", false);
         // }
+        // glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        for (size_t i = 0; i < model.meshes.size(); ++i) {
+            const auto& mesh = model.meshes[i];
+            const auto& m = *model.materials[i];
+            graphicsApi::bindVao(mesh.vao);
+            shader.setUniform("kd", m.Kd);
+            shader.setUniform("ks", m.Ks);
+            shader.setUniform("ke", m.Ke);
+            shader.setUniform("shininess", m.Ns);
+            if (m.map_Kd) {
+                shader.setUniform("textured", true);
+                graphicsApi::bind2DTexture(m.map_Kd->gpuHandle(), shader.getUniform("diffuseTex"), 0);
+            } else {
+                shader.setUniform("textured", false);
+            }
+
+            glDrawElements(GL_TRIANGLES, mesh.getNumIndices(), GL_UNSIGNED_INT, 0);
+        }
 
         window->endFrame();
     }

@@ -29,6 +29,8 @@ namespace Progression {
         ResUpdateStatus loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) override;
         void move(Resource* resource) override;
         std::shared_ptr<Resource> needsReloading() override;
+        bool saveToFastFile(std::ofstream& outFile) const override;
+        bool loadFromFastFile(std::ifstream& in) override;
 
         bool loadFromObj();
         void optimize();

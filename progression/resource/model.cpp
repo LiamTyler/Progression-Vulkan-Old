@@ -4,6 +4,7 @@
 #include "resource/resource_manager.hpp"
 #include "core/common.hpp"
 #include "utils/logger.hpp"
+#include "utils/serialize.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
@@ -91,6 +92,52 @@ namespace Progression {
             metaData = *(ModelMetaData*) data;
 
         return loadFromObj();
+    }
+
+    bool Model::saveToFastFile(std::ofstream& out) const {
+        serialize::write(out, name);
+        uint32_t numMeshes = meshes.size();
+        serialize::write(out, numMeshes);
+        for (uint32_t i = 0; i < numMeshes; ++i) {
+            if (!materials[i]->saveToFastFile(out)) {
+                LOG("Could not write material: ", i, ", of model: ", name, " to fastfile");
+                return false;
+            }
+        }
+
+        for (uint32_t i = 0; i < numMeshes; ++i) {
+            if (!meshes[i].saveToFastFile(out)) {
+                LOG("Could not write mesh: ", i, ", of model: ", name, " to fastfile");
+                return false;
+            }
+        }
+
+        return !out.fail();
+    }
+
+    bool Model::loadFromFastFile(std::ifstream& in) {
+        serialize::read(in, name);
+        uint32_t numMeshes;
+        serialize::read(in, numMeshes);
+        meshes.resize(numMeshes);
+        materials.resize(numMeshes);
+        for (uint32_t i = 0; i < numMeshes; ++i) {
+            auto mat = std::make_shared<Material>();
+            if (!mat->loadFromFastFile(in)) {
+                LOG("Could not load material: ", i, ", of model: ", name, " from fastfile");
+                return false;
+            }
+            materials[i] = mat;
+        }
+
+        for (uint32_t i = 0; i < numMeshes; ++i) {
+            if (!meshes[i].loadFromFastFile(in)) {
+                LOG("Could not load mesh: ", i, ", of model: ", name, " from fastfile");
+                return false;
+            }
+        }
+
+        return !in.fail();
     }
 
     bool Model::readMetaData(std::istream& in) {

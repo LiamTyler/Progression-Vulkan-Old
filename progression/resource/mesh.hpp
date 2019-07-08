@@ -18,6 +18,10 @@ namespace Progression {
 		void free(bool gpuCopy = true, bool cpuCopy = true);
         void optimize();
 
+        bool saveToFastFile(std::ofstream& outFile) const;
+        bool loadFromFastFile(std::ifstream& in);
+
+
         unsigned int getNumVertices() const { return numVertices_; }
         unsigned int getNumIndices() const { return numIndices_; }
 

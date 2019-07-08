@@ -2,6 +2,7 @@
 #include "graphics/graphics_api.hpp"
 #include "utils/logger.hpp"
 #include "meshoptimizer/src/meshoptimizer.h"
+#include "utils/serialize.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
@@ -197,6 +198,30 @@ namespace Progression {
             numVertices_  = numIndices_ = 0;
             normalOffset_ = textureOffset_ = -1;
         }
+    }
+
+    bool Mesh::saveToFastFile(std::ofstream& out) const {
+        if (!vertices.size()) {
+            LOG_ERR("No vertex data to save. Was this mesh accidentally uploaded to the GPU + freed?");
+            return false;
+        }
+
+        serialize::write(out, vertices);
+        serialize::write(out, normals);
+        serialize::write(out, uvs);
+        serialize::write(out, indices);
+
+        return !out.fail();
+    }
+
+    bool Mesh::loadFromFastFile(std::ifstream& in) {
+        gpuDataCreated = false;
+        serialize::read(in, vertices);
+        serialize::read(in, normals);
+        serialize::read(in, uvs);
+        serialize::read(in, indices);
+
+        return !in.fail();
     }
 
 } // namespace Progression

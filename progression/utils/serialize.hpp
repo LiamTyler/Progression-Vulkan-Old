@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include "glm/glm.hpp"
+#include <vector>
 
 namespace serialize {
 
@@ -20,6 +21,14 @@ namespace serialize {
     template <>
     inline void write(std::ofstream& out, const glm::vec3& v) {
         out.write((char*) &v.x, sizeof(glm::vec3));
+    }
+
+    template <typename T>
+    inline void write(std::ofstream& out, const std::vector<T>& vec) {
+        size_t len = vec.size();
+        serialize::write(out, len);
+        if (len)
+            out.write((char*) &vec[0], len * sizeof(T));
     }
 
     inline void write(std::ofstream& out, char* buff, size_t len) {
@@ -42,6 +51,15 @@ namespace serialize {
     template <>
     inline void read(std::ifstream& in, glm::vec3& v) {
         in.read((char*) &v.x, sizeof(glm::vec3));
+    }
+
+    template <typename T>
+    inline void read(std::ifstream& in, std::vector<T>& vec) {
+        size_t len;
+        serialize::read(in, len);
+        vec.resize(len);
+        if (len)
+            in.read((char*) &vec[0], len * sizeof(T));
     }
 
     inline void read(std::ifstream& in, char* buff, size_t len) {

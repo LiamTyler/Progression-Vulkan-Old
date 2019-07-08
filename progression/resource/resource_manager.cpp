@@ -317,17 +317,13 @@ namespace ResourceManager {
             }
             PARSE_THEN_LOAD(Shader)
             PARSE_THEN_LOAD(Material)
+            PARSE_THEN_LOAD(Model)
             else {
                 LOG_WARN("Unrecognized line: ", line);
             }
         }
 
         in.close();
-
-        // if (!resolveSoftLinks(DB)) {
-        //     LOG("Could not resolve the soft links while parsing resource file: ", resourceFile);
-        //     return false;
-        // }
 
         std::string fastFileName = resourceFile + ".ff";
         std::ofstream out(fastFileName, std::ios::binary);
@@ -346,7 +342,17 @@ namespace ResourceManager {
         serialize::write(out, numMaterials);
         for (const auto& [name, material] : materials) {
             if (!material->saveToFastFile(out)) {
-                LOG("Could not write materials: ", material->name, " to fast file");
+                LOG("Could not write material: ", material->name, " to fast file");
+                return false;
+            }
+        }
+
+        ResourceMap& models = DB.getMap<Model>();
+        uint32_t numModels = models.size();
+        serialize::write(out, numModels);
+        for (const auto& [name, model] : models) {
+            if (!model->saveToFastFile(out)) {
+                LOG("Could not write model: ", model->name, " to fast file");
                 return false;
             }
         }
@@ -386,13 +392,29 @@ namespace ResourceManager {
         for (uint32_t i = 0; i < numMaterials; ++i) {
             auto material = std::make_shared<Material>();
             if (!material->loadFromFastFile(in)) {
-                LOG_ERR("Failed to load shader from fastfile");
+                LOG_ERR("Failed to load material from fastfile");
                 return false;
             }
             if (materials.find(material->name) != materials.end()) {
                 material->move(materials[material->name].get());
             } else {
                 materials[material->name] = material;
+            }
+        }
+
+        uint32_t numModels;
+        serialize::read(in, numModels);
+        ResourceMap& models = DB.getMap<Model>();
+        for (uint32_t i = 0; i < numModels; ++i) {
+            auto model = std::make_shared<Model>();
+            if (!model->loadFromFastFile(in)) {
+                LOG_ERR("Failed to load model from fastfile");
+                return false;
+            }
+            if (models.find(model->name) != models.end()) {
+                model->move(models[model->name].get());
+            } else {
+                models[model->name] = model;
             }
         }
 
