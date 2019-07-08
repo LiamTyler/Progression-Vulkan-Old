@@ -318,6 +318,7 @@ namespace ResourceManager {
             PARSE_THEN_LOAD(Shader)
             PARSE_THEN_LOAD(Material)
             PARSE_THEN_LOAD(Model)
+            PARSE_THEN_LOAD(Texture2D)
             else {
                 LOG_WARN("Unrecognized line: ", line);
             }
@@ -353,6 +354,16 @@ namespace ResourceManager {
         for (const auto& [name, model] : models) {
             if (!model->saveToFastFile(out)) {
                 LOG("Could not write model: ", model->name, " to fast file");
+                return false;
+            }
+        }
+
+        ResourceMap& textures = DB.getMap<Texture2D>();
+        uint32_t numTextures = textures.size();
+        serialize::write(out, numTextures);
+        for (const auto& [name, texture] : textures) {
+            if (!texture->saveToFastFile(out)) {
+                LOG("Could not write texture2D: ", texture->name, " to fast file");
                 return false;
             }
         }
@@ -415,6 +426,22 @@ namespace ResourceManager {
                 model->move(models[model->name].get());
             } else {
                 models[model->name] = model;
+            }
+        }
+
+        uint32_t numTextures;
+        serialize::read(in, numTextures);
+        ResourceMap& textures = DB.getMap<Texture2D>();
+        for (uint32_t i = 0; i < numTextures; ++i) {
+            auto texture = std::make_shared<Texture2D>();
+            if (!texture->loadFromFastFile(in)) {
+                LOG_ERR("Failed to load texture from fastfile");
+                return false;
+            }
+            if (textures.find(texture->name) != textures.end()) {
+                texture->move(textures[texture->name].get());
+            } else {
+                textures[texture->name] = texture;
             }
         }
 

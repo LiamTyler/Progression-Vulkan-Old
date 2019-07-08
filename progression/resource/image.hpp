@@ -27,7 +27,11 @@ namespace Progression {
         Image& operator=(Image&& src);
 
         bool load(const std::string& fname, bool flipVertically = true);
-        bool save(const std::string& fname, bool flipVertically = true);
+        bool save(const std::string& fname, bool flipVertically = true) const;
+
+        // to / from  a binary file
+        bool save(std::ofstream& outFile) const;
+        bool load(std::ifstream& in);
 
 		int width() const { return width_; }
 		int height() const { return height_; }

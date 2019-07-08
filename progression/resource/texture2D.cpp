@@ -1,6 +1,7 @@
 #include "resource/texture2D.hpp"
 #include "utils/logger.hpp"
 #include "resource/resource_manager.hpp"
+#include "utils/serialize.hpp"
 
 namespace Progression {
 
@@ -193,7 +194,7 @@ namespace Progression {
         ss >> name;
         PG_ASSERT(!in.fail() && !ss.fail());
 
-        // texture name
+        // texture filename
         std::getline(in, line);
         ss = std::istringstream(line);
         ss >> s;
@@ -325,6 +326,52 @@ namespace Progression {
         }
 
         return load() ? RES_RELOAD_SUCCESS : RES_RELOAD_FAILED;
+    }
+
+    bool Texture2D::saveToFastFile(std::ofstream& out) const {
+        serialize::write(out, name);
+        metaData.file.save(out);
+        serialize::write(out, metaData.internalFormat);
+        serialize::write(out, metaData.minFilter);
+        serialize::write(out, metaData.magFilter);
+        serialize::write(out, metaData.wrapModeS);
+        serialize::write(out, metaData.wrapModeT);
+        serialize::write(out, metaData.mipMapped);
+        serialize::write(out, metaData.freeCpuCopy);
+
+        if (!metaData.image) {
+            Image image;
+            if (!image.load(metaData.file.filename)) {
+                LOG_ERR("Could not load the image with filename: ", metaData.file.filename, " for texture: ", name);
+                return false;
+            }
+            return image.save(out);
+        }
+        
+        return metaData.image->save(out);
+    }
+    bool Texture2D::loadFromFastFile(std::ifstream& in) {
+        serialize::read(in, name);
+        metaData.file.load(in);
+        serialize::read(in, metaData.internalFormat);
+        serialize::read(in, metaData.minFilter);
+        serialize::read(in, metaData.magFilter);
+        serialize::read(in, metaData.wrapModeS);
+        serialize::read(in, metaData.wrapModeT);
+        serialize::read(in, metaData.mipMapped);
+        serialize::read(in, metaData.freeCpuCopy);
+
+        metaData.image = new Image;
+        if (!metaData.image->load(in)) {
+            LOG_ERR("Could not load the image for texture: ", name);
+            delete metaData.image;
+            metaData.image = nullptr;
+            return false;
+        }
+
+        uploadToGPU();
+
+        return !in.fail();
     }
 
 } // namespace Progression

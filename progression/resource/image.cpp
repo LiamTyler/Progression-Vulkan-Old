@@ -6,6 +6,7 @@
 #include "stb_image/stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image/stb_image_write.h"
+#include "utils/serialize.hpp"
 
 namespace Progression {
 
@@ -90,7 +91,7 @@ namespace Progression {
         return true;
 	}
 
-	bool Image::save(const std::string& fname, bool flipVertically) {
+	bool Image::save(const std::string& fname, bool flipVertically) const {
         stbi_flip_vertically_on_write(flipVertically);
 		int i = fname.length();
 		while (fname[--i] != '.' && i >= 0);
@@ -122,5 +123,22 @@ namespace Progression {
 
         return ret;
 	}
+
+    bool Image::save(std::ofstream& out) const {
+        serialize::write(out, width_);
+        serialize::write(out, height_);
+        serialize::write(out, numComponents_);
+        serialize::write(out, (char*) pixels_, width_ * height_ * numComponents_);
+        return !out.fail();
+    }
+
+    bool Image::load(std::ifstream& in) {
+        serialize::read(in, width_);
+        serialize::read(in, height_);
+        serialize::read(in, numComponents_);
+        pixels_ = (unsigned char*) malloc(width_ * height_ * numComponents_);
+        serialize::read(in, (char*) pixels_, width_ * height_ * numComponents_);
+        return !in.fail();
+    }
 
 } // namespace Progression
