@@ -2,11 +2,12 @@
 #include "resource/resource_manager.hpp"
 #include "resource/texture2D.hpp"
 #include "utils/serialize.hpp"
+#include "utils/fileIO.hpp"
 
 namespace Progression {
 
     bool Material::load(MetaData* metaData) {
-        UNUSED(metaData);
+        PG_UNUSED(metaData);
         return true;
     }
 
@@ -44,55 +45,15 @@ namespace Progression {
         std::string s;
         std::istringstream ss;
 
-        // material name
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "name");
-        ss >> name;
-        PG_ASSERT(!in.fail() && !ss.fail());
+       
+        fileIO::parseLineKeyVal(in, "name", name);
+        fileIO::parseLineKeyVal(in, "Ka", Ka);
+        fileIO::parseLineKeyVal(in, "Kd", Kd);
+        fileIO::parseLineKeyVal(in, "Ks", Ks);
+        fileIO::parseLineKeyVal(in, "Ke", Ke);
+        fileIO::parseLineKeyVal(in, "Ns", Ns);
+        //fileIO::parseLineKeyVal(in, "map_Kd", map_Kd_name);
 
-        // ambient
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "Ka");
-        ss >> Ka;
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        // diffuse
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "Kd");
-        ss >> Kd;
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        // specular
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "Ks");
-        ss >> Ks;
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        // emissive
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "Ke");
-        ss >> Ke;
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        // Ns
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "Ns");
-        ss >> Ns;
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        // map_Kd
         std::getline(in, line);
         ss = std::istringstream(line);
         ss >> s;
@@ -109,7 +70,7 @@ namespace Progression {
 
     ResUpdateStatus Material::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc)
     {
-        UNUSED(updateFunc);
+        PG_UNUSED(updateFunc);
         return readMetaData(in) ? RES_RELOAD_SUCCESS : RES_PARSE_ERROR;
     }
 

@@ -5,6 +5,7 @@
 #include "core/common.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
+#include "utils/fileIO.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
@@ -141,52 +142,19 @@ namespace Progression {
     }
 
     bool Model::readMetaData(std::istream& in) {
-        std::string line;
-        std::string s;
-        std::istringstream ss;
+        std::string tmp;
 
-        // model name
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "name");
-        ss >> name;
-        PG_ASSERT(!in.fail() && !ss.fail());
+        fileIO::parseLineKeyVal(in, "name", name);
+        fileIO::parseLineKeyVal(in, "filename", tmp);
+        metaData.file = TimeStampedFile(PG_RESOURCE_DIR + tmp);
+        metaData.optimize = fileIO::parseLineKeyBool(in, "optimize");
+        metaData.freeCpuCopy = fileIO::parseLineKeyBool(in, "freeCpuCopy");
 
-        // model filename
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "filename");
-        ss >> s;
-        PG_ASSERT(!in.fail() && !ss.fail());
-        metaData.file = TimeStampedFile(PG_RESOURCE_DIR + s);
-
-        // optimize
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "optimize");
-        ss >> s;
-        PG_ASSERT(s == "true" || s == "false");
-        metaData.optimize = s == "true";
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        // freeCpuCopy
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "freeCpuCopy");
-        ss >> s;
-        PG_ASSERT(s == "true" || s == "false");
-        metaData.freeCpuCopy = s == "true";
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        return !in.fail() && !ss.fail();
+        return !in.fail();
     }
 
     ResUpdateStatus Model::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) {
-        UNUSED(updateFunc);
+        PG_UNUSED(updateFunc);
         if (!readMetaData(in))
             return RES_PARSE_ERROR;
         

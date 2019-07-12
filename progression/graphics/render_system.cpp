@@ -106,8 +106,8 @@ namespace Progression { namespace RenderSystem {
     void postProcessPass(Scene* scene);
 
     bool Init(const config::Config& config) {
-        UNUSED(config);
-        UNUSED(gbuffer);
+        PG_UNUSED(config);
+        PG_UNUSED(gbuffer);
 
         // load shaders
         for (int i = 0; i < TOTAL_SHADERS; ++i) {

@@ -2,6 +2,7 @@
 #include "utils/logger.hpp"
 #include "resource/resource_manager.hpp"
 #include "utils/serialize.hpp"
+#include "utils/fileIO.hpp"
 
 namespace Progression {
 
@@ -182,122 +183,51 @@ namespace Progression {
 
     bool Texture2D::readMetaData(std::istream& in) {
         std::string line;
-        std::string s;
-        std::istringstream ss;
-        std::unordered_map<std::string, GLint>::iterator it;
+        std::string tmp;
+ 
+        decltype(auto) parseMapValue = [&](const auto& map, const char* key) {
+            std::string tmpStr;
+            fileIO::parseLineKeyVal(in, key, tmpStr);
+            auto it = map.find(tmpStr);
+            if (it == map.end()) {
+                LOG_ERR("Invalid texture format: ", tmp);
+                return false;
+            }
+            
+            PG_ASSERT(!in.fail());
+            return it->second;
+        };
 
-        // texture name
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "name");
-        ss >> name;
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        // texture filename
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "filename");
-        ss >> s;
-        PG_ASSERT(!in.fail() && !ss.fail());
-        metaData.file = TimeStampedFile(PG_RESOURCE_DIR + s);
-
-        // freeCPUCopy
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "freeCPUCopy");
-        ss >> s;
-        PG_ASSERT(s == "true" || s == "false");
-        metaData.freeCpuCopy = s == "true";
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        // mipmaped
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "mipmapped");
-        ss >> s;
-        PG_ASSERT(s == "true" || s == "false");
-        metaData.mipMapped = s == "true";
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        // internal format
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "internalFormat");
-        ss >> s;
-        it = internalFormatMap.find(s);
-        if (it == internalFormatMap.end()) {
-            LOG_ERR("Invalid texture format: ", s);
+        fileIO::parseLineKeyVal(in, "name", name);
+        fileIO::parseLineKeyVal(in, "filename", tmp);
+        metaData.file = TimeStampedFile(PG_RESOURCE_DIR + tmp);
+        metaData.freeCpuCopy = fileIO::parseLineKeyBool(in, "freeCpuCopy");
+        metaData.mipMapped = fileIO::parseLineKeyBool(in, "mipmapped");
+        if (!fileIO::parseLineKeyMap(in, "internalFormat", internalFormatMap, metaData.internalFormat)) {
+            LOG("Invalid texture2D 'internalFormat'");
             return false;
         }
-        metaData.internalFormat = it->second;
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-
-        // min filter
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "minFilter");
-        ss >> s;
-        it = minFilterMap.find(s);
-        if (it == minFilterMap.end()) {
-            LOG_ERR("Invalid minFilter format: ", s);
+        if (!fileIO::parseLineKeyMap(in, "minFilter", minFilterMap, metaData.minFilter)) {
+            LOG("Invalid texture2D 'minFilter'");
             return false;
         }
-        if (!metaData.mipMapped && (s != "nearest" && s != "linear")) {
+        if (!metaData.mipMapped && (metaData.minFilter != GL_NEAREST && metaData.minFilter != GL_LINEAR)) {
             LOG_WARN("Trying to use a mip map min filter when there is no mip map on texture: ", metaData.file.filename);
         }
-        metaData.minFilter = it->second;
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        // mag filter
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "magFilter");
-        ss >> s;
-        it = magFilterMap.find(s);
-        if (it == magFilterMap.end()) {
-            LOG_ERR("Invalid magFilter format: ", s);
+        if (!fileIO::parseLineKeyMap(in, "magFilter", magFilterMap, metaData.magFilter)) {
+            LOG("Invalid texture2D 'magFilter'");
             return false;
         }
-        metaData.magFilter = it->second;
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        // wrapModeS
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "wrapModeS");
-        ss >> s;
-        it = wrapMap.find(s);
-        if (it == wrapMap.end()) {
-            LOG_ERR("Invalid wrapModeS format: ", s);
+        if (!fileIO::parseLineKeyMap(in, "wrapModeS", wrapMap, metaData.wrapModeS)) {
+            LOG("Invalid texture2D 'wrapModeS'");
             return false;
         }
-        metaData.wrapModeS = it->second;
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        // wrapModeT
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "wrapModeT");
-        ss >> s;
-        it = wrapMap.find(s);
-        if (it == wrapMap.end()) {
-            LOG_ERR("Invalid wrapModeT format: ", s);
+        if (!fileIO::parseLineKeyMap(in, "wrapModeT", wrapMap, metaData.wrapModeT)) {
+            LOG("Invalid texture2D 'wrapModeT'");
             return false;
         }
-        metaData.wrapModeT = it->second;
-        PG_ASSERT(!in.fail() && !ss.fail());
 
-        return !in.fail() && !ss.fail();
+        return !in.fail();
     }
 
     ResUpdateStatus Texture2D::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) {

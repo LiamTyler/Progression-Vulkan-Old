@@ -1,16 +1,11 @@
 #pragma once
 
-#include "core/game_object.hpp"
 #include "core/frustum.hpp"
 
 namespace Progression {
 
-	class Camera {
-	public:
-        struct RenderOptions {
-            float exposure = 1.0f;
-        };
-
+    class Camera {
+    public:
         Camera(
             const glm::vec3& pos = glm::vec3(0),
             const glm::vec3& rot = glm::vec3(0),
@@ -40,7 +35,6 @@ namespace Progression {
         void setNearPlane(float p);
         void setFarPlane(float p);
 
-        struct RenderOptions renderOptions;
         glm::vec3 position;
         glm::vec3 rotation;
 
@@ -56,6 +50,6 @@ namespace Progression {
         glm::vec3 currUp_;
         glm::vec3 currRight_;
         Frustum frustum_;
-	};
+    };
 
 } // namespace Progression

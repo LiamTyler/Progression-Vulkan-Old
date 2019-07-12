@@ -23,7 +23,7 @@ freeCpuCopy true
 Texture2D
 name cockatoo
 filename textures/cockatoo.jpg
-freeCPUCopy true
+freeCpuCopy true
 mipmapped true
 internalFormat RGBA32F
 minFilter nearest

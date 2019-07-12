@@ -2,6 +2,7 @@
 #include "utils/logger.hpp"
 #include "resource/resource_manager.hpp"
 #include "utils/serialize.hpp"
+#include "utils/fileIO.hpp"
 
 namespace Progression {
 
@@ -336,62 +337,22 @@ namespace Progression {
     }
     
     bool Shader::readMetaData(std::istream& in) {
-        std::string line;
-        std::string s;
-        std::istringstream ss;
+        std::string tmp;
+        fileIO::parseLineKeyVal(in, "name", name);
+        if (fileIO::parseLineKeyValOptional(in, "vertex", tmp))
+            metaData.vertex = TimeStampedFile(PG_RESOURCE_DIR + tmp);
+        if (fileIO::parseLineKeyValOptional(in, "geometry", tmp))
+            metaData.geometry = TimeStampedFile(PG_RESOURCE_DIR + tmp);
+        if (fileIO::parseLineKeyValOptional(in, "fragment", tmp))
+            metaData.fragment = TimeStampedFile(PG_RESOURCE_DIR + tmp);
+        if (fileIO::parseLineKeyValOptional(in, "compute", tmp))
+            metaData.compute = TimeStampedFile(PG_RESOURCE_DIR + tmp);
 
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "name");
-        ss >> name;
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "vertex");
-        if (!ss.eof()) {
-            ss >> s;
-            metaData.vertex = TimeStampedFile(PG_RESOURCE_DIR + s);
-        }
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "geometry");
-        if (!ss.eof()) {
-            ss >> s;
-            metaData.geometry = TimeStampedFile(PG_RESOURCE_DIR + s);
-        }
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "fragment");
-        if (!ss.eof()) {
-            ss >> s;
-            metaData.fragment = TimeStampedFile(PG_RESOURCE_DIR + s);
-        }
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "compute");
-        if (!ss.eof()) {
-            ss >> s;
-            metaData.compute = TimeStampedFile(PG_RESOURCE_DIR + s);
-        }
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        return !in.fail() && !ss.fail();
+        return !in.fail();
     }
 
     ResUpdateStatus Shader::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) {
-        UNUSED(updateFunc);
+        PG_UNUSED(updateFunc);
 
         if (!readMetaData(in))
             return RES_PARSE_ERROR;

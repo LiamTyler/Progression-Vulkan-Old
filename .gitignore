@@ -4,6 +4,7 @@ build_debug/
 a.out
 progression/core/configuration.hpp
 *.ff
+resources/sponza
 
 # Prerequisites
 *.d

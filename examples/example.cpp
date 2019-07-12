@@ -10,8 +10,8 @@
 using namespace Progression;
 
 int main(int argc, char* argv[]) {
-    UNUSED(argc);
-    UNUSED(argv);
+    PG_UNUSED(argc);
+    PG_UNUSED(argv);
 
     PG::EngineInitialize();
 
@@ -67,8 +67,8 @@ int main(int argc, char* argv[]) {
 
     Transform modelTransform(
             glm::vec3(0, 0, 0),
-            glm::vec3(0),
-            //glm::vec3(glm::radians(-90.0f), glm::radians(90.0f), glm::radians(-0.0f)),
+            //glm::vec3(0),
+            glm::vec3(glm::radians(-90.0f), glm::radians(90.0f), glm::radians(-0.0f)),
             glm::vec3(1));
     Camera camera(glm::vec3(0, 0, 3), glm::vec3(0));
 

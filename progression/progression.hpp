@@ -2,9 +2,7 @@
 
 #include "core/camera.hpp"
 #include "core/common.hpp"
-#include "core/component.hpp"
 #include "core/config.hpp"
-#include "core/game_object.hpp"
 #include "core/input.hpp"
 #include "core/input_types.hpp"
 #include "core/time.hpp"
@@ -14,6 +12,7 @@
 // #include "core/bounding_box.hpp"
 // #include "core/frustum.hpp"
 #include "core/configuration.hpp"
+#include "core/ecs.hpp"
 // 
 // #include "graphics/render_system.hpp"
 // #include "graphics/render_component.hpp"
@@ -34,7 +33,7 @@
 #include "utils/logger.hpp"
 #include "utils/random.hpp"
 
-#include "components/user_camera_component.hpp"
+// #include "components/user_camera_component.hpp"
 
 #if PG_AUDIO_ENABLED
     #include "audio/audio_system.hpp"

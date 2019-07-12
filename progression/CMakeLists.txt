@@ -16,7 +16,6 @@ set(
     core/camera.cpp
     core/common.cpp
     core/config.cpp
-    core/game_object.cpp
     core/input.cpp
     core/time.cpp
     core/transform.cpp
@@ -25,7 +24,7 @@ set(
     core/bounding_box.cpp
     core/frustum.cpp
 
-    #graphics/lights.cpp
+    graphics/lights.cpp
     #graphics/render_component.cpp
     #graphics/render_system.cpp
     #graphics/model_render_component.cpp
@@ -58,9 +57,7 @@ set(
     HEADERS
     core/camera.hpp
     core/common.hpp
-    core/component.hpp
     core/config.hpp
-    core/game_object.hpp
     core/input.hpp
     core/input_types.hpp
     core/time.hpp
@@ -69,8 +66,9 @@ set(
     #core/scene.hpp
     core/bounding_box.hpp
     core/frustum.hpp
+    core/ecs.hpp
     
-    #graphics/lights.hpp
+    graphics/lights.hpp
     #graphics/render_component.hpp
     #graphics/render_system.hpp
     #graphics/model_render_component.hpp
@@ -89,6 +87,7 @@ set(
 
     #components/user_camera_component.hpp
     
+    utils/fileIO.hpp
     utils/serialize.hpp
     utils/noncopyable.hpp
     utils/logger.hpp

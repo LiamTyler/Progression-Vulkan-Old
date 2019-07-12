@@ -14,8 +14,8 @@ static void APIENTRY glDebugOutput(GLenum source,
                             const GLchar *message,
                             const void *userParam)
 {
-    UNUSED(length);
-    UNUSED(userParam);
+    PG_UNUSED(length);
+    PG_UNUSED(userParam);
     // ignore non-significant error/warning codes
     if(id == 131169 || id == 131185 || id == 131218 || id == 131204) return;
 
