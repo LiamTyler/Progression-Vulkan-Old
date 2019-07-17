@@ -7,9 +7,13 @@
 #include <utility>
 #include <type_traits>
 #include <functional>
+#include <bitset>
 #include "core/common.hpp"
+#include "core/transform.hpp"
 
 namespace Progression {
+
+namespace ECS {
 
 class BaseFamily {
 public:
@@ -32,28 +36,119 @@ static constexpr auto ENTITY_INDEX_BITS = 24;
 static constexpr entity_type ENTITY_INDEX_MASK = (1ull << ENTITY_INDEX_BITS) - 1;
 static constexpr auto ENTITY_VERSION_BITS = 8;
 static constexpr entity_type ENTITY_VERSION_MASK = (1ull << ENTITY_VERSION_BITS) - 1;
+static constexpr uint32_t MAX_COMPONENTS = 64;
+
+static constexpr entity_type INVALID_ENTITY_ID = ~0u;
+
+// TODO: test to see if / how much gain from struct of arrays
+class EntityData {
+public:
+    entity_type parentID = INVALID_ENTITY_ID;
+    std::bitset<MAX_COMPONENTS> hasComponents;
+    Transform transform;
+};
+
+// forward declarations
+
+namespace entity {
+
+    EntityData* data(const entity_type& id);
+
+} // namespace entity
+
+namespace component {
+
+    void destroy(uint32_t componentFamilyID, const entity_type& e);
+
+} // namespace component
 
 class Entity {
     public:
-        Entity() : id_(0) {}
-        Entity(const entity_type e) : id_(e) {}
-        Entity(const entity_index_type i, const entity_version_type v) :
+        constexpr Entity() : id_(0) {}
+        constexpr Entity(const entity_type e) : id_(e) {}
+        constexpr Entity(const entity_index_type i, const entity_version_type v) :
             id_(((entity_type) v << ENTITY_INDEX_BITS) + i) {}
 
-        entity_type id() const { return id_; }
-        entity_index_type index() const { return id_ & ENTITY_INDEX_MASK; }
-        entity_version_type version() const { return (id_ >> ENTITY_INDEX_BITS) & ENTITY_VERSION_MASK; }
+        constexpr entity_type id() const { return id_; }
+        constexpr entity_index_type index() const { return id_ & ENTITY_INDEX_MASK; }
+        constexpr entity_version_type version() const { return (id_ >> ENTITY_INDEX_BITS) & ENTITY_VERSION_MASK; }
 
-        bool operator==(const Entity& e) const {
+        constexpr bool operator==(const Entity& e) const {
             return id_ == e.id_;
         }
 
-        bool operator!=(const Entity& e) const {
+        constexpr bool operator!=(const Entity& e) const {
             return !(id_ == e.id_);
+        }
+
+        constexpr operator entity_type() const {
+            return id_;
+        }
+
+        EntityData* operator->() const {
+            return ECS::entity::data(id_);
         }
 
     private:
         entity_type id_;
+};
+
+class EntityManager {
+    static const auto MINIMUM_FREE_INDICIES = 128;
+
+public:
+    EntityManager(uint32_t reserveSize = 1024) {
+        entityVersions.reserve(reserveSize);
+        entityData.reserve(reserveSize);
+    }
+
+    void clear() {
+        freeIndices.clear();
+        entityVersions.clear();
+        entityData.clear();
+    }
+
+    Entity create() {
+        entity_index_type index = 0;
+        entity_version_type version = 0;
+        if (freeIndices.size() > MINIMUM_FREE_INDICIES) {
+            index = freeIndices.front();
+            freeIndices.pop_front();
+            version = entityVersions[index];
+        }
+        else {
+            index = entityVersions.size();
+            entityVersions.push_back(0);
+            entityData.emplace_back();
+        }
+
+        return Entity(index, version);
+    }
+
+    bool alive(const Entity e) const {
+        PG_ASSERT(e.index() < entityVersions.size());
+        return entityVersions[e.index()] == e.version();
+    }
+
+    void destroy(const Entity e) {
+        PG_ASSERT(alive(e));
+        const auto idx = e.index();
+        ++entityVersions[idx];
+        freeIndices.push_back(idx);
+        for (uint32_t cTypeID = 0; cTypeID < MAX_COMPONENTS; ++cTypeID) {
+            if (entityData[idx].hasComponents[cTypeID])
+                ECS::component::destroy(cTypeID, e);
+        }
+    }
+
+    EntityData* getData(const Entity& e) {
+        PG_ASSERT(e.index() < entityData.size());
+        return &entityData[e.index()];
+    }
+
+    std::deque<entity_index_type> freeIndices; // TODO: use a ring buffer or something w/contiguous mem
+    std::vector<entity_version_type> entityVersions;
+    std::vector<EntityData> entityData;
 };
 
 /**
@@ -283,70 +378,48 @@ class ComponentPool {
         size_t componentSize_ = -1;
 };
 
-static const auto MINIMUM_FREE_INDICIES = 128;
-
-namespace ECS {
 
     namespace {
 
-        std::deque<entity_index_type> freeIndices_; // TODO: use a ring buffer or something w/contiguous mem
-        std::vector<entity_version_type> entityVersions_;
+        EntityManager entityManager_;
         std::vector<ComponentPool> components_;
 
-        // could enforce a MAX_COMPONENTS to avoid needing this assure
         template <typename Component>
         ComponentPool& assurePool() {
             const uint32_t cTypeID = Family<Component>::id();
-            if (components_.size() <= cTypeID)
-                components_.resize(cTypeID + 1);
+            PG_ASSERT(cTypeID < MAX_COMPONENTS);
             return components_[cTypeID];
          }
 
     } // namespace anonymous
 
-    // reserve space for 10K entities and initialize all comonent pools
-    // Also create space for 32 different component types
+    // reserve space for 1K entities and initialize all comonent pools
+    // Also create space for 64 different component types
     inline void init() {
-        entityVersions_.reserve(1024 * 10);
-        components_.resize(32);
+        components_.resize(MAX_COMPONENTS);
     }
 
     inline void shutdown() {
-        freeIndices_.clear();
-        entityVersions_.clear();
+        entityManager_.clear();
         components_.clear();
     }
 
     namespace entity {
 
-        inline Entity create() {
-            entity_index_type index     = 0;
-            entity_version_type version = 0;
-            if (freeIndices_.size() > MINIMUM_FREE_INDICIES) {
-                index = freeIndices_.front();
-                freeIndices_.pop_front();
-                version = entityVersions_[index];
-            } else {
-                index = entityVersions_.size();
-                entityVersions_.push_back(0);
-            }
+        inline EntityData* data(const entity_type& id) {
+            return entityManager_.getData(id);
+        }
 
-            return Entity(index, version);
+        inline Entity create() {
+            return entityManager_.create();
         }
 
         inline bool alive(const Entity e) {
-            return entityVersions_[e.index()] == e.version();
+            return entityManager_.alive(e);
         }
 
         inline void destroy(const Entity e) {
-            const auto idx = e.index();
-            ++entityVersions_[idx];
-            freeIndices_.push_back(idx);
-            // TODO: should probably use a bitset or something
-            for (auto& pool : components_) {
-                if (pool.has(e))
-                    pool.destroy(e);
-            }
+            return entityManager_.destroy(e);
         }
 
     } // namespace entity
@@ -365,10 +438,14 @@ namespace ECS {
             return pool.has(e);
         }
 
+        inline void destroy(uint32_t componentFamilyID, const entity_type& e) {
+            PG_ASSERT(componentFamilyID < MAX_COMPONENTS);
+            components_[componentFamilyID].destroy(e);
+        }
+
         template <typename Component>
         void destroy(const Entity& e) {
-            auto& pool = assurePool<Component>();
-            pool.destroy(e);
+            destroy(Family<Component>::id(), e);
         }
 
         template <typename Component>
