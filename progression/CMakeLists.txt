@@ -20,14 +20,13 @@ set(
     core/time.cpp
     core/transform.cpp
     core/window.cpp
-    #core/scene.cpp
+    core/scene.cpp
     core/bounding_box.cpp
     core/frustum.cpp
+    core/ecs.cpp
 
     graphics/lights.cpp
-    #graphics/render_component.cpp
-    #graphics/render_system.cpp
-    #graphics/model_render_component.cpp
+    graphics/render_system.cpp
     #graphics/skybox.cpp
     #graphics/shadow_map.cpp
     graphics/graphics_api.cpp
@@ -42,6 +41,7 @@ set(
     resource/texture2D.cpp
 
     #components/user_camera_component.cpp
+    components/model_renderer_component.cpp
 
     utils/logger.cpp
     utils/serialize.cpp
@@ -63,14 +63,14 @@ set(
     core/time.hpp
     core/transform.hpp
     core/window.hpp
-    #core/scene.hpp
+    core/scene.hpp
     core/bounding_box.hpp
     core/frustum.hpp
     core/ecs.hpp
     
     graphics/lights.hpp
     #graphics/render_component.hpp
-    #graphics/render_system.hpp
+    graphics/render_system.hpp
     #graphics/model_render_component.hpp
     #graphics/skybox.hpp
     #graphics/shadow_map.hpp
@@ -86,7 +86,8 @@ set(
     resource/texture2D.hpp
 
     #components/user_camera_component.hpp
-    
+    components/model_renderer_component.hpp
+
     utils/fileIO.hpp
     utils/serialize.hpp
     utils/noncopyable.hpp

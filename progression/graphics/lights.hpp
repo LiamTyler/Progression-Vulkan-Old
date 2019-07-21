@@ -6,38 +6,22 @@ namespace Progression {
 
     class Light {
     public:
-        Light() = default;
-        virtual ~Light() = default;
+        enum Type {
+            POINT = 0,
+            DIRECTIONAL,
+            SPOT
+        };
 
-        glm::vec3 color;
-        float intensity;
-    };
-
-    class PointLight : public Light {
-    public:
-        PointLight() = default;
-        ~PointLight() = default;
-
-        glm::vec3 position;
-        float radius;
-    };
-
-    class DirectionalLight : public Light {
-    public:
-        DirectionalLight() = default;
-        ~DirectionalLight() = default;
-
-        glm::vec3 direction;
-    };
-
-    class SpotLight : public Light {
-    public:
-        SpotLight() = default;
-        ~SpotLight() = default;
-
-        glm::vec3 position;
-        float innerCutoff;
-        float outerCutoff;
+        std::string name    = "";
+        Type type           = POINT;
+        glm::vec3 color     = glm::vec3(1, 1, 1);
+        glm::vec3 position  = glm::vec3(0, 0, 0);
+        glm::vec3 direction = glm::vec3(0, 0, 0);
+        float intensity     = 1.0f;
+        float radius        = 10.0f;
+        float innerCutoff   = glm::radians(10.0f);
+        float outerCutoff   = glm::radians(20.0f);
+        bool enabled        = true;
     };
 
 } // namespace Progression

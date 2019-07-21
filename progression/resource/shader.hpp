@@ -7,7 +7,7 @@
 #include "utils/noncopyable.hpp"
 #include <unordered_set>
 
-#define PG_SHADER_WARNINGS
+// #define PG_SHADER_WARNINGS
 
 #ifndef PG_SHADER_WARNINGS
 #define PG_SHADER_GETTER_CONST const
@@ -78,6 +78,9 @@ namespace Progression {
 	protected:
 		GLuint program_;
 		std::unordered_map<std::string, GLuint> uniforms_;
+
+        // hash the shader warnings if they are enabled and only display them if the hash isnt
+        // present so that the console doesnt overflow with the warnings
         #ifdef PG_SHADER_WARNINGS
         std::unordered_set<size_t> warnings_;
         #endif

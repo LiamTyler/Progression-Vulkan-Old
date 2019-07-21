@@ -8,20 +8,21 @@
 #include "core/time.hpp"
 #include "core/transform.hpp"
 #include "core/window.hpp"
-// #include "core/scene.hpp"
+#include "core/ecs.hpp"
+#include "core/scene.hpp"
 // #include "core/bounding_box.hpp"
-// #include "core/frustum.hpp"
+#include "core/frustum.hpp"
 #include "core/configuration.hpp"
 #include "core/ecs.hpp"
-// 
-// #include "graphics/render_system.hpp"
+
+#include "graphics/render_system.hpp"
 // #include "graphics/render_component.hpp"
 // #include "graphics/model_render_component.hpp"
 // #include "graphics/skybox.hpp"
 // #include "graphics/shadow_map.hpp"
 #include "graphics/graphics_api.hpp"
-// 
-// #include "graphics/lights.hpp"
+
+#include "graphics/lights.hpp"
 
 #include "resource/resource_manager.hpp"
 #include "resource/mesh.hpp"
@@ -34,6 +35,7 @@
 #include "utils/random.hpp"
 
 // #include "components/user_camera_component.hpp"
+#include "components/model_renderer_component.hpp"
 
 #if PG_AUDIO_ENABLED
     #include "audio/audio_system.hpp"

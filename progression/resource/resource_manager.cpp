@@ -267,24 +267,6 @@ namespace ResourceManager {
         f_resources.clear();
     }
 
-    void loadResourceFileAsync(const std::string& fname) {
-        // if alreading being processed, ignore
-        if (loadingResourceFiles_.find(fname) != loadingResourceFiles_.end())
-            return;
-        
-        // ignore if file is up to date
-        auto it = resourceFiles_.find(fname);
-        if (it != resourceFiles_.end()) {
-            auto newTimestamp = TimeStampedFile(fname);
-            if (!it->second.outOfDate(newTimestamp))
-                return;
-        }
-
-        BG_LoaderData& data = loadingResourceFiles_[fname];
-        data.retVal = std::async(std::launch::async, BG_LoadResources, fname, &data.db, &data.updateDB);
-        data.resFile = TimeStampedFile(fname);
-    }
-
     #define PARSE_THEN_LOAD(TYPE) \
         else if (line == #TYPE) \
         { \
@@ -372,7 +354,25 @@ namespace ResourceManager {
         return true;
     }
 
-    bool loadFastFile(const std::string& fastFile) {
+    static void loadResourceFileAsync(const std::string& fname) {
+        // if alreading being processed, ignore
+        if (loadingResourceFiles_.find(fname) != loadingResourceFiles_.end())
+            return;
+        
+        // ignore if file is up to date
+        auto it = resourceFiles_.find(fname);
+        if (it != resourceFiles_.end()) {
+            auto newTimestamp = TimeStampedFile(fname);
+            if (!it->second.outOfDate(newTimestamp))
+                return;
+        }
+
+        BG_LoaderData& data = loadingResourceFiles_[fname];
+        data.retVal = std::async(std::launch::async, BG_LoadResources, fname, &data.db, &data.updateDB);
+        data.resFile = TimeStampedFile(fname);
+    }
+
+    static bool loadFastFile(const std::string& fastFile) {
         std::ifstream in(fastFile, std::ios::binary);
         if (!in) {
             LOG_ERR("Could not open fastfile:", fastFile);
@@ -450,6 +450,24 @@ namespace ResourceManager {
         UpdateDB updateDB;
         moveBackgroundData(DB, updateDB);
         return true;
+    }
+
+    bool loadResourceFile(const std::string& fname) {
+        auto lastDot = fname.find_last_of('.');
+        if (lastDot == std::string::npos) {
+            LOG_ERR("No file format recognized on resource file: ", fname);
+            return false;
+        }
+        std::string ext = fname.substr(lastDot);
+        if (ext == ".ff") {
+            return loadFastFile(fname);
+        } else if (ext == ".txt") {
+            loadResourceFileAsync(fname);
+            return true;
+        } else {
+            LOG_ERR("Did not find '.txt' or '.ff' extension on resource file: ", fname);
+            return false;
+        }
     }
 
 } } // namespace Progression::ResourceManager

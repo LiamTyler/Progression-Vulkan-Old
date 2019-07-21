@@ -168,13 +168,19 @@ namespace Progression {
             if (len > 3) {
                 if (sName[len - 1] == ']' && sName[len - 3] == '[') {
                     uniforms_[sName.substr(0, len - 3)] = location;
+                    #ifdef PG_SHADER_WARNINGS
                     LOG("Uniform: ", location, " = ", sName.substr(0, len - 3));
+                    #endif
                 }
             }
             uniforms_[sName] = location;
+            #ifdef PG_SHADER_WARNINGS
             LOG("Uniform:",location,"=",sName);
+            #endif
         }
+        #ifdef PG_SHADER_WARNINGS
         LOG("")
+        #endif
         delete[] uniformName;
     }
 

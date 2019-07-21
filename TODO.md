@@ -14,7 +14,7 @@
 - [x] loading resource text file
 - [x] re-use materials when loading models if its already been loaded
 - [x] detect changed files + reload them
-- [ ] convert resource file into 1 binary file
+- [x] convert resource file into 1 binary file
 - [ ] compress / decompress resource file
 - [ ] skybox loading
 - [ ] select different data types for mesh data (like shorts for indices)
@@ -29,6 +29,8 @@
 
 ## Rendering
 - [ ] Meshes easily
+- [ ] Expand graphics api so there are 0 opengl calls otherwise
+- [ ] Frustum culling
 - [ ] Shadows
 - [ ] Normal maps
 - [ ] PBR
@@ -39,7 +41,14 @@
 - [ ] switch to using ECS
 - [ ] imgui
 - [ ] add in Lua scripting
-- [ ] multi-threaded logger
+- [x] multi-threaded logger
+
+## Other
+- [ ] have a remote console
+- [ ] Have a full converter for each resource type and fastfiles
+- [ ] have a defines file instead of just common
+- [ ] using #inlcudes in the glsl
+- [ ] Debug, Release, Ship modes
 
 ## Low priority software engineering related
 - [ ] follow style / clang tidy

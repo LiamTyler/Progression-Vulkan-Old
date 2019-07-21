@@ -69,6 +69,8 @@ namespace ResourceManager {
     void init(bool scanner = true);
     void update();
     bool resolveSoftLinks(ResourceDB& db);
+    bool loadResourceFile(const std::string& fname);
+    bool createFastFile(const std::string& resourceFile); // meant to be called without any other resources loaded already
     bool waitUntilLoadComplete(const std::string& fname = "");
     void shutdown();
 
@@ -103,18 +105,5 @@ namespace ResourceManager {
     std::shared_ptr<T> load(const std::string& name, MetaData* metaData = nullptr) {
         return loadInternal<T>(name, metaData, &f_resources);
     }
-
-    // for all the add functions, the resource will be moved into the manager, meaning that
-    // any other reference to it will be invalidated. Get the newly managed copy with the get
-    // functions
-    // template <typename T>
-    // void add(const std::string& name, T* resource) {}
-
-    void loadResourceFileAsync(const std::string& fname);
-
-    // meant to be called without any other resources loaded already
-    bool createFastFile(const std::string& resourceFile);
-
-    bool loadFastFile(const std::string& fastFile);
 
 } } // namespace Progression::Resource
