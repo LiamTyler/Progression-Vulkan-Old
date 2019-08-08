@@ -9,32 +9,31 @@ namespace Progression {
 
     class Scene {
     public:
-        Scene();
+        Scene() = default;
         ~Scene();
 
-        /** \brief Parses a scene file and returns a Scene object as specified in the file. */
-        static Scene* load(const std::string& filename);
+        static Scene* Load(const std::string& filename);
 
-        void addLight(Light* light);
-        void removeLight(Light* light);
-        void sortLights();
-        const std::vector<Light*>& getLights() const { return lights_; }
-        unsigned int getNumPointLights() const { return numPointLights_; }
-        unsigned int getNumSpotLights() const { return numSpotLights_; }
-        unsigned int getNumDirectionalLights() const { return numDirectionalLights_; }
+        void AddLight(Light* light);
+        void RemoveLight(Light* light);
+        void SortLights();
+        const std::vector<Light*>& GetLights() const;
+        unsigned int GetNumPointLights() const;
+        unsigned int GetNumSpotLights() const;
+        unsigned int GetNumDirectionalLights() const;
 
         Camera camera;
-        glm::vec3 backgroundColor;
-        glm::vec3 ambientColor;
-        // std::shared_ptr<Skybox> skybox; ///< Pointer to the scene's current skybox, or nullptr
+        glm::vec3 backgroundColor = glm::vec3( 0, 0, 0 );
+        glm::vec3 ambientColor    = glm::vec3( 0, 0, 0 );
+        // std::shared_ptr<Skybox> skybox;
 
     protected:
         // TODO: Store in contiguous block. Just doing this for now to have stable pointers after
         //       adding or deleting a light
-        std::vector<Light*> lights_;
-        unsigned int numPointLights_       = 0; ///< Number of point lights currently in the list
-        unsigned int numSpotLights_        = 0; ///< Number of spot lights currently in the list
-        unsigned int numDirectionalLights_ = 0; ///< Number of directional lights currently in the list
+        std::vector<Light*> m_lights;
+        unsigned int m_numPointLights       = 0;
+        unsigned int m_numSpotLights        = 0;
+        unsigned int m_numDirectionalLights = 0;
     };
 
 } // namespace Progression

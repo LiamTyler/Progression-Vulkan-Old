@@ -2,24 +2,30 @@
 
 #include "cpptoml.h"
 
-namespace Progression { namespace config {
-	
-    class Config {
+namespace Progression
+{
+namespace config
+{
+
+    class Config
+    {
     public:
-		Config(const std::string& fname);
-		Config(std::shared_ptr<cpptoml::table>& handle);
-		~Config() = default;
+        Config( const std::string& fname );
+        Config( std::shared_ptr< cpptoml::table >& handle );
+        ~Config() = default;
 
-		explicit operator bool() const;
+        explicit operator bool() const;
 
-		std::shared_ptr<cpptoml::table> operator->() const {
-			return handle_;
-		}
+        std::shared_ptr< cpptoml::table > operator->() const
+        {
+            return handle_;
+        }
 
     private:
-		std::shared_ptr<cpptoml::table> handle_;
+        std::shared_ptr< cpptoml::table > handle_;
     };
 
-	Config parseFile(const std::string& path);
+    Config parseFile( const std::string& path );
 
-} } // namespace Progression::config
+} // namespace config
+} // namespace Progression

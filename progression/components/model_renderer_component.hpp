@@ -1,19 +1,21 @@
 #pragma once
 
-#include <vector>
-#include <memory>
 #include <iostream>
+#include <memory>
+#include <vector>
 
-namespace Progression {
+namespace Progression
+{
 
-    class Model;
-    class Material;
+class Model;
+class Material;
 
-    struct ModelRenderComponent {
-        std::shared_ptr<Model> model;
-        std::vector<std::shared_ptr<Material>> materials;
-    };
+struct ModelRenderComponent
+{
+    std::shared_ptr< Model > model;
+    std::vector< std::shared_ptr< Material > > materials;
+};
 
-    void parseModelRendererComponentFromFile(std::istream& in, ModelRenderComponent& comp);
+void ParseModelRendererComponentFromFile( std::istream& in, ModelRenderComponent& comp );
 
 } // namespace Progression

@@ -1,32 +1,30 @@
 #include "resource/model.hpp"
-#include "resource/material.hpp"
-#include "tinyobjloader/tiny_obj_loader.h"
-#include "resource/resource_manager.hpp"
 #include "core/common.hpp"
+#include "resource/material.hpp"
+#include "resource/texture.hpp"
+#include "resource/resource_manager.hpp"
+#include "tinyobjloader/tiny_obj_loader.h"
+#include "utils/fileIO.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
-#include "utils/fileIO.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
-class Vertex {
+class Vertex
+{
 public:
-    Vertex() :
-        vertex(glm::vec3(0)),
-        normal(glm::vec3(0)),
-        uv(glm::vec3(0))
+    Vertex() : vertex( glm::vec3( 0 ) ), normal( glm::vec3( 0 ) ), uv( glm::vec3( 0 ) )
     {
     }
 
-    Vertex(const glm::vec3& vert, const glm::vec3& norm, const glm::vec2& tex) :
-        vertex(vert),
-        normal(norm),
-        uv(tex)
+    Vertex( const glm::vec3& vert, const glm::vec3& norm, const glm::vec2& tex ) :
+      vertex( vert ), normal( norm ), uv( tex )
     {
     }
 
-    bool operator==(const Vertex& other) const {
+    bool operator==( const Vertex& other ) const
+    {
         return vertex == other.vertex && normal == other.normal && uv == other.uv;
     }
 
@@ -35,235 +33,226 @@ public:
     glm::vec2 uv;
 };
 
-namespace std {
-    template<> struct hash<Vertex> {
-        size_t operator()(Vertex const& vertex) const {
-            return ((hash<glm::vec3>()(vertex.vertex) ^
-                        (hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^
-                (hash<glm::vec2>()(vertex.uv) << 1);
-        }
-    };
-}        
-
-namespace Progression {
-
-    void Model::optimize() {
-        for (Mesh& mesh : meshes)
-            mesh.optimize();
-    }
-
-    bool ModelMetaData::update() {
-        return file.update();
-    }
-
-    Model::Model(const std::string& _name, const ModelMetaData& _metaData) :
-        Resource(_name),
-        metaData(_metaData)
+namespace std
+{
+template <>
+struct hash< Vertex >
+{
+    size_t operator()( Vertex const& vertex ) const
     {
+        return ( ( hash< glm::vec3 >()( vertex.vertex ) ^
+                   ( hash< glm::vec3 >()( vertex.normal ) << 1 ) ) >>
+                 1 ) ^
+               ( hash< glm::vec2 >()( vertex.uv ) << 1 );
     }
+};
+} // namespace std
 
-    Model::Model(Model&& model) {
-        *this = std::move(model);
+namespace Progression
+{
+
+void Model::Optimize()
+{
+    for ( Mesh& mesh : meshes )
+    {
+        mesh.Optimize();
     }
+}
 
-    Model& Model::operator=(Model&& model) {
-        name = std::move(model.name);
-        meshes = std::move(model.meshes);
-        materials = std::move(model.materials);
-        metaData = std::move(model.metaData);
+Model::Model( Model&& model )
+{
+    *this = std::move( model );
+}
 
-        return *this;
-    }
+Model& Model::operator=( Model&& model )
+{
+    name      = std::move( model.name );
+    meshes    = std::move( model.meshes );
+    materials = std::move( model.materials );
 
-    void Model::move(Resource* resource) {
-        Model* model = (Model*) resource;
-        *model = std::move(*this);
-    }
+    return *this;
+}
 
-    std::shared_ptr<Resource> Model::needsReloading() {
-        if (metaData.update()) {
-            return std::make_shared<Model>(name, metaData);
-        }
-        
-        return nullptr;
-    }
+void Model::Move( std::shared_ptr< Resource > dst )
+{
+    PG_ASSERT( std::dynamic_pointer_cast< Model >( dst ) );
+    Model* dstPtr = (Model*) dst.get();
+    *dstPtr       = std::move( *this );
+}
 
-    bool Model::load(MetaData* data) {
-        if (data)
-            metaData = *(ModelMetaData*) data;
+bool Model::Load( ResourceCreateInfo* createInfo )
+{
+    return LoadFromObj( static_cast< ModelCreateInfo* >( createInfo ) );
+}
 
-        return loadFromObj();
-    }
-
-    bool Model::saveToFastFile(std::ofstream& out) const {
-        serialize::write(out, name);
-        uint32_t numMeshes = meshes.size();
-        serialize::write(out, numMeshes);
-        for (uint32_t i = 0; i < numMeshes; ++i) {
-            if (!materials[i]->saveToFastFile(out)) {
-                LOG("Could not write material: ", i, ", of model: ", name, " to fastfile");
-                return false;
-            }
-        }
-
-        for (uint32_t i = 0; i < numMeshes; ++i) {
-            if (!meshes[i].saveToFastFile(out)) {
-                LOG("Could not write mesh: ", i, ", of model: ", name, " to fastfile");
-                return false;
-            }
-        }
-
-        return !out.fail();
-    }
-
-    bool Model::loadFromFastFile(std::ifstream& in) {
-        serialize::read(in, name);
-        uint32_t numMeshes;
-        serialize::read(in, numMeshes);
-        meshes.resize(numMeshes);
-        materials.resize(numMeshes);
-        for (uint32_t i = 0; i < numMeshes; ++i) {
-            auto mat = std::make_shared<Material>();
-            if (!mat->loadFromFastFile(in)) {
-                LOG("Could not load material: ", i, ", of model: ", name, " from fastfile");
-                return false;
-            }
-            materials[i] = mat;
-        }
-
-        for (uint32_t i = 0; i < numMeshes; ++i) {
-            if (!meshes[i].loadFromFastFile(in)) {
-                LOG("Could not load mesh: ", i, ", of model: ", name, " from fastfile");
-                return false;
-            }
-        }
-
-        return !in.fail();
-    }
-
-    bool Model::readMetaData(std::istream& in) {
-        std::string tmp;
-
-        fileIO::parseLineKeyVal(in, "name", name);
-        fileIO::parseLineKeyVal(in, "filename", tmp);
-        metaData.file = TimeStampedFile(PG_RESOURCE_DIR + tmp);
-        metaData.optimize = fileIO::parseLineKeyBool(in, "optimize");
-        metaData.freeCpuCopy = fileIO::parseLineKeyBool(in, "freeCpuCopy");
-
-        return !in.fail();
-    }
-
-    ResUpdateStatus Model::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) {
-        PG_UNUSED(updateFunc);
-        if (!readMetaData(in))
-            return RES_PARSE_ERROR;
-        
-        auto curr = std::static_pointer_cast<Model>(ResourceManager::get<Model>(name));
-        if (curr) {
-            return RES_UP_TO_DATE;
-            if (curr->metaData.file.outOfDate(metaData.file)) {
-                bool success = load();
-                return success ? RES_RELOAD_SUCCESS : RES_RELOAD_FAILED;
-            }
-            return RES_UP_TO_DATE;
-        }
-
-        bool success = load();
-        return success ? RES_RELOAD_SUCCESS : RES_RELOAD_FAILED;
-    }
-
-    // fname is full path
-    bool Model::loadFromObj() {
-        tinyobj::attrib_t attrib;
-        std::vector<tinyobj::shape_t> shapes;
-        std::vector<tinyobj::material_t> tiny_materials;
-        std::string err;
-        bool ret = tinyobj::LoadObj(&attrib, &shapes, &tiny_materials, &err, metaData.file.filename.c_str(), PG_RESOURCE_DIR, true);
-
-        if (!err.empty()) {
-            LOG_WARN("TinyObj loader warning: ", err);
-        }
-
-        if (!ret) {
-            LOG_ERR("Failed to load the obj file: ", metaData.file.filename);
+bool Model::Serialize( std::ofstream& out ) const
+{
+    serialize::Write( out, name );
+    uint32_t numMeshes = meshes.size();
+    serialize::Write( out, numMeshes );
+    for ( uint32_t i = 0; i < numMeshes; ++i )
+    {
+        if ( !materials[i]->Serialize( out ) )
+        {
+            LOG( "Could not write material: ", i, ", of model: ", name, " to fastfile" );
             return false;
         }
+    }
 
-        meshes.clear();
-        materials.clear();
+    for ( uint32_t i = 0; i < numMeshes; ++i )
+    {
+        if ( !meshes[i].Serialize( out ) )
+        {
+            LOG( "Could not write mesh: ", i, ", of model: ", name, " to fastfile" );
+            return false;
+        }
+    }
 
-        for (int currentMaterialID = -1; currentMaterialID < (int) tiny_materials.size(); ++currentMaterialID) {
-            auto currentMaterial = std::make_shared<Material>();
-            if (currentMaterialID == -1) {
-                currentMaterial->name = "default";
-            } else {
-                tinyobj::material_t& mat  = tiny_materials[currentMaterialID];
-                currentMaterial->name = mat.name;
-                currentMaterial->Ka = glm::vec3(mat.ambient[0], mat.ambient[1], mat.ambient[2]);
-                currentMaterial->Kd = glm::vec3(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
-                currentMaterial->Ks = glm::vec3(mat.specular[0], mat.specular[1], mat.specular[2]);
-                currentMaterial->Ke = glm::vec3(mat.emission[0], mat.emission[1], mat.emission[2]);
-                currentMaterial->Ns = mat.shininess;
-                currentMaterial->map_Kd_name = mat.diffuse_texname;
-            }
+    return !out.fail();
+}
 
-            Mesh currentMesh;
-            std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
-            for (const auto& shape : shapes) {
-                // Loop over faces(polygon)
-                for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
-                    if (shape.mesh.material_ids[f] == currentMaterialID) {
-                        // Loop over vertices in the face. Each face should have 3 vertices from the LoadObj triangulation
-                        for (size_t v = 0; v < 3; v++) {
-                            tinyobj::index_t idx = shape.mesh.indices[3 * f + v];
-                            tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index + 0];
-                            tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
-                            tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
+bool Model::Deserialize( std::ifstream& in )
+{
+    serialize::Read( in, name );
+    uint32_t numMeshes;
+    serialize::Read( in, numMeshes );
+    meshes.resize( numMeshes );
+    materials.resize( numMeshes );
+    for ( uint32_t i = 0; i < numMeshes; ++i )
+    {
+        auto mat = std::make_shared< Material >();
+        if ( !mat->Deserialize( in ) )
+        {
+            LOG( "Could not load material: ", i, ", of model: ", name, " from fastfile" );
+            return false;
+        }
+        materials[i] = mat;
+    }
 
-                            tinyobj::real_t nx = 0;
-                            tinyobj::real_t ny = 0;
-                            tinyobj::real_t nz = 0;
-                            if (idx.normal_index != -1) {
-                                nx = attrib.normals[3 * idx.normal_index + 0];
-                                ny = attrib.normals[3 * idx.normal_index + 1];
-                                nz = attrib.normals[3 * idx.normal_index + 2];
-                            }
+    for ( uint32_t i = 0; i < numMeshes; ++i )
+    {
+        if ( !meshes[i].Deserialize( in ) )
+        {
+            LOG( "Could not load mesh: ", i, ", of model: ", name, " from fastfile" );
+            return false;
+        }
+    }
 
-                            tinyobj::real_t tx = 0, ty = 0;
-                            if (idx.texcoord_index != -1) {
-                                tx = attrib.texcoords[2 * idx.texcoord_index + 0];
-                                ty = attrib.texcoords[2 * idx.texcoord_index + 1];
-                            }
+    return !in.fail();
+}
 
-                            Vertex vertex(glm::vec3(vx, vy, vz), glm::vec3(nx, ny, nz), glm::vec2(ty, ty));
-                            if (uniqueVertices.count(vertex) == 0) {
-                                uniqueVertices[vertex] = static_cast<uint32_t>(currentMesh.vertices.size());
-                                currentMesh.vertices.emplace_back(vx, vy, vz);
-                                if (idx.normal_index != -1)
-                                    currentMesh.normals.emplace_back(nx, ny, nz);
-                                if (idx.texcoord_index != -1)
-                                    currentMesh.uvs.emplace_back(tx, ty);
-                            }
+// fname is full path
+bool Model::LoadFromObj( ModelCreateInfo* createInfo )
+{
+    tinyobj::attrib_t attrib;
+    std::vector< tinyobj::shape_t > shapes;
+    std::vector< tinyobj::material_t > tiny_materials;
+    std::string err;
+    bool ret = tinyobj::LoadObj( &attrib, &shapes, &tiny_materials, &err,
+                                 createInfo->filename.c_str(), PG_RESOURCE_DIR, true );
 
-                            currentMesh.indices.push_back(uniqueVertices[vertex]);
+    if ( !err.empty() )
+    {
+        LOG_WARN( "TinyObj loader warning: ", err );
+    }
+
+    if ( !ret )
+    {
+        LOG_ERR( "Failed to load the obj file: ", createInfo->filename );
+        return false;
+    }
+
+    meshes.clear();
+    materials.clear();
+
+    for ( int currentMaterialID = -1; currentMaterialID < (int) tiny_materials.size();
+          ++currentMaterialID )
+    {
+        auto currentMaterial = std::make_shared< Material >();
+        if ( currentMaterialID == -1 )
+        {
+            currentMaterial->name = "default";
+        }
+        else
+        {
+            tinyobj::material_t& mat = tiny_materials[currentMaterialID];
+            currentMaterial->name    = mat.name;
+            currentMaterial->Ka      = glm::vec3( mat.ambient[0], mat.ambient[1], mat.ambient[2] );
+            currentMaterial->Kd      = glm::vec3( mat.diffuse[0], mat.diffuse[1], mat.diffuse[2] );
+            currentMaterial->Ks = glm::vec3( mat.specular[0], mat.specular[1], mat.specular[2] );
+            currentMaterial->Ke = glm::vec3( mat.emission[0], mat.emission[1], mat.emission[2] );
+            currentMaterial->Ns = mat.shininess;
+            currentMaterial->map_Kd = ResourceManager::GetOrCreateTexture( PG_RESOURCE_DIR + mat.diffuse_texname );
+        }
+
+        Mesh currentMesh;
+        std::unordered_map< Vertex, uint32_t > uniqueVertices = {};
+        for ( const auto& shape : shapes )
+        {
+            // Loop over faces(polygon)
+            for ( size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++ )
+            {
+                if ( shape.mesh.material_ids[f] == currentMaterialID )
+                {
+                    // Loop over vertices in the face. Each face should have 3 vertices from the
+                    // LoadObj triangulation
+                    for ( size_t v = 0; v < 3; v++ )
+                    {
+                        tinyobj::index_t idx = shape.mesh.indices[3 * f + v];
+                        tinyobj::real_t vx   = attrib.vertices[3 * idx.vertex_index + 0];
+                        tinyobj::real_t vy   = attrib.vertices[3 * idx.vertex_index + 1];
+                        tinyobj::real_t vz   = attrib.vertices[3 * idx.vertex_index + 2];
+
+                        tinyobj::real_t nx = 0;
+                        tinyobj::real_t ny = 0;
+                        tinyobj::real_t nz = 0;
+                        if ( idx.normal_index != -1 )
+                        {
+                            nx = attrib.normals[3 * idx.normal_index + 0];
+                            ny = attrib.normals[3 * idx.normal_index + 1];
+                            nz = attrib.normals[3 * idx.normal_index + 2];
                         }
+
+                        tinyobj::real_t tx = 0, ty = 0;
+                        if ( idx.texcoord_index != -1 )
+                        {
+                            tx = attrib.texcoords[2 * idx.texcoord_index + 0];
+                            ty = attrib.texcoords[2 * idx.texcoord_index + 1];
+                        }
+
+                        Vertex vertex( glm::vec3( vx, vy, vz ), glm::vec3( nx, ny, nz ),
+                                       glm::vec2( ty, ty ) );
+                        if ( uniqueVertices.count( vertex ) == 0 )
+                        {
+                            uniqueVertices[vertex] =
+                              static_cast< uint32_t >( currentMesh.vertices.size() );
+                            currentMesh.vertices.emplace_back( vx, vy, vz );
+                            if ( idx.normal_index != -1 )
+                                currentMesh.normals.emplace_back( nx, ny, nz );
+                            if ( idx.texcoord_index != -1 )
+                                currentMesh.uvs.emplace_back( tx, ty );
+                        }
+
+                        currentMesh.indices.push_back( uniqueVertices[vertex] );
                     }
                 }
             }
-
-            // create mesh and upload to GPU
-            if (currentMesh.vertices.size()) {
-                if (metaData.optimize)
-                    currentMesh.optimize();
-
-                //currentMesh.uploadToGpu(metaData.freeCpuCopy);
-
-                materials.push_back(currentMaterial);
-                meshes.push_back(std::move(currentMesh));
-            }
         }
 
-        return true;
+        // create mesh and upload to GPU
+        if ( currentMesh.vertices.size() )
+        {
+            if ( createInfo->optimize )
+                currentMesh.Optimize();
+
+            // currentMesh.uploadToGpu(metaData.freeCpuCopy);
+
+            materials.push_back( currentMaterial );
+            meshes.push_back( std::move( currentMesh ) );
+        }
     }
+
+    return true;
+}
 
 } // namespace Progression

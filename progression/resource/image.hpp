@@ -2,57 +2,52 @@
 #include <cstring>
 #include <string>
 
-namespace Progression {
+namespace Progression
+{
 
-    class Pixel {
-    public:
-        Pixel();
-        Pixel(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
+class Pixel
+{
+public:
+    Pixel();
+    Pixel( unsigned char r, unsigned char g, unsigned char b, unsigned char a );
 
-        unsigned char r;
-        unsigned char g;
-        unsigned char b;
-        unsigned char a;
-    };
+    unsigned char r;
+    unsigned char g;
+    unsigned char b;
+    unsigned char a;
+};
 
-	class Image {
-	public:
-		Image();
-		Image(int w, int h, int nc, unsigned char* pixels = nullptr);
-		~Image();
+class Image
+{
+public:
+    Image() = default;
+    Image( int w, int h, int nc, unsigned char* pixels = nullptr );
+    ~Image();
 
-        Image(const Image& src);
-        Image& operator=(const Image& image);
-        Image(Image&& src);
-        Image& operator=(Image&& src);
+    Image( const Image& src );
+    Image& operator=( const Image& image );
+    Image( Image&& src );
+    Image& operator=( Image&& src );
 
-        bool load(const std::string& fname, bool flipVertically = true);
-        bool save(const std::string& fname, bool flipVertically = true) const;
+    bool Load( const std::string& fname, bool flipVertically = true );
+    bool Save( const std::string& fname, bool flipVertically = true ) const;
 
-        // to / from  a binary file
-        bool save(std::ofstream& outFile) const;
-        bool load(std::ifstream& in);
+    // to / from  a binary file
+    bool Serialize( std::ofstream& outFile ) const;
+    bool Deserialize( std::ifstream& in );
 
-		int width() const { return width_; }
-		int height() const { return height_; }
-		int numComponents() const { return numComponents_; }
-		unsigned char* pixels() const { return pixels_; }
+    int Width() const;
+    int Height() const;
+    int NumComponents() const;
+    unsigned char* Pixels() const;
+    Pixel GetPixel( int r, int c ) const;
+    void SetPixel( int r, int c, const Pixel& p );
 
-	    Pixel getPixel(int r, int c) const {
-            Pixel p;
-            memcpy(&p, &pixels_[numComponents_ * (r * width_ + c)], numComponents_);
-            return p;
-        }
-
-		void setPixel(int r, int c, const Pixel& p) {
-            memcpy(pixels_ + numComponents_ * (r * width_ + c), &p, numComponents_);
-        }
-
-	protected:
-		int width_;
-		int height_;
-        int numComponents_;
-		unsigned char* pixels_;
-	};
+protected:
+    int m_width             = 0;
+    int m_height            = 0;
+    int m_numComponents     = 0;
+    unsigned char* m_pixels = nullptr;
+};
 
 } // namespace Progression

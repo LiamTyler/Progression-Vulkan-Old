@@ -3,7 +3,7 @@ cmake_minimum_required (VERSION 3.8)
 project(Progression)
 
 option(PROGRESSION_BUILD_EXAMPLES "Build the example programs" ON)
-option(PROGRESSION_BUILD_TOOLS "Build the tools, such as the OBJ converter" OFF)
+option(PROGRESSION_BUILD_TOOLS "Build the tools, such as the OBJ converter" ON)
 option(PROGRESSION_AUDIO "Enable the progression audio system" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -40,7 +40,6 @@ add_subdirectory(progression)
 
 if (PROGRESSION_BUILD_EXAMPLES)
     add_subdirectory(examples/)
-    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT demo)
 endif()
 
 if (PROGRESSION_BUILD_TOOLS)

@@ -1,467 +1,440 @@
 #include "resource/shader.hpp"
-#include "utils/logger.hpp"
+#include "graphics/pg_to_opengl_types.hpp"
 #include "resource/resource_manager.hpp"
-#include "utils/serialize.hpp"
 #include "utils/fileIO.hpp"
+#include "utils/logger.hpp"
+#include "utils/serialize.hpp"
 
-namespace Progression {
-
-    namespace {
-
-        // TODO: faster read file
-        bool loadShaderTextFile(std::string& source, const std::string& filename) {
-            std::ifstream in(filename);
-            if (in.fail()) {
-                LOG_ERR("Failed to open the shader file: ", filename);
-                return false; 
-            }
-            source = "";
-            std::string line;
-            while (std::getline(in, line))
-                source += line + '\n';
-            in.close();
-            return true;
-        }
-
-        bool compileShader(GLuint& shader, const char* source, GLenum shaderType) {
-            shader = glCreateShader(shaderType);
-            glShaderSource(shader, 1, &source, NULL);
-            glCompileShader(shader);
-
-            GLint result = GL_FALSE;
-            int infoLogLength;
-
-            glGetShaderiv(shader, GL_COMPILE_STATUS, &result);
-            glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
-            if (!result) {
-                std::vector<char> errorMessage(infoLogLength + 1);
-                glGetShaderInfoLog(shader, infoLogLength, NULL, &errorMessage[0]);
-                std::string err(&errorMessage[0]);
-                LOG_ERR("Error while loading shader:\n", err, '\n');
-                glDeleteShader(shader);
-                return false;
-            }
-
-            return true;
-        }
-
-        bool createAndLinkProgram(GLuint& program, const std::vector<GLuint>& shaders) {
-            program = glCreateProgram();
-            for (const auto& shader : shaders)
-                glAttachShader(program, shader);
-
-            glLinkProgram(program);
-
-            for (const auto& shader : shaders) {
-                glDetachShader(program, shader);
-                glDeleteShader(shader);
-            }
-
-            GLint result = GL_FALSE;
-            int infoLogLength;
-            glGetProgramiv(program, GL_LINK_STATUS, &result);
-            glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
-            if (!result) {
-                std::vector<char> errorMessage(infoLogLength + 1);
-                glGetProgramInfoLog(program, infoLogLength, NULL, &errorMessage[0]);
-                std::string err(&errorMessage[0]);
-                LOG_ERR("Error while compiling and linking the shader:\n", err, '\n');
-                glDeleteProgram(program);
-                return false;
-            }
-
-            return true;
-        }
-
-    } // namespace anonymous
-
-    bool ShaderMetaData::operator==(const ShaderMetaData& desc) const {
-        return vertex == desc.vertex &&
-                geometry == desc.geometry &&
-                fragment == desc.fragment &&
-                compute == desc.compute;
-    }
-
-    bool ShaderMetaData::operator!=(const ShaderMetaData& desc) const {
-        return !(*this == desc);
-    }
-
-    bool ShaderMetaData::outOfDate(const ShaderMetaData& metaData) const {
-        return vertex.outOfDate(metaData.vertex) ||
-               geometry.outOfDate(metaData.geometry) ||
-               fragment.outOfDate(metaData.fragment) ||
-               compute.outOfDate(metaData.compute );
-    }
-
-    bool ShaderMetaData::update() {
-        bool r1 = vertex.update();
-        bool r2 = geometry.update();
-        bool r3 = fragment.update();
-        bool r4 = compute.update();
-        return r1 || r2 || r3 || r4;
-    }
-
-
-    Shader::Shader() :
-        Resource(""),
-        program_((GLuint) -1)
+// TODO: faster read file
+static bool LoadShaderTextFile( std::string& source, const std::string& filename )
+{
+    std::ifstream in( filename );
+    if ( in.fail() )
     {
+        LOG_ERR( "Failed to open the shader file: ", filename );
+        return false;
     }
+    source = "";
+    std::string line;
+    while ( std::getline( in, line ) ) source += line + '\n';
+    in.close();
+    return true;
+}
 
-    Shader::Shader(const std::string& _name, const ShaderMetaData& data) :
-        Resource(_name),
-        metaData(data),
-        program_((GLuint) -1)
+static bool CompileShader( GLuint& shader, const char* source, GLenum shaderType )
+{
+    shader = glCreateShader( shaderType );
+    glShaderSource( shader, 1, &source, NULL );
+    glCompileShader( shader );
+
+    GLint result = GL_FALSE;
+    int infoLogLength;
+
+    glGetShaderiv( shader, GL_COMPILE_STATUS, &result );
+    glGetShaderiv( shader, GL_INFO_LOG_LENGTH, &infoLogLength );
+    if ( !result )
     {
+        std::vector< char > errorMessage( infoLogLength + 1 );
+        glGetShaderInfoLog( shader, infoLogLength, NULL, &errorMessage[0] );
+        std::string err( &errorMessage[0] );
+        LOG_ERR( "Error while loading shader:\n", err, '\n' );
+        glDeleteShader( shader );
+        return false;
     }
 
-    Shader::Shader(const std::string& _name, GLuint program) :
-        Resource(_name),
-        program_(program)
+    return true;
+}
+
+static bool CreateAndLinkProgram( GLuint& program, const std::vector< GLuint >& shaders )
+{
+    program = glCreateProgram();
+    for ( const auto& shader : shaders ) glAttachShader( program, shader );
+
+    glLinkProgram( program );
+
+    for ( const auto& shader : shaders )
     {
-        queryUniforms();
+        glDetachShader( program, shader );
+        glDeleteShader( shader );
     }
 
-    Shader::~Shader() {
-        free();
+    GLint result = GL_FALSE;
+    int infoLogLength;
+    glGetProgramiv( program, GL_LINK_STATUS, &result );
+    glGetProgramiv( program, GL_INFO_LOG_LENGTH, &infoLogLength );
+    if ( !result )
+    {
+        std::vector< char > errorMessage( infoLogLength + 1 );
+        glGetProgramInfoLog( program, infoLogLength, NULL, &errorMessage[0] );
+        std::string err( &errorMessage[0] );
+        LOG_ERR( "Error while compiling and linking the shader:\n", err, '\n' );
+        glDeleteProgram( program );
+        return false;
     }
 
-    Shader::Shader(Shader&& shader) {
-        *this = std::move(shader);
-    }
+    return true;
+}
 
-    Shader& Shader::operator=(Shader&& shader) {
-        name      = std::move(shader.name);
-        metaData  = std::move(shader.metaData);
-        program_  = std::move(shader.program_);
-        uniforms_ = std::move(shader.uniforms_);
+namespace Progression
+{
 
-        shader.program_ = (GLuint) -1;
+Shader::Shader() : Resource( "" ), m_program( ~0u )
+{
+}
 
-        return *this;
-    }
+Shader::~Shader()
+{
+    Free();
+}
 
-    void Shader::free() {
-        if (program_ != (GLuint) -1) {
-            glDeleteProgram(program_);
-            program_ = (GLuint) -1;
-        }
-    }
+Shader::Shader( Shader&& shader )
+{
+    *this = std::move( shader );
+}
 
-    void Shader::queryUniforms() {
-        GLsizei uniformBufSize;
-        GLint count;
-        glGetProgramiv(program_, GL_ACTIVE_UNIFORM_MAX_LENGTH, &uniformBufSize);
-        GLchar* uniformName = new GLchar[uniformBufSize];
-        glGetProgramiv(program_, GL_ACTIVE_UNIFORMS, &count);
-        // LOG("Num uniforms:",count);
-        for (int i = 0; i < count; i++) {
-            GLint size;
-            GLenum type;
-            GLsizei length;
-            glGetActiveUniform(program_, (GLuint)i, uniformBufSize, &length, &size, &type, uniformName);
+Shader& Shader::operator=( Shader&& shader )
+{
+    name       = std::move( shader.name );
+    m_program  = std::move( shader.m_program );
+    m_uniforms = std::move( shader.m_uniforms );
 
-            std::string sName(uniformName);
-            // fix uniform arrays
-            auto location = glGetUniformLocation(program_, sName.c_str());
-            int len = sName.length();
-            if (len > 3) {
-                if (sName[len - 1] == ']' && sName[len - 3] == '[') {
-                    uniforms_[sName.substr(0, len - 3)] = location;
-                    #ifdef PG_SHADER_WARNINGS
-                    LOG("Uniform: ", location, " = ", sName.substr(0, len - 3));
-                    #endif
-                }
-            }
-            uniforms_[sName] = location;
-            #ifdef PG_SHADER_WARNINGS
-            LOG("Uniform:",location,"=",sName);
-            #endif
-        }
-        #ifdef PG_SHADER_WARNINGS
-        LOG("")
-        #endif
-        delete[] uniformName;
-    }
+    shader.m_program = (GLuint) -1;
 
-    std::shared_ptr<Resource> Shader::needsReloading() {
-        if (metaData.update()) {
-            return std::make_shared<Shader>(name, metaData);
-        }
-        return nullptr;
-    }    
+    return *this;
+}
 
-    bool Shader::load(MetaData* data) {
-        if (data)
-            metaData = *(ShaderMetaData*) data;
-        return loadFromText();
-    }
+bool Shader::Load( ResourceCreateInfo* info )
+{
+    ShaderCreateInfo* createInfo = static_cast< ShaderCreateInfo* >( info );
+    Free();
 
-    void Shader::move(Resource* resource) {
-        Shader& newShader = *(Shader*) resource;
-        newShader = std::move(*this);
-    }
+    std::string shaderSource;
+    GLuint glShader;
+    std::vector< GLuint > shaders;
+    GLuint program;
+    bool ret = true;
+    name     = info->name;
 
-    bool Shader::loadFromText() {
-        std::string shaderSource;
-        GLuint glShader;
-        std::vector<GLuint> shaders;
-        GLuint program;
-        bool ret = true;
-
-        free();
-
-        if (metaData.compute.filename != "") {
-            ret = loadShaderTextFile(shaderSource, metaData.compute.filename);
-            ret = ret && compileShader(glShader, shaderSource.c_str(), GL_COMPUTE_SHADER);
-            shaders.push_back(glShader);
-            ret = ret && createAndLinkProgram(program, shaders);
-            if (!ret)
-                return false;
-            program_ = program;
-            return true;
-        }
-
-        if (metaData.vertex.filename != "") {
-            ret = ret && loadShaderTextFile(shaderSource, metaData.vertex.filename);
-            ret = ret && compileShader(glShader, shaderSource.c_str(), GL_VERTEX_SHADER);
-            if (ret)
-                shaders.push_back(glShader);
-        }
-        if (metaData.geometry.filename != "") {
-            ret = ret && loadShaderTextFile(shaderSource, metaData.geometry.filename);
-            ret = ret && compileShader(glShader, shaderSource.c_str(), GL_GEOMETRY_SHADER);
-            if (ret)
-                shaders.push_back(glShader);
-        }
-        if (metaData.fragment.filename != "") {
-            ret = ret && loadShaderTextFile(shaderSource, metaData.fragment.filename);
-            ret = ret && compileShader(glShader, shaderSource.c_str(), GL_FRAGMENT_SHADER);
-            if (ret)
-                shaders.push_back(glShader);
-        }
-        if (!ret) {
-            for (const auto& s : shaders)
-                glDeleteShader(s);
+    if ( !createInfo->compute.empty() )
+    {
+        ret = LoadShaderTextFile( shaderSource, createInfo->compute );
+        ret = ret && CompileShader( glShader, shaderSource.c_str(), GL_COMPUTE_SHADER );
+        shaders.push_back( glShader );
+        ret = ret && CreateAndLinkProgram( program, shaders );
+        if ( !ret )
             return false;
-        }
-
-        if (createAndLinkProgram(program, shaders)) {
-            program_ = program;
-            queryUniforms();
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    bool Shader::loadFromBinary(const char* binarySource, GLint len, GLenum format) {
-        free();
-        GLuint program = glCreateProgram();
-        glProgramBinary(program, format, binarySource, len);
-
-        GLint status;
-        glGetProgramiv(program, GL_LINK_STATUS, &status);
-        if( GL_FALSE == status ) {
-            LOG_ERR("Failed to create program from the binary");
-            return false;
-        }
-        program_ = program;
+        m_program = program;
         return true;
     }
 
-    std::vector<char> Shader::getShaderBinary(GLint& len, GLenum& format) const {
-        GLint formats = 0;
-        glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS, &formats);
-        if (formats < 1) {
-            LOG_ERR("No binary formats supported with this driver");
-            return {};
-        }
-
-        glGetProgramiv(program_, GL_PROGRAM_BINARY_LENGTH, &len);
-        auto binary = std::vector<char>(len);
-        glGetProgramBinary(program_, len, NULL, &format, binary.data());
-
-        return binary;
+    if ( !createInfo->vertex.empty() )
+    {
+        ret = ret && LoadShaderTextFile( shaderSource, createInfo->vertex );
+        ret = ret && CompileShader( glShader, shaderSource.c_str(), GL_VERTEX_SHADER );
+        if ( ret )
+            shaders.push_back( glShader );
+    }
+    if ( !createInfo->geometry.empty() )
+    {
+        ret = ret && LoadShaderTextFile( shaderSource, createInfo->geometry );
+        ret = ret && CompileShader( glShader, shaderSource.c_str(), GL_GEOMETRY_SHADER );
+        if ( ret )
+            shaders.push_back( glShader );
+    }
+    if ( !createInfo->fragment.empty() )
+    {
+        ret = ret && LoadShaderTextFile( shaderSource, createInfo->fragment );
+        ret = ret && CompileShader( glShader, shaderSource.c_str(), GL_FRAGMENT_SHADER );
+        if ( ret )
+            shaders.push_back( glShader );
+    }
+    if ( !ret )
+    {
+        for ( const auto& s : shaders ) glDeleteShader( s );
+        return false;
     }
 
-    bool Shader::saveToFastFile(std::ofstream& out) const {
-        GLint len;
-        GLenum format;
-        auto binary = getShaderBinary(len, format);
-        if (!binary.size())
-            return false;
+    if ( CreateAndLinkProgram( program, shaders ) )
+    {
+        m_program = program;
+        QueryUniforms();
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
 
-        serialize::write(out, name);
-        serialize::write(out, len);
-        serialize::write(out, format);
-        serialize::write(out, binary.data(), len);
-        metaData.vertex.save(out);
-        metaData.geometry.save(out);
-        metaData.compute.save(out);
-        metaData.fragment.save(out);
+void Shader::Move( std::shared_ptr< Resource > dst )
+{
+    PG_ASSERT( std::dynamic_pointer_cast< Shader >( dst ) );
+    Shader* dstPtr = (Shader*) dst.get();
+    *dstPtr        = std::move( *this );
+}
 
-        uint32_t numUniforms = (uint32_t) uniforms_.size();
-        serialize::write(out, numUniforms);
-        for (const auto& [uName, loc] : uniforms_) {
-            serialize::write(out, uName);
-            serialize::write(out, loc);
-        }
+bool Shader::Serialize( std::ofstream& out ) const
+{
+    GLint len;
+    GLenum format;
+    auto binary = GetShaderBinary( len, format );
+    if ( !binary.size() )
+        return false;
 
-        return !out.fail();
+    serialize::Write( out, name );
+    serialize::Write( out, len );
+    serialize::Write( out, format );
+    serialize::Write( out, binary.data(), len );
+
+    uint32_t numUniforms = (uint32_t) m_uniforms.size();
+    serialize::Write( out, numUniforms );
+    for ( const auto& [uName, loc] : m_uniforms )
+    {
+        serialize::Write( out, uName );
+        serialize::Write( out, loc );
     }
 
-    bool Shader::loadFromFastFile(std::ifstream& in) {
-        serialize::read(in, name);
-        GLint len;
-        GLenum format;
-        serialize::read(in, len);
-        serialize::read(in, format);
-        std::vector<char> binary(len);
-        serialize::read(in, binary.data(), len);
-        if (!loadFromBinary(binary.data(), len, format)) {
-            LOG_ERR("Failed to load shader from binary");
-            return false;
-        }
+    return !out.fail();
+}
 
-        metaData.vertex.load(in);
-        metaData.geometry.load(in);
-        metaData.compute.load(in);
-        metaData.fragment.load(in);
-
-        uint32_t numUniforms;
-        serialize::read(in, numUniforms);
-        for (uint32_t i =0; i < numUniforms; ++i) {
-            std::string uName;
-            GLuint loc;
-            serialize::read(in, uName);
-            serialize::read(in, loc);
-            uniforms_[uName] = loc;
-        }
-
-        return !in.fail();
-    }
-    
-    bool Shader::readMetaData(std::istream& in) {
-        std::string tmp;
-        fileIO::parseLineKeyVal(in, "name", name);
-        if (fileIO::parseLineKeyValOptional(in, "vertex", tmp))
-            metaData.vertex = TimeStampedFile(PG_RESOURCE_DIR + tmp);
-        if (fileIO::parseLineKeyValOptional(in, "geometry", tmp))
-            metaData.geometry = TimeStampedFile(PG_RESOURCE_DIR + tmp);
-        if (fileIO::parseLineKeyValOptional(in, "fragment", tmp))
-            metaData.fragment = TimeStampedFile(PG_RESOURCE_DIR + tmp);
-        if (fileIO::parseLineKeyValOptional(in, "compute", tmp))
-            metaData.compute = TimeStampedFile(PG_RESOURCE_DIR + tmp);
-
-        return !in.fail();
+bool Shader::Deserialize( std::ifstream& in )
+{
+    serialize::Read( in, name );
+    GLint len;
+    GLenum format;
+    serialize::Read( in, len );
+    serialize::Read( in, format );
+    std::vector< char > binary( len );
+    serialize::Read( in, binary.data(), len );
+    if ( !LoadFromBinary( binary.data(), len, format ) )
+    {
+        LOG_ERR( "Failed to load shader from binary" );
+        return false;
     }
 
-    ResUpdateStatus Shader::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) {
-        PG_UNUSED(updateFunc);
+    uint32_t numUniforms;
+    serialize::Read( in, numUniforms );
+    for ( uint32_t i = 0; i < numUniforms; ++i )
+    {
+        std::string uName;
+        GLuint loc;
+        serialize::Read( in, uName );
+        serialize::Read( in, loc );
+        m_uniforms[uName] = loc;
+    }
 
-        if (!readMetaData(in))
-            return RES_PARSE_ERROR;
-            
-        auto curr = std::static_pointer_cast<Shader>(ResourceManager::get<Shader>(name));
-        if (curr) {
-            if (curr->metaData.outOfDate(metaData)) {
-                return load() ? RES_RELOAD_SUCCESS : RES_RELOAD_FAILED;
+    return !in.fail();
+}
+
+bool Shader::LoadFromBinary( const char* binarySource, GLint len, GLenum format )
+{
+    Free();
+    GLuint program = glCreateProgram();
+    glProgramBinary( program, format, binarySource, len );
+
+    GLint status;
+    glGetProgramiv( program, GL_LINK_STATUS, &status );
+    if ( GL_FALSE == status )
+    {
+        LOG_ERR( "Failed to create program from the binary" );
+        return false;
+    }
+    m_program = program;
+    return true;
+}
+
+std::vector< char > Shader::GetShaderBinary( GLint& len, GLenum& format ) const
+{
+    GLint formats = 0;
+    glGetIntegerv( GL_NUM_PROGRAM_BINARY_FORMATS, &formats );
+    if ( formats < 1 )
+    {
+        LOG_ERR( "No binary formats supported with this driver" );
+        return {};
+    }
+
+    glGetProgramiv( m_program, GL_PROGRAM_BINARY_LENGTH, &len );
+    auto binary = std::vector< char >( len );
+    glGetProgramBinary( m_program, len, NULL, &format, binary.data() );
+
+    return binary;
+}
+
+void Shader::Free()
+{
+    if ( m_program != (GLuint) -1 )
+    {
+        glDeleteProgram( m_program );
+        m_program = (GLuint) -1;
+    }
+}
+
+void Shader::QueryUniforms()
+{
+    GLsizei uniformBufSize;
+    GLint count;
+    glGetProgramiv( m_program, GL_ACTIVE_UNIFORM_MAX_LENGTH, &uniformBufSize );
+    GLchar* uniformName = new GLchar[uniformBufSize];
+    glGetProgramiv( m_program, GL_ACTIVE_UNIFORMS, &count );
+    // LOG("Num uniforms:",count);
+    for ( int i = 0; i < count; i++ )
+    {
+        GLint size;
+        GLenum type;
+        GLsizei length;
+        glGetActiveUniform( m_program, (GLuint) i, uniformBufSize, &length, &size, &type,
+                            uniformName );
+
+        std::string sName( uniformName );
+        // fix uniform arrays
+        auto location = glGetUniformLocation( m_program, sName.c_str() );
+        int len       = sName.length();
+        if ( len > 3 )
+        {
+            if ( sName[len - 1] == ']' && sName[len - 3] == '[' )
+            {
+                m_uniforms[sName.substr( 0, len - 3 )] = location;
+#ifdef PG_SHADER_WARNINGS
+                LOG( "Uniform: ", location, " = ", sName.substr( 0, len - 3 ) );
+#endif
             }
-            return RES_UP_TO_DATE;
         }
-        bool success = load();
-        return success ? RES_RELOAD_SUCCESS : RES_RELOAD_FAILED;
+        m_uniforms[sName] = location;
+#ifdef PG_SHADER_WARNINGS
+        LOG( "Uniform:", location, "=", sName );
+#endif
     }
+#ifdef PG_SHADER_WARNINGS
+    LOG( "" )
+#endif
+    delete[] uniformName;
+}
 
-    void Shader::enable() const {
-        glUseProgram(program_);
+void Shader::Enable() const
+{
+    glUseProgram( m_program );
+}
+
+void Shader::Disable() const
+{
+    glUseProgram( 0 );
+}
+
+GLuint Shader::GetUniform( const std::string& _name ) PG_SHADER_GETTER_CONST
+{
+    auto it = m_uniforms.find( _name );
+    if ( it == m_uniforms.end() )
+    {
+#ifdef PG_SHADER_WARNINGS
+        std::hash< std::string > hasher;
+        auto hash = hasher( _name );
+        if ( m_warnings.find( hash ) == m_warnings.end() )
+        {
+            LOG_WARN( "Uniform: ", _name, " is not present in the shader: ", m_program,
+                      ", using -1 instead" );
+            m_warnings.insert( hash );
+        }
+#endif
+
+        return (GLuint) -1;
     }
-
-    void Shader::disable() const {
-        glUseProgram(0);
+    else
+    {
+        return it->second;
     }
+}
 
-    GLuint Shader::getUniform(const std::string& _name) PG_SHADER_GETTER_CONST {
-        auto it = uniforms_.find(_name);
-        if (it == uniforms_.end()) {
-            #ifdef PG_SHADER_WARNINGS
-                std::hash<std::string> hasher;
-                auto hash = hasher(_name);
-                if (warnings_.find(hash) == warnings_.end()) {
-                    LOG_WARN("Uniform: ", _name, " is not present in the shader: ", program_, ", using -1 instead");
-                    warnings_.insert(hash);
-                }
-            #endif
-
-            return (GLuint) -1;
-        } else {
-            return it->second;
+GLuint Shader::GetAttribute( const std::string& _name ) PG_SHADER_GETTER_CONST
+{
+    GLuint loc = glGetAttribLocation( m_program, _name.c_str() );
+#ifdef PG_SHADER_WARNINGS
+    if ( loc == (GLuint) -1 )
+    {
+        std::hash< std::string > hasher;
+        size_t hash = hasher( _name );
+        if ( m_warnings.find( hash ) == m_warnings.end() )
+        {
+            LOG_WARN( "Attribute: ", _name, " is not present in the shader, using -1 instead" );
+            m_warnings.insert( hash );
         }
     }
+#endif
 
-    GLuint Shader::getAttribute(const std::string& _name) PG_SHADER_GETTER_CONST {
-        GLuint loc = glGetAttribLocation(program_, _name.c_str());
-        #ifdef PG_SHADER_WARNINGS
-            if (loc == (GLuint) -1) {
-                std::hash<std::string> hasher;
-                size_t hash = hasher(_name);
-                if (warnings_.find(hash) == warnings_.end()) {
-                    LOG_WARN("Attribute: ", _name, " is not present in the shader, using -1 instead");
-                    warnings_.insert(hash);
-                }
-            }
-        #endif
+    return loc;
+}
 
-        return loc;
-    }
+void Shader::BindTexture( const Gfx::Texture& tex, const std::string& texName, uint32_t index )
+{
 
-    void Shader::setUniform(const std::string& _name, const bool data) {
-        glUniform1i(getUniform(_name), data);
-    }
+    glActiveTexture( GL_TEXTURE0 + index );
+    auto nativeTexType = Gfx::PGToOpenGLTextureType( tex.GetType() );
+    glBindTexture( nativeTexType, tex.GetNativeHandle() );
+    SetUniform( texName, (int) index );
+}
 
-    void Shader::setUniform(const std::string& _name, const int data) {
-        glUniform1i(getUniform(_name), data);
-    }
+GLuint Shader::GetNativeHandle() const
+{
+    return m_program;
+}
 
-    void Shader::setUniform(const std::string& _name, const float data) {
-        glUniform1f(getUniform(_name), data);
-    }
+void Shader::SetUniform( const std::string& _name, const bool data )
+{
+    glUniform1i( GetUniform( _name ), data );
+}
 
-    void Shader::setUniform(const std::string& _name, const glm::ivec2& data) {
-        glUniform2i(getUniform(_name), data.x, data.y);
-    }
+void Shader::SetUniform( const std::string& _name, const int data )
+{
+    glUniform1i( GetUniform( _name ), data );
+}
 
-    void Shader::setUniform(const std::string& _name, const glm::vec2& data) {
-        glUniform2f(getUniform(_name), data.x, data.y);
-    }
+void Shader::SetUniform( const std::string& _name, const float data )
+{
+    glUniform1f( GetUniform( _name ), data );
+}
 
-    void Shader::setUniform(const std::string& _name, const glm::vec3& data) {
-        glUniform3f(getUniform(_name), data.x, data.y, data.z);
-    }
+void Shader::SetUniform( const std::string& _name, const glm::ivec2& data )
+{
+    glUniform2i( GetUniform( _name ), data.x, data.y );
+}
 
-    void Shader::setUniform(const std::string& _name, const glm::vec4& data) {
-        glUniform4f(getUniform(_name), data.x, data.y, data.z, data.w);
-    }
+void Shader::SetUniform( const std::string& _name, const glm::vec2& data )
+{
+    glUniform2f( GetUniform( _name ), data.x, data.y );
+}
 
-    void Shader::setUniform(const std::string& _name, const glm::mat3& data) {
-        glUniformMatrix3fv(getUniform(_name), 1, GL_FALSE, glm::value_ptr(data));
-    }
+void Shader::SetUniform( const std::string& _name, const glm::vec3& data )
+{
+    glUniform3f( GetUniform( _name ), data.x, data.y, data.z );
+}
 
-    void Shader::setUniform(const std::string& _name, const glm::mat4& data) {
-        glUniformMatrix4fv(getUniform(_name), 1, GL_FALSE, glm::value_ptr(data));
-    }
+void Shader::SetUniform( const std::string& _name, const glm::vec4& data )
+{
+    glUniform4f( GetUniform( _name ), data.x, data.y, data.z, data.w );
+}
 
-    void Shader::setUniform(const std::string& _name, const glm::mat4* data, int elements) {
-        glUniformMatrix4fv(getUniform(_name), elements, GL_FALSE, glm::value_ptr(data[0]));
-    }
+void Shader::SetUniform( const std::string& _name, const glm::mat3& data )
+{
+    glUniformMatrix3fv( GetUniform( _name ), 1, GL_FALSE, glm::value_ptr( data ) );
+}
 
-    void Shader::setUniform(const std::string& _name, const glm::vec3* data, int elements) {
-        glUniform3fv(getUniform(_name), elements, glm::value_ptr(data[0]));
-    }
+void Shader::SetUniform( const std::string& _name, const glm::mat4& data )
+{
+    glUniformMatrix4fv( GetUniform( _name ), 1, GL_FALSE, glm::value_ptr( data ) );
+}
 
-    void Shader::setUniform(const std::string& _name, const glm::vec4* data, int elements) {
-        glUniform4fv(getUniform(_name), elements, glm::value_ptr(data[0]));
-    }
+void Shader::SetUniform( const std::string& _name, const glm::mat4* data, int elements )
+{
+    glUniformMatrix4fv( GetUniform( _name ), elements, GL_FALSE, glm::value_ptr( data[0] ) );
+}
+
+void Shader::SetUniform( const std::string& _name, const glm::vec3* data, int elements )
+{
+    glUniform3fv( GetUniform( _name ), elements, glm::value_ptr( data[0] ) );
+}
+
+void Shader::SetUniform( const std::string& _name, const glm::vec4* data, int elements )
+{
+    glUniform4fv( GetUniform( _name ), elements, glm::value_ptr( data[0] ) );
+}
 
 } // namespace Progression

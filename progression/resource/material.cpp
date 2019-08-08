@@ -1,139 +1,138 @@
 #include "resource/material.hpp"
 #include "resource/resource_manager.hpp"
-#include "resource/texture2D.hpp"
-#include "utils/serialize.hpp"
+#include "resource/texture.hpp"
 #include "utils/fileIO.hpp"
+#include "utils/serialize.hpp"
 
-namespace Progression {
+namespace Progression
+{
 
-    bool Material::load(MetaData* metaData) {
-        PG_UNUSED(metaData);
-        return true;
-    }
+bool Material::Load( ResourceCreateInfo* createInfo )
+{
+    PG_ASSERT( createInfo );
+    MaterialCreateInfo* info = static_cast< MaterialCreateInfo* >( createInfo );
+    name = info->name;
+    Ka = info->Ka;
+    Kd = info->Kd;
+    Ks = info->Ks;
+    Ke = info->Ke;
+    Ns = info->Ns;
+    map_Kd = ResourceManager::GetOrCreateTexture( info->map_Kd_name );
 
-    void Material::move(Resource* resource) {
-        Material& newResource = *(Material*) resource;
-        newResource = std::move(*this);
-    }
+    return true;
+}
 
-    bool Material::saveToFastFile(std::ofstream& out) const {
-        serialize::write(out, name);
-        serialize::write(out, Ka);
-        serialize::write(out, Kd);
-        serialize::write(out, Ks);
-        serialize::write(out, Ke);
-        serialize::write(out, Ns);
-        serialize::write(out, map_Kd_name);
+void Material::Move( std::shared_ptr< Resource > dst )
+{
+    PG_ASSERT( std::dynamic_pointer_cast< Material >( dst ) );
+    Material* dstPtr = (Material*) dst.get();
+    *dstPtr          = std::move( *this );
+}
 
-        return !out.fail();
-    }
 
-    bool Material::loadFromFastFile(std::ifstream& in) {
-        serialize::read(in, name);
-        serialize::read(in, Ka);
-        serialize::read(in, Kd);
-        serialize::read(in, Ks);
-        serialize::read(in, Ke);
-        serialize::read(in, Ns);
-        serialize::read(in, map_Kd_name);
+bool Material::Serialize( std::ofstream& out ) const
+{
+    serialize::Write( out, name );
+    serialize::Write( out, Ka );
+    serialize::Write( out, Kd );
+    serialize::Write( out, Ks );
+    serialize::Write( out, Ke );
+    serialize::Write( out, Ns );
+    std::string map_Kd_name = map_Kd ? map_Kd->name : "";
+    serialize::Write( out, map_Kd_name );
 
-        return !in.fail();
-    }
+    return !out.fail();
+}
 
-    bool Material::readMetaData(std::istream& in) {
-        std::string line;
-        std::string s;
-        std::istringstream ss;
-
-       
-        fileIO::parseLineKeyVal(in, "name", name);
-        fileIO::parseLineKeyVal(in, "Ka", Ka);
-        fileIO::parseLineKeyVal(in, "Kd", Kd);
-        fileIO::parseLineKeyVal(in, "Ks", Ks);
-        fileIO::parseLineKeyVal(in, "Ke", Ke);
-        fileIO::parseLineKeyVal(in, "Ns", Ns);
-        //fileIO::parseLineKeyVal(in, "map_Kd", map_Kd_name);
-
-        std::getline(in, line);
-        ss = std::istringstream(line);
-        ss >> s;
-        PG_ASSERT(s == "map_Kd");
-        if (!ss.eof()) {
-            ss >> s;
-            PG_ASSERT(!in.fail() && !ss.fail());
-            map_Kd_name = s;
-        }
-        PG_ASSERT(!in.fail() && !ss.fail());
-
-        return !in.fail() && !ss.fail();
-    }
-
-    ResUpdateStatus Material::loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc)
+bool Material::Deserialize( std::ifstream& in )
+{
+    serialize::Read( in, name );
+    serialize::Read( in, Ka );
+    serialize::Read( in, Kd );
+    serialize::Read( in, Ks );
+    serialize::Read( in, Ke );
+    serialize::Read( in, Ns );
+    std::string map_Kd_name = map_Kd ? map_Kd->name : "";
+    serialize::Read( in, map_Kd_name );
+    if ( !map_Kd_name.empty() )
     {
-        PG_UNUSED(updateFunc);
-        return readMetaData(in) ? RES_RELOAD_SUCCESS : RES_PARSE_ERROR;
+        map_Kd = ResourceManager::Get< Texture >( map_Kd_name );
+        PG_ASSERT( map_Kd );
     }
 
-    bool Material::loadMtlFile(
-            std::vector<std::pair<std::string, Material>>& materials,
-            const std::string& fname,
-            const std::string& rootTexDir)
+    return !in.fail();
+}
+
+bool Material::LoadMtlFile( std::vector< Material >& materials, const std::string& fname )
+{
+    std::ifstream file( fname );
+    if ( !file )
     {
-        std::ifstream file(fname);
-        if (!file) {
-            LOG_ERR("Could not open mtl file: ", fname);
-            return false;
+        LOG_ERR( "Could not open mtl file: ", fname );
+        return false;
+    }
+
+    materials.clear();
+    Material* mat = nullptr;
+
+    std::string line;
+    std::string first;
+    while ( std::getline( file, line ) )
+    {
+        std::istringstream ss( line );
+        ss >> first;
+        if ( first == "#" )
+        {
+            continue;
         }
-
-        materials.clear();
-        Material* mat = nullptr;
-        std::vector<Texture2D*> newTextures; // just for cleaning up on failure
-
-        std::string line;
-        std::string first;
-        while (std::getline(file, line)) {
-            std::istringstream ss(line);
-            ss >> first;
-            if (first == "#") {
-                continue;
-            } else if (first == "newmtl") {
-                std::string name;
-                ss >> name;
-                materials.emplace_back(name, Material{});
-                mat = &materials[materials.size() - 1].second;
-            } else if (first == "Ns") {
-                ss >> mat->Ns;
-            } else if (first == "Ka") {
-                ss >> mat->Ka;
-            } else if (first == "Kd") {
-                ss >> mat->Kd;
-            } else if (first == "Ks") {
-                ss >> mat->Ks;
-            } else if (first == "Ke") {
-                ss >> mat->Ke;
-            } else if (first == "map_Kd") {
-                std::string texName;
-                ss >> texName;
-                if (ResourceManager::get<Texture2D>(texName)) {
-                    mat->map_Kd = ResourceManager::get<Texture2D>(texName).get();
-                    continue;
-                }
-                TextureMetaData meta;
-                meta.file = TimeStampedFile(rootTexDir + texName);
-                mat->map_Kd = ResourceManager::load<Texture2D>(texName, &meta).get();
-                if (!mat->map_Kd) {
-                    LOG_ERR("Unable to load material's texture: ", rootTexDir + texName);
-                    // cleanup newly created textures
-                    for (const auto& t : newTextures)
-                        delete t;
-                    return false;
-                } else {
-                    newTextures.push_back(mat->map_Kd);
-                }
+        else if ( first == "newmtl" )
+        {
+            std::string name;
+            ss >> name;
+            materials.emplace_back();
+            mat = &materials[materials.size() - 1];
+            mat->name = name;
+        }
+        else if ( first == "Ns" )
+        {
+            ss >> mat->Ns;
+        }
+        else if ( first == "Ka" )
+        {
+            ss >> mat->Ka;
+        }
+        else if ( first == "Kd" )
+        {
+            ss >> mat->Kd;
+        }
+        else if ( first == "Ks" )
+        {
+            ss >> mat->Ks;
+        }
+        else if ( first == "Ke" )
+        {
+            ss >> mat->Ke;
+        }
+        else if ( first == "map_Kd" )
+        {
+            std::string texName;
+            ss >> texName;
+            // mat->map_Kd = ResourceManager::GetOrCreateTexture( rootTexDir + texName );
+            // if ( !mat->map_Kd )
+            // {
+            //     LOG_ERR("Failed to load/create map_Kd texture '", texName, "' in mtl file '", fname, "'");
+            //     return false;
+            // }
+            mat->map_Kd = ResourceManager::Get< Texture >( texName );
+            if ( !mat->map_Kd )
+            {
+                LOG_ERR("Failed to load map_Kd texture '", texName, "' in mtl file '", fname, "'");
+                return false;
             }
         }
-
-        return true;
     }
+
+    return true;
+}
 
 } // namespace Progression

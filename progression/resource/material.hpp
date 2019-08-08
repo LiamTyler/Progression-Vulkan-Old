@@ -3,32 +3,39 @@
 #include "core/common.hpp"
 #include "resource/resource.hpp"
 
-namespace Progression {
+namespace Progression
+{
 
-    class Texture2D;
+class Texture;
 
-    class Material : public Resource {
-    public:
-        Material() = default;
+class MaterialCreateInfo : public ResourceCreateInfo
+{
+public:
+    glm::vec3 Ka;
+    glm::vec3 Kd;
+    glm::vec3 Ks;
+    glm::vec3 Ke;
+    float Ns;
+    std::string map_Kd_name;
+};
 
-        bool load(MetaData* metaData = nullptr) override;
-        bool readMetaData(std::istream& in) override;
-        ResUpdateStatus loadFromResourceFile(std::istream& in, std::function<void()>& updateFunc) override;
-        void move(Resource* resource) override;
-        bool saveToFastFile(std::ofstream& outFile) const override;
-        bool loadFromFastFile(std::ifstream& in) override;
-        static bool loadMtlFile(
-            std::vector<std::pair<std::string, Material>>& materials,
-            const std::string& fname,
-            const std::string& rootTexDir = "");
+class Material : public Resource
+{
+public:
+    Material() = default;
 
-        glm::vec3 Ka;
-        glm::vec3 Kd;
-        glm::vec3 Ks;
-		glm::vec3 Ke;
-        float Ns;
-        std::string map_Kd_name;
-        Texture2D* map_Kd = nullptr;
-    };
+    bool Load( ResourceCreateInfo* createInfo ) override;
+    void Move( std::shared_ptr< Resource > dst ) override;
+    bool Serialize( std::ofstream& outFile ) const override;
+    bool Deserialize( std::ifstream& in ) override;
+    static bool LoadMtlFile( std::vector< Material >& materials, const std::string& fname );
+
+    glm::vec3 Ka;
+    glm::vec3 Kd;
+    glm::vec3 Ks;
+    glm::vec3 Ke;
+    float Ns;
+    std::shared_ptr<Texture> map_Kd = nullptr;
+};
 
 } // namespace Progression

@@ -1,109 +1,131 @@
 #pragma once
 
 #include "resource/resource.hpp"
+#include "utils/logger.hpp"
+#include <memory>
 #include <unordered_map>
 #include <vector>
-#include <memory>
-#include "utils/logger.hpp"
 
-class ResourceTypeID {
+class ResourceTypeID
+{
     inline static uint32_t identifier;
 
-    template<typename...>
+    template < typename... >
     inline static const auto inner = identifier++;
 
 public:
-
-    template<typename... Type>
-    inline static const uint32_t id = inner<std::decay_t<Type>...>;
+    template < typename... Type >
+    inline static const uint32_t id = inner< std::decay_t< Type >... >;
 };
 
-template <typename Resource>
-uint32_t getResourceTypeID() {
-    return ResourceTypeID::id<Resource>;
+template < typename Resource >
+uint32_t GetResourceTypeID()
+{
+    return ResourceTypeID::id< Resource >;
 }
 
-namespace Progression {
+namespace Progression
+{
 
-    enum ResourceTypes {
-        SHADER = 0,
-        TEXTURE2D,
-        MATERIAL,
-        MODEL,
-        TOTAL_RESOURCE_TYPES
-    };
-    
-namespace ResourceManager {
+class Texture;
 
-    using ResourceMap = std::unordered_map<std::string, std::shared_ptr<Resource>>;
-    using UpdateMap = std::unordered_map<std::string, std::function<void()>>;
+enum ResourceTypes
+{
+    SHADER = 0,
+    TEXTURE2D,
+    MATERIAL,
+    MODEL,
+    TOTAL_RESOURCE_TYPES
+};
 
-    class ResourceDB {
+namespace ResourceManager
+{
+
+    using ResourceMap = std::unordered_map< std::string, std::shared_ptr< Resource > >;
+
+    class ResourceDB
+    {
     public:
-        ResourceDB() {
-            maps.resize(TOTAL_RESOURCE_TYPES);
+        ResourceDB()
+        {
+            maps.resize( TOTAL_RESOURCE_TYPES );
         }
-        template <typename T>
-        ResourceMap& getMap() { return maps[getResourceTypeID<T>()]; }
-        ResourceMap& operator[](uint32_t typeID) { return maps[typeID]; }
-        void clear() { maps.clear(); maps.resize(TOTAL_RESOURCE_TYPES); }
 
-        std::vector<ResourceMap> maps;
-    };
-
-    class UpdateDB {
-    public:
-        UpdateDB() {
-            maps.resize(TOTAL_RESOURCE_TYPES);
+        template < typename T >
+        ResourceMap& GetMap()
+        {
+            return maps[GetResourceTypeID< T >()];
         }
-        template <typename T>
-        UpdateMap& getMap() { return maps[getResourceTypeID<T>()]; }
-        UpdateMap& operator[](uint32_t typeID) { return maps[typeID]; }
 
-        void clear() { maps.clear(); maps.resize(TOTAL_RESOURCE_TYPES); }
-        std::vector<UpdateMap> maps;
+        ResourceMap& operator[]( uint32_t typeID )
+        {
+            return maps[typeID];
+        }
+
+        void Clear()
+        {
+            maps.clear();
+            maps.resize( TOTAL_RESOURCE_TYPES );
+        }
+
+        std::vector< ResourceMap > maps;
     };
 
     extern ResourceDB f_resources;
 
-    void init(bool scanner = true);
-    void update();
-    bool resolveSoftLinks(ResourceDB& db);
-    bool loadResourceFile(const std::string& fname);
-    bool createFastFile(const std::string& resourceFile); // meant to be called without any other resources loaded already
-    bool waitUntilLoadComplete(const std::string& fname = "");
-    void shutdown();
+    void Init();
+    bool LoadFastFile( const std::string& fname );
+    void Shutdown();
 
-    template <typename T>
-    std::shared_ptr<T> get(const std::string& name) {
-        auto& group = f_resources[getResourceTypeID<T>()];
-        auto it = group.find(name);
-        return it == group.end() ? nullptr : std::static_pointer_cast<T>(it->second);
+    template < typename T >
+    std::shared_ptr< T > Get( const std::string& name )
+    {
+        auto& group = f_resources[GetResourceTypeID< T >()];
+        auto it     = group.find( name );
+        return it == group.end() ? nullptr : std::static_pointer_cast< T >( it->second );
     }
 
-    template <typename T>
-    std::shared_ptr<T> loadInternal(const std::string& name, MetaData* metaData, ResourceDB* db) {
-        static_assert(std::is_base_of<Resource, T>::value && !std::is_same<Resource, T>::value, "Can only call load with a class that inherits from Resource");
-        ResourceMap& map = db->getMap<T>();
-        auto resource = std::make_shared<T>();
-        resource->name = name;
-        if (!resource->load(metaData)) {
-            LOG_ERR("Failed to load resource with name '", name, "'");
+    template < typename T >
+    std::shared_ptr< T > LoadInternal( ResourceCreateInfo* createInfo )
+    {
+        static_assert( std::is_base_of< Resource, T >::value && !std::is_same< Resource, T >::value,
+                       "Can only call load with a class that inherits from Resource" );
+        // PG_ASSERT( createInfo != nullptr );
+
+        auto currentResPtr = Get< T >( createInfo->name );
+        if ( currentResPtr )
+        {
+            return currentResPtr;
+        }
+
+        auto resourcePtr  = std::make_shared< T >();
+        resourcePtr->name = createInfo->name;
+        if ( !resourcePtr->Load( createInfo ) )
+        {
+            LOG_ERR( "Failed to load resource with name '", createInfo->name, "'" );
             return nullptr;
         }
+        f_resources.GetMap< T >()[createInfo->name] = resourcePtr;
 
-        if (map.find(name) != map.end()) {
-            resource->move(map[name].get());
-        } else {
-            map[name] = resource;
-        }
-
-        return std::static_pointer_cast<T>(map[name]);
+        return resourcePtr;
     }
 
-    template <typename T>
-    std::shared_ptr<T> load(const std::string& name, MetaData* metaData = nullptr) {
-        return loadInternal<T>(name, metaData, &f_resources);
+    template < typename T >
+    std::shared_ptr< T > Load( ResourceCreateInfo* createInfo )
+    {
+        return LoadInternal< T >( createInfo );
     }
 
-} } // namespace Progression::Resource
+    template < typename T >
+    void Add( std::shared_ptr< T > resourcePtr )
+    {
+        static_assert( std::is_base_of< Resource, T >::value && !std::is_same< Resource, T >::value,
+                       "Can only add resources to manager that inherit from class Resource" );
+
+        f_resources.GetMap< T >()[resourcePtr->name] = resourcePtr;         
+    }
+
+    std::shared_ptr< Texture > GetOrCreateTexture( const std::string& texname );
+
+} // namespace ResourceManager
+} // namespace Progression

@@ -1,12 +1,10 @@
 [window]
     title = "Offline"
-    width = 1
-    height = 1
+    width = 1280
+    height = 720
     visible = false
+    vsync = false
 
 [logger]
     file = ""
     useColors = true
-
-[time]
-    displayFPS = false

@@ -1,45 +1,47 @@
 #pragma once
 
 #include "core/common.hpp"
+#include "graphics/graphics_api.hpp"
 #include "utils/noncopyable.hpp"
 #include <vector>
 
-namespace Progression {
+namespace Progression
+{
 
-    class Mesh : public NonCopyable {
-    public:
-        Mesh();
-        ~Mesh();
+class Mesh : public NonCopyable
+{
+public:
+    Mesh()  = default;
+    ~Mesh() = default;
 
-        Mesh(Mesh&& mesh);
-        Mesh& operator=(Mesh&& mesh);
+    Mesh( Mesh&& mesh );
+    Mesh& operator=( Mesh&& mesh );
 
-		void uploadToGpu(bool freeCPUCopy = true);
-		void free(bool gpuCopy = true, bool cpuCopy = true);
-        void optimize();
+    void UploadToGpu( bool freeCPUCopy = true );
+    void Free( bool gpuCopy = true, bool cpuCopy = true );
+    void Optimize();
+    bool Serialize( std::ofstream& out ) const;
+    bool Deserialize( std::ifstream& in );
+    uint32_t GetNumVertices() const;
+    uint32_t GetNumIndices() const;
+    uint32_t GetVertexOffset() const;
+    uint32_t GetNormalOffset() const;
+    uint32_t GetUVOffset() const;
 
-        bool saveToFastFile(std::ofstream& outFile) const;
-        bool loadFromFastFile(std::ifstream& in);
 
+    std::vector< glm::vec3 > vertices;
+    std::vector< glm::vec3 > normals;
+    std::vector< glm::vec2 > uvs;
+    std::vector< uint32_t > indices;
+    Gfx::Buffer vertexBuffer;
+    Gfx::Buffer indexBuffer;
 
-        unsigned int getNumVertices() const { return numVertices_; }
-        unsigned int getNumIndices() const { return numIndices_; }
-
-
-		std::vector<glm::vec3> vertices;
-		std::vector<glm::vec3> normals;
-		std::vector<glm::vec2> uvs;
-		std::vector<unsigned int> indices;
-        GLuint vertexBuffer = -1;
-        GLuint indexBuffer  = -1;
-        GLuint vao          = -1;
-
-	private:
-        unsigned int numVertices_   = 0;
-        unsigned int numIndices_    = 0;
-        unsigned int normalOffset_  = (unsigned int) -1;
-        unsigned int textureOffset_ = (unsigned int) -1;
-        bool gpuDataCreated         = false;
-    };
+private:
+    uint32_t m_numVertices  = 0;
+    uint32_t m_numIndices   = 0;
+    uint32_t m_normalOffset = ~0u;
+    uint32_t m_uvOffset     = ~0u;
+    bool m_gpuDataCreated   = false;
+};
 
 } // namespace Progression

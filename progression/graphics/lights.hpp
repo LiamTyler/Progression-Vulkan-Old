@@ -2,11 +2,14 @@
 
 #include "core/common.hpp"
 
-namespace Progression {
+namespace Progression
+{
 
-    class Light {
+    class Light
+    {
     public:
-        enum Type {
+        enum Type
+        {
             POINT = 0,
             DIRECTIONAL,
             SPOT

@@ -5,6 +5,7 @@ a.out
 progression/core/configuration.hpp
 *.ff
 resources/sponza
+resources/cache
 
 # Prerequisites
 *.d

@@ -1,0 +1,22 @@
+Shader
+name test
+vertex test.vert
+geometry
+fragment test.frag
+compute
+
+Texture
+name cockatoo
+filename textures/cockatoo.jpg
+mipmapped true
+internalFormat R8_G8_B8_Uint
+minFilter nearest
+magFilter nearest
+wrapModeS clamp_to_edge
+wrapModeT clamp_to_edge
+wrapModeR clamp_to_edge
+borderColor 0 0 0 0
+maxAnisotropy 4
+
+MTLFile
+filename materials/cockatoo.mtl

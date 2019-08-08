@@ -387,6 +387,8 @@ void LoadMtl(std::map<std::string, int> *material_map,
 
 namespace tinyobj {
 
+  static std::string s_baseOBJFilename;
+
 MaterialReader::~MaterialReader() {}
 
 struct vertex_index_t {
@@ -1751,6 +1753,28 @@ bool LoadObj(attrib_t *attrib, std::vector<shape_t> *shapes,
     return false;
   }
 
+  std::string name = filename;
+  size_t dot = name.find_last_of('.');
+  if ( dot == std::string::npos )
+  {
+    dot = name.length();
+  }
+  int i = name.length();
+  while ( i >= 0 && filename[i] != '/' && filename[i] != '\\')
+  {
+    --i;
+  }
+
+  if ( i >= 0 )
+  {
+    s_baseOBJFilename = name.substr( i + 1, dot - i - 1 );
+  }
+  else
+  {
+    s_baseOBJFilename = name.substr( 0, dot );
+  }
+  
+
   std::string baseDir = mtl_basedir ? mtl_basedir : "";
   if (!baseDir.empty()) {
 #ifndef _WIN32
@@ -1962,6 +1986,37 @@ bool LoadObj(attrib_t *attrib, std::vector<shape_t> *shapes,
         } else {
           bool found = false;
           for (size_t s = 0; s < filenames.size(); s++) {
+            if (err) {
+              std::string fname = filenames[s];
+              size_t dot = fname.find_last_of('.');
+              if ( dot == std::string::npos )
+              {
+                dot = fname.length();
+              }
+              int i = fname.length();
+              while ( i >= 0 && filenames[s][i] != '/' && filenames[s][i] != '\\')
+              {
+                --i;
+              }
+
+              std::string baseMtlName = "";
+              std::string ext = fname.substr( dot );
+              if ( i >= 0 )
+              {
+                baseMtlName = fname.substr( i + 1, dot - i - 1 );
+              }
+              else
+              {
+                baseMtlName = fname.substr( 0, dot );
+              }
+
+
+              if (s_baseOBJFilename != baseMtlName || ext != ".mtl" )
+              {
+                (*err) += "WARN: Only the mtl file with name '", s_baseOBJFilename + ".mtl' will be" +
+                          "checked as a dependency during fastfile building\n";
+              }
+            }
             std::string err_mtl;
             bool ok = (*readMatFn)(filenames[s].c_str(), materials,
                                    &material_map, &err_mtl);

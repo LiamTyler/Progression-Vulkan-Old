@@ -49,6 +49,7 @@
 - [ ] have a defines file instead of just common
 - [ ] using #inlcudes in the glsl
 - [ ] Debug, Release, Ship modes
+- [ ] Get rid of the config initialization style when dumb, like logger
 
 ## Low priority software engineering related
 - [ ] follow style / clang tidy

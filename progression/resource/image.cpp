@@ -1,144 +1,183 @@
 #include "resource/image.hpp"
+#include "utils/logger.hpp"
 #include <cstdlib>
 #include <utility>
-#include "utils/logger.hpp"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image/stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image/stb_image_write.h"
 #include "utils/serialize.hpp"
 
-namespace Progression {
+namespace Progression
+{
 
-    Pixel::Pixel() : r(0), g(0), b(0), a(0) {}
-    Pixel::Pixel(unsigned char _r, unsigned char _g, unsigned char _b, unsigned char _a) : 
-        r(_r), g(_g), b(_b), a(_a)
+Pixel::Pixel() : r( 0 ), g( 0 ), b( 0 ), a( 0 )
+{
+}
+Pixel::Pixel( unsigned char _r, unsigned char _g, unsigned char _b, unsigned char _a ) :
+  r( _r ), g( _g ), b( _b ), a( _a )
+{
+}
+
+Image::Image( int w, int h, int nc, unsigned char* pixels ) :
+  m_width( w ), m_height( h ), m_numComponents( nc ), m_pixels( pixels )
+{
+    if ( !m_pixels )
+        m_pixels = (unsigned char*) malloc( nc * w * h );
+}
+
+Image::~Image()
+{
+    if ( m_pixels )
+        free( m_pixels );
+}
+
+Image::Image( const Image& src )
+{
+    *this = src;
+}
+
+Image& Image::operator=( const Image& image )
+{
+    if ( m_pixels )
+        free( m_pixels );
+
+    if ( !image.m_pixels )
     {
+        m_pixels        = nullptr;
+        m_width         = 0;
+        m_height        = 0;
+        m_numComponents = 0;
     }
-
-	Image::Image() :
-		width_(0),
-		height_(0),
-		pixels_(nullptr)
+    else
     {
-	}
+        m_width         = image.m_width;
+        m_height        = image.m_height;
+        m_numComponents = image.m_numComponents;
+        m_pixels        = (unsigned char*) malloc( m_numComponents * m_width * m_height );
+        memcpy( m_pixels, image.m_pixels, m_numComponents * m_width * m_height );
+    }
 
-	Image::Image(int w, int h, int nc, unsigned char* pixels) :
-		width_(w),
-		height_(h),
-        numComponents_(nc),
-        pixels_(pixels)
+    return *this;
+}
+
+Image::Image( Image&& src )
+{
+    *this = std::move( src );
+}
+
+Image& Image::operator=( Image&& src )
+{
+    if ( m_pixels )
+        free( m_pixels );
+    m_width         = src.m_width;
+    m_height        = src.m_height;
+    m_numComponents = src.m_numComponents;
+    m_pixels        = src.m_pixels;
+    src.m_pixels    = nullptr;
+    return *this;
+}
+
+bool Image::Load( const std::string& fname, bool flip_vertically )
+{
+    stbi_set_flip_vertically_on_load( flip_vertically );
+    int width, height, numComponents;
+    unsigned char* pixels = stbi_load( fname.c_str(), &width, &height, &numComponents, 0 );
+
+    if ( !pixels )
     {
-        if (!pixels_)
-            pixels_ = (unsigned char*) malloc(nc*w*h);
-	}
+        LOG_ERR( "Failed to load image '", fname, "'" );
+        return false;
+    }
+    *this = std::move( Image( width, height, numComponents, pixels ) );
 
-    Image::~Image() {
-        if (pixels_)
-            free(pixels_);
+    return true;
+}
+
+bool Image::Save( const std::string& fname, bool flipVertically ) const
+{
+    stbi_flip_vertically_on_write( flipVertically );
+    int i = fname.length();
+    while ( fname[--i] != '.' && i >= 0 )
+        ;
+    if ( i < 0 )
+    {
+        LOG_ERR( "Image filename \"", fname, "\" has no extension" );
+        return false;
     }
 
-	Image::Image(const Image& src) {
-        *this = src;
-	}
-
-    Image& Image::operator=(const Image& image) {
-        if (pixels_)
-            free(pixels_);
-
-        if (!image.pixels_) {
-            pixels_ = nullptr;
-            width_ = 0;
-            height_ = 0;
-            numComponents_ = 0;
-        } else {
-            width_ = image.width_;
-            height_ = image.height_;
-            numComponents_ = image.numComponents_;
-            pixels_ = (unsigned char*) malloc(numComponents_ * width_ * height_);
-            memcpy(pixels_, image.pixels_, numComponents_ * width_ * height_);
-        }
-
-        return *this;
-    }
-
-    Image::Image(Image&& src) {
-        *this = std::move(src);
-    }
-
-    Image& Image::operator=(Image&& src) {
-        if (pixels_)
-            free(pixels_);
-        width_ = src.width_;
-        height_ = src.height_;
-        numComponents_ = src.numComponents_;
-        pixels_ = src.pixels_;
-        src.pixels_ = nullptr;
-        return *this;
-    }
-
-    bool Image::load(const std::string& fname, bool flip_vertically) {
-        stbi_set_flip_vertically_on_load(flip_vertically);
-        int width, height, numComponents;
-        unsigned char* pixels = stbi_load(fname.c_str(), &width, &height, &numComponents, 0);
-
-        if (!pixels) {
-            LOG_ERR("Failed to load image:", fname);
+    int ret;
+    switch ( fname[i + 1] )
+    {
+        case 'p':
+            ret = stbi_write_png( fname.c_str(), m_width, m_height, m_numComponents, m_pixels,
+                                  m_width * m_numComponents );
+            break;
+        case 'j':
+            ret = stbi_write_jpg( fname.c_str(), m_width, m_height, m_numComponents, m_pixels, 95 );
+            break;
+        case 'b':
+            ret = stbi_write_bmp( fname.c_str(), m_width, m_height, m_numComponents, m_pixels );
+            break;
+        case 't':
+            ret = stbi_write_tga( fname.c_str(), m_width, m_height, m_numComponents, m_pixels );
+            break;
+        default:
+            LOG_ERR( "Cant save an image with an unrecognized format:", fname )
             return false;
-        }
-        *this = std::move(Image(width, height, numComponents, pixels));
-
-        return true;
-	}
-
-	bool Image::save(const std::string& fname, bool flipVertically) const {
-        stbi_flip_vertically_on_write(flipVertically);
-		int i = fname.length();
-		while (fname[--i] != '.' && i >= 0);
-		if (i < 0) {
-            LOG_ERR("Image filename \"", fname, "\" has no extension");
-			return false;
-		}
-
-        int ret;
-		switch (fname[i + 1]) {
-		case 'p':
-			ret = stbi_write_png(fname.c_str(), width_, height_, numComponents_, pixels_, width_ * numComponents_);
-			break;
-		case 'j':
-            ret = stbi_write_jpg(fname.c_str(), width_, height_, numComponents_, pixels_, 95);
-			break;
-		case 'b':
-            ret = stbi_write_bmp(fname.c_str(), width_, height_, numComponents_, pixels_);
-			break;
-		case 't':
-            ret = stbi_write_tga(fname.c_str(), width_, height_, numComponents_, pixels_);
-			break;
-		default:
-            LOG_ERR("Cant save an image with an unrecognized format:", fname)
-            return false;
-		}
-        if (!ret)
-            LOG_ERR("failed to write image:", fname);
-
-        return ret;
-	}
-
-    bool Image::save(std::ofstream& out) const {
-        serialize::write(out, width_);
-        serialize::write(out, height_);
-        serialize::write(out, numComponents_);
-        serialize::write(out, (char*) pixels_, width_ * height_ * numComponents_);
-        return !out.fail();
     }
+    if ( !ret )
+        LOG_ERR( "failed to write image:", fname );
 
-    bool Image::load(std::ifstream& in) {
-        serialize::read(in, width_);
-        serialize::read(in, height_);
-        serialize::read(in, numComponents_);
-        pixels_ = (unsigned char*) malloc(width_ * height_ * numComponents_);
-        serialize::read(in, (char*) pixels_, width_ * height_ * numComponents_);
-        return !in.fail();
-    }
+    return ret;
+}
+
+bool Image::Serialize( std::ofstream& out ) const
+{
+    serialize::Write( out, m_width );
+    serialize::Write( out, m_height );
+    serialize::Write( out, m_numComponents );
+    serialize::Write( out, (char*) m_pixels, m_width * m_height * m_numComponents );
+    return !out.fail();
+}
+
+bool Image::Deserialize( std::ifstream& in )
+{
+    serialize::Read( in, m_width );
+    serialize::Read( in, m_height );
+    serialize::Read( in, m_numComponents );
+    m_pixels = (unsigned char*) malloc( m_width * m_height * m_numComponents );
+    serialize::Read( in, (char*) m_pixels, m_width * m_height * m_numComponents );
+    return !in.fail();
+}
+
+int Image::Width() const
+{
+    return m_width;
+}
+int Image::Height() const
+{
+    return m_height;
+}
+int Image::NumComponents() const
+{
+    return m_numComponents;
+}
+unsigned char* Image::Pixels() const
+{
+    return m_pixels;
+}
+
+Pixel Image::GetPixel( int r, int c ) const
+{
+    Pixel p;
+    memcpy( &p, &m_pixels[m_numComponents * ( r * m_width + c )], m_numComponents );
+    return p;
+}
+
+void Image::SetPixel( int r, int c, const Pixel& p )
+{
+    memcpy( m_pixels + m_numComponents * ( r * m_width + c ), &p, m_numComponents );
+}
 
 } // namespace Progression
