@@ -17,7 +17,7 @@ static std::string GetModelFastFileName( struct ModelCreateInfo& createInfo )
     size_t hash          = std::hash< std::string >{}( filePath );
     std::string baseName = filePath.filename();
 
-    return PG_RESOURCE_DIR "cache/models/" + baseName + std::to_string( hash ) + ".ffi";
+    return PG_RESOURCE_DIR "cache/models/" + baseName + "_" + std::to_string( hash ) + ".ffi";
 }
 
 AssetStatus ModelConverter::CheckDependencies()
@@ -28,15 +28,38 @@ AssetStatus ModelConverter::CheckDependencies()
     {
         outputFile = GetModelFastFileName( createInfo );
     }
-    if ( !std::filesystem::exists( outputFile ) ||
-         Timestamp( outputFile ) < Timestamp( createInfo.filename ) )
+
+    if ( !std::filesystem::exists( outputFile ) )
     {
+        LOG( "OUT OF DATE: FFI File for Model '", createInfo.filename, "' does not exist, convert required" );
         return ASSET_OUT_OF_DATE;
     }
 
+    namespace fs = std::filesystem;
+    auto path = fs::path( createInfo.filename );
+    std::string matFile = path.parent_path().string() + "/" + path.stem().string() + ".mtl";
     Timestamp outTimestamp( outputFile );
+    Timestamp mtlTimestamp( matFile );
+    Timestamp objFileTime( createInfo.filename );
 
-    return ASSET_UP_TO_DATE;
+    m_status = outTimestamp <= objFileTime || outTimestamp <= mtlTimestamp ? ASSET_OUT_OF_DATE : ASSET_UP_TO_DATE;
+
+    if ( outTimestamp <= mtlTimestamp )
+    {
+        LOG( "OUT OF DATE: MTL file '", matFile, "' for model '", createInfo.filename, "' has newer timestamp than saved FFI" );
+    }
+
+    if ( outTimestamp <= objFileTime )
+    {
+        LOG( "OUT OF DATE: Model file '", createInfo.filename, "' has newer timestamp than saved FFI" );
+    }
+    
+    if ( m_status == ASSET_UP_TO_DATE )
+    {
+        LOG( "UP TO DATE: Model file '", createInfo.filename, "' and MTL file '", matFile, "'" );
+    }
+
+    return m_status;
 }
 
 ConverterStatus ModelConverter::Convert()
@@ -48,7 +71,9 @@ ConverterStatus ModelConverter::Convert()
 
     Model model;
 
-    if ( !model.Load(&createInfo) )
+    bool freeCpuCopy = createInfo.freeCpuCopy;
+    createInfo.freeCpuCopy = false;
+    if ( !model.Load( &createInfo ) )
     {
         LOG_ERR( "Could not load the model '", createInfo.filename, "'" );
         return CONVERT_ERROR;

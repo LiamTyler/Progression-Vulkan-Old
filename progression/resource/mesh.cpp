@@ -36,10 +36,8 @@ struct hash< Vertex >
 {
     size_t operator()( Vertex const& vertex ) const
     {
-        return ( ( hash< glm::vec3 >()( vertex.vertex ) ^
-                   ( hash< glm::vec3 >()( vertex.normal ) << 1 ) ) >>
-                 1 ) ^
-               ( hash< glm::vec2 >()( vertex.uv ) << 1 );
+        return ( ( hash< glm::vec3 >()( vertex.vertex ) ^ 
+                 ( hash< glm::vec3 >()( vertex.normal ) << 1 ) ) >> 1 ) ^ ( hash< glm::vec2 >()( vertex.uv ) << 1 );
     }
 };
 } // namespace std
@@ -47,28 +45,6 @@ struct hash< Vertex >
 
 namespace Progression
 {
-
-Mesh::Mesh( Mesh&& mesh )
-{
-    *this = std::move( mesh );
-}
-
-Mesh& Mesh::operator=( Mesh&& mesh )
-{
-    vertices         = std::move( mesh.vertices );
-    normals          = std::move( mesh.normals );
-    uvs              = std::move( mesh.uvs );
-    indices          = std::move( mesh.indices );
-    m_numVertices    = std::move( mesh.m_numVertices );
-    m_numIndices     = std::move( mesh.m_numIndices );
-    m_normalOffset   = std::move( mesh.m_normalOffset );
-    m_uvOffset       = std::move( mesh.m_uvOffset );
-    m_gpuDataCreated = std::move( mesh.m_gpuDataCreated );
-    vertexBuffer     = std::move( mesh.vertexBuffer );
-    indexBuffer      = std::move( mesh.indexBuffer );
-
-    return *this;
-}
 
 void Mesh::Optimize()
 {
@@ -111,8 +87,7 @@ void Mesh::Optimize()
     meshopt_optimizeVertexCache( &indices[0], &indices[0], indices.size(), opt_vertices.size() );
 
     // reorder indices for overdraw, balancing overdraw and vertex cache efficiency
-    const float kThreshold =
-      1.01f; // allow up to 1% worse ACMR to get more reordering opportunities for overdraw
+    const float kThreshold = 1.01f; // allow up to 1% worse ACMR to get more reordering opportunities for overdraw
     meshopt_optimizeOverdraw( &indices[0], &indices[0], indices.size(), &opt_vertices[0].vertex.x,
                               opt_vertices.size(), sizeof( Vertex ), kThreshold );
 
@@ -131,10 +106,15 @@ void Mesh::Optimize()
     {
         const auto& v = opt_vertices[i];
         vertices[i]   = v.vertex;
-        if ( normals.size() )
+        if ( normals.size() ) 
+        {
             normals[i] = v.normal;
+        }
+
         if ( uvs.size() )
+        {
             uvs[i] = v.uv;
+        }
     }
 }
 
@@ -166,6 +146,20 @@ void Mesh::UploadToGpu( bool freeCPUCopy )
     Free( false, freeCPUCopy );
 }
 
+void Mesh::RecalculateBB()
+{
+    PG_ASSERT( vertices.size() != 0 );
+    glm::vec3 max = vertices[0];
+    glm::vec3 min = vertices[0];
+    for ( size_t i = 1; i < vertices.size(); ++i )
+    {
+        min = glm::min( min, vertices[i] );
+        max = glm::max( max, vertices[i] );
+    }
+
+    aabb = AABB( min, max );
+}
+
 void Mesh::Free( bool gpuCopy, bool cpuCopy )
 {
     if ( cpuCopy )
@@ -189,28 +183,70 @@ void Mesh::Free( bool gpuCopy, bool cpuCopy )
 
 bool Mesh::Serialize( std::ofstream& out ) const
 {
-    if ( !vertices.size() )
+    if ( !vertices.size() || !normals.size() )
     {
-        LOG_ERR(
-          "No vertex data to save. Was this mesh accidentally uploaded to the GPU + freed?" );
+        LOG_ERR( "Need CPU vertices and normals to save! Was this mesh accidentally uploaded to the GPU + freed?" );
         return false;
     }
+
+    // uint32_t numVertices     = 0;
+    // uint32_t numIndices      = 0;
+    // uint32_t normalOffset    = ~0u;
+    // uint32_t uvOffset        = ~0u;
+
+    // // If the mesh hasn't been uploaded before, need to calculate offsets
+    // if ( m_numVertices )
+    // {
+    //     numVertices  = vertices.size();
+    //     numIndices   = indices.size();
+    //     normalOffset = numVertices * sizeof( glm::vec3 );
+    //     uvOffset     = normalOffset + normals.size() * sizeof( glm::vec3 );
+    // }
+    // serialize::Write( out, m_keepCPUCopy );
+
+    // serialize::Write( out, vertices );
+    // serialize::Write( out, normals );
+    // serialize::Write( out, uvs );
+    // if ( vertices.size() <= std::numeric_limits< uint16_t >::max() )
+    // {
+    //     std::vector< uint16_t > newIndices( indices.begin(), indices.end() );
+    //     serialize::Write( out, Gfx::IndexType::UNSIGNED_SHORT );
+    //     serialize::Write( out, newIndices );
+    // }
+    // else
+    // {
+    //     serialize::Write( out, Gfx::IndexType::UNSIGNED_INT );
+    //     serialize::Write( out, indices );
+    // }
+    // serialize::Write( out, aabb.min );
+    // serialize::Write( out, aabb.max );
+    // serialize::Write( out, aabb.extent );
 
     serialize::Write( out, vertices );
     serialize::Write( out, normals );
     serialize::Write( out, uvs );
+    serialize::Write( out, Gfx::IndexType::UNSIGNED_INT );
     serialize::Write( out, indices );
-
+    serialize::Write( out, aabb.min );
+    serialize::Write( out, aabb.max );
+    serialize::Write( out, aabb.extent );
+    
     return !out.fail();
 }
 
-bool Mesh::Deserialize( std::ifstream& in )
+bool Mesh::Deserialize( std::ifstream& in, bool freeCpuCopy )
 {
     m_gpuDataCreated = false;
     serialize::Read( in, vertices );
     serialize::Read( in, normals );
     serialize::Read( in, uvs );
+    serialize::Read( in, m_indexType );
     serialize::Read( in, indices );
+    serialize::Read( in, aabb.min );
+    serialize::Read( in, aabb.max );
+    serialize::Read( in, aabb.extent );
+
+    UploadToGpu( freeCpuCopy );
 
     return !in.fail();
 }
@@ -239,5 +275,10 @@ uint32_t Mesh::GetUVOffset() const
 {
     return m_uvOffset;
 }
+
+// void Mesh::SetKeepCPUCopyOnDeserialize( bool b )
+// {
+//     m_keepCPUCopy = b;
+// }
 
 } // namespace Progression

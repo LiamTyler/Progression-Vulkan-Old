@@ -1,4 +1,5 @@
 #include <iostream>
+#include <ios>
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
@@ -7,13 +8,18 @@
 namespace fileIO {
 
     template <typename T>
-    void parse(std::istream& in, T& val) {
+    void Parse(std::istream& in, T& val) {
         in >> val;
         PG_ASSERT(!in.fail());
     }
 
+    inline void Parse(std::istream& in, bool& val) {
+        in >> std::boolalpha >> val;
+        PG_ASSERT(!in.fail());
+    }
+
     template <typename T>
-    void parseLineKeyVal(std::istream& in, const char* key, T& val) {
+    void ParseLineKeyVal(std::istream& in, const char* key, T& val) {
         std::string line;
         std::string s;
         std::getline(in, line);
@@ -24,8 +30,19 @@ namespace fileIO {
         PG_ASSERT(!in.fail() && !ss.fail());
     }
 
+    inline void ParseLineKeyVal(std::istream& in, const char* key, bool& val) {
+        std::string line;
+        std::string s;
+        std::getline(in, line);
+        auto ss = std::istringstream(line);
+        ss >> s;
+        PG_ASSERT(s == key);
+        ss >> std::boolalpha >> val;
+        PG_ASSERT(!in.fail() && !ss.fail());
+    }
+
     template <typename T>
-    bool parseLineKeyValOptional(std::istream& in, const char* key, T& val) {
+    bool ParseLineKeyValOptional(std::istream& in, const char* key, T& val) {
         std::string line;
         std::string s;
         std::getline(in, line);
@@ -33,29 +50,40 @@ namespace fileIO {
         ss >> s;
         PG_ASSERT(s == key);
         if (!ss.eof())
+        {
             ss >> val;
+        }
         else
+        {
             return false;
-        
+        }
+
         PG_ASSERT(!in.fail() && !ss.fail());
         return true;
     }
 
-    inline bool parseLineKeyBool(std::istream& in, const char* key) {
+    inline bool ParseLineKeyValOptional(std::istream& in, const char* key, bool& val) {
         std::string line;
         std::string s;
         std::getline(in, line);
         auto ss = std::istringstream(line);
         ss >> s;
         PG_ASSERT(s == key);
-        ss >> s;
+        if (!ss.eof())
+        {
+            ss >> std::boolalpha >> val;
+        }
+        else
+        {
+            return false;
+        }
+
         PG_ASSERT(!in.fail() && !ss.fail());
-        PG_ASSERT(s == "true" || s == "false");
-        return s == "true" ? true : false;
+        return true;
     }
 
     template <typename T>
-    bool parseLineKeyMap(std::istream& in, const char* key, const std::unordered_map<std::string, T>& map, T& val) {
+    bool ParseLineKeyMap(std::istream& in, const char* key, const std::unordered_map<std::string, T>& map, T& val) {
         std::string line;
         std::string s;
         std::getline(in, line);

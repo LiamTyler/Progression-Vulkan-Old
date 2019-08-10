@@ -29,11 +29,14 @@ public:
     bool Serialize( std::ofstream& outFile ) const override;
     bool Deserialize( std::ifstream& in ) override;
 
-    bool LoadFromObj( ModelCreateInfo* createInfo );
+    bool LoadFromObj( ModelCreateInfo* createInfo, bool loadTexturesIfNotInResourceManager = false );
+    void RecalculateBB( bool recursive = false );
     void Optimize();
 
+    AABB aabb;
     std::vector< Mesh > meshes;
     std::vector< std::shared_ptr< Material > > materials;
+    bool freeCpuCopyDuringLoad = true;
 };
 
 } // namespace Progression

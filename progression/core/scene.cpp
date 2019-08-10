@@ -14,7 +14,7 @@ using namespace Progression;
 static bool ParseResourcefile( std::istream& in )
 {
     std::string fname;
-    fileIO::parseLineKeyVal( in, "filename", fname );
+    fileIO::ParseLineKeyVal( in, "filename", fname );
     return !in.fail() && ResourceManager::LoadFastFile( PG_RESOURCE_DIR + fname );
 }
 
@@ -24,11 +24,11 @@ static bool ParseCamera( Scene* scene, std::istream& in )
     std::string line;
     float tmp;
 
-    fileIO::parseLineKeyVal( in, "position", camera.position );
+    fileIO::ParseLineKeyVal( in, "position", camera.position );
     glm::vec3 rotInDegrees;
-    fileIO::parseLineKeyVal( in, "rotation", rotInDegrees );
+    fileIO::ParseLineKeyVal( in, "rotation", rotInDegrees );
     camera.rotation = glm::radians( rotInDegrees );
-    fileIO::parseLineKeyVal( in, "fov", tmp );
+    fileIO::ParseLineKeyVal( in, "fov", tmp );
     camera.SetFOV( glm::radians( tmp ) );
     std::getline( in, line );
     std::stringstream ss( line );
@@ -39,9 +39,9 @@ static bool ParseCamera( Scene* scene, std::istream& in )
     char colon;
     ss >> width >> colon >> height;
     camera.SetAspectRatio( width / height );
-    fileIO::parseLineKeyVal( in, "near-plane", tmp );
+    fileIO::ParseLineKeyVal( in, "near-plane", tmp );
     camera.SetNearPlane( tmp );
-    fileIO::parseLineKeyVal( in, "far-plane", tmp );
+    fileIO::ParseLineKeyVal( in, "far-plane", tmp );
     camera.SetFarPlane( tmp );
 
     camera.UpdateOrientationVectors();
@@ -55,20 +55,20 @@ static bool ParseLight( Scene* scene, std::istream& in )
     Light light;
     std::string tmp;
 
-    fileIO::parseLineKeyVal( in, "name", light.name );
-    fileIO::parseLineKeyVal( in, "type", tmp );
+    fileIO::ParseLineKeyVal( in, "name", light.name );
+    fileIO::ParseLineKeyVal( in, "type", tmp );
     PG_ASSERT( tmp == "point" || tmp == "spot" || tmp == "directional" );
     light.type = tmp == "point" ? Light::Type::POINT
                                 : tmp == "spot" ? Light::Type::SPOT : Light::Type::DIRECTIONAL;
-    light.enabled = fileIO::parseLineKeyBool( in, "enabled" );
-    fileIO::parseLineKeyVal( in, "color", light.color );
-    fileIO::parseLineKeyVal( in, "intensity", light.intensity );
-    fileIO::parseLineKeyValOptional( in, "position", light.position );
-    fileIO::parseLineKeyValOptional( in, "direction", light.direction );
+    fileIO::ParseLineKeyVal( in, "enabled", light.enabled );
+    fileIO::ParseLineKeyVal( in, "color", light.color );
+    fileIO::ParseLineKeyVal( in, "intensity", light.intensity );
+    fileIO::ParseLineKeyValOptional( in, "position", light.position );
+    fileIO::ParseLineKeyValOptional( in, "direction", light.direction );
     light.direction = glm::normalize( light.direction );
-    fileIO::parseLineKeyValOptional( in, "radius", light.radius );
-    fileIO::parseLineKeyValOptional( in, "innerCutoff", light.innerCutoff );
-    fileIO::parseLineKeyValOptional( in, "outerCutoff", light.outerCutoff );
+    fileIO::ParseLineKeyValOptional( in, "radius", light.radius );
+    fileIO::ParseLineKeyValOptional( in, "innerCutoff", light.innerCutoff );
+    fileIO::ParseLineKeyValOptional( in, "outerCutoff", light.outerCutoff );
 
     scene->AddLight( new Light( light ) );
     return !in.fail();
@@ -78,22 +78,22 @@ static bool ParseEntity( std::istream& in )
 {
     auto e                = ECS::entity::create();
     ECS::EntityData* data = ECS::entity::data( e );
-    fileIO::parseLineKeyValOptional( in, "name", data->name );
+    fileIO::ParseLineKeyValOptional( in, "name", data->name );
     std::string parentName;
-    fileIO::parseLineKeyValOptional( in, "parent", parentName );
+    fileIO::ParseLineKeyValOptional( in, "parent", parentName );
     if ( parentName.empty() )
         data->parentID = ECS::INVALID_ENTITY_ID;
-    fileIO::parseLineKeyVal( in, "position", data->transform.position );
-    fileIO::parseLineKeyVal( in, "rotation", data->transform.rotation );
+    fileIO::ParseLineKeyVal( in, "position", data->transform.position );
+    fileIO::ParseLineKeyVal( in, "rotation", data->transform.rotation );
     data->transform.rotation = glm::radians( data->transform.rotation );
-    fileIO::parseLineKeyVal( in, "scale", data->transform.scale );
-    data->isStatic = fileIO::parseLineKeyBool( in, "static" );
+    fileIO::ParseLineKeyVal( in, "scale", data->transform.scale );
+    fileIO::ParseLineKeyVal( in, "static", data->isStatic );
     int numComponents;
-    fileIO::parseLineKeyVal( in, "numComponents", numComponents );
+    fileIO::ParseLineKeyVal( in, "numComponents", numComponents );
     for ( int i = 0; i < numComponents; ++i )
     {
         std::string component;
-        fileIO::parseLineKeyVal( in, "Component", component );
+        fileIO::ParseLineKeyVal( in, "Component", component );
         if ( component == "ModelRenderer" )
         {
             auto comp = ECS::component::create< ModelRenderComponent >( e );
@@ -110,14 +110,14 @@ static bool ParseEntity( std::istream& in )
 
 static bool ParseBackgroundColor( Scene* scene, std::istream& in )
 {
-    fileIO::parseLineKeyVal( in, "color", scene->backgroundColor );
+    fileIO::ParseLineKeyVal( in, "color", scene->backgroundColor );
 
     return !in.fail();
 }
 
 static bool ParseAmbientColor( Scene* scene, std::istream& in )
 {
-    fileIO::parseLineKeyVal( in, "color", scene->ambientColor );
+    fileIO::ParseLineKeyVal( in, "color", scene->ambientColor );
 
     return !in.fail();
 }

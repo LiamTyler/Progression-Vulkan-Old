@@ -115,6 +115,29 @@ namespace ResourceManager
             }
         }
 
+        {
+            uint32_t numModels;
+            serialize::Read( in, numModels );
+            ResourceMap& resources = f_resources[GetResourceTypeID< Model >()];
+            for ( uint32_t i = 0; i < numModels; ++i )
+            {
+                auto res = std::make_shared< Model >();
+                if ( !res->Deserialize( in ) )
+                {
+                    LOG_ERR( "Failed to load model from fastfile" );
+                    return false;
+                }
+                if ( resources.find( res->name ) != resources.end() )
+                {
+                    res->Move( resources[res->name] );
+                }
+                else
+                {
+                    resources[res->name] = res;
+                }
+            }
+        }
+
         in.close();
 
         LOG( "Loaded fastfile '", fastFile, "' in: ", Time::GetDuration( start ), " ms." )

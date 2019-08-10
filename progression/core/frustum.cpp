@@ -4,16 +4,14 @@
 namespace Progression
 {
 
-Frustum::Frustum()
-{
-}
-
-bool Frustum::boxInFrustum( const BoundingBox& aabb ) const
+bool Frustum::BoxInFrustum( const AABB& aabb ) const
 {
     for ( int i = 0; i < 6; ++i )
     {
         if ( !SameSide( aabb.GetP( glm::vec3( planes[i] ) ), planes[i] ) )
+        {
             return false;
+        }
     }
     return true;
 }

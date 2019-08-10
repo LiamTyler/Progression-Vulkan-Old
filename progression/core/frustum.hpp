@@ -8,7 +8,7 @@ namespace Progression
 class Frustum
 {
 public:
-    Frustum();
+    Frustum() = default;
 
     void Update( float fov,
                  float np,
@@ -19,7 +19,7 @@ public:
                  const glm::vec3& up,
                  const glm::vec3& right );
 
-    bool boxInFrustum( const BoundingBox& aabb ) const;
+    bool BoxInFrustum( const AABB& aabb ) const;
     bool SameSide( const glm::vec3& point, const glm::vec4& plane ) const;
 
     glm::vec4 planes[6];

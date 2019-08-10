@@ -98,6 +98,9 @@ AssetStatus TextureConverter::CheckDependencies()
 
 ConverterStatus TextureConverter::Convert()
 {
+    auto resPtr = std::make_shared< Texture >();
+    resPtr->name = createInfo.name;
+    ResourceManager::Add< Texture >( resPtr );
     if ( m_status == ASSET_UP_TO_DATE )
     {
         return CONVERT_SUCCESS;
@@ -139,7 +142,6 @@ ConverterStatus TextureConverter::Convert()
         if ( !img.Load( createInfo.filename ) )
         {
             out.close();
-            std::filesystem::remove( outputFile );
             return CONVERT_ERROR;
         }
         img.Serialize( out );

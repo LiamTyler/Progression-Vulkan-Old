@@ -3,17 +3,17 @@
 namespace Progression
 {
 
-BoundingBox::BoundingBox( const glm::vec3& min_, const glm::vec3& max_ ) :
+AABB::AABB( const glm::vec3& min_, const glm::vec3& max_ ) :
   min( min_ ), max( max_ ), extent( max_ - min_ )
 {
 }
 
-glm::vec3 BoundingBox::getCenter() const
+glm::vec3 AABB::GetCenter() const
 {
     return ( max + min ) / 2.0f;
 }
 
-void BoundingBox::getPoints( glm::vec3* data ) const
+void AABB::GetPoints( glm::vec3* data ) const
 {
     data[0] = min + glm::vec3( 0 );
     data[1] = min + glm::vec3( extent.x, 0, 0 );
@@ -25,13 +25,13 @@ void BoundingBox::getPoints( glm::vec3* data ) const
     data[7] = max - glm::vec3( 0, 0, extent.z );
 }
 
-void BoundingBox::setCenter( const glm::vec3& point )
+void AABB::SetCenter( const glm::vec3& point )
 {
     min = point - extent / 2.0f;
     max = point + extent / 2.0f;
 }
 
-void BoundingBox::Encompass( glm::vec3* points, int numPoints )
+void AABB::Encompass( glm::vec3* points, int numPoints )
 {
     for ( int i = 0; i < numPoints; ++i )
     {
@@ -41,7 +41,7 @@ void BoundingBox::Encompass( glm::vec3* points, int numPoints )
     extent = max - min;
 }
 
-void BoundingBox::Encompass( const BoundingBox& aabb, const Transform& transform )
+void AABB::Encompass( const AABB& aabb, const Transform& transform )
 {
     glm::vec3 he        = aabb.extent / 2.0f;
     glm::vec3 points[8] = { -he,
@@ -74,7 +74,7 @@ void BoundingBox::Encompass( const BoundingBox& aabb, const Transform& transform
     extent = max - min;
 }
 
-glm::mat4 BoundingBox::GetModelMatrix() const
+glm::mat4 AABB::GetModelMatrix() const
 {
     glm::mat4 model( 1 );
     glm::vec3 center = .5f * ( min + max );
@@ -83,7 +83,7 @@ glm::mat4 BoundingBox::GetModelMatrix() const
     return model;
 }
 
-glm::vec3 BoundingBox::GetP( const glm::vec3& planeNormal ) const
+glm::vec3 AABB::GetP( const glm::vec3& planeNormal ) const
 {
     glm::vec3 P = min;
     if ( planeNormal.x >= 0 )
@@ -96,7 +96,7 @@ glm::vec3 BoundingBox::GetP( const glm::vec3& planeNormal ) const
     return P;
 }
 
-glm::vec3 BoundingBox::GetN( const glm::vec3& planeNormal ) const
+glm::vec3 AABB::GetN( const glm::vec3& planeNormal ) const
 {
     glm::vec3 N = max;
     if ( planeNormal.x >= 0 )

@@ -27,43 +27,31 @@ int main( int argc, char* argv[] )
     PG_ASSERT( ResourceManager::Get< Shader >( "test" ) );
     Shader& shader = *ResourceManager::Get< Shader >( "test" );
 
-    //PG_ASSERT( ResourceManager::Get<::Progression::Texture >( "cockatoo" ) );
-    //auto tex = ResourceManager::Get<::Progression::Texture >( "cockatoo" );
+    PG_ASSERT( ResourceManager::Get<::Progression::Texture >( "cockatoo" ) );
+    auto tex = ResourceManager::Get<::Progression::Texture >( "cockatoo" );
 
     PG_ASSERT( ResourceManager::Get< Material >( "cockatooMaterial" ) );
     auto mat = ResourceManager::Get< Material >( "cockatooMaterial" );
 
-    // Material mat;
-    // mat.Ka     = glm::vec3( 0 );
-    // mat.Kd     = glm::vec3( 1, 0, 0 );
-    // mat.Ks     = glm::vec3( 0 );
-    // mat.Ke     = glm::vec3( 0 );
-    // mat.Ns     = 50;
-    // mat.map_Kd = tex;
+    PG_ASSERT( ResourceManager::Get< Model >( "chalet2" ) );
+    Model& model = *ResourceManager::Get< Model >( "chalet2" );
 
-    float quadVerts[] = {
-        -1, 1, 0, 0, 0, 1, 0, 1, -1, -1, 0, 0, 0, 1, 0, 0, 1, -1, 0, 0, 0, 1, 1, 0,
+    auto mat2 = std::make_shared< Material>();
+    mat2->Ka     = glm::vec3( 0 );
+    mat2->Kd     = glm::vec3( 1, 1, 1 );
+    mat2->Ks     = glm::vec3( 0 );
+    mat2->Ke     = glm::vec3( 0 );
+    mat2->Ns     = 50;
+    mat2->map_Kd = model.materials[0]->map_Kd;
 
-        -1, 1, 0, 0, 0, 1, 0, 1, 1,  -1, 0, 0, 0, 1, 1, 0, 1, 1,  0, 0, 0, 1, 1, 1,
-    };
+    // float quadVerts[] = {
+    //     -1, 1, 0, 0, 0, 1, 0, 1, -1, -1, 0, 0, 0, 1, 0, 0, 1, -1, 0, 0, 0, 1, 1, 0,
 
-    uint16_t indices[] = { 0, 1, 2, 3, 4, 5 };
+    //     -1, 1, 0, 0, 0, 1, 0, 1, 1,  -1, 0, 0, 0, 1, 1, 0, 1, 1,  0, 0, 0, 1, 1, 1,
+    // }; 
+    // uint16_t indices[] = { 0, 1, 2, 3, 4, 5 };
 
     Mesh meshTmp;
-    // mesh.vertices.push_back( { -1, 1, 0 } );
-    // mesh.vertices.push_back( { -1, -1, 0 } );
-    // mesh.vertices.push_back( { 1, -1, 0 } );
-    // mesh.vertices.push_back( { 1, 1, 0 } );
-    // mesh.normals.push_back( { 0, 0, 1 } );
-    // mesh.normals.push_back( { 0, 0, 1 } );
-    // mesh.normals.push_back( { 0, 0, 1 } );
-    // mesh.normals.push_back( { 0, 0, 1 } );
-    // mesh.uvs.push_back( { 0, 1 } );
-    // mesh.uvs.push_back( { 0, 0 } );
-    // mesh.uvs.push_back( { 1, 0 } );
-    // mesh.uvs.push_back( { 1, 1 } );
-    // mesh.indices = { 0, 1, 2, 2, 3, 0 };
-
     meshTmp.vertices.push_back( { -1, 1, 0 } );
     meshTmp.vertices.push_back( { -1, -1, 0 } );
     meshTmp.vertices.push_back( { 1, -1, 0 } );
@@ -85,10 +73,9 @@ int main( int argc, char* argv[] )
     meshTmp.indices = { 0, 1, 2, 3, 4, 5 };
     meshTmp.UploadToGpu();
 
-    Model model;
-    model.meshes.push_back( std::move( meshTmp ) );
-    model.materials.push_back( mat );
-    //model.materials.push_back( std::make_shared< Material >( mat ) );
+    Model model2;
+    model2.meshes.push_back( std::move( meshTmp ) );
+    model2.materials.push_back( mat2 );
 
     DepthAttachmentDescriptor depthAttachmentDesc;
     depthAttachmentDesc.depthTestEnabled = true;
@@ -128,8 +115,8 @@ int main( int argc, char* argv[] )
 
         PG::Input::PollEvents();
 
-        Transform modelTransform( glm::vec3( 0, 0, 0 ), glm::vec3( 0, 0, 0 ), glm::vec3( 1 ) );
-        Camera camera( glm::vec3( 0, 0, 5 ), glm::vec3( 0 ) );
+        Transform modelTransform( glm::vec3( 0, 0, 0 ), glm::vec3( glm::radians( -90.0f ), glm::radians( 90.0f ), 0 ), glm::vec3( 1 ) );
+        Camera camera( glm::vec3( 0, 0, 3 ), glm::vec3( 0 ) );
 
         glm::vec3 lightDir = -glm::normalize( glm::vec3( 0, 0, -1 ) );
 
@@ -161,7 +148,7 @@ int main( int argc, char* argv[] )
             for ( size_t i = 0; i < model.meshes.size(); ++i )
             {
                 Mesh& mesh    = model.meshes[i];
-                auto& matPtr = model.materials[i];
+                auto& matPtr  = model.materials[i];
 
                 vertexInputDesc.Bind();
                 BindVertexBuffer( mesh.vertexBuffer, 0, mesh.GetVertexOffset(), 12 );
@@ -172,12 +159,12 @@ int main( int argc, char* argv[] )
                 shader.SetUniform( "kd", matPtr->Kd );
                 shader.SetUniform( "ks", matPtr->Ks );
                 shader.SetUniform( "ke", matPtr->Ke );
-                shader.SetUniform( "shininess", mat->Ns );
-                if ( mat->map_Kd )
+                shader.SetUniform( "shininess", matPtr->Ns );
+                if ( matPtr->map_Kd )
                 {
                     shader.SetUniform( "textured", true );
-                    mat->map_Kd->sampler->Bind( 0 );
-                    shader.BindTexture( mat->map_Kd->gfxTexture, "diffuseTex", 0 );
+                    matPtr->map_Kd->sampler->Bind( 0 );
+                    shader.BindTexture( matPtr->map_Kd->gfxTexture, "diffuseTex", 0 );
                 }
                 else
                 {

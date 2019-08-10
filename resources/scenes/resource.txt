@@ -20,3 +20,22 @@ maxAnisotropy 4
 
 MTLFile
 filename materials/cockatoo.mtl
+
+Texture
+name chaletTex
+filename textures/chalet.jpg
+mipmapped true
+internalFormat R8_G8_B8_Uint
+minFilter linear 
+magFilter nearest
+wrapModeS clamp_to_edge
+wrapModeT clamp_to_edge
+wrapModeR clamp_to_edge
+borderColor 0 0 0 0
+maxAnisotropy 4
+
+Model
+name chalet2
+filename models/chalet2.obj
+optimize true
+freeCpuCopy true

@@ -3,6 +3,7 @@
 #include "graphics/graphics_api.hpp"
 #include "resource/shader.hpp"
 #include "resource/texture.hpp"
+#include "resource/model.hpp"
 #include "utils/fileIO.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
@@ -14,11 +15,11 @@ using namespace Progression;
 
 bool ParseShaderCreateInfoFromFile( std::istream& in, ShaderCreateInfo& info )
 {
-    fileIO::parseLineKeyVal( in, "name", info.name );
-    fileIO::parseLineKeyValOptional( in, "vertex", info.vertex );
-    fileIO::parseLineKeyValOptional( in, "geometry", info.geometry );
-    fileIO::parseLineKeyValOptional( in, "fragment", info.fragment );
-    fileIO::parseLineKeyValOptional( in, "compute", info.compute );
+    fileIO::ParseLineKeyVal( in, "name", info.name );
+    fileIO::ParseLineKeyValOptional( in, "vertex", info.vertex );
+    fileIO::ParseLineKeyValOptional( in, "geometry", info.geometry );
+    fileIO::ParseLineKeyValOptional( in, "fragment", info.fragment );
+    fileIO::ParseLineKeyValOptional( in, "compute", info.compute );
     if ( !info.vertex.empty() )
     {
         info.vertex = PG_RESOURCE_DIR + info.vertex;
@@ -83,16 +84,16 @@ bool ParseTextureCreateInfoFromFile( std::istream& in, TextureCreateInfo& info )
 {
     info.texDesc.type = Gfx::TextureType::TEXTURE2D;
 
-    fileIO::parseLineKeyVal( in, "name", info.name );
-    fileIO::parseLineKeyVal( in, "filename", info.filename );
+    fileIO::ParseLineKeyVal( in, "name", info.name );
+    fileIO::ParseLineKeyVal( in, "filename", info.filename );
     info.filename          = PG_RESOURCE_DIR + info.filename;
-    info.texDesc.mipmapped = fileIO::parseLineKeyBool( in, "mipmapped" );
-    if ( !fileIO::parseLineKeyMap( in, "internalFormat", internalFormatMap, info.texDesc.format ) )
+    fileIO::ParseLineKeyVal( in, "mipmapped", info.texDesc.mipmapped );
+    if ( !fileIO::ParseLineKeyMap( in, "internalFormat", internalFormatMap, info.texDesc.format ) )
     {
         LOG_ERR( "Invalid texture2D 'internalFormat'" );
         return false;
     }
-    if ( !fileIO::parseLineKeyMap( in, "minFilter", minFilterMap, info.samplerDesc.minFilter ) )
+    if ( !fileIO::ParseLineKeyMap( in, "minFilter", minFilterMap, info.samplerDesc.minFilter ) )
     {
         LOG_ERR( "Invalid texture2D minFilter" );
         return false;
@@ -104,36 +105,47 @@ bool ParseTextureCreateInfoFromFile( std::istream& in, TextureCreateInfo& info )
                  info.filename );
         return false;
     }
-    if ( !fileIO::parseLineKeyMap( in, "magFilter", magFilterMap, info.samplerDesc.magFilter ) )
+    if ( !fileIO::ParseLineKeyMap( in, "magFilter", magFilterMap, info.samplerDesc.magFilter ) )
     {
         LOG_ERR( "Invalid texture2D magFilter" );
         return false;
     }
-    if ( !fileIO::parseLineKeyMap( in, "wrapModeS", wrapMap, info.samplerDesc.wrapModeS ) )
+    if ( !fileIO::ParseLineKeyMap( in, "wrapModeS", wrapMap, info.samplerDesc.wrapModeS ) )
     {
         LOG_ERR( "Invalid texture2D wrapModeS" );
         return false;
     }
-    if ( !fileIO::parseLineKeyMap( in, "wrapModeT", wrapMap, info.samplerDesc.wrapModeT ) )
+    if ( !fileIO::ParseLineKeyMap( in, "wrapModeT", wrapMap, info.samplerDesc.wrapModeT ) )
     {
         LOG_ERR( "Invalid texture2D wrapModeT" );
         return false;
     }
-    if ( !fileIO::parseLineKeyMap( in, "wrapModeR", wrapMap, info.samplerDesc.wrapModeR ) )
+    if ( !fileIO::ParseLineKeyMap( in, "wrapModeR", wrapMap, info.samplerDesc.wrapModeR ) )
     {
         LOG_ERR( "Invalid texture2D wrapModeR" );
         return false;
     }
-    fileIO::parseLineKeyVal( in, "borderColor", info.samplerDesc.borderColor );
-    fileIO::parseLineKeyVal( in, "maxAnisotropy", info.samplerDesc.maxAnisotropy );
+    fileIO::ParseLineKeyVal( in, "borderColor", info.samplerDesc.borderColor );
+    fileIO::ParseLineKeyVal( in, "maxAnisotropy", info.samplerDesc.maxAnisotropy );
 
     return true;
 }
 
 bool ParseMaterialFileFromFile( std::istream& in, std::string& mtlFileName )
 {
-    fileIO::parseLineKeyVal( in, "filename", mtlFileName );
+    fileIO::ParseLineKeyVal( in, "filename", mtlFileName );
     mtlFileName = PG_RESOURCE_DIR + mtlFileName;
+    return true;
+}
+
+bool ParseModelFromFile( std::istream& in, ModelCreateInfo& createInfo )
+{
+    fileIO::ParseLineKeyVal( in, "name", createInfo.name );
+    fileIO::ParseLineKeyVal( in, "filename", createInfo.filename );
+    createInfo.filename = PG_RESOURCE_DIR + createInfo.filename;
+    fileIO::ParseLineKeyVal( in, "optimize", createInfo.optimize );
+    fileIO::ParseLineKeyVal( in, "freeCpuCopy", createInfo.freeCpuCopy );
+    
     return true;
 }
 
@@ -238,7 +250,21 @@ AssetStatus FastfileConverter::CheckDependencies()
 
             m_materialFileConverters.emplace_back( std::move( converter ) );
         }
-        
+        else if ( line == "Model")
+        {
+            ModelConverter converter;
+            ParseModelFromFile( in, converter.createInfo );
+
+            auto status = converter.CheckDependencies();
+            if ( status == ASSET_CHECKING_ERROR )
+            {
+                LOG_ERR( "Error while checking dependencies on model file '", converter.createInfo.filename, "'" );
+                return ASSET_CHECKING_ERROR;
+            }
+            UpdateStatus( status );
+
+            m_modelConverters.emplace_back( std::move( converter ) );
+        }
         else
         {
             LOG_WARN( "Unrecognized line: ", line );
@@ -265,10 +291,11 @@ ConverterStatus FastfileConverter::Convert()
         return CONVERT_ERROR;
     }
 
-    auto OnError = [&]()
+    auto OnError = [&]( std::string ffiFile )
     {
         out.close();
         std::filesystem::remove( outputFile );
+        std::filesystem::remove( ffiFile );
         return CONVERT_ERROR;
     };
 
@@ -280,7 +307,7 @@ ConverterStatus FastfileConverter::Convert()
         if ( converter.Convert() != CONVERT_SUCCESS )
         {
             LOG_ERR( "Error while converting shader" );
-            return OnError();
+            return OnError( converter.outputFile );
         }
 
         // TODO: Dont write and then read back the same data, just write to both files
@@ -288,7 +315,7 @@ ConverterStatus FastfileConverter::Convert()
         if ( !in )
         {
             LOG_ERR( "Error opening intermediate file '", converter.outputFile, "'" );
-            return OnError();
+            return OnError( converter.outputFile );
         }
         in.seekg( 0, in.end );
         size_t length = in.tellg();
@@ -306,14 +333,14 @@ ConverterStatus FastfileConverter::Convert()
         if ( converter.Convert() != CONVERT_SUCCESS )
         {
             LOG_ERR( "Error while converting texture" );
-            return OnError();
+            return OnError( converter.outputFile );
         }
 
         std::ifstream in( converter.outputFile );
         if ( !in )
         {
             LOG_ERR( "Error opening intermediate file '", converter.outputFile, "'" );
-            return OnError();
+            return OnError( converter.outputFile );
         }
         in.seekg( 0, in.end );
         size_t length = in.tellg();
@@ -331,14 +358,14 @@ ConverterStatus FastfileConverter::Convert()
         if ( converter.Convert() != CONVERT_SUCCESS )
         {
             LOG_ERR( "Error while converting material" );
-            return OnError();
+            return OnError( converter.outputFile );
         }
 
         std::ifstream in( converter.outputFile );
         if ( !in )
         {
             LOG_ERR( "Error opening intermediate file '", converter.outputFile, "'" );
-            return OnError();
+            return OnError( converter.outputFile );
         }
         in.seekg( 0, in.end );
         size_t length = in.tellg();
@@ -349,10 +376,30 @@ ConverterStatus FastfileConverter::Convert()
         serialize::Write( out, buffer.data(), length );
     }
 
+    uint32_t numModels = m_modelConverters.size();
+    serialize::Write( out, numModels );
+    for ( auto& converter : m_modelConverters )
+    {
+        if ( converter.Convert() != CONVERT_SUCCESS )
+        {
+            LOG_ERR( "Error while converting model" );
+            return OnError( converter.outputFile );
+        }
 
-    // uint32_t numModels = m_modelConverters.size();
-    // serialize::Write( out, numModels );
+        std::ifstream in( converter.outputFile );
+        if ( !in )
+        {
+            LOG_ERR( "Error opening intermediate file '", converter.outputFile, "'" );
+            return OnError( converter.outputFile );
+        }
+        in.seekg( 0, in.end );
+        size_t length = in.tellg();
+        in.seekg( 0, in.beg );
+        buffer.resize( length );
+        in.read( &buffer[0], length );
 
+        serialize::Write( out, buffer.data(), length );
+    }
 
     out.close();
 

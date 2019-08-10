@@ -32,7 +32,7 @@ class Texture;
 enum ResourceTypes
 {
     SHADER = 0,
-    TEXTURE2D,
+    TEXTURE,
     MATERIAL,
     MODEL,
     TOTAL_RESOURCE_TYPES
