@@ -73,35 +73,8 @@ bool Texture::Serialize( std::ofstream& out ) const
     // Serialization done in TextureConverter
     return false;
 }
-bool Texture::Deserialize( std::ifstream& in )
-{
-    Gfx::TextureDescriptor texDesc;
-    serialize::Read( in, name );
-    serialize::Read( in, texDesc.format );
-    serialize::Read( in, texDesc.type );
-    serialize::Read( in, texDesc.mipmapped );
 
-    Gfx::SamplerDescriptor samplerDesc;
-    serialize::Read( in, samplerDesc.minFilter );
-    serialize::Read( in, samplerDesc.magFilter );
-    serialize::Read( in, samplerDesc.wrapModeS );
-    serialize::Read( in, samplerDesc.wrapModeT );
-    serialize::Read( in, samplerDesc.wrapModeR );
-    serialize::Read( in, samplerDesc.borderColor );
-    serialize::Read( in, samplerDesc.maxAnisotropy );
-    sampler = RenderSystem::GetSampler( &samplerDesc );
-
-    Image img;
-    img.Deserialize( in );
-    texDesc.width  = img.Width();
-    texDesc.height = img.Height();
-    gfxTexture     = Gfx::Texture::Create( texDesc, img.Pixels(),
-                                           GetSourceFormatFromNumComponents( img.NumComponents() ) );
-
-    return !in.fail();
-}
-
-bool Texture::Deserialize2( char*& buffer )
+bool Texture::Deserialize( char*& buffer )
 {
     Gfx::TextureDescriptor texDesc;
     serialize::Read( buffer, name );
@@ -119,12 +92,12 @@ bool Texture::Deserialize2( char*& buffer )
     serialize::Read( buffer, samplerDesc.maxAnisotropy );
     sampler = RenderSystem::GetSampler( &samplerDesc );
 
-    Image img;
-    img.Deserialize2( buffer );
-    texDesc.width  = img.Width();
-    texDesc.height = img.Height();
-    gfxTexture     = Gfx::Texture::Create( texDesc, img.Pixels(),
-                                           GetSourceFormatFromNumComponents( img.NumComponents() ) );
+    serialize::Read( buffer, texDesc.width );
+    serialize::Read( buffer, texDesc.height );
+    uint32_t numComponents;
+    serialize::Read( buffer, numComponents );
+    gfxTexture = Gfx::Texture::Create( texDesc, buffer, GetSourceFormatFromNumComponents( numComponents ) );
+    buffer += texDesc.width * texDesc.height * numComponents;
 
     return true;
 }

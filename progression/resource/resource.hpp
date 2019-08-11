@@ -28,8 +28,7 @@ public:
     virtual bool Load( ResourceCreateInfo* createInfo = nullptr ) = 0;
     virtual void Move( std::shared_ptr< Resource > dst )          = 0;
     virtual bool Serialize( std::ofstream& outFile ) const        = 0;
-    virtual bool Deserialize( std::ifstream& in )                 = 0;
-    virtual bool Deserialize2( char*& buffer )                    = 0;
+    virtual bool Deserialize( char*& buffer )                     = 0;
 
     std::string name;
 };

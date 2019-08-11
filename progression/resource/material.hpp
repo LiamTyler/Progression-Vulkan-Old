@@ -27,8 +27,7 @@ public:
     bool Load( ResourceCreateInfo* createInfo ) override;
     void Move( std::shared_ptr< Resource > dst ) override;
     bool Serialize( std::ofstream& outFile ) const override;
-    bool Deserialize( std::ifstream& in ) override;
-    bool Deserialize2( char*& buffer ) override;
+    bool Deserialize( char*& buffer ) override;
     static bool LoadMtlFile( std::vector< Material >& materials, const std::string& fname );
 
     glm::vec3 Ka;

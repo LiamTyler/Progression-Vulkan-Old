@@ -78,14 +78,12 @@ bool Model::Load( ResourceCreateInfo* createInfo )
     PG_ASSERT( createInfo );
     ModelCreateInfo* info = static_cast< ModelCreateInfo* >( createInfo );
     name = info->name;
-    freeCpuCopyDuringLoad = info->freeCpuCopy;
     return LoadFromObj( info );
 }
 
 bool Model::Serialize( std::ofstream& out ) const
 {
     serialize::Write( out, name );
-    serialize::Write( out, freeCpuCopyDuringLoad );
     uint32_t numMeshes = meshes.size();
     serialize::Write( out, numMeshes );
     for ( uint32_t i = 0; i < numMeshes; ++i )
@@ -106,45 +104,16 @@ bool Model::Serialize( std::ofstream& out ) const
         }
     }
 
+    serialize::Write( out, aabb.min );
+    serialize::Write( out, aabb.max );
+    serialize::Write( out, aabb.extent );
+
     return !out.fail();
 }
 
-bool Model::Deserialize( std::ifstream& in )
-{
-    serialize::Read( in, name );
-    serialize::Read( in, freeCpuCopyDuringLoad );
-    uint32_t numMeshes;
-    serialize::Read( in, numMeshes );
-    meshes.resize( numMeshes );
-    materials.resize( numMeshes );
-    for ( uint32_t i = 0; i < numMeshes; ++i )
-    {
-        auto mat = std::make_shared< Material >();
-        if ( !mat->Deserialize( in ) )
-        {
-            LOG( "Could not load material: ", i, ", of model: ", name, " from fastfile" );
-            return false;
-        }
-        materials[i] = mat;
-    }
-
-    for ( uint32_t i = 0; i < numMeshes; ++i )
-    {
-        if ( !meshes[i].Deserialize( in, freeCpuCopyDuringLoad ) )
-        {
-            LOG( "Could not load mesh: ", i, ", of model: ", name, " from fastfile" );
-            return false;
-        }
-    }
-
-    return !in.fail();
-}
-
-bool Model::Deserialize2( char*& buffer )
+bool Model::Deserialize( char*& buffer )
 {
     serialize::Read( buffer, name );
-    LOG("model name '", name, "'");
-    serialize::Read( buffer, freeCpuCopyDuringLoad );
     uint32_t numMeshes;
     serialize::Read( buffer, numMeshes );
     meshes.resize( numMeshes );
@@ -152,7 +121,7 @@ bool Model::Deserialize2( char*& buffer )
     for ( uint32_t i = 0; i < numMeshes; ++i )
     {
         auto mat = std::make_shared< Material >();
-        if ( !mat->Deserialize2( buffer ) )
+        if ( !mat->Deserialize( buffer ) )
         {
             LOG( "Could not load material: ", i, ", of model: ", name, " from fastfile" );
             return false;
@@ -162,12 +131,16 @@ bool Model::Deserialize2( char*& buffer )
 
     for ( uint32_t i = 0; i < numMeshes; ++i )
     {
-        if ( !meshes[i].Deserialize2( buffer, freeCpuCopyDuringLoad ) )
+        if ( !meshes[i].Deserialize( buffer ) )
         {
             LOG( "Could not load mesh: ", i, ", of model: ", name, " from fastfile" );
             return false;
         }
     }
+
+    serialize::Read( buffer, aabb.min );
+    serialize::Read( buffer, aabb.max );
+    serialize::Read( buffer, aabb.extent );
 
     return true;
 }
@@ -195,6 +168,9 @@ bool Model::LoadFromObj( ModelCreateInfo* createInfo, bool loadTexturesIfNotInRe
 
     meshes.clear();
     materials.clear();
+
+    aabb.min = glm::vec3( std::numeric_limits< float >::max() );
+    aabb.max = glm::vec3( std::numeric_limits< float >::min() );
 
     for ( int currentMaterialID = -1; currentMaterialID < (int) tiny_materials.size();
           ++currentMaterialID )
@@ -329,6 +305,8 @@ bool Model::LoadFromObj( ModelCreateInfo* createInfo, bool loadTexturesIfNotInRe
             }
 
             currentMesh.aabb = AABB( min, max );
+            aabb.min         = glm::min( min, aabb.min );
+            aabb.max         = glm::max( max, aabb.max );
 
             if ( createInfo->optimize )
             {
@@ -341,6 +319,8 @@ bool Model::LoadFromObj( ModelCreateInfo* createInfo, bool loadTexturesIfNotInRe
             meshes.push_back( std::move( currentMesh ) );
         }
     }
+
+    aabb = AABB( aabb.min, aabb.max );
 
     return true;
 }

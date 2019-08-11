@@ -197,36 +197,7 @@ bool Shader::Serialize( std::ofstream& out ) const
     return !out.fail();
 }
 
-bool Shader::Deserialize( std::ifstream& in )
-{
-    serialize::Read( in, name );
-    GLint len;
-    GLenum format;
-    serialize::Read( in, len );
-    serialize::Read( in, format );
-    std::vector< char > binary( len );
-    serialize::Read( in, binary.data(), len );
-    if ( !LoadFromBinary( binary.data(), len, format ) )
-    {
-        LOG_ERR( "Failed to load shader from binary" );
-        return false;
-    }
-
-    uint32_t numUniforms;
-    serialize::Read( in, numUniforms );
-    for ( uint32_t i = 0; i < numUniforms; ++i )
-    {
-        std::string uName;
-        GLuint loc;
-        serialize::Read( in, uName );
-        serialize::Read( in, loc );
-        m_uniforms[uName] = loc;
-    }
-
-    return !in.fail();
-}
-
-bool Shader::Deserialize2( char*& buffer )
+bool Shader::Deserialize( char*& buffer )
 {
     serialize::Read( buffer, name );
     GLint len;

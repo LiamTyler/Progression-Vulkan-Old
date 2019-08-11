@@ -44,26 +44,7 @@ bool Material::Serialize( std::ofstream& out ) const
     return !out.fail();
 }
 
-bool Material::Deserialize( std::ifstream& in )
-{
-    serialize::Read( in, name );
-    serialize::Read( in, Ka );
-    serialize::Read( in, Kd );
-    serialize::Read( in, Ks );
-    serialize::Read( in, Ke );
-    serialize::Read( in, Ns );
-    std::string map_Kd_name = map_Kd ? map_Kd->name : "";
-    serialize::Read( in, map_Kd_name );
-    if ( !map_Kd_name.empty() )
-    {
-        map_Kd = ResourceManager::Get< Texture >( map_Kd_name );
-        PG_ASSERT( map_Kd );
-    }
-
-    return !in.fail();
-}
-
-bool Material::Deserialize2( char*& buffer )
+bool Material::Deserialize( char*& buffer )
 {
     serialize::Read( buffer, name );
     serialize::Read( buffer, Ka );

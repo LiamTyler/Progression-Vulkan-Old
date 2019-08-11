@@ -35,6 +35,7 @@ set(GLFW_BUILD_DOCS      OFF CACHE BOOL " " FORCE)
 
 add_subdirectory(ext/glfw)
 add_subdirectory(ext/meshoptimizer)
+add_subdirectory(ext/lz4)
 
 add_subdirectory(progression)
 

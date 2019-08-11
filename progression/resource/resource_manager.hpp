@@ -75,7 +75,6 @@ namespace ResourceManager
 
     void Init();
     bool LoadFastFile( const std::string& fname );
-    bool LoadFastFile2( const std::string& fname );
     void Shutdown();
 
     template < typename T >

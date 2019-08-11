@@ -71,8 +71,8 @@ ConverterStatus ModelConverter::Convert()
 
     Model model;
 
-    bool freeCpuCopy = createInfo.freeCpuCopy;
     createInfo.freeCpuCopy = false;
+    createInfo.optimize    = true;
     if ( !model.Load( &createInfo ) )
     {
         LOG_ERR( "Could not load the model '", createInfo.filename, "'" );

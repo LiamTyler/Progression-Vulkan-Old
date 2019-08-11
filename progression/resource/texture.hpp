@@ -27,8 +27,7 @@ public:
     bool Load( ResourceCreateInfo* createInfo ) override;
     void Move( std::shared_ptr< Resource > dst ) override;
     bool Serialize( std::ofstream& outFile ) const override;
-    bool Deserialize( std::ifstream& in ) override;
-    bool Deserialize2( char*& buffer ) override;
+    bool Deserialize( char*& buffer ) override;
 
     GLuint GetNativeHandle() const;
     Gfx::PixelFormat GetFormat() const;

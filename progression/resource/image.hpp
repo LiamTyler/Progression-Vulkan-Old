@@ -23,17 +23,17 @@ public:
     // to / from  a binary file
     bool Serialize( std::ofstream& outFile ) const;
     bool Deserialize( std::ifstream& in );
-    bool Deserialize2( char*& buffer );
+    bool Deserialize( char*& buffer );
 
-    int Width() const;
-    int Height() const;
-    int NumComponents() const;
+    uint32_t Width() const;
+    uint32_t Height() const;
+    uint32_t NumComponents() const;
     unsigned char* Pixels() const;
 
 protected:
-    int m_width             = 0;
-    int m_height            = 0;
-    int m_numComponents     = 0;
+    uint32_t m_width             = 0;
+    uint32_t m_height            = 0;
+    uint32_t m_numComponents     = 0;
     unsigned char* m_pixels = nullptr;
 };
 

@@ -23,8 +23,7 @@ public:
     void Free( bool gpuCopy = true, bool cpuCopy = true );
     void Optimize();
     bool Serialize( std::ofstream& out ) const;
-    bool Deserialize( std::ifstream& in, bool freeCpuCopy );
-    bool Deserialize2( char*& buffer, bool freeCpuCopy );
+    bool Deserialize( char*& buffer );
 
     uint32_t GetNumVertices() const;
     uint32_t GetNumIndices() const;

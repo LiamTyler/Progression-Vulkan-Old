@@ -189,39 +189,10 @@ bool Mesh::Serialize( std::ofstream& out ) const
         return false;
     }
 
-    // uint32_t numVertices     = 0;
-    // uint32_t numIndices      = 0;
-    // uint32_t normalOffset    = ~0u;
-    // uint32_t uvOffset        = ~0u;
-
-    // // If the mesh hasn't been uploaded before, need to calculate offsets
-    // if ( m_numVertices )
-    // {
-    //     numVertices  = vertices.size();
-    //     numIndices   = indices.size();
-    //     normalOffset = numVertices * sizeof( glm::vec3 );
-    //     uvOffset     = normalOffset + normals.size() * sizeof( glm::vec3 );
-    // }
-    // serialize::Write( out, m_keepCPUCopy );
-
-    // serialize::Write( out, vertices );
-    // serialize::Write( out, normals );
-    // serialize::Write( out, uvs );
-    // if ( vertices.size() <= std::numeric_limits< uint16_t >::max() )
-    // {
-    //     std::vector< uint16_t > newIndices( indices.begin(), indices.end() );
-    //     serialize::Write( out, Gfx::IndexType::UNSIGNED_SHORT );
-    //     serialize::Write( out, newIndices );
-    // }
-    // else
-    // {
-    //     serialize::Write( out, Gfx::IndexType::UNSIGNED_INT );
-    //     serialize::Write( out, indices );
-    // }
-    // serialize::Write( out, aabb.min );
-    // serialize::Write( out, aabb.max );
-    // serialize::Write( out, aabb.extent );
-
+    size_t totalVertexBytes = sizeof( glm::vec3 ) * vertices.size() + sizeof( glm::vec3 ) * normals.size() + sizeof( glm::vec2 ) * uvs.size();
+    size_t totalIndexBytes  = sizeof( uint32_t ) * indices.size();
+    serialize::Write( out, totalVertexBytes );
+    serialize::Write( out, totalIndexBytes );
     serialize::Write( out, vertices );
     serialize::Write( out, normals );
     serialize::Write( out, uvs );
@@ -234,36 +205,42 @@ bool Mesh::Serialize( std::ofstream& out ) const
     return !out.fail();
 }
 
-bool Mesh::Deserialize( std::ifstream& in, bool freeCpuCopy )
+bool Mesh::Deserialize( char*& buffer )
 {
-    m_gpuDataCreated = false;
-    serialize::Read( in, vertices );
-    serialize::Read( in, normals );
-    serialize::Read( in, uvs );
-    serialize::Read( in, m_indexType );
-    serialize::Read( in, indices );
-    serialize::Read( in, aabb.min );
-    serialize::Read( in, aabb.max );
-    serialize::Read( in, aabb.extent );
+    size_t buffSize;
+    size_t totalVertexBytes;
+    size_t totalIndexBytes;
+    serialize::Read( buffer, totalVertexBytes );
+    serialize::Read( buffer, totalIndexBytes );
+    m_gpuDataCreated = true;
 
-    UploadToGpu( freeCpuCopy );
+    vertexBuffer = Gfx::Buffer::Create( NULL, totalVertexBytes, Gfx::BufferType::VERTEX, Gfx::BufferUsage::STATIC );
 
-    return !in.fail();
-}
+    serialize::Read( buffer, buffSize );
+    m_numVertices = buffSize;
+    vertexBuffer.SetData( buffer, 0, m_numVertices * sizeof( glm::vec3 ) );
+    buffer += m_numVertices * sizeof( glm::vec3 );
 
-bool Mesh::Deserialize2( char*& buffer, bool freeCpuCopy )
-{
-    m_gpuDataCreated = false;
-    serialize::Read( buffer, vertices );
-    serialize::Read( buffer, normals );
-    serialize::Read( buffer, uvs );
+    m_normalOffset = m_numVertices * sizeof( glm::vec3 );
+    serialize::Read( buffer, buffSize );
+    vertexBuffer.SetData( buffer, m_normalOffset, buffSize * sizeof( glm::vec3 ) );
+    buffer += buffSize * sizeof( glm::vec3 );
+    
+    m_uvOffset = m_normalOffset + buffSize * sizeof( glm::vec3 );
+    serialize::Read( buffer, buffSize );
+    vertexBuffer.SetData( buffer, m_uvOffset, buffSize * sizeof( glm::vec2 ) );
+    buffer += buffSize * sizeof( glm::vec2 );
+
     serialize::Read( buffer, m_indexType );
-    serialize::Read( buffer, indices );
+    serialize::Read( buffer, buffSize );
+    m_numIndices = buffSize;
+    indexBuffer = Gfx::Buffer::Create( buffer, totalIndexBytes, Gfx::BufferType::INDEX, Gfx::BufferUsage::STATIC );
+    buffer += totalIndexBytes;
     serialize::Read( buffer, aabb.min );
     serialize::Read( buffer, aabb.max );
     serialize::Read( buffer, aabb.extent );
 
-    UploadToGpu( freeCpuCopy );
+    // UploadToGpu( true );
 
     return true;
 }

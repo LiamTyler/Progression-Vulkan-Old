@@ -143,7 +143,7 @@ bool Image::Deserialize( std::ifstream& in )
     return !in.fail();
 }
 
-bool Image::Deserialize2( char*& buffer)
+bool Image::Deserialize( char*& buffer)
 {
     serialize::Read( buffer, m_width );
     serialize::Read( buffer, m_height );
@@ -154,17 +154,17 @@ bool Image::Deserialize2( char*& buffer)
     return true;
 }
 
-int Image::Width() const
+uint32_t Image::Width() const
 {
     return m_width;
 }
 
-int Image::Height() const
+uint32_t Image::Height() const
 {
     return m_height;
 }
 
-int Image::NumComponents() const
+uint32_t Image::NumComponents() const
 {
     return m_numComponents;
 }

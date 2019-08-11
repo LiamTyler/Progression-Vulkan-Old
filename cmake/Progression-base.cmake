@@ -1,4 +1,5 @@
 set(PROGRESSION_INCLUDE_DIRS
+    ${PROGRESSION_DIR}
     ${PROGRESSION_DIR}/ext
     ${PROGRESSION_DIR}/ext/glad/include
     ${PROGRESSION_DIR}/ext/glfw/include
@@ -17,6 +18,7 @@ endif()
 set(PROGRESSION_LIBS
     glfw
     meshoptimizer
+    lz4
     ${SYSTEM_LIBS}
 )
 

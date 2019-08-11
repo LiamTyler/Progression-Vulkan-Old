@@ -21,8 +21,7 @@ int main( int argc, char* argv[] )
     // window->setRelativeMouse(true);
 
     // Scene* scene = Scene::load( PG_RESOURCE_DIR "scenes/scene1.txt" );
-    //ResourceManager::LoadFastFile( PG_RESOURCE_DIR "fastfiles/resource.txt.ff" );
-    ResourceManager::LoadFastFile2( PG_RESOURCE_DIR "fastfiles/resource.txt.ff" );
+    ResourceManager::LoadFastFile( PG_RESOURCE_DIR "fastfiles/resource.txt.ff" );
 
 
     PG_ASSERT( ResourceManager::Get< Shader >( "test" ) );

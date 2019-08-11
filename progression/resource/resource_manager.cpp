@@ -2,6 +2,7 @@
 #include "core/configuration.hpp"
 #include "core/time.hpp"
 #include "core/window.hpp"
+#include "lz4/lz4.h"
 #include "memory_map/MemoryMapped.h"
 #include "resource/material.hpp"
 #include "resource/model.hpp"
@@ -38,118 +39,8 @@ namespace ResourceManager
 
     bool LoadFastFile( const std::string& fname )
     {
-        std::ifstream in( fname, std::ios::binary );
-        if ( !in )
-        {
-            LOG_ERR( "Could not open fastfile:", fname );
-            return false;
-        }
-
-        auto start = Time::GetTimePoint();
-
-        {
-            uint32_t numShaders;
-            serialize::Read( in, numShaders );
-            ResourceMap& resources = f_resources[GetResourceTypeID< Shader >()];
-            for ( uint32_t i = 0; i < numShaders; ++i )
-            {
-                auto shader = std::make_shared< Shader >();
-                if ( !shader->Deserialize( in ) )
-                {
-                    LOG_ERR( "Failed to load shader from fastfile" );
-                    return false;
-                }
-                if ( resources.find( shader->name ) != resources.end() )
-                {
-                    shader->Move( resources[shader->name] );
-                }
-                else
-                {
-                    resources[shader->name] = shader;
-                }
-            }
-        }
-
-        {
-            uint32_t numTextures;
-            serialize::Read( in, numTextures );
-            ResourceMap& resources = f_resources[GetResourceTypeID< Texture >()];
-            for ( uint32_t i = 0; i < numTextures; ++i )
-            {
-                auto res = std::make_shared< Texture >();
-                if ( !res->Deserialize( in ) )
-                {
-                    LOG_ERR( "Failed to load texture from fastfile" );
-                    return false;
-                }
-                if ( resources.find( res->name ) != resources.end() )
-                {
-                    res->Move( resources[res->name] );
-                }
-                else
-                {
-                    resources[res->name] = res;
-                }
-            }
-        }
-
-        {
-            uint32_t numMaterials;
-            serialize::Read( in, numMaterials );
-            ResourceMap& resources = f_resources[GetResourceTypeID< Material >()];
-            for ( uint32_t i = 0; i < numMaterials; ++i )
-            {
-                auto res = std::make_shared< Material >();
-                if ( !res->Deserialize( in ) )
-                {
-                    LOG_ERR( "Failed to load material from fastfile" );
-                    return false;
-                }
-                if ( resources.find( res->name ) != resources.end() )
-                {
-                    res->Move( resources[res->name] );
-                }
-                else
-                {
-                    resources[res->name] = res;
-                }
-            }
-        }
-
-        {
-            uint32_t numModels;
-            serialize::Read( in, numModels );
-            ResourceMap& resources = f_resources[GetResourceTypeID< Model >()];
-            for ( uint32_t i = 0; i < numModels; ++i )
-            {
-                auto res = std::make_shared< Model >();
-                if ( !res->Deserialize( in ) )
-                {
-                    LOG_ERR( "Failed to load model from fastfile" );
-                    return false;
-                }
-                if ( resources.find( res->name ) != resources.end() )
-                {
-                    res->Move( resources[res->name] );
-                }
-                else
-                {
-                    resources[res->name] = res;
-                }
-            }
-        }
-
-        in.close();
-
-        LOG( "Loaded fastfile '", fname, "' in: ", Time::GetDuration( start ), " ms." );
-
-        return true;
-    }
-
-    bool LoadFastFile2( const std::string& fname )
-    {
         MemoryMapped memMappedFile;
-        if ( !memMappedFile.open( fname, MemoryMapped::WholeFile, MemoryMapped::SequentialScan ) )
+        if ( !memMappedFile.open( fname, MemoryMapped::WholeFile, MemoryMapped::Normal ) )
         {
             LOG_ERR( "Could not open fastfile:", fname );
             return false;
@@ -158,6 +49,31 @@ namespace ResourceManager
         auto start = Time::GetTimePoint();
 
         char* data = (char*) memMappedFile.getData();
+        // char* fileData = (char*) memMappedFile.getData();
+        // int uncompressedSize;
+        // serialize::Read( fileData, uncompressedSize );
+
+        // char* uncompressedBuffer = (char*) malloc( uncompressedSize );
+        // const int decompressedSize = LZ4_decompress_safe( fileData, uncompressedBuffer,
+        //                                                   memMappedFile.size() - 4, uncompressedSize );
+
+        // memMappedFile.close();
+
+        // if ( decompressedSize < 0 )
+        // {
+        //     LOG_ERR( "Failed to decompress fastfile with return value: ", decompressedSize );
+        //     return false;
+        // }
+
+        // if ( decompressedSize != uncompressedSize )
+        // {
+        //     LOG_ERR( "Decompressed data size does not match the expected uncompressed size: ",
+        //              decompressedSize, " != ", uncompressedSize );
+        // }
+
+        // char* data = uncompressedBuffer;
+        // LOG( "LZ4 decompress finished in: ", Time::GetDuration( start ), " ms." );
+
         {
             uint32_t numShaders;
             serialize::Read( data, numShaders );
@@ -165,7 +81,7 @@ namespace ResourceManager
             for ( uint32_t i = 0; i < numShaders; ++i )
             {
                 auto shader = std::make_shared< Shader >();
-                if ( !shader->Deserialize2( data ) )
+                if ( !shader->Deserialize( data ) )
                 {
                     LOG_ERR( "Failed to load shader from fastfile" );
                     return false;
@@ -188,7 +104,7 @@ namespace ResourceManager
             for ( uint32_t i = 0; i < numTextures; ++i )
             {
                 auto res = std::make_shared< Texture >();
-                if ( !res->Deserialize2( data ) )
+                if ( !res->Deserialize( data ) )
                 {
                     LOG_ERR( "Failed to load texture from fastfile" );
                     return false;
@@ -211,7 +127,7 @@ namespace ResourceManager
             for ( uint32_t i = 0; i < numMaterials; ++i )
             {
                 auto res = std::make_shared< Material >();
-                if ( !res->Deserialize2( data ) )
+                if ( !res->Deserialize( data ) )
                 {
                     LOG_ERR( "Failed to load material from fastfile" );
                     return false;
@@ -234,7 +150,7 @@ namespace ResourceManager
             for ( uint32_t i = 0; i < numModels; ++i )
             {
                 auto res = std::make_shared< Model >();
-                if ( !res->Deserialize2( data ) )
+                if ( !res->Deserialize( data ) )
                 {
                     LOG_ERR( "Failed to load model from fastfile" );
                     return false;
@@ -250,7 +166,7 @@ namespace ResourceManager
             }
         }
 
-        memMappedFile.close();
+        // free( uncompressedBuffer );
 
         LOG( "Loaded fastfile '", fname, "' in: ", Time::GetDuration( start ), " ms." );
 

@@ -113,7 +113,6 @@ inline void Read( char*& buff, std::vector< T >& vec )
     //PG_ASSERT( buff );
     size_t len = ( ( size_t* ) buff )[0];
     buff += sizeof( size_t );
-    std::cout << len << std::endl;
     vec.resize( len );
     memcpy( vec.data(), buff, len * sizeof( T ) );
     buff += len * sizeof( T );
