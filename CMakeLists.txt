@@ -4,16 +4,27 @@ project(Progression)
 
 option(PROGRESSION_BUILD_EXAMPLES "Build the example programs" ON)
 option(PROGRESSION_BUILD_TOOLS "Build the tools, such as the OBJ converter" ON)
-option(PROGRESSION_AUDIO "Enable the progression audio system" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(LINUX_PROGRAM   "NOT_IN_USE")
+set(WINDOWS_PROGRAM "NOT_IN_USE")
+set(APPLE_PROGRAM   "NOT_IN_USE")
+
+if (UNIX AND NOT APPLE)
+    set(LINUX_PROGRAM   "IN_USE")
+elseif (WIN32)
+    set(WINDOWS_PROGRAM "IN_USE")
+elseif (APPLE)
+    set(APPLE_PROGRAM   "IN_USE")
+endif()
+
 
 if (UNIX AND NOT APPLE)
     set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Werror -Wextra -Wno-implicit-fallthrough -Wshadow -Wno-unused-variable -Wno-unused-function")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CPP_VERSION} -g")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CPP_VERSION} -O3")
-    #option(PROGRESSION_AUDIO "Enable the progression audio system" ON)
 elseif (MSVC)
     add_compile_options("/std:c++14")
 endif()

@@ -75,6 +75,7 @@ set(
     core/scene.hpp
     core/time.hpp
     core/transform.hpp
+    core/using_defines.hpp
     core/window.hpp
     
     graphics/graphics_api.hpp
