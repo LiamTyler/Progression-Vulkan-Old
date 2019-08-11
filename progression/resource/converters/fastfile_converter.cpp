@@ -1,5 +1,4 @@
 #include "resource/converters/fastfile_converter.hpp"
-#include "core/configuration.hpp"
 #include "graphics/graphics_api.hpp"
 #include "lz4/lz4.h"
 #include "memory_map/MemoryMapped.h"
@@ -403,47 +402,47 @@ ConverterStatus FastfileConverter::Convert()
 
     out.close();
 
-    // LOG( "Compressing with LZ4..." );
-    // MemoryMapped memMappedFile;
-    // if ( !memMappedFile.open( outputFile, MemoryMapped::WholeFile, MemoryMapped::Normal ) )
-    // {
-    //     LOG_ERR( "Could not open fastfile:", outputFile );
-    //     return CONVERT_ERROR;
-    // }
+    LOG( "Compressing with LZ4..." );
+    MemoryMapped memMappedFile;
+    if ( !memMappedFile.open( outputFile, MemoryMapped::WholeFile, MemoryMapped::Normal ) )
+    {
+        LOG_ERR( "Could not open fastfile:", outputFile );
+        return CONVERT_ERROR;
+    }
 
-    // char* src = (char*) memMappedFile.getData();
-    // const int srcSize = (int) memMappedFile.size();
+    char* src = (char*) memMappedFile.getData();
+    const int srcSize = (int) memMappedFile.size();
 
-    // const int maxDstSize = LZ4_compressBound( srcSize );
+    const int maxDstSize = LZ4_compressBound( srcSize );
 
-    // char* compressedData = (char*) malloc( maxDstSize );
-    // const int compressedDataSize = LZ4_compress_default( src, compressedData, srcSize, maxDstSize );
+    char* compressedData = (char*) malloc( maxDstSize );
+    const int compressedDataSize = LZ4_compress_default( src, compressedData, srcSize, maxDstSize );
 
-    // memMappedFile.close();
+    memMappedFile.close();
 
-    // if ( compressedDataSize <= 0 )
-    // {
-    //     LOG_ERR("Error while trying to compress the fastfile. LZ4 returned: ", compressedDataSize );
-    //     return CONVERT_ERROR;
-    // }
+    if ( compressedDataSize <= 0 )
+    {
+        LOG_ERR("Error while trying to compress the fastfile. LZ4 returned: ", compressedDataSize );
+        return CONVERT_ERROR;
+    }
 
-    // if ( compressedDataSize > 0 )
-    // {
-    //     LOG( "Compressed file size ratio: ", (float) compressedDataSize / srcSize );
-    // }
+    if ( compressedDataSize > 0 )
+    {
+        LOG( "Compressed file size ratio: ", (float) compressedDataSize / srcSize );
+    }
 
-    // out.open( outputFile, std::ios::binary );
+    out.open( outputFile, std::ios::binary );
 
-    // if ( !out )
-    // {
-    //     LOG_ERR( "Failed to open fastfile '", outputFile, "' for writing compressed results" );
-    //     return CONVERT_ERROR;
-    // }
+    if ( !out )
+    {
+        LOG_ERR( "Failed to open fastfile '", outputFile, "' for writing compressed results" );
+        return CONVERT_ERROR;
+    }
 
-    // serialize::Write( out, srcSize );
-    // serialize::Write( out, compressedData, compressedDataSize );
+    serialize::Write( out, srcSize );
+    serialize::Write( out, compressedData, compressedDataSize );
 
-    // out.close();
+    out.close();
 
     return CONVERT_SUCCESS;
 }

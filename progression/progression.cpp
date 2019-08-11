@@ -63,17 +63,10 @@ void EngineInitialize( std::string config_name )
     ResourceManager::Init();
     ECS::init();
     // RenderSystem::Init();
-#if PG_AUDIO_ENABLED
-    AudioSystem::Init( conf );
-#endif // #if PG_AUDIO_ENABLED
 }
 
 void EngineQuit()
 {
-#if PG_AUDIO_ENABLED
-    AudioSystem::Free();
-#endif // #if PG_AUDIO_ENABLED
-
     // RenderSystem::Shutdown();
     ECS::shutdown();
     ResourceManager::Shutdown();

@@ -1,5 +1,4 @@
 #include "resource/resource_manager.hpp"
-#include "core/configuration.hpp"
 #include "core/time.hpp"
 #include "core/window.hpp"
 #include "lz4/lz4.h"
@@ -48,31 +47,31 @@ namespace ResourceManager
 
         auto start = Time::GetTimePoint();
 
-        char* data = (char*) memMappedFile.getData();
-        // char* fileData = (char*) memMappedFile.getData();
-        // int uncompressedSize;
-        // serialize::Read( fileData, uncompressedSize );
+        //char* data = (char*) memMappedFile.getData();
+        char* fileData = (char*) memMappedFile.getData();
+        int uncompressedSize;
+        serialize::Read( fileData, uncompressedSize );
 
-        // char* uncompressedBuffer = (char*) malloc( uncompressedSize );
-        // const int decompressedSize = LZ4_decompress_safe( fileData, uncompressedBuffer,
-        //                                                   memMappedFile.size() - 4, uncompressedSize );
+        char* uncompressedBuffer = (char*) malloc( uncompressedSize );
+        const int decompressedSize = LZ4_decompress_safe( fileData, uncompressedBuffer,
+                                                          memMappedFile.size() - 4, uncompressedSize );
 
-        // memMappedFile.close();
+        memMappedFile.close();
 
-        // if ( decompressedSize < 0 )
-        // {
-        //     LOG_ERR( "Failed to decompress fastfile with return value: ", decompressedSize );
-        //     return false;
-        // }
+        if ( decompressedSize < 0 )
+        {
+            LOG_ERR( "Failed to decompress fastfile with return value: ", decompressedSize );
+            return false;
+        }
 
-        // if ( decompressedSize != uncompressedSize )
-        // {
-        //     LOG_ERR( "Decompressed data size does not match the expected uncompressed size: ",
-        //              decompressedSize, " != ", uncompressedSize );
-        // }
+        if ( decompressedSize != uncompressedSize )
+        {
+            LOG_ERR( "Decompressed data size does not match the expected uncompressed size: ",
+                     decompressedSize, " != ", uncompressedSize );
+        }
 
-        // char* data = uncompressedBuffer;
-        // LOG( "LZ4 decompress finished in: ", Time::GetDuration( start ), " ms." );
+        char* data = uncompressedBuffer;
+        LOG( "LZ4 decompress finished in: ", Time::GetDuration( start ), " ms." );
 
         {
             uint32_t numShaders;

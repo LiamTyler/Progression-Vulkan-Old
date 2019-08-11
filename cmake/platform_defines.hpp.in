@@ -2,4 +2,3 @@
 
 #define PG_ROOT_DIR "${PROGRESSION_DIR}/"
 #define PG_RESOURCE_DIR "${PROGRESSION_DIR}/resources/"
-#define PG_AUDIO_ENABLED ${PG_AUDIO_ENABLED}

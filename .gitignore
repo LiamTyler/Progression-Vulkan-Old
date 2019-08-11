@@ -3,9 +3,10 @@ build_debug/
 *.swp
 a.out
 progression/core/configuration.hpp
-*.ff
 resources/sponza
 resources/cache
+resources/fastfiles
+.vscode/
 
 # Prerequisites
 *.d

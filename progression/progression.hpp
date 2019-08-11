@@ -3,7 +3,7 @@
 #include "core/camera.hpp"
 #include "core/common.hpp"
 #include "core/config.hpp"
-#include "core/configuration.hpp"
+#include "core/platform_defines.hpp"
 #include "core/ecs.hpp"
 #include "core/frustum.hpp"
 #include "core/input.hpp"
@@ -29,11 +29,6 @@
 #include "utils/random.hpp"
 
 #include "components/model_renderer_component.hpp"
-
-#if PG_AUDIO_ENABLED
-#include "audio/audio_file.hpp"
-#include "audio/audio_system.hpp"
-#endif
 
 namespace PG = Progression;
 

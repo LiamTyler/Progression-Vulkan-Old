@@ -9,7 +9,7 @@ if (PROGRESSION_AUDIO)
     set(PG_AUDIO_ENABLED 1)
 endif()
 
-configure_file(${PROGRESSION_DIR}/cmake/configuration.h.in ../../progression/core/configuration.hpp)
+configure_file(${PROGRESSION_DIR}/cmake/platform_defines.hpp.in ../../progression/core/platform_defines.hpp)
 
 set(
     SRCS

@@ -2,7 +2,7 @@
 
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
-#include "core/configuration.hpp"
+#include "core/platform_defines.hpp"
 #include "glm/ext.hpp"
 #include "glm/glm.hpp"
 #include <iostream>
