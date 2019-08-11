@@ -40,6 +40,7 @@ public:
     void Move( std::shared_ptr< Resource > dst ) override;
     bool Serialize( std::ofstream& out ) const override;
     bool Deserialize( std::ifstream& in ) override;
+    bool Deserialize2( char*& buffer ) override;
 
     void Free();
     void QueryUniforms();

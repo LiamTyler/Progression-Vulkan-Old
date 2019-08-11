@@ -15,27 +15,42 @@
 - [x] re-use materials when loading models if its already been loaded
 - [x] detect changed files + reload them
 - [x] convert resource file into 1 binary file
-- [ ] compress / decompress resource file
+- [ ] deserialization from RAM, not file
+- [ ] avoid copies during deserialization if freeCpuCopy == true
+- [ ] LZ4 compress / decompress resource file
+- [ ] Resource file loading from "my changes" workflow
 - [ ] skybox loading
-- [ ] select different data types for mesh data (like shorts for indices)
-- [ ] select different mesh topology, like rendering with no index buffer, lines, etc
-- [ ] Texture Compression (at least BC7)
-- [ ] offline mipmap generation
 - [ ] Change the resource DB types so that you dont have to resize by hand / forget
 - [ ] make sure all memory is properly released on failure cases in resource loadings
-- [ ] automatic LOD creation for models
-- [ ] support per vertex colors
-- [ ] easy system for dynamic meshes
+
+### Meshes:
+- [ ] Add support for 16 bit indices
+- [ ] Tangents and bitangents
+- [ ] MTL file edits dont re-optimize the mesh
+- [ ] Automatic LOD generation
+- [ ] Specify topology?
+
+### Textures:
+- [ ] Compressed formats
+- [ ] Mipmap generation
 
 ## Rendering
-- [ ] Meshes easily
 - [ ] Expand graphics api so there are 0 opengl calls otherwise
+- [ ] Meshes easily
 - [ ] Frustum culling
 - [ ] Shadows
+- [ ] Load screen
 - [ ] Normal maps
 - [ ] PBR
+- [ ] Bloom
+- [ ] Filmic tonemapping
 - [ ] LOD system
-- [ ] compress textures and vertex data
+- [ ] compress render target and vertex data
+
+## Audio
+- [ ] Get basic sounds clips working, no streaming (linux)
+- [ ] Background music + positional clips working (linux)
+- [ ] Get working on linux and windows
 
 ## Core
 - [ ] switch to using ECS
@@ -45,12 +60,11 @@
 
 ## Other
 - [ ] have a remote console
-- [ ] Have a full converter for each resource type and fastfiles
+- [x] Have a full converter for each resource type and fastfiles
 - [ ] have a defines file instead of just common
-- [ ] using #inlcudes in the glsl
+- [ ] using #includes in the glsl
 - [ ] Debug, Release, Ship modes
-- [ ] Get rid of the config initialization style when dumb, like logger
+- [x] Get rid of the config initialization style when dumb, like logger
 
 ## Low priority software engineering related
-- [ ] follow style / clang tidy
-- [ ] doxygen comments fully
+- [x] follow style / clang tidy

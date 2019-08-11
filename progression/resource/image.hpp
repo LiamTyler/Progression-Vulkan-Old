@@ -5,18 +5,6 @@
 namespace Progression
 {
 
-class Pixel
-{
-public:
-    Pixel();
-    Pixel( unsigned char r, unsigned char g, unsigned char b, unsigned char a );
-
-    unsigned char r;
-    unsigned char g;
-    unsigned char b;
-    unsigned char a;
-};
-
 class Image
 {
 public:
@@ -35,13 +23,12 @@ public:
     // to / from  a binary file
     bool Serialize( std::ofstream& outFile ) const;
     bool Deserialize( std::ifstream& in );
+    bool Deserialize2( char*& buffer );
 
     int Width() const;
     int Height() const;
     int NumComponents() const;
     unsigned char* Pixels() const;
-    Pixel GetPixel( int r, int c ) const;
-    void SetPixel( int r, int c, const Pixel& p );
 
 protected:
     int m_width             = 0;

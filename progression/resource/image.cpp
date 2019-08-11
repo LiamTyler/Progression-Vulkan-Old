@@ -11,14 +11,6 @@
 namespace Progression
 {
 
-Pixel::Pixel() : r( 0 ), g( 0 ), b( 0 ), a( 0 )
-{
-}
-Pixel::Pixel( unsigned char _r, unsigned char _g, unsigned char _b, unsigned char _a ) :
-  r( _r ), g( _g ), b( _b ), a( _a )
-{
-}
-
 Image::Image( int w, int h, int nc, unsigned char* pixels ) :
   m_width( w ), m_height( h ), m_numComponents( nc ), m_pixels( pixels )
 {
@@ -123,7 +115,7 @@ bool Image::Save( const std::string& fname, bool flipVertically ) const
             ret = stbi_write_tga( fname.c_str(), m_width, m_height, m_numComponents, m_pixels );
             break;
         default:
-            LOG_ERR( "Cant save an image with an unrecognized format:", fname )
+            LOG_ERR( "Cant save an image with an unrecognized format:", fname );
             return false;
     }
     if ( !ret )
@@ -151,33 +143,35 @@ bool Image::Deserialize( std::ifstream& in )
     return !in.fail();
 }
 
+bool Image::Deserialize2( char*& buffer)
+{
+    serialize::Read( buffer, m_width );
+    serialize::Read( buffer, m_height );
+    serialize::Read( buffer, m_numComponents );
+    m_pixels = (unsigned char*) malloc( m_width * m_height * m_numComponents );
+    serialize::Read( buffer, (char*) m_pixels, m_width * m_height * m_numComponents );
+    
+    return true;
+}
+
 int Image::Width() const
 {
     return m_width;
 }
+
 int Image::Height() const
 {
     return m_height;
 }
+
 int Image::NumComponents() const
 {
     return m_numComponents;
 }
+
 unsigned char* Image::Pixels() const
 {
     return m_pixels;
-}
-
-Pixel Image::GetPixel( int r, int c ) const
-{
-    Pixel p;
-    memcpy( &p, &m_pixels[m_numComponents * ( r * m_width + c )], m_numComponents );
-    return p;
-}
-
-void Image::SetPixel( int r, int c, const Pixel& p )
-{
-    memcpy( m_pixels + m_numComponents * ( r * m_width + c ), &p, m_numComponents );
 }
 
 } // namespace Progression

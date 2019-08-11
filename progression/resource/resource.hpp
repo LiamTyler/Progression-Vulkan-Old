@@ -29,6 +29,7 @@ public:
     virtual void Move( std::shared_ptr< Resource > dst )          = 0;
     virtual bool Serialize( std::ofstream& outFile ) const        = 0;
     virtual bool Deserialize( std::ifstream& in )                 = 0;
+    virtual bool Deserialize2( char*& buffer )                    = 0;
 
     std::string name;
 };

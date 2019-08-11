@@ -226,6 +226,35 @@ bool Shader::Deserialize( std::ifstream& in )
     return !in.fail();
 }
 
+bool Shader::Deserialize2( char*& buffer )
+{
+    serialize::Read( buffer, name );
+    GLint len;
+    GLenum format;
+    serialize::Read( buffer, len );
+    serialize::Read( buffer, format );
+    std::vector< char > binary( len );
+    serialize::Read( buffer, binary.data(), len );
+    if ( !LoadFromBinary( binary.data(), len, format ) )
+    {
+        LOG_ERR( "Failed to load shader from binary" );
+        return false;
+    }
+
+    uint32_t numUniforms;
+    serialize::Read( buffer, numUniforms );
+    for ( uint32_t i = 0; i < numUniforms; ++i )
+    {
+        std::string uName;
+        GLuint loc;
+        serialize::Read( buffer, uName );
+        serialize::Read( buffer, loc );
+        m_uniforms[uName] = loc;
+    }
+
+    return true;
+}
+
 bool Shader::LoadFromBinary( const char* binarySource, GLint len, GLenum format )
 {
     Free();
@@ -305,7 +334,7 @@ void Shader::QueryUniforms()
 #endif
     }
 #ifdef PG_SHADER_WARNINGS
-    LOG( "" )
+    LOG( "" );
 #endif
     delete[] uniformName;
 }

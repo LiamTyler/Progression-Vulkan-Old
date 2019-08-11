@@ -21,7 +21,8 @@ int main( int argc, char* argv[] )
     // window->setRelativeMouse(true);
 
     // Scene* scene = Scene::load( PG_RESOURCE_DIR "scenes/scene1.txt" );
-    ResourceManager::LoadFastFile( PG_RESOURCE_DIR "fastfiles/resource.txt.ff" );
+    //ResourceManager::LoadFastFile( PG_RESOURCE_DIR "fastfiles/resource.txt.ff" );
+    ResourceManager::LoadFastFile2( PG_RESOURCE_DIR "fastfiles/resource.txt.ff" );
 
 
     PG_ASSERT( ResourceManager::Get< Shader >( "test" ) );
@@ -71,6 +72,7 @@ int main( int argc, char* argv[] )
     meshTmp.uvs.push_back( { 1, 0 } );
     meshTmp.uvs.push_back( { 1, 1 } );
     meshTmp.indices = { 0, 1, 2, 3, 4, 5 };
+
     meshTmp.UploadToGpu();
 
     Model model2;
@@ -115,7 +117,8 @@ int main( int argc, char* argv[] )
 
         PG::Input::PollEvents();
 
-        Transform modelTransform( glm::vec3( 0, 0, 0 ), glm::vec3( glm::radians( -90.0f ), glm::radians( 90.0f ), 0 ), glm::vec3( 1 ) );
+        Transform modelTransform( glm::vec3( 0, 0, 0 ), glm::vec3( glm::radians( -0.0f ), glm::radians( 0.0f ), 0 ), glm::vec3( 1 ) );
+        //Transform modelTransform( glm::vec3( 0, 0, 0 ), glm::vec3( glm::radians( -90.0f ), glm::radians( 90.0f ), 0 ), glm::vec3( 1 ) );
         Camera camera( glm::vec3( 0, 0, 3 ), glm::vec3( 0 ) );
 
         glm::vec3 lightDir = -glm::normalize( glm::vec3( 0, 0, -1 ) );

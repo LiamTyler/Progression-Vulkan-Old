@@ -96,9 +96,37 @@ bool Texture::Deserialize( std::ifstream& in )
     texDesc.width  = img.Width();
     texDesc.height = img.Height();
     gfxTexture     = Gfx::Texture::Create( texDesc, img.Pixels(),
-                                       GetSourceFormatFromNumComponents( img.NumComponents() ) );
+                                           GetSourceFormatFromNumComponents( img.NumComponents() ) );
 
     return !in.fail();
+}
+
+bool Texture::Deserialize2( char*& buffer )
+{
+    Gfx::TextureDescriptor texDesc;
+    serialize::Read( buffer, name );
+    serialize::Read( buffer, texDesc.format );
+    serialize::Read( buffer, texDesc.type );
+    serialize::Read( buffer, texDesc.mipmapped );
+
+    Gfx::SamplerDescriptor samplerDesc;
+    serialize::Read( buffer, samplerDesc.minFilter );
+    serialize::Read( buffer, samplerDesc.magFilter );
+    serialize::Read( buffer, samplerDesc.wrapModeS );
+    serialize::Read( buffer, samplerDesc.wrapModeT );
+    serialize::Read( buffer, samplerDesc.wrapModeR );
+    serialize::Read( buffer, samplerDesc.borderColor );
+    serialize::Read( buffer, samplerDesc.maxAnisotropy );
+    sampler = RenderSystem::GetSampler( &samplerDesc );
+
+    Image img;
+    img.Deserialize2( buffer );
+    texDesc.width  = img.Width();
+    texDesc.height = img.Height();
+    gfxTexture     = Gfx::Texture::Create( texDesc, img.Pixels(),
+                                           GetSourceFormatFromNumComponents( img.NumComponents() ) );
+
+    return true;
 }
 
 GLuint Texture::GetNativeHandle() const

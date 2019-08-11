@@ -90,7 +90,6 @@ bool Model::Serialize( std::ofstream& out ) const
     serialize::Write( out, numMeshes );
     for ( uint32_t i = 0; i < numMeshes; ++i )
     {
-        LOG( "mat name '", materials[i]->name, "'" );
         if ( !materials[i]->Serialize( out ) )
         {
             LOG( "Could not write material: ", i, ", of model: ", name, " to fastfile" );
@@ -113,7 +112,6 @@ bool Model::Serialize( std::ofstream& out ) const
 bool Model::Deserialize( std::ifstream& in )
 {
     serialize::Read( in, name );
-    LOG("model name '", name, "'");
     serialize::Read( in, freeCpuCopyDuringLoad );
     uint32_t numMeshes;
     serialize::Read( in, numMeshes );
@@ -128,7 +126,6 @@ bool Model::Deserialize( std::ifstream& in )
             return false;
         }
         materials[i] = mat;
-        LOG( "mat name '", materials[i]->name, "'" );
     }
 
     for ( uint32_t i = 0; i < numMeshes; ++i )
@@ -138,10 +135,41 @@ bool Model::Deserialize( std::ifstream& in )
             LOG( "Could not load mesh: ", i, ", of model: ", name, " from fastfile" );
             return false;
         }
-
     }
 
     return !in.fail();
+}
+
+bool Model::Deserialize2( char*& buffer )
+{
+    serialize::Read( buffer, name );
+    LOG("model name '", name, "'");
+    serialize::Read( buffer, freeCpuCopyDuringLoad );
+    uint32_t numMeshes;
+    serialize::Read( buffer, numMeshes );
+    meshes.resize( numMeshes );
+    materials.resize( numMeshes );
+    for ( uint32_t i = 0; i < numMeshes; ++i )
+    {
+        auto mat = std::make_shared< Material >();
+        if ( !mat->Deserialize2( buffer ) )
+        {
+            LOG( "Could not load material: ", i, ", of model: ", name, " from fastfile" );
+            return false;
+        }
+        materials[i] = mat;
+    }
+
+    for ( uint32_t i = 0; i < numMeshes; ++i )
+    {
+        if ( !meshes[i].Deserialize2( buffer, freeCpuCopyDuringLoad ) )
+        {
+            LOG( "Could not load mesh: ", i, ", of model: ", name, " from fastfile" );
+            return false;
+        }
+    }
+
+    return true;
 }
 
 // fname is full path

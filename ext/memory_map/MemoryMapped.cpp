@@ -202,9 +202,9 @@ unsigned char MemoryMapped::at(size_t offset) const
 
 
 /// raw access
-const unsigned char* MemoryMapped::getData() const
+unsigned char* MemoryMapped::getData() const
 {
-  return (const unsigned char*)_mappedView;
+  return (unsigned char*)_mappedView;
 }
 
 

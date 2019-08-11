@@ -4,9 +4,9 @@
 #include <iostream>
 #include <mutex>
 
-#define LOG( ... ) g_Logger.Write( Logger::DEBUG, __VA_ARGS__ );
-#define LOG_WARN( ... ) g_Logger.Write( Logger::WARN, __VA_ARGS__ );
-#define LOG_ERR( ... ) g_Logger.Write( Logger::ERR, __VA_ARGS__ );
+#define LOG( ... ) g_Logger.Write( Logger::DEBUG, __VA_ARGS__ )
+#define LOG_WARN( ... ) g_Logger.Write( Logger::WARN, __VA_ARGS__ )
+#define LOG_ERR( ... ) g_Logger.Write( Logger::ERR, __VA_ARGS__ )
 
 class PrintModifier
 {

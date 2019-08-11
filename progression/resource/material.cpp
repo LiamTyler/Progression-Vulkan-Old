@@ -63,6 +63,25 @@ bool Material::Deserialize( std::ifstream& in )
     return !in.fail();
 }
 
+bool Material::Deserialize2( char*& buffer )
+{
+    serialize::Read( buffer, name );
+    serialize::Read( buffer, Ka );
+    serialize::Read( buffer, Kd );
+    serialize::Read( buffer, Ks );
+    serialize::Read( buffer, Ke );
+    serialize::Read( buffer, Ns );
+    std::string map_Kd_name = map_Kd ? map_Kd->name : "";
+    serialize::Read( buffer, map_Kd_name );
+    if ( !map_Kd_name.empty() )
+    {
+        map_Kd = ResourceManager::Get< Texture >( map_Kd_name );
+        PG_ASSERT( map_Kd );
+    }
+
+    return true;
+}
+
 bool Material::LoadMtlFile( std::vector< Material >& materials, const std::string& fname )
 {
     std::ifstream file( fname );

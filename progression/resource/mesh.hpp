@@ -24,6 +24,7 @@ public:
     void Optimize();
     bool Serialize( std::ofstream& out ) const;
     bool Deserialize( std::ifstream& in, bool freeCpuCopy );
+    bool Deserialize2( char*& buffer, bool freeCpuCopy );
 
     uint32_t GetNumVertices() const;
     uint32_t GetNumIndices() const;

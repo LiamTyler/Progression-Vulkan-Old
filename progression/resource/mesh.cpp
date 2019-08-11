@@ -251,6 +251,23 @@ bool Mesh::Deserialize( std::ifstream& in, bool freeCpuCopy )
     return !in.fail();
 }
 
+bool Mesh::Deserialize2( char*& buffer, bool freeCpuCopy )
+{
+    m_gpuDataCreated = false;
+    serialize::Read( buffer, vertices );
+    serialize::Read( buffer, normals );
+    serialize::Read( buffer, uvs );
+    serialize::Read( buffer, m_indexType );
+    serialize::Read( buffer, indices );
+    serialize::Read( buffer, aabb.min );
+    serialize::Read( buffer, aabb.max );
+    serialize::Read( buffer, aabb.extent );
+
+    UploadToGpu( freeCpuCopy );
+
+    return true;
+}
+
 uint32_t Mesh::GetNumVertices() const
 {
     return m_numVertices;

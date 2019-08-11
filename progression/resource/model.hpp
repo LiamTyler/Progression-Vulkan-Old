@@ -28,7 +28,8 @@ public:
     void Move( std::shared_ptr< Resource > dst ) override;
     bool Serialize( std::ofstream& outFile ) const override;
     bool Deserialize( std::ifstream& in ) override;
-
+    bool Deserialize2( char*& buffer ) override;
+    
     bool LoadFromObj( ModelCreateInfo* createInfo, bool loadTexturesIfNotInResourceManager = false );
     void RecalculateBB( bool recursive = false );
     void Optimize();
