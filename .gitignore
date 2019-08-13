@@ -2,7 +2,7 @@ build/
 build_debug/
 *.swp
 a.out
-progression/core/configuration.hpp
+progression/core/platform_defines.hpp
 resources/sponza
 resources/cache
 resources/fastfiles

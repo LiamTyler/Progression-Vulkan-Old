@@ -2,6 +2,17 @@ cmake_minimum_required (VERSION 3.8)
 
 project(Progression)
 
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
+
+set(DEBUG_BUILD   "NOT_IN_USE")
+set(RELEASE_BUILD "NOT_IN_USE")
+
+if (CMAKE_BUILD_TYPE STREQUAL Debug)
+	set(DEBUG_BUILD "IN_USE")
+elseif (CMAKE_BUILD_TYPE STREQUAL Release)
+	set(RELEASE_BUILD "IN_USE")
+endif()
+
 option(PROGRESSION_BUILD_EXAMPLES "Build the example programs" ON)
 option(PROGRESSION_BUILD_TOOLS "Build the tools, such as the OBJ converter" ON)
 

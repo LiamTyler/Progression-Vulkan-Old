@@ -4,16 +4,22 @@ project(Progression-lib)
 
 include(Progression-base)
 
-set(PG_AUDIO_ENABLED 0)
-if (PROGRESSION_AUDIO)
-    set(PG_AUDIO_ENABLED 1)
-endif()
-
 configure_file(${PROGRESSION_DIR}/cmake/platform_defines.hpp.in ../../progression/core/platform_defines.hpp)
 
 set(
-    SRCS
-    core/bounding_box.cpp
+    GRAPHICS
+    graphics/graphics_api.cpp
+    graphics/render_system.cpp
+
+    graphics/graphics_api.hpp
+    graphics/pg_to_opengl_types.hpp
+    graphics/lights.hpp
+    graphics/render_system.hpp
+)
+
+set(
+	CORE
+	core/bounding_box.cpp
     core/camera.cpp
     core/config.cpp
     core/ecs.cpp
@@ -23,44 +29,8 @@ set(
     core/time.cpp
     core/transform.cpp
     core/window.cpp
-
-    graphics/graphics_api.cpp
-    graphics/render_system.cpp
-    #graphics/shadow_map.cpp
-    #graphics/skybox.cpp
-
-    resource/image.cpp
-    resource/material.cpp
-    resource/mesh.cpp
-    resource/model.cpp
-    resource/resource_manager.cpp
-    resource/shader.cpp
-    resource/texture.cpp
-    resource/converters/converter.cpp
-    resource/converters/material_converter.cpp
-    resource/converters/model_converter.cpp
-    resource/converters/shader_converter.cpp
-    resource/converters/texture_converter.cpp
-    resource/converters/fastfile_converter.cpp
-
-    components/model_renderer_component.cpp
-    #components/user_camera_component.cpp
-
-    utils/logger.cpp
-    utils/random.cpp
-    utils/timestamp.cpp
-
-	${PROGRESSION_DIR}/ext/getopt/getopt.c
-    ${PROGRESSION_DIR}/ext/glad/src/glad.c
-    ${PROGRESSION_DIR}/ext/memory_map/MemoryMapped.cpp    
-    ${PROGRESSION_DIR}/ext/tinyobjloader/tiny_obj_loader.cc
-
-    progression.cpp
-)
-
-set(
-    HEADERS
-    core/bounding_box.hpp
+	
+	core/bounding_box.hpp
     core/camera.hpp
     core/common.hpp
     core/config.hpp
@@ -69,20 +39,26 @@ set(
     core/feature_defines.hpp
     core/input.hpp
     core/input_types.hpp
+    core/platform_defines.hpp
     core/scene.hpp
     core/time.hpp
     core/transform.hpp
     core/using_defines.hpp
     core/window.hpp
-    
-    graphics/graphics_api.hpp
-    graphics/pg_to_opengl_types.hpp
-    graphics/lights.hpp
-    graphics/render_system.hpp
-    #graphics/shadow_map.hpp
-    #graphics/skybox.hpp
+)
 
-    resource/resource_manager.hpp
+set(
+	RESOURCE
+	resource/image.cpp
+    resource/material.cpp
+    resource/mesh.cpp
+    resource/model.cpp
+    resource/resource_manager.cpp
+    resource/shader.cpp
+    resource/texture.cpp
+    
+	
+	resource/resource_manager.hpp
     resource/resource.hpp
     resource/image.hpp
     resource/material.hpp
@@ -90,53 +66,85 @@ set(
     resource/model.hpp
     resource/shader.hpp
     resource/texture.hpp
-    resource/converters/converter.hpp
+)
+
+set(
+	RESOURCE_CONVERTERS
+	resource/converters/converter.cpp
+    resource/converters/material_converter.cpp
+    resource/converters/model_converter.cpp
+    resource/converters/shader_converter.cpp
+    resource/converters/texture_converter.cpp
+    resource/converters/fastfile_converter.cpp
+	
+	resource/converters/converter.hpp
     resource/converters/material_converter.hpp
     resource/converters/model_converter.hpp
     resource/converters/shader_converter.hpp
     resource/converters/texture_converter.hpp
     resource/converters/fastfile_converter.hpp
+)	
 
-    components/model_renderer_component.hpp
-    #components/user_camera_component.hpp
+set(
+	EXTERNALS
+	../ext/getopt/getopt.c
+    ../ext/glad/src/glad.c
+    ../ext/memory_map/MemoryMapped.cpp    
+    ../ext/tinyobjloader/tiny_obj_loader.cc
+	
+	../ext/cpptoml.h
+    ../ext/getopt/getopt.h
+    ../ext/glad/include/glad/glad.h
+    ../ext/glad/include/KHR/khrplatform.h
+    ../ext/memory_map/MemoryMapped.h
+    ../ext/stb_image/stb_image.h
+    ../ext/stb_image/stb_image_write.h
+    ../ext/tinyobjloader/tiny_obj_loader.h
+)
 
-    utils/fileIO.hpp
+set(
+	UTILS
+	utils/logger.cpp
+    utils/random.cpp
+    utils/timestamp.cpp
+	
+	utils/fileIO.hpp
     utils/logger.hpp
     utils/noncopyable.hpp
     utils/random.hpp
     utils/serialize.hpp
     utils/timestamp.hpp
-    
-    ${PROGRESSION_DIR}/ext/cpptoml.h
-    ${PROGRESSION_DIR}/ext/getopt/getopt.h
-    ${PROGRESSION_DIR}/ext/glad/include/glad/glad.h
-    ${PROGRESSION_DIR}/ext/glad/include/KHR/khrplatform.h
-    ${PROGRESSION_DIR}/ext/memory_map/MemoryMapped.h
-    ${PROGRESSION_DIR}/ext/stb_image/stb_image.h
-    ${PROGRESSION_DIR}/ext/stb_image/stb_image_write.h
-    ${PROGRESSION_DIR}/ext/tinyobjloader/tiny_obj_loader.h
-
-    #progression.hpp
 )
 
-set(AUDIO_SRCS
-    audio/audio_file.cpp
-    audio/audio_source.cpp
-    audio/audio_system.cpp
+set(
+	COMPONENTS
+	components/model_renderer_component.cpp
+	
+	components/model_renderer_component.hpp
 )
 
-set(AUDIO_INCLUDES
-    audio/audio_file.hpp
-    audio/audio_source.hpp
-    audio/audio_system.hpp
+set(
+	OTHER
+    progression.cpp
 )
 
-if (PROGRESSION_AUDIO)
-    set(SRCS ${SRCS} ${AUDIO_SRCS})
-    set(HEADERS ${HEADERS} ${AUDIO_INCLUDES})
-endif()
+set(
+	ALL_FILES
+	${GRAPHICS}
+	${CORE}
+	${RESOURCE}
+	${RESOURCE_CONVERTERS}
+	${UTILS}
+	${COMPONENTS}
+	${EXTERNALS}
+	${OTHER}
+)
 
-add_library(progression STATIC ${SRCS} ${HEADERS})
+list(TRANSFORM ALL_FILES PREPEND ${CMAKE_CURRENT_SOURCE_DIR}/)
+
+source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${ALL_FILES})
+
+add_library(progression STATIC ${ALL_FILES})
 
 if(MSVC)
     target_compile_options(progression PRIVATE "/MP")
