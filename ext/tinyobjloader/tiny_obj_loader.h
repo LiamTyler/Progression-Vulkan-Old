@@ -1759,7 +1759,7 @@ bool LoadObj(attrib_t *attrib, std::vector<shape_t> *shapes,
   {
     dot = name.length();
   }
-  int i = name.length();
+  int i = static_cast< int >( name.length() );
   while ( i >= 0 && filename[i] != '/' && filename[i] != '\\')
   {
     --i;
@@ -1993,7 +1993,7 @@ bool LoadObj(attrib_t *attrib, std::vector<shape_t> *shapes,
               {
                 dot = fname.length();
               }
-              int i = fname.length();
+              int i = static_cast< int >( fname.length() );
               while ( i >= 0 && filenames[s][i] != '/' && filenames[s][i] != '\\')
               {
                 --i;

@@ -14,8 +14,8 @@ static std::string GetModelFastFileName( struct ModelCreateInfo& createInfo )
     PG_ASSERT( !createInfo.filename.empty() );
     fs::path filePath = fs::absolute( createInfo.filename );
 
-    size_t hash          = std::hash< std::string >{}( filePath );
-    std::string baseName = filePath.filename();
+    size_t hash          = std::hash< std::string >{}( filePath.string() );
+    std::string baseName = filePath.filename().string();
 
     return PG_RESOURCE_DIR "cache/models/" + baseName + "_" + std::to_string( hash ) + ".ffi";
 }
@@ -64,7 +64,7 @@ AssetStatus ModelConverter::CheckDependencies()
 
 ConverterStatus ModelConverter::Convert()
 {
-    if ( status == ASSET_UP_TO_DATE )
+    if ( m_status == ASSET_UP_TO_DATE )
     {
         return CONVERT_SUCCESS;
     }

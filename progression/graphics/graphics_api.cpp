@@ -106,7 +106,7 @@ namespace Gfx
         return *this;
     }
 
-    Buffer Buffer::Create( void* data, uint32_t length, BufferType type, BufferUsage usage )
+    Buffer Buffer::Create( void* data, size_t length, BufferType type, BufferUsage usage )
     {
         Buffer buffer;
         glGenBuffers( 1, &buffer.m_nativeHandle );
@@ -117,7 +117,7 @@ namespace Gfx
         return buffer;
     }
 
-    void Buffer::SetData( void* src, uint32_t length )
+    void Buffer::SetData( void* src, size_t length )
     {
         if ( !length )
         {
@@ -128,7 +128,7 @@ namespace Gfx
         glBufferData( PGToOpenGLBufferType( m_type ), m_length, src,
                       PGToOpenGLBufferUsage( m_usage ) );
     }
-    void Buffer::SetData( void* src, uint32_t offset, uint32_t length )
+    void Buffer::SetData( void* src, size_t offset, size_t length )
     {
         if ( !length )
         {
@@ -139,7 +139,7 @@ namespace Gfx
         glBufferSubData( PGToOpenGLBufferType( m_type ), offset, length, src );
     }
 
-    uint32_t Buffer::GetLength() const
+    size_t Buffer::GetLength() const
     {
         return m_length;
     }
@@ -460,6 +460,8 @@ namespace Gfx
 
     RenderPass& RenderPass::operator=( RenderPass&& r )
     {
+        m_allColorAttachmentsSameColor = std::move( r.m_allColorAttachmentsSameColor );
+        m_desc = std::move( r.m_desc );
         m_nativeHandle   = std::move( r.m_nativeHandle );
         r.m_nativeHandle = 0;
 
@@ -542,11 +544,11 @@ namespace Gfx
         std::vector< GLuint > attachments;
         for ( const auto& tex : desc.m_colorAttachmentDescriptors )
         {
-            glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachments.size(),
-                                    GL_TEXTURE_2D, tex.texture->GetNativeHandle(), 0 );
-            attachments.push_back( GL_COLOR_ATTACHMENT0 + attachments.size() );
+            GLuint slot = GL_COLOR_ATTACHMENT0 + static_cast< unsigned int >( attachments.size() );
+            glFramebufferTexture2D( GL_FRAMEBUFFER, slot, GL_TEXTURE_2D, tex.texture->GetNativeHandle(), 0 );
+            attachments.push_back( slot );
         }
-        glDrawBuffers( attachments.size(), &attachments[0] );
+        glDrawBuffers( static_cast< int >( attachments.size() ), &attachments[0] );
 
         if ( glCheckFramebufferStatus( GL_FRAMEBUFFER ) != GL_FRAMEBUFFER_COMPLETE )
         {
@@ -591,11 +593,11 @@ namespace Gfx
         std::vector< GLuint > attachments;
         for ( const auto& tex : colorTextures )
         {
-            glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachments.size(),
-                                    GL_TEXTURE_2D, tex, 0 );
-            attachments.push_back( GL_COLOR_ATTACHMENT0 + attachments.size() );
+            GLuint slot = GL_COLOR_ATTACHMENT0 + static_cast< unsigned int >( attachments.size() );
+            glFramebufferTexture2D( GL_FRAMEBUFFER, slot, GL_TEXTURE_2D, tex, 0 );
+            attachments.push_back( slot );
         }
-        glDrawBuffers( attachments.size(), &attachments[0] );
+        glDrawBuffers( static_cast< int >( attachments.size() ), &attachments[0] );
     }
 
     void attachDepthTexture( GLuint texture )

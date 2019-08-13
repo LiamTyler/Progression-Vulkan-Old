@@ -37,5 +37,3 @@ maxAnisotropy 4
 Model
 name chalet2
 filename models/chalet2.obj
-optimize true
-freeCpuCopy true

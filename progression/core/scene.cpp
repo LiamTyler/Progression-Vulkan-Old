@@ -4,6 +4,7 @@
 #include "resource/resource_manager.hpp"
 #include "utils/fileIO.hpp"
 #include "utils/logger.hpp"
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 

@@ -288,7 +288,7 @@ void Shader::QueryUniforms()
         std::string sName( uniformName );
         // fix uniform arrays
         auto location = glGetUniformLocation( m_program, sName.c_str() );
-        int len       = sName.length();
+        int len       = static_cast< int >( sName.length() );
         if ( len > 3 )
         {
             if ( sName[len - 1] == ']' && sName[len - 3] == '[' )

@@ -17,8 +17,8 @@ static std::string GetTextureFastFileName( TextureCreateInfo& createInfo )
     PG_ASSERT( !createInfo.filename.empty() );
     fs::path filePath = fs::absolute( createInfo.filename );
 
-    size_t hash          = std::hash< std::string >{}( filePath );
-    std::string baseName = filePath.filename();
+    size_t hash          = std::hash< std::string >{}( filePath.string() );
+    std::string baseName = filePath.filename().string();
 
     return PG_RESOURCE_DIR "cache/textures/" + createInfo.name + "_" + baseName +
            std::to_string( hash ) + ".ffi";

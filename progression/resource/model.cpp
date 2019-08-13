@@ -84,7 +84,7 @@ bool Model::Load( ResourceCreateInfo* createInfo )
 bool Model::Serialize( std::ofstream& out ) const
 {
     serialize::Write( out, name );
-    uint32_t numMeshes = meshes.size();
+    uint32_t numMeshes = static_cast< uint32_t >( meshes.size() );
     serialize::Write( out, numMeshes );
     for ( uint32_t i = 0; i < numMeshes; ++i )
     {
@@ -170,7 +170,7 @@ bool Model::LoadFromObj( ModelCreateInfo* createInfo, bool loadTexturesIfNotInRe
     materials.clear();
 
     aabb.min = glm::vec3( std::numeric_limits< float >::max() );
-    aabb.max = glm::vec3( std::numeric_limits< float >::min() );
+    aabb.max = glm::vec3( -std::numeric_limits< float >::max() );
 
     for ( int currentMaterialID = -1; currentMaterialID < (int) tiny_materials.size();
           ++currentMaterialID )
@@ -210,7 +210,7 @@ bool Model::LoadFromObj( ModelCreateInfo* createInfo, bool loadTexturesIfNotInRe
 
         Mesh currentMesh;
         glm::vec3 min = glm::vec3( std::numeric_limits< float >::max() );
-        glm::vec3 max = glm::vec3( std::numeric_limits< float >::min() );
+        glm::vec3 max = glm::vec3( -std::numeric_limits< float >::max() );
         std::unordered_map< Vertex, uint32_t > uniqueVertices = {};
         for ( const auto& shape : shapes )
         {
@@ -229,7 +229,7 @@ bool Model::LoadFromObj( ModelCreateInfo* createInfo, bool loadTexturesIfNotInRe
                         tinyobj::real_t vz   = attrib.vertices[3 * idx.vertex_index + 2];
                         glm::vec3 vert( vx, vy, vz );
                         min = glm::min( min, vert );
-                        max = glm::max( min, vert );
+                        max = glm::max( max, vert );
 
                         tinyobj::real_t nx = 0;
                         tinyobj::real_t ny = 0;
@@ -272,6 +272,8 @@ bool Model::LoadFromObj( ModelCreateInfo* createInfo, bool loadTexturesIfNotInRe
             }
         }
 
+        LOG( "Mat #: ", currentMaterialID, ", min: ", min, ", max: ", max );
+
         // create mesh and upload to GPU
         if ( currentMesh.vertices.size() )
         {
@@ -307,6 +309,7 @@ bool Model::LoadFromObj( ModelCreateInfo* createInfo, bool loadTexturesIfNotInRe
             currentMesh.aabb = AABB( min, max );
             aabb.min         = glm::min( min, aabb.min );
             aabb.max         = glm::max( max, aabb.max );
+            LOG( "Mat #: ", currentMaterialID, ", aabb min: ", aabb.min, ", aabb max : ", aabb.max );
 
             if ( createInfo->optimize )
             {
@@ -321,7 +324,7 @@ bool Model::LoadFromObj( ModelCreateInfo* createInfo, bool loadTexturesIfNotInRe
     }
 
     aabb = AABB( aabb.min, aabb.max );
-
+    LOG( "aabb min: ", aabb.min, ", aabb max : ", aabb.max );
     return true;
 }
 

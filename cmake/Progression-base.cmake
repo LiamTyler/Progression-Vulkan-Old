@@ -1,6 +1,7 @@
 set(PROGRESSION_INCLUDE_DIRS
     ${PROGRESSION_DIR}
     ${PROGRESSION_DIR}/ext
+    ${PROGRESSION_DIR}/ext/getopt
     ${PROGRESSION_DIR}/ext/glad/include
     ${PROGRESSION_DIR}/ext/glfw/include
     ${PROGRESSION_DIR}/progression

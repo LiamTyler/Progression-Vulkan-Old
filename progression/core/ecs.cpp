@@ -37,7 +37,7 @@ namespace ECS
         }
         else
         {
-            index = entityVersions.size();
+            index = static_cast< entity_index_type >( entityVersions.size() );
             entityVersions.push_back( 0 );
             entityData.emplace_back();
         }
@@ -65,13 +65,16 @@ namespace ECS
 
     Entity EntityManager::get( const std::string& name ) const
     {
-        size_t index = 0;
-        while ( index < entityData.size() && name != entityData[index].name )
+        entity_index_type index = 0;
+        entity_index_type entityDataSize = static_cast< entity_index_type >( entityData.size() );
+        while ( index < entityDataSize && name != entityData[index].name )
         {
             ++index;
         }
-        if ( index == entityData.size() )
+        if ( index == entityDataSize )
+        {
             return INVALID_ENTITY_ID;
+        }
         return Entity( index, entityVersions[index] );
     }
 

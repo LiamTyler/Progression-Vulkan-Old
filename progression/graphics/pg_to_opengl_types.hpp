@@ -181,9 +181,9 @@ namespace Gfx
         return convert[static_cast< int >( format )];
     }
 
-    constexpr std::tuple< GLenum, GLenum > PGToOpenGLFormatAndType( PixelFormat format )
+    inline std::tuple< GLenum, GLenum > PGToOpenGLFormatAndType( PixelFormat format )
     {
-        std::tuple< GLenum, GLenum > convert[] = {
+        constexpr std::tuple< GLenum, GLenum > convert[] = {
             { GL_RED, GL_UNSIGNED_BYTE },     // R8_Uint
             { GL_RED, GL_HALF_FLOAT },        // R16_Float
             { GL_RED, GL_FLOAT },             // R32_Float

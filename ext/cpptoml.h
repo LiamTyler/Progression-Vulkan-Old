@@ -27,6 +27,7 @@
 #elif defined(__clang__)
 #define CPPTOML_DEPRECATED(reason) __attribute__((deprecated(reason)))
 #elif defined(__GNUG__)
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #define CPPTOML_DEPRECATED(reason) __attribute__((deprecated))
 #elif defined(_MSC_VER)
 #if _MSC_VER < 1910
@@ -35,8 +36,6 @@
 #define CPPTOML_DEPRECATED(reason) [[deprecated(reason)]]
 #endif
 #endif
-
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 
 namespace cpptoml
 {

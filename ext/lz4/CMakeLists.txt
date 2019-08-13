@@ -16,8 +16,8 @@ set(
     xxhash.h 
 )
 
-if(MSVC)
-    target_compile_options(progression PRIVATE "/MP")
-endif()
-
 add_library(lz4 STATIC ${SRCS} ${HEADERS})
+
+if(MSVC)
+    target_compile_options(lz4 PRIVATE "/MP")
+endif()

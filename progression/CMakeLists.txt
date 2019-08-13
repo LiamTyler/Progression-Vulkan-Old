@@ -15,7 +15,6 @@ set(
     SRCS
     core/bounding_box.cpp
     core/camera.cpp
-    core/common.cpp
     core/config.cpp
     core/ecs.cpp
     core/frustum.cpp
@@ -26,8 +25,6 @@ set(
     core/window.cpp
 
     graphics/graphics_api.cpp
-    graphics/pg_to_opengl_types.cpp
-    graphics/lights.cpp
     graphics/render_system.cpp
     #graphics/shadow_map.cpp
     #graphics/skybox.cpp
@@ -36,7 +33,6 @@ set(
     resource/material.cpp
     resource/mesh.cpp
     resource/model.cpp
-    resource/resource.cpp
     resource/resource_manager.cpp
     resource/shader.cpp
     resource/texture.cpp
@@ -52,9 +48,9 @@ set(
 
     utils/logger.cpp
     utils/random.cpp
-    utils/serialize.cpp
     utils/timestamp.cpp
 
+	${PROGRESSION_DIR}/ext/getopt/getopt.c
     ${PROGRESSION_DIR}/ext/glad/src/glad.c
     ${PROGRESSION_DIR}/ext/memory_map/MemoryMapped.cpp    
     ${PROGRESSION_DIR}/ext/tinyobjloader/tiny_obj_loader.cc
@@ -70,6 +66,7 @@ set(
     core/config.hpp
     core/ecs.hpp
     core/frustum.hpp
+    core/feature_defines.hpp
     core/input.hpp
     core/input_types.hpp
     core/scene.hpp
@@ -111,6 +108,7 @@ set(
     utils/timestamp.hpp
     
     ${PROGRESSION_DIR}/ext/cpptoml.h
+    ${PROGRESSION_DIR}/ext/getopt/getopt.h
     ${PROGRESSION_DIR}/ext/glad/include/glad/glad.h
     ${PROGRESSION_DIR}/ext/glad/include/KHR/khrplatform.h
     ${PROGRESSION_DIR}/ext/memory_map/MemoryMapped.h

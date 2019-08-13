@@ -20,7 +20,7 @@ namespace Time
 
     float TotalTime()
     {
-        return glfwGetTime();
+        return static_cast< float >( glfwGetTime() );
     }
 
     float DeltaTime()

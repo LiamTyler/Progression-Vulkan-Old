@@ -12,7 +12,4 @@ public:
 
     struct Progression::ModelCreateInfo createInfo;
     std::string outputFile;
-
-private:
-    AssetStatus status = ASSET_OUT_OF_DATE;
 };

@@ -8,7 +8,7 @@ namespace Random
     /**
      * \brief Sets the seed for the random number generator
      */
-    void SetSeed( unsigned int seed );
+    void SetSeed( size_t seed );
 
     /**
      * \brief Returns a random int in the range [low, high]

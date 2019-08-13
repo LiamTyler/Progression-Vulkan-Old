@@ -17,7 +17,7 @@ inline void Write( std::ofstream& out, const T& val )
 template <>
 inline void Write( std::ofstream& out, const std::string& s )
 {
-    uint32_t len = s.length();
+    uint32_t len = static_cast< uint32_t >( s.length() );
     out.write( (char*)&len, sizeof( uint32_t ) );
     out.write( s.c_str(), len );
 }

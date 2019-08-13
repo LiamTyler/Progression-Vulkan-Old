@@ -307,7 +307,7 @@ namespace ECS
         template < typename Component >
         iterator< Component > begin()
         {
-            return iterator< Component >( &components_, direct_.size() );
+            return iterator< Component >( &components_, static_cast< entity_type >( direct_.size() ) );
         }
 
         template < typename Component >

@@ -154,10 +154,10 @@ namespace Gfx
         Buffer( Buffer&& buff );
         Buffer& operator=( Buffer&& buff );
 
-        static Buffer Create( void* data, uint32_t length, BufferType type, BufferUsage usage );
-        void SetData( void* src, uint32_t length );
-        void SetData( void* src, uint32_t offset, uint32_t length );
-        uint32_t GetLength() const;
+        static Buffer Create( void* data, size_t length, BufferType type, BufferUsage usage );
+        void SetData( void* src, size_t length );
+        void SetData( void* src, size_t offset, size_t length );
+        size_t GetLength() const;
         BufferType GetType() const;
         BufferUsage GetUsage() const;
         GLuint GetNativeHandle() const;
@@ -169,8 +169,8 @@ namespace Gfx
 
         BufferType m_type;
         BufferUsage m_usage;
-        uint32_t m_length       = 0; // in bytes
-        GLuint m_nativeHandle   = ~0u;
+        size_t m_length       = 0; // in bytes
+        GLuint m_nativeHandle = ~0u;
     };
 
     void BindVertexBuffer( const Buffer& buffer, uint32_t index, int offset, uint32_t stride );
@@ -239,8 +239,9 @@ namespace Gfx
         CLAMP_TO_BORDER = 3,
     };
 
-    struct SamplerDescriptor
+    class SamplerDescriptor
     {
+    public:
         FilterMode minFilter  = FilterMode::LINEAR;
         FilterMode magFilter  = FilterMode::LINEAR;
         WrapMode wrapModeS    = WrapMode::CLAMP_TO_EDGE;

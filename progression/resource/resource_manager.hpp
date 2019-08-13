@@ -8,7 +8,7 @@
 
 class ResourceTypeID
 {
-    inline static uint32_t identifier;
+    inline static uint32_t identifier = 0;
 
     template < typename... >
     inline static const auto inner = identifier++;
@@ -18,10 +18,26 @@ public:
     inline static const uint32_t id = inner< std::decay_t< Type >... >;
 };
 
+class BaseFamily {
+public:
+    static uint32_t typeCounter_;
+};
+
+template <typename Derived>
+class DerivedFamily : public BaseFamily {
+public:
+    static uint32_t typeCounter() {
+        static uint32_t typeIndex = typeCounter_++;
+        return typeIndex;
+    }
+};
+
+
 template < typename Resource >
 uint32_t GetResourceTypeID()
 {
-    return ResourceTypeID::id< Resource >;
+    // return ResourceTypeID::id< Resource >;
+    return DerivedFamily< Resource >::typeCounter();
 }
 
 namespace Progression

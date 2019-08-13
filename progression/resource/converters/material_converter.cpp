@@ -11,10 +11,10 @@ static std::string GetMTLFileFastFileName( const std::string& mtlFileName )
 {
     namespace fs = std::filesystem;
 
-    std::string absPath = mtlFileName.empty() ? "" : fs::absolute( mtlFileName );
+    std::string absPath = mtlFileName.empty() ? "" : fs::absolute( mtlFileName ).string();
 
     size_t hash = std::hash< std::string >{}( absPath );
-    std::string basename = fs::path( mtlFileName ).filename();
+    std::string basename = fs::path( mtlFileName ).filename().string();
     return PG_RESOURCE_DIR "cache/materials/" + basename + "_" + std::to_string( hash ) + ".ffi";
 }
 

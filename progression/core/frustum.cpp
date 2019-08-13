@@ -27,7 +27,7 @@ void Frustum::Update( float fov,
 {
     glm::vec3 ntl, ntr, nbl, nbr, ftl, ftr, fbr, fbl;
     float nearHeight, nearWidth, farHeight, farWidth;
-    float angle = 0.5 * fov;
+    float angle = 0.5f * fov;
 
     nearHeight = nearPlane * tanf( angle );
     farHeight  = farPlane * tanf( angle );

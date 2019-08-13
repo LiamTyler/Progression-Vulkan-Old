@@ -89,7 +89,7 @@ bool Image::Load( const std::string& fname, bool flip_vertically )
 bool Image::Save( const std::string& fname, bool flipVertically ) const
 {
     stbi_flip_vertically_on_write( flipVertically );
-    int i = fname.length();
+    int i = static_cast< int >( fname.length() );
     while ( fname[--i] != '.' && i >= 0 )
         ;
     if ( i < 0 )

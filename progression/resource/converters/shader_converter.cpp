@@ -11,16 +11,16 @@ static std::string GetShaderFastFileName( struct ShaderCreateInfo& createInfo )
 {
     namespace fs = std::filesystem;
 
-    std::string vertPath = createInfo.vertex.empty() ? "" : fs::absolute( createInfo.vertex );
-    std::string geomPath = createInfo.geometry.empty() ? "" : fs::absolute( createInfo.geometry );
-    std::string fragPath = createInfo.fragment.empty() ? "" : fs::absolute( createInfo.fragment );
-    std::string compPath = createInfo.compute.empty() ? "" : fs::absolute( createInfo.compute );
+    std::string vertPath = createInfo.vertex.empty() ? "" : fs::absolute( createInfo.vertex ).string();
+    std::string geomPath = createInfo.geometry.empty() ? "" : fs::absolute( createInfo.geometry ).string();
+    std::string fragPath = createInfo.fragment.empty() ? "" : fs::absolute( createInfo.fragment ).string();
+    std::string compPath = createInfo.compute.empty() ? "" : fs::absolute( createInfo.compute ).string();
 
     size_t hash = std::hash< std::string >{}( vertPath + geomPath + fragPath + compPath );
-    vertPath    = fs::path( createInfo.vertex ).filename();
-    geomPath    = fs::path( createInfo.geometry ).filename();
-    fragPath    = fs::path( createInfo.fragment ).filename();
-    compPath    = fs::path( createInfo.compute ).filename();
+    vertPath    = fs::path( createInfo.vertex ).filename().string();
+    geomPath    = fs::path( createInfo.geometry ).filename().string();
+    fragPath    = fs::path( createInfo.fragment ).filename().string();
+    compPath    = fs::path( createInfo.compute ).filename().string();
     return PG_RESOURCE_DIR "cache/shaders/" + vertPath + "_" + geomPath + "_" + fragPath + "_" +
            compPath + "_" + std::to_string( hash ) + ".ffi";
 }

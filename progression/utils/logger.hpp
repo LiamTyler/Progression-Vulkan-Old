@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <mutex>
+#include <string>
 
 #define LOG( ... ) g_Logger.Write( Logger::DEBUG, __VA_ARGS__ )
 #define LOG_WARN( ... ) g_Logger.Write( Logger::WARN, __VA_ARGS__ )

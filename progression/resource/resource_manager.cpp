@@ -15,6 +15,8 @@
 #include <thread>
 #include <tuple>
 
+uint32_t BaseFamily::typeCounter_ = 0;
+
 namespace Progression
 {
 
@@ -25,6 +27,7 @@ namespace ResourceManager
 
     void Init()
     {
+        f_resources.Clear();
         // glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         auto defaultMat                                         = std::make_shared< Material >();
         defaultMat->Kd                                          = glm::vec3( 1, 1, 0 );
@@ -39,7 +42,7 @@ namespace ResourceManager
     bool LoadFastFile( const std::string& fname )
     {
         MemoryMapped memMappedFile;
-        if ( !memMappedFile.open( fname, MemoryMapped::WholeFile, MemoryMapped::Normal ) )
+        if ( !memMappedFile.open( fname, MemoryMapped::WholeFile, MemoryMapped::SequentialScan ) )
         {
             LOG_ERR( "Could not open fastfile:", fname );
             return false;
@@ -47,14 +50,15 @@ namespace ResourceManager
 
         auto start = Time::GetTimePoint();
 
-        //char* data = (char*) memMappedFile.getData();
+        char* data = (char*) memMappedFile.getData();
+#if USING( LZ4_COMPRESSED_FASTFILES )
         char* fileData = (char*) memMappedFile.getData();
         int uncompressedSize;
         serialize::Read( fileData, uncompressedSize );
 
+        const int compressedSize = static_cast<int>( memMappedFile.size() - 4 );
         char* uncompressedBuffer = (char*) malloc( uncompressedSize );
-        const int decompressedSize = LZ4_decompress_safe( fileData, uncompressedBuffer,
-                                                          memMappedFile.size() - 4, uncompressedSize );
+        const int decompressedSize = LZ4_decompress_safe( fileData, uncompressedBuffer, compressedSize, uncompressedSize );
 
         memMappedFile.close();
 
@@ -72,6 +76,7 @@ namespace ResourceManager
 
         char* data = uncompressedBuffer;
         LOG( "LZ4 decompress finished in: ", Time::GetDuration( start ), " ms." );
+#endif // #if USING( LZ4_COMPRESSED_FASTFILES )
 
         {
             uint32_t numShaders;

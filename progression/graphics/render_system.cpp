@@ -11,6 +11,7 @@
 #include "resource/model.hpp"
 #include "resource/texture.hpp"
 //#include "graphics/shadow_map.hpp"
+#include <array>
 
 using namespace Progression;
 using namespace Gfx;
@@ -553,7 +554,7 @@ namespace RenderSystem
                 else
                 {
                     shader.SetUniform( "textured", false );
-                }
+                };
                 glDrawElements( GL_TRIANGLES, mesh.GetNumIndices(), GL_UNSIGNED_INT, 0 );
             }
         } );

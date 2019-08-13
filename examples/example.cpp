@@ -2,6 +2,7 @@
 #include <future>
 #include <iomanip>
 #include <thread>
+#include <array>
 
 #ifdef __linux__
 #pragma GCC diagnostic ignored "-Wunused-variable"
@@ -22,6 +23,8 @@ int main( int argc, char* argv[] )
 
     // Scene* scene = Scene::load( PG_RESOURCE_DIR "scenes/scene1.txt" );
     ResourceManager::LoadFastFile( PG_RESOURCE_DIR "fastfiles/resource.txt.ff" );
+
+    glEnable(GL_DEPTH_TEST);
 
 
     PG_ASSERT( ResourceManager::Get< Shader >( "test" ) );
@@ -90,7 +93,7 @@ int main( int argc, char* argv[] )
     renderPassDesc.SetColorAttachments( { colorAttachmentDescriptor } );
 
     RenderPass renderPass = RenderPass::CreateDefault( renderPassDesc );
-
+    Model& drawModel = model;
     {
         std::array< VertexAttributeDescriptor, 3 > attribDescs;
         attribDescs[0].binding  = 0;
@@ -134,6 +137,7 @@ int main( int argc, char* argv[] )
                 PG::EngineShutdown = true;
 
             renderPass.Bind();
+            //glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
             shader.Enable();
             glm::mat4 M   = modelTransform.getModelMatrix();
@@ -146,11 +150,10 @@ int main( int argc, char* argv[] )
             shader.SetUniform( "cameraPos", camera.position );
             shader.SetUniform( "lightDirInWorldSpace", lightDir );
 
-
-            for ( size_t i = 0; i < model.meshes.size(); ++i )
+            for ( size_t i = 0; i < drawModel.meshes.size(); ++i )
             {
-                Mesh& mesh    = model.meshes[i];
-                auto& matPtr  = model.materials[i];
+                Mesh& mesh    = drawModel.meshes[i];
+                auto& matPtr  = drawModel.materials[i];
 
                 vertexInputDesc.Bind();
                 BindVertexBuffer( mesh.vertexBuffer, 0, mesh.GetVertexOffset(), 12 );
@@ -162,18 +165,24 @@ int main( int argc, char* argv[] )
                 shader.SetUniform( "ks", matPtr->Ks );
                 shader.SetUniform( "ke", matPtr->Ke );
                 shader.SetUniform( "shininess", matPtr->Ns );
-                if ( matPtr->map_Kd )
+                /*if ( matPtr->map_Kd )
                 {
                     shader.SetUniform( "textured", true );
                     matPtr->map_Kd->sampler->Bind( 0 );
                     shader.BindTexture( matPtr->map_Kd->gfxTexture, "diffuseTex", 0 );
                 }
                 else
-                {
+                {*/
                     shader.SetUniform( "textured", false );
-                }
+                //}
 
                 DrawIndexedPrimitives( PrimitiveType::TRIANGLES, IndexType::UNSIGNED_INT, 0, mesh.GetNumIndices() );
+            }
+
+            GLenum err;
+            while((err = glGetError()) != GL_NO_ERROR)
+            {
+                LOG("Err"); 
             }
 
 

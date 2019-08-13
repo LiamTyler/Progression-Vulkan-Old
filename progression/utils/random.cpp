@@ -8,17 +8,23 @@ namespace Progression
 namespace Random
 {
 
-    void SetSeed( unsigned int seed ) { srand( seed ); }
+    void SetSeed( size_t seed )
+    {
+        srand( (unsigned int) seed );
+    }
 
-    int RandInt( int l, int h ) { return l + std::rand() % ( h - l + 1 ); }
+    int RandInt( int l, int h )
+    {
+        return l + rand() % ( h - l + 1 );
+    }
 
     float RandFloat( float l, float h )
     {
-        float r = std::rand() / static_cast< float >( RAND_MAX );
+        float r = rand() / static_cast< float >( RAND_MAX );
         return r * ( h - l ) + l;
     }
 
-    float Rand() { return std::rand() / static_cast< float >( RAND_MAX ); }
+    float Rand() { return rand() / static_cast< float >( RAND_MAX ); }
 
 } // namespace Random
 

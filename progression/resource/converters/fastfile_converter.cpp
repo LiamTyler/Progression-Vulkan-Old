@@ -298,7 +298,7 @@ ConverterStatus FastfileConverter::Convert()
         return CONVERT_ERROR;
     };
 
-    uint32_t numShaders = m_shaderConverters.size();
+    uint32_t numShaders = static_cast< uint32_t >( m_shaderConverters.size() );
     serialize::Write( out, numShaders );
     std::vector< char > buffer( 4 * 1024 * 1024 );
     for ( auto& converter : m_shaderConverters )
@@ -310,7 +310,7 @@ ConverterStatus FastfileConverter::Convert()
         }
 
         // TODO: Dont write and then read back the same data, just write to both files
-        std::ifstream in( converter.outputFile );
+        std::ifstream in( converter.outputFile, std::ios::binary );
         if ( !in )
         {
             LOG_ERR( "Error opening intermediate file '", converter.outputFile, "'" );
@@ -325,7 +325,7 @@ ConverterStatus FastfileConverter::Convert()
         serialize::Write( out, buffer.data(), length );
     }
 
-    uint32_t numTextures = m_textureConverters.size();
+    uint32_t numTextures = static_cast< uint32_t >( m_textureConverters.size() );
     serialize::Write( out, numTextures );
     for ( auto& converter : m_textureConverters )
     {
@@ -335,7 +335,7 @@ ConverterStatus FastfileConverter::Convert()
             return OnError( converter.outputFile );
         }
 
-        std::ifstream in( converter.outputFile );
+        std::ifstream in( converter.outputFile, std::ios::binary );
         if ( !in )
         {
             LOG_ERR( "Error opening intermediate file '", converter.outputFile, "'" );
@@ -350,7 +350,7 @@ ConverterStatus FastfileConverter::Convert()
         serialize::Write( out, buffer.data(), length );
     }
 
-    uint32_t numMaterials = m_materialFileConverters.size();
+    uint32_t numMaterials = static_cast< uint32_t >( m_materialFileConverters.size() );
     serialize::Write( out, numMaterials );
     for ( auto& converter : m_materialFileConverters )
     {
@@ -360,7 +360,7 @@ ConverterStatus FastfileConverter::Convert()
             return OnError( converter.outputFile );
         }
 
-        std::ifstream in( converter.outputFile );
+        std::ifstream in( converter.outputFile, std::ios::binary );
         if ( !in )
         {
             LOG_ERR( "Error opening intermediate file '", converter.outputFile, "'" );
@@ -375,7 +375,7 @@ ConverterStatus FastfileConverter::Convert()
         serialize::Write( out, buffer.data(), length );
     }
 
-    uint32_t numModels = m_modelConverters.size();
+    uint32_t numModels = static_cast< uint32_t >( m_modelConverters.size() );
     serialize::Write( out, numModels );
     for ( auto& converter : m_modelConverters )
     {
@@ -385,7 +385,7 @@ ConverterStatus FastfileConverter::Convert()
             return OnError( converter.outputFile );
         }
 
-        std::ifstream in( converter.outputFile );
+        std::ifstream in( converter.outputFile, std::ios::binary );
         if ( !in )
         {
             LOG_ERR( "Error opening intermediate file '", converter.outputFile, "'" );
@@ -402,6 +402,7 @@ ConverterStatus FastfileConverter::Convert()
 
     out.close();
 
+#if USING( LZ4_COMPRESSED_FASTFILES )
     LOG( "Compressing with LZ4..." );
     MemoryMapped memMappedFile;
     if ( !memMappedFile.open( outputFile, MemoryMapped::WholeFile, MemoryMapped::Normal ) )
@@ -443,6 +444,7 @@ ConverterStatus FastfileConverter::Convert()
     serialize::Write( out, compressedData, compressedDataSize );
 
     out.close();
+#endif // #if USING( LZ4_COMPRESSED_FASTFILES )
 
     return CONVERT_SUCCESS;
 }
