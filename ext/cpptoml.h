@@ -2688,7 +2688,7 @@ class parser
         };
 
         auto eat_digits = [&](bool (*check_char)(char)) {
-            auto beg = check_it;
+            // auto beg = check_it;
             while (check_it != end && check_char(*check_it))
             {
                 ++check_it;
