@@ -4,7 +4,8 @@ project(Progression-lib)
 
 include(Progression-base)
 
-configure_file(${PROGRESSION_DIR}/cmake/platform_defines.hpp.in ../../progression/core/platform_defines.hpp)
+message("PROGRESSION_DIR = '${PROGRESSION_DIR}'")
+configure_file(${PROGRESSION_DIR}/cmake/platform_defines.hpp.in ${PROGRESSION_DIR}/progression/core/platform_defines.hpp)
 
 set(
     GRAPHICS
