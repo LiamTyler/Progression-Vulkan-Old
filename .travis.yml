@@ -9,11 +9,12 @@ before_install:
   - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
   - sudo apt-get update -q
   - sudo apt-get install gcc-9 -y
-
-install:
-- "[ $CXX = g++ ] && export CXX=g++-9 || true"
+  - sudo apt-get install g++-9 -y
 
 script:
+  - sudo ln -s /usr/bin/gcc-9 /usr/local/bin/gcc
+  - sudo ln -s /usr/bin/g++-9 /usr/local/bin/g++
+  - gcc -v && g++ -v && cmake --version
   - mkdir build
   - cd build
   - cmake -DCMAKE_BUILD_TYPE=Release ..
