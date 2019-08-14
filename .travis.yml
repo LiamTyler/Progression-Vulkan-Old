@@ -10,6 +10,7 @@ before_install:
   - sudo apt-get update -q
   - sudo apt-get install gcc-9 -y
   - sudo apt-get install g++-9 -y
+  - sudo apt-get install xorg-dev libglu1-mesa-dev
 
 script:
   - sudo ln -s /usr/bin/gcc-9 /usr/local/bin/gcc
