@@ -1,5 +1,7 @@
 # Progression
 
+[![Build Status](https://travis-ci.org/LiamTyler/Progression.svg?branch=FPS-in-city)](https://travis-ci.org/LiamTyler/Progression)
+
 ## Description
 A C++ game engine I have been developing for Linux and Windows. 
 
