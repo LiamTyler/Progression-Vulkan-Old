@@ -1,0 +1,25 @@
+language: cpp
+
+compiler:
+  - gcc
+
+dist: bionic
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+      - g++-9
+
+install:
+- "[ $CXX = g++ ] && export CXX=g++-9 || true"
+
+script:
+  - mkdir build
+  - cmake -DCMAKE_BUILD_TYPE=Release ..
+  - make
+  - cd ..
+  - mkdir build_debug
+  - cmake -DCMAKE_BUILD_TYPE=Debug ..
+  - make
