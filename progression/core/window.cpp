@@ -31,9 +31,13 @@ static void APIENTRY GLDebugOutput( GLenum source,
     std::hash< std::string > hasher;
     auto hash = hasher( std::string( message ) );
     if ( s_debugMessages.find( hash ) != s_debugMessages.end() )
+    {
         return;
+    }
     else
+    {
         s_debugMessages.insert( hash );
+    }
 
 
     LOG_WARN( "---------------" );
@@ -113,6 +117,8 @@ static void APIENTRY GLDebugOutput( GLenum source,
 
 static void ErrorCallback( int err, const char* description )
 {
+    PG_MAYBE_UNUSED( err );
+    PG_MAYBE_UNUSED( description );
     LOG_ERR( "GLFW ERROR: ", err, ", ", description );
 }
 

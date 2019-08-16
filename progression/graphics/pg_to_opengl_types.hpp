@@ -1,6 +1,7 @@
 #pragma once
 
 #include "graphics/graphics_api.hpp"
+#include <tuple>
 
 namespace Progression
 {
