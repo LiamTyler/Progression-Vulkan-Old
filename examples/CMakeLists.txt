@@ -1,17 +1,13 @@
 include(Progression)
 
-add_executable(example1 example1.cpp)
-add_executable(forward forward.cpp)
-add_executable(lightDemo lightDemo.cpp)
-add_executable(shadow shadow.cpp)
+add_executable(example example.cpp)
 
 set_target_properties(
-    example1 forward lightDemo shadow
+    example
     PROPERTIES
     DEBUG_POSTFIX _debug
 )
 
-target_link_libraries(example1 ${PROGRESSION_LIBS})
-target_link_libraries(forward ${PROGRESSION_LIBS})
-target_link_libraries(lightDemo ${PROGRESSION_LIBS})
-target_link_libraries(shadow ${PROGRESSION_LIBS})
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example)
+
+target_link_libraries(example ${PROGRESSION_LIBS})

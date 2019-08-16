@@ -1,40 +1,30 @@
 #pragma once
 
-#include "core/game_object.hpp"
+#include "core/common.hpp"
 
-namespace Progression {
+namespace Progression
+{
 
-    class ShadowMap;
-
-    class Light : public GameObject {
+    class Light
+    {
     public:
-        enum Type {
+        enum Type
+        {
             POINT = 0,
-            SPOT,
             DIRECTIONAL,
+            SPOT
         };
 
-        Light(
-            Type _type = Type::POINT,
-            const Transform& _transform = Transform(),
-            const glm::vec3& _color = glm::vec3(1),
-            float _intensity = 2.0f,
-            float _radius = 15.0f,
-            float _innerCutoff = glm::radians(25.0f),
-            float _outerCutoff = glm::radians(35.0f)
-        );
-
-        virtual ~Light();
-        Light(Light&& light);
-        Light& operator=(Light&& light);
-
-        Type type;
-        glm::vec3 color;
-        float intensity;
-        float radius;
-        float innerCutoff;
-        float outerCutoff;
-        ShadowMap* shadowMap;
+        std::string name    = "";
+        Type type           = POINT;
+        glm::vec3 color     = glm::vec3(1, 1, 1);
+        glm::vec3 position  = glm::vec3(0, 0, 0);
+        glm::vec3 direction = glm::vec3(0, 0, 0);
+        float intensity     = 1.0f;
+        float radius        = 10.0f;
+        float innerCutoff   = glm::radians(10.0f);
+        float outerCutoff   = glm::radians(20.0f);
+        bool enabled        = true;
     };
 
 } // namespace Progression

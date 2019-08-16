@@ -10,9 +10,9 @@ layout(binding = 3) uniform sampler2D gDiffuse;
 layout(binding = 4) uniform sampler2D gSpecularExp;
 layout(binding = 5) uniform sampler2D gEmissive;
 
-layout(binding = 6) uniform samplerCube shadowMap;
-layout(location = 7) uniform bool shadows;
-layout(location = 8) uniform float shadowFarPlane;
+// layout(binding = 6) uniform samplerCube shadowMap;
+// layout(location = 7) uniform bool shadows;
+// layout(location = 8) uniform float shadowFarPlane;
 
 layout(location = 9) uniform vec3 cameraPos;
 
@@ -28,6 +28,7 @@ float attenuate(in const float distSquared, in const float radiusSquared) {
     return (atten * atten) / (1.0 + distSquared);
 }
 
+/*
 float shadowAmount(in const vec3 fragPos, in const vec3 n) {
     vec3 fragToLight = fragPos - lightPos;
     // now get current linear depth as the length between the fragment and light position
@@ -45,6 +46,7 @@ float shadowAmount(in const vec3 fragPos, in const vec3 n) {
     // return 0;
     return currentDepth -  bias > closestDepth ? 1.0 : 0.0;
 }
+*/
 
 void main() {    
     vec3 NDC = glPos.xyz / glPos.w;
@@ -71,9 +73,9 @@ void main() {
     if (dot(l, n) > EPSILON)
         outColor += atten * lightColor * specExp.rgb * pow(max(dot(h, n), 0.0), 4*specExp.a);
     
-    if (shadows) {
-        outColor *= (1.0f - shadowAmount(fragPos, n));
-    }
+    // if (shadows) {
+    //     outColor *= (1.0f - shadowAmount(fragPos, n));
+    // }
 
     finalColor.rgb = outColor;
     finalColor.a   = 1.0;

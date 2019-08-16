@@ -4,130 +4,177 @@ project(Progression-lib)
 
 include(Progression-base)
 
-set(PG_AUDIO_ENABLED 0)
-if (PROGRESSION_AUDIO)
-    set(PG_AUDIO_ENABLED 1)
-endif()
+set_property(
+    DIRECTORY
+    PROPERTY
+    COMPILE_DEFINITIONS
+    $<$<CONFIG:Debug>:CMAKE_DEFINE_DEBUG_BUILD>
+    $<$<CONFIG:Release>:CMAKE_DEFINE_RELEASE_BUILD>
+    $<$<CONFIG:Ship>:CMAKE_DEFINE_SHIP_BUILD>
+)
 
-configure_file(${PROGRESSION_DIR}/cmake/configuration.h.in ../../progression/core/configuration.hpp)
+configure_file(${PROGRESSION_DIR}/cmake/platform_defines.hpp.in ${PROGRESSION_DIR}/progression/core/platform_defines.hpp)
 
 set(
-    SRCS
+    GRAPHICS
+    graphics/graphics_api.cpp
+    graphics/render_system.cpp
+
+    graphics/graphics_api.hpp
+    graphics/pg_to_opengl_types.hpp
+    graphics/lights.hpp
+    graphics/render_system.hpp
+)
+
+set(
+	CORE
+	core/bounding_box.cpp
     core/camera.cpp
-    core/common.cpp
     core/config.cpp
-    core/game_object.cpp
-    core/image.cpp
+    core/ecs.cpp
+    core/frustum.cpp
     core/input.cpp
+    core/scene.cpp
     core/time.cpp
     core/transform.cpp
     core/window.cpp
-    core/scene.cpp
-    core/resource_manager.cpp
-    core/bounding_box.cpp
-    core/frustum.cpp
+	
+	core/assert.hpp
+	core/unused.hpp
+	core/bounding_box.hpp
+    core/camera.hpp
+    core/common.hpp
+    core/config.hpp
+    core/ecs.hpp
+    core/frustum.hpp
+    core/feature_defines.hpp
+    core/input.hpp
+    core/input_types.hpp
+    core/platform_defines.hpp
+    core/scene.hpp
+    core/time.hpp
+    core/transform.hpp
+    core/using_defines.hpp
+    core/window.hpp
+)
 
-    graphics/texture2D.cpp
-    graphics/lights.cpp
+set(
+	RESOURCE
+	resource/image.cpp
+    resource/material.cpp
+    resource/mesh.cpp
+    resource/model.cpp
+    resource/resource_manager.cpp
+    resource/shader.cpp
+    resource/texture.cpp
     
-    graphics/material.cpp
-    graphics/mesh.cpp
-    graphics/shader.cpp
-    graphics/render_component.cpp
-    graphics/render_system.cpp
-    graphics/model_render_component.cpp
-    graphics/skybox.cpp
-    graphics/shadow_map.cpp
-    graphics/graphics_api.cpp
+	
+	resource/resource_manager.hpp
+    resource/resource.hpp
+    resource/image.hpp
+    resource/material.hpp
+    resource/mesh.hpp
+    resource/model.hpp
+    resource/shader.hpp
+    resource/texture.hpp
+)
 
-    components/user_camera_component.cpp
+set(
+	RESOURCE_CONVERTERS
+	resource/converters/converter.cpp
+    resource/converters/material_converter.cpp
+    resource/converters/model_converter.cpp
+    resource/converters/shader_converter.cpp
+    resource/converters/texture_converter.cpp
+    resource/converters/fastfile_converter.cpp
+	
+	resource/converters/converter.hpp
+    resource/converters/material_converter.hpp
+    resource/converters/model_converter.hpp
+    resource/converters/shader_converter.hpp
+    resource/converters/texture_converter.hpp
+    resource/converters/fastfile_converter.hpp
+)	
 
-    utils/logger.cpp
+set(
+	EXTERNALS
+	../ext/getopt/getopt.c
+    ../ext/glad/src/glad.c
+    ../ext/memory_map/MemoryMapped.cpp    
+    ../ext/tinyobjloader/tiny_obj_loader.cc
+	
+	../ext/cpptoml.h
+    ../ext/getopt/getopt.h
+    ../ext/glad/include/glad/glad.h
+    ../ext/glad/include/KHR/khrplatform.h
+    ../ext/memory_map/MemoryMapped.h
+    ../ext/stb_image/stb_image.h
+    ../ext/stb_image/stb_image_write.h
+    ../ext/tinyobjloader/tiny_obj_loader.h
+)
 
-    ${PROGRESSION_DIR}/ext/tinyobjloader/tiny_obj_loader.cc
-    ${PROGRESSION_DIR}/ext/memory_map/MemoryMapped.cpp    
-    ${PROGRESSION_DIR}/ext/glad/glad.c
+set(
+	UTILS
+	utils/logger.cpp
+    utils/random.cpp
+    utils/timestamp.cpp
+	
+	utils/fileIO.hpp
+    utils/logger.hpp
+    utils/noncopyable.hpp
+    utils/random.hpp
+    utils/serialize.hpp
+    utils/timestamp.hpp
+)
 
+set(
+	COMPONENTS
+	components/model_renderer_component.cpp
+	
+	components/model_renderer_component.hpp
+)
+
+set(
+	OTHER
     progression.cpp
 )
 
 set(
-    HEADERS
-    core/camera.hpp
-    core/common.hpp
-    core/component.hpp
-    core/config.hpp
-    core/game_object.hpp
-    core/image.hpp
-    core/input.hpp
-    core/input_types.hpp
-    core/time.hpp
-    core/transform.hpp
-    core/window.hpp
-    core/scene.hpp
-    core/resource_manager.hpp
-    core/bounding_box.hpp
-    core/frustum.hpp
-    
-    graphics/lights.hpp
-    graphics/texture2D.hpp
-
-    graphics/material.hpp
-    graphics/mesh.hpp
-    graphics/model.hpp
-    graphics/shader.hpp
-    graphics/render_component.hpp
-    graphics/render_system.hpp
-    graphics/model_render_component.hpp
-    graphics/skybox.hpp
-    graphics/shadow_map.hpp
-    graphics/graphics_api.hpp
-
-    components/user_camera_component.hpp
-    
-    utils/noncopyable.hpp
-    utils/logger.hpp
-    utils/random.hpp
-    
-    ${PROGRESSION_DIR}/ext/tinyobjloader/tiny_obj_loader.h
-    ${PROGRESSION_DIR}/ext/stb_image/stb_image.h
-    ${PROGRESSION_DIR}/ext/stb_image/stb_image_write.h
-    ${PROGRESSION_DIR}/ext/cpptoml.h
-    ${PROGRESSION_DIR}/ext/glad/glad.h
-    
-    ${PROGRESSION_DIR}/ext/memory_map/MemoryMapped.h
-
-    progression.hpp
+	ALL_FILES
+	${GRAPHICS}
+	${CORE}
+	${RESOURCE}
+	${RESOURCE_CONVERTERS}
+	${UTILS}
+	${COMPONENTS}
+	${EXTERNALS}
+	${OTHER}
 )
 
-set(AUDIO_SRCS
-    audio/audio_file.cpp
-    audio/audio_source.cpp
-    audio/audio_system.cpp
-)
+# Needs cmake 3.12.4
+#list(TRANSFORM ALL_FILES PREPEND ${CMAKE_CURRENT_SOURCE_DIR}/)
 
-set(AUDIO_INCLUDES
-    audio/audio_file.hpp
-    audio/audio_source.hpp
-    audio/audio_system.hpp
-)
+SET(listVar "")
+FOREACH(f ${ALL_FILES})
+    LIST(APPEND listVar "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
+ENDFOREACH(f)
+set(ALL_FILES ${listVar})
 
-if (PROGRESSION_AUDIO)
-    set(SRCS ${SRCS} ${AUDIO_SRCS})
-    set(HEADERS ${HEADERS} ${AUDIO_INCLUDES})
-endif()
+source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${ALL_FILES})
 
-add_library(progression STATIC ${SRCS} ${HEADERS})
+add_library(progression STATIC ${ALL_FILES})
 
 if(MSVC)
     target_compile_options(progression PRIVATE "/MP")
 endif()
 
-set_target_properties(
-    progression
-    PROPERTIES
-    DEBUG_POSTFIX _debug
-)
+#set_target_properties(
+#    progression
+#    PROPERTIES
+#    DEBUG_POSTFIX _debug
+#    DEBUG_POSTFIX _release
+#    SHIP_POSTFIX _ship
+#)
 
 # link in the static libs
 target_link_libraries(progression ${PROGRESSION_LIBS})

@@ -53,7 +53,7 @@ public:
   unsigned char at        (size_t offset) const;
 
   /// raw access
-  const unsigned char* getData() const;
+  unsigned char* getData() const;
 
   /// true, if file successfully opened
   bool isValid() const;

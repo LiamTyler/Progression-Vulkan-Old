@@ -12,9 +12,9 @@ uniform sampler2D gEmissive;
 
 uniform vec3 cameraPos;
 
-uniform sampler2D shadowMap;
-uniform bool shadows;
-uniform mat4 LSM;
+// uniform sampler2D shadowMap;
+// uniform bool shadows;
+// uniform mat4 LSM;
 
 uniform vec3 lightPos;
 uniform vec3 lightDir;
@@ -32,6 +32,7 @@ float attenuate(in const float distSquared, in const float radiusSquared) {
     return (atten * atten) / (1.0 + distSquared);
 }
 
+/*
 // return how much the fragment is 'in' the shadow.
 // 0 == not at all
 // 1 == fully shadowed
@@ -52,6 +53,7 @@ float shadowAmount(const in vec3 fragPos, const in vec3 n, const in vec3 l) {
 
     return currentDepth - bias > texture(shadowMap, projCoords.xy).r ? 1.0 : 0.0;
 }
+*/
 
 void main() {    
     vec3 NDC = glPos.xyz / glPos.w;
@@ -82,9 +84,9 @@ void main() {
         if (dot(l, n) > EPSILON)
             outColor += atten * lightColor * specExp.rgb * pow(max(dot(h, n), 0.0), 4*specExp.a);
 
-        if (shadows) {
-            outColor *= (1.0f - shadowAmount(fragPos, n, l));
-        }
+        // if (shadows) {
+        //     outColor *= (1.0f - shadowAmount(fragPos, n, l));
+        // }
     }
 
     finalColor.rgb = outColor;

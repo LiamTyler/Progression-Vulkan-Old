@@ -1,44 +1,78 @@
 #include "progression.hpp"
+#include <ctime>
 
 namespace PG = Progression;
 
-namespace Progression {
+namespace Progression
+{
 
-    bool EngineShutdown = false;
+bool EngineShutdown = false;
 
-    void EngineInitialize(std::string config_name) {
-        if (config_name == "")
-            config_name = PG_ROOT_DIR "configs/default.toml";
+void EngineInitialize( std::string config_name )
+{
+    if ( config_name == "" )
+    {
+        config_name = PG_ROOT_DIR "configs/default.toml";
+    }
 
-        auto conf = config::Config(config_name);
-        if (!conf) {
-            LOG_ERR("Failed to load the config file: ", config_name);
-            exit(EXIT_FAILURE);
+    auto conf = config::Config( config_name );
+    if ( !conf )
+    {
+        LOG_ERR( "Failed to load the config file: ", config_name );
+        exit( EXIT_FAILURE );
+    }
+
+    // logger
+    {
+        auto logConfig = conf->get_table( "logger" );
+        PG_ASSERT( logConfig );
+        PG_ASSERT( logConfig->contains( "file" ) );
+        PG_ASSERT( logConfig->contains( "useColors" ) );
+
+        std::string filename = *logConfig->get_as< std::string >( "file" );
+        if ( filename != "" )
+        {
+            filename = PG_ROOT_DIR + filename;
         }
+        bool colors = *logConfig->get_as< bool >( "useColors" );
 
-        srand(time(NULL));
-        Logger::Init(conf);
-        random::setSeed();
-        Window::Init(conf);
-        Time::Init(conf);
-        Input::Init(conf);
-        ResourceManager::Init(conf);
-        RenderSystem::Init(conf);
-#if PG_AUDIO_ENABLED
-        AudioSystem::Init(conf);
-#endif
+        g_Logger.Init( filename, colors );
     }
 
-    void EngineQuit() {
-#if PG_AUDIO_ENABLED
-        AudioSystem::Free();
-#endif
-        RenderSystem::Free();
-        ResourceManager::Free();
-        Input::Free();
-        Time::Free();
-        Window::Free();
-        Logger::Free();
+    Random::SetSeed( time( NULL ) );
+
+    // window
+    {
+        auto winConfig = conf->get_table( "window" );
+        PG_ASSERT( winConfig );
+        PG_ASSERT( winConfig->contains( "title" ) );
+        PG_ASSERT( winConfig->contains( "width" ) );
+        PG_ASSERT( winConfig->contains( "height" ) );
+        PG_ASSERT( winConfig->contains( "visible" ) );
+        PG_ASSERT( winConfig->contains( "vsync" ) );
+        WindowCreateInfo winCreate;
+        winCreate.title   = *winConfig->get_as< std::string >( "title" );
+        winCreate.width   = *winConfig->get_as< int >( "width" );
+        winCreate.height  = *winConfig->get_as< int >( "height" );
+        winCreate.visible = *winConfig->get_as< bool >( "visible" );
+        winCreate.vsync   = *winConfig->get_as< bool >( "vsync" );
+        InitWindowSystem( winCreate );
     }
+    Time::Reset();
+    Input::Init();
+    ResourceManager::Init();
+    ECS::init();
+    // RenderSystem::Init();
+}
+
+void EngineQuit()
+{
+    // RenderSystem::Shutdown();
+    ECS::shutdown();
+    ResourceManager::Shutdown();
+    Input::Free();
+    ShutdownWindowSystem();
+    g_Logger.Shutdown();
+}
 
 } // namespace Progression

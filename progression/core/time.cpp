@@ -1,80 +1,55 @@
 #include "core/time.hpp"
 #include "core/common.hpp"
-#include "utils/logger.hpp"
 
-namespace Progression {
+static float s_currentFrameStartTime = 0;
+static float s_lastFrameStartTime    = 0;
+static float s_deltaTime             = 0;
 
-    float Time::_mFrameTime = 0;
-    float Time::_mLastFrameTime = 0;
-    float Time::_mDeltaTime = 0;
-    float Time::_mFPSTime = 0;
-	unsigned int Time::_currentFPS = 0;
-	unsigned int Time::_mCurrentFrameCount = 0;
-	unsigned int Time::_mTotalFrameCount = 0;
-    bool Time::_mDisplay = false;
+namespace Progression
+{
 
-    void Time::Init(const config::Config& config) {
-        glfwSetTime(0);
-        _mFrameTime = 0;
-        _mDeltaTime = 0;
-        _mFPSTime = 0;
-        _mCurrentFrameCount = 0;
-        _mTotalFrameCount = 0;
-		
-        auto timeConf = config->get_table("time");
-        if (!timeConf) {
-            LOG_ERR("Need to specify the time subsystem in the config file");
-            exit(EXIT_FAILURE);
-        }
-
-	    _mDisplay = timeConf->get_as<bool>("displayFPS").value_or(true);
+namespace Time
+{
+    void Reset()
+    {
+        glfwSetTime( 0 );
+        s_currentFrameStartTime = 0;
+        s_deltaTime             = 0;
+        s_currentFrameStartTime = 0;
     }
 
-    void Time::Restart() {
-        glfwSetTime(0);
-        _mFrameTime = 0;
-        _mDeltaTime = 0;
-        _mFPSTime = 0;
-        _mCurrentFrameCount = 0;
-        _mTotalFrameCount = 0;
+    float TotalTime()
+    {
+        return static_cast< float >( glfwGetTime() );
     }
 
-    float Time::frameTime() { return _mFrameTime; }
-
-    float Time::totalTime() { return glfwGetTime(); }
-
-    float Time::deltaTime() { return _mDeltaTime; }
-
-    unsigned int Time::totalFrameCount() { return _mTotalFrameCount; }
-
-    unsigned int Time::currentFrameCount() { return _mCurrentFrameCount; }
-
-    void Time::showFPS(bool b) { _mDisplay = b; }
-
-    void Time::StartFrame() {
-        _mFrameTime = totalTime();
-        _mDeltaTime = _mFrameTime - _mLastFrameTime;
+    float DeltaTime()
+    {
+        return s_deltaTime;
     }
 
-    void Time::EndFrame() {
-        _mLastFrameTime = _mFrameTime;
-        ++_mCurrentFrameCount;
-        ++_mTotalFrameCount;
-        if (_mFrameTime > _mFPSTime + 1) {
-            if (_mDisplay)
-                std::cout << "FPS: " << _mCurrentFrameCount << std::endl;
-			_currentFPS = _mCurrentFrameCount;
-            _mCurrentFrameCount = 0;
-            _mFPSTime = _mFrameTime;
-        }
+    void StartFrame()
+    {
+        s_currentFrameStartTime = TotalTime();
+        s_deltaTime             = s_currentFrameStartTime - s_lastFrameStartTime;
     }
 
-    std::chrono::high_resolution_clock::time_point Time::getTimePoint() {
+    void EndFrame()
+    {
+        s_lastFrameStartTime = s_currentFrameStartTime;
+    }
+
+    std::chrono::high_resolution_clock::time_point GetTimePoint()
+    {
         return std::chrono::high_resolution_clock::now();
     }
 
-    double Time::getDuration(const std::chrono::high_resolution_clock::time_point& point) {
-        return (std::chrono::high_resolution_clock::now() - point).count() / (double) 1e6;
+    double GetDuration( const std::chrono::high_resolution_clock::time_point& point )
+    {
+        auto now = std::chrono::high_resolution_clock::now();
+        return std::chrono::duration_cast< std::chrono::microseconds >( now - point ).count() /
+               (float) 1000;
     }
 
+} // namespace Time
 } // namespace Progression

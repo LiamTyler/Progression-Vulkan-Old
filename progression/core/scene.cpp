@@ -1,293 +1,231 @@
 #include "core/scene.hpp"
+#include "core/ecs.hpp"
+#include "graphics/lights.hpp"
+#include "resource/resource_manager.hpp"
+#include "utils/fileIO.hpp"
+#include "utils/logger.hpp"
+#include <algorithm>
 #include <fstream>
 #include <sstream>
-#include "core/resource_manager.hpp"
-#include "graphics/model_render_component.hpp"
-#include "utils/logger.hpp"
-#include "graphics/render_system.hpp"
-#include "graphics/shadow_map.hpp"
 
-namespace Progression {
+#include "components/model_renderer_component.hpp"
 
-    Scene::Scene() :
-        backgroundColor(glm::vec4(.3, .3, .3, 1)),
-        ambientColor(glm::vec4(0)),
-        skybox(nullptr)
+using namespace Progression;
+
+static bool ParseResourcefile( std::istream& in )
+{
+    std::string fname;
+    fileIO::ParseLineKeyVal( in, "filename", fname );
+    return !in.fail() && ResourceManager::LoadFastFile( PG_RESOURCE_DIR + fname );
+}
+
+static bool ParseCamera( Scene* scene, std::istream& in )
+{
+    Camera& camera = scene->camera;
+    std::string line;
+    float tmp;
+
+    fileIO::ParseLineKeyVal( in, "position", camera.position );
+    glm::vec3 rotInDegrees;
+    fileIO::ParseLineKeyVal( in, "rotation", rotInDegrees );
+    camera.rotation = glm::radians( rotInDegrees );
+    fileIO::ParseLineKeyVal( in, "fov", tmp );
+    camera.SetFOV( glm::radians( tmp ) );
+    std::getline( in, line );
+    std::stringstream ss( line );
+    std::string first;
+    ss >> first;
+    PG_ASSERT( first == "aspect" );
+    float width, height;
+    char colon;
+    ss >> width >> colon >> height;
+    camera.SetAspectRatio( width / height );
+    fileIO::ParseLineKeyVal( in, "near-plane", tmp );
+    camera.SetNearPlane( tmp );
+    fileIO::ParseLineKeyVal( in, "far-plane", tmp );
+    camera.SetFarPlane( tmp );
+
+    camera.UpdateOrientationVectors();
+    camera.UpdateViewMatrix();
+
+    return !in.fail();
+}
+
+static bool ParseLight( Scene* scene, std::istream& in )
+{
+    Light light;
+    std::string tmp;
+
+    fileIO::ParseLineKeyVal( in, "name", light.name );
+    fileIO::ParseLineKeyVal( in, "type", tmp );
+    PG_ASSERT( tmp == "point" || tmp == "spot" || tmp == "directional" );
+    light.type = tmp == "point" ? Light::Type::POINT
+                                : tmp == "spot" ? Light::Type::SPOT : Light::Type::DIRECTIONAL;
+    fileIO::ParseLineKeyVal( in, "enabled", light.enabled );
+    fileIO::ParseLineKeyVal( in, "color", light.color );
+    fileIO::ParseLineKeyVal( in, "intensity", light.intensity );
+    fileIO::ParseLineKeyValOptional( in, "position", light.position );
+    fileIO::ParseLineKeyValOptional( in, "direction", light.direction );
+    light.direction = glm::normalize( light.direction );
+    fileIO::ParseLineKeyValOptional( in, "radius", light.radius );
+    fileIO::ParseLineKeyValOptional( in, "innerCutoff", light.innerCutoff );
+    fileIO::ParseLineKeyValOptional( in, "outerCutoff", light.outerCutoff );
+
+    scene->AddLight( new Light( light ) );
+    return !in.fail();
+}
+
+static bool ParseEntity( std::istream& in )
+{
+    auto e                = ECS::entity::create();
+    ECS::EntityData* data = ECS::entity::data( e );
+    fileIO::ParseLineKeyValOptional( in, "name", data->name );
+    std::string parentName;
+    fileIO::ParseLineKeyValOptional( in, "parent", parentName );
+    if ( parentName.empty() )
+        data->parentID = ECS::INVALID_ENTITY_ID;
+    fileIO::ParseLineKeyVal( in, "position", data->transform.position );
+    fileIO::ParseLineKeyVal( in, "rotation", data->transform.rotation );
+    data->transform.rotation = glm::radians( data->transform.rotation );
+    fileIO::ParseLineKeyVal( in, "scale", data->transform.scale );
+    fileIO::ParseLineKeyVal( in, "static", data->isStatic );
+    int numComponents;
+    fileIO::ParseLineKeyVal( in, "numComponents", numComponents );
+    for ( int i = 0; i < numComponents; ++i )
     {
-    }
-
-    Scene::~Scene() {
-        for (const auto& obj : gameObjects_)
-            delete obj;
-        for (const auto& l : lights_)
-            delete l;
-    }
-
-    Scene* Scene::load(const std::string& filename) {
-        Scene* scene = new Scene;
-
-        std::ifstream in(filename);
-        if (!in) {
-            LOG_ERR("Could not open scene:", filename);
-            return nullptr;
+        std::string component;
+        fileIO::ParseLineKeyVal( in, "Component", component );
+        if ( component == "ModelRenderer" )
+        {
+            auto comp = ECS::component::create< ModelRenderComponent >( e );
+            ParseModelRendererComponentFromFile( in, *comp );
         }
-        std::string line;
-        while (std::getline(in, line)) {
-            if (line == "")
-                continue;
-            if (line[0] == '#')
-                continue;
-            if (line == "Resource-file") {
-                std::getline(in, line);
-                std::stringstream ss(line);
-                std::string fname;
-                ss >> fname;
-                ss >> fname;
-                ResourceManager::LoadResourceFile(fname);
-            } else if (line == "RootResourceDir") {
-                std::getline(in, line);
-                std::stringstream ss(line);
-                ss >> ResourceManager::rootResourceDir;
-            } else if (line == "Camera") {
-                parseCamera(scene, in);
-            } else if (line == "Light") {
-                parseLight(scene, in);
-            } else if (line == "GameObject") {
-                parseGameObject(scene, in);
-            } else if (line == "Skybox") {
-                std::getline(in, line);
-                std::stringstream ss(line);
-                std::string name;
-                ss >> name;
-                ss >> name;
-                scene->skybox = ResourceManager::GetSkybox(name);
-            } else if (line == "AmbientLight") {
-                // next line should be "color _ _ _"
-                std::getline(in, line);
-                std::stringstream ss(line);
-                std::string name;
-                ss >> name;
-                ss >> scene->ambientColor;
-            } else if (line == "BackgroundColor") {
-                // next line should be "color _ _ _ _"
-                std::getline(in, line);
-                std::stringstream ss(line);
-                std::string name;
-                ss >> name;
-                ss >> scene->backgroundColor;
-            }
+        else
+        {
+            LOG_WARN( "Unrecognized component: '", component, "'" );
         }
-
-        in.close();
-
-        return scene;
     }
 
-    void Scene::update() {
-        for (const auto& obj : gameObjects_)
-            obj->Update();
-        for (const auto& l : lights_)
-            l->Update();
-        camera_.Update();
+    return !in.fail();
+}
+
+static bool ParseBackgroundColor( Scene* scene, std::istream& in )
+{
+    fileIO::ParseLineKeyVal( in, "color", scene->backgroundColor );
+
+    return !in.fail();
+}
+
+static bool ParseAmbientColor( Scene* scene, std::istream& in )
+{
+    fileIO::ParseLineKeyVal( in, "color", scene->ambientColor );
+
+    return !in.fail();
+}
+
+namespace Progression
+{
+
+Scene::~Scene()
+{
+    for ( auto light : m_lights )
+    {
+        delete light;
+    }
+}
+
+void Scene::AddLight( Light* light )
+{
+    switch ( light->type )
+    {
+        case Light::Type::POINT:
+            ++m_numPointLights;
+            break;
+        case Light::Type::SPOT:
+            ++m_numSpotLights;
+            break;
+        case Light::Type::DIRECTIONAL:
+            ++m_numDirectionalLights;
+            break;
+    }
+    m_lights.push_back( light );
+}
+
+void Scene::RemoveLight( Light* light )
+{
+    m_lights.erase( std::remove( m_lights.begin(), m_lights.end(), light ), m_lights.end() );
+}
+
+void Scene::SortLights()
+{
+    std::sort( m_lights.begin(), m_lights.end(),
+               []( Light* lhs, Light* rhs ) { return lhs->type < rhs->type; } );
+}
+
+#define PARSE_SCENE_ELEMENT( name, function )                       \
+    else if ( line == name )                                        \
+    {                                                               \
+        if ( !function )                                            \
+        {                                                           \
+            LOG_ERR( "Could not parse '" #name "' in scene file" ); \
+            delete scene;                                           \
+            return nullptr;                                         \
+        }                                                           \
     }
 
-    void Scene::addGameObject(GameObject* obj) {
-        gameObjects_.push_back(obj);
-    }
+Scene* Scene::Load( const std::string& filename )
+{
+    Scene* scene = new Scene;
 
-    GameObject* Scene::getGameObject(const std::string& name) const {
-        for (const auto& obj : gameObjects_)
-            if (obj->name == name)
-                return obj;
+    std::ifstream in( filename );
+    if ( !in )
+    {
+        LOG_ERR( "Could not open scene:", filename );
         return nullptr;
     }
 
-    void Scene::sortLights() {
-        std::sort(lights_.begin(), lights_.end(),
-                [] (const auto& lhs, const auto& rhs) { return lhs->type < rhs->type; });
-    }
-
-    void Scene::parseCamera(Scene* scene, std::ifstream& in) {
-        Camera& camera = scene->camera_;
-        std::string line = " ";
-        while (line != "" && !in.eof()) {
-            std::getline(in, line);
-            std::stringstream ss(line);
-            std::string first;
-            ss >> first;
-            if (first == "name") {
-                ss >> camera.name;
-            } else if (first == "position") {
-                float x, y, z;
-                ss >> x >> y >> z;
-                camera.transform.position = glm::vec3(x, y, z);
-            } else if (first == "rotation") {
-                float x, y, z;
-                ss >> x >> y >> z;
-                camera.transform.rotation = glm::vec3(glm::radians(x), glm::radians(y), glm::radians(z));
-            } else if (first == "scale") {
-                float x, y, z;
-                ss >> x >> y >> z;
-                camera.transform.scale = glm::vec3(x, y, z);
-            } else if (first == "fov") {
-                float x;
-                ss >> x;
-                camera.SetFOV(glm::radians(x));
-            } else if (first == "aspect") {
-                float width, height;
-                char colon;
-                ss >> width >> colon >> height;
-                camera.SetAspectRatio(width / height);
-            } else if (first == "near-plane") {
-                float x;
-                ss >> x;
-                camera.SetNearPlane(x);
-            } else if (first == "far-plane") {
-                float x;
-                ss >> x;
-                camera.SetFarPlane(x);
-            } else if (first == "exposure") {
-                ss >> camera.renderOptions.exposure;
-            }
+    std::string line;
+    while ( std::getline( in, line ) )
+    {
+        if ( line == "" || line[0] == '#' )
+        {
+            continue;
+        }
+        PARSE_SCENE_ELEMENT( "Resourcefile", ParseResourcefile( in ) )
+        PARSE_SCENE_ELEMENT( "Camera", ParseCamera( scene, in ) )
+        PARSE_SCENE_ELEMENT( "Light", ParseLight( scene, in ) )
+        PARSE_SCENE_ELEMENT( "Entity", ParseEntity( in ) )
+        PARSE_SCENE_ELEMENT( "BackgroundColor", ParseBackgroundColor( scene, in ) )
+        PARSE_SCENE_ELEMENT( "AmbientColor", ParseAmbientColor( scene, in ) )
+        else
+        {
+            LOG_WARN( "Unrecognized scene file entry: ", line );
         }
     }
 
-    void Scene::parseLight(Scene* scene, std::ifstream& in) {
-        Light* light = new Light;
-        std::string line = " ";
-        glm::ivec2 shadowResolution(-1, -1);
-        bool shadows = false;
-        while (line != "" && !in.eof()) {
-            std::getline(in, line);
-            std::stringstream ss(line);
-            std::string first;
-            ss >> first;
-            if (first == "name") {
-                ss >> light->name;
-            } else if (first == "type") {
-                std::string type;
-                ss >> type;
-                if (type == "directional") {
-                    light->type = Light::Type::DIRECTIONAL;
-                    scene->numDirectionalLights_ += 1;
-                } else if (type == "spot") {
-                    light->type = Light::Type::SPOT;
-                    scene->numSpotLights_ += 1;
-                } else {
-                    light->type = Light::Type::POINT;
-                    scene->numPointLights_ += 1;
-                }
-            } else if (first == "shadows") {
-                std::string tmp;
-                ss >> tmp;
-                shadows = tmp == "true";
-            } else if (first == "shadowMapResolution") {
-                ss >> shadowResolution.x >> shadowResolution.y;
-            } else if (first == "intensity") {
-                ss >> light->intensity;
-            } else if (first == "radius") {
-                ss >> light->radius;
-            } else if (first == "innerCutoff") {
-                float degrees;
-                ss >> degrees;
-                light->innerCutoff = glm::radians(degrees);
-            } else if (first == "outerCutoff") {
-                float degrees;
-                ss >> degrees;
-                light->outerCutoff = glm::radians(degrees);
-            } else if (first == "color") {
-                float x, y, z;
-                ss >> x >> y >> z;
-                light->color = glm::vec3(x, y, z);
-            } else if (first == "position") {
-                float x, y, z;
-                ss >> x >> y >> z;
-                light->transform.position = glm::vec3(x, y, z);
-            } else if (first == "rotation") {
-                float x, y, z;
-                ss >> x >> y >> z;
-                light->transform.rotation = glm::vec3(glm::radians(x), glm::radians(y), glm::radians(z));
-            } else if (first == "scale") {
-                float x, y, z;
-                ss >> x >> y >> z;
-                light->transform.scale = glm::vec3(x, y, z);
-            }
-        }
+    in.close();
 
-        auto shadowType = light->type == Light::Type::POINT ? ShadowMap::Type::CUBE : ShadowMap::Type::QUAD;
+    return scene;
+}
 
-        if (shadows) {
-            if (shadowResolution.x != -1)
-                light->shadowMap = new ShadowMap(shadowType, shadowResolution.x, shadowResolution.y);
-            else
-                light->shadowMap = new ShadowMap(shadowType);
-        }
+const std::vector<Light*>& Scene::GetLights() const
+{
+    return m_lights;
+}
 
-        scene->lights_.push_back(light);
-    }
+unsigned int Scene::GetNumPointLights() const
+{
+    return m_numPointLights;
+}
 
-    void Scene::parseGameObject(Scene* scene, std::ifstream& in) {
-        GameObject* obj = new GameObject;
-        std::string line = " ";
-        while (line != "" && !in.eof()) {
-            std::getline(in, line);
-            std::stringstream ss(line);
-            std::string first;
-            ss >> first;
-            if (first == "name") {
-                ss >> obj->name;
-            } else if (first == "position") {
-                float x, y, z;
-                ss >> x >> y >> z;
-                obj->transform.position = glm::vec3(x, y, z);
-            } else if (first == "rotation") {
-                float x, y, z;
-                ss >> x >> y >> z;
-                obj->transform.rotation = glm::vec3(glm::radians(x), glm::radians(y), glm::radians(z));
-            } else if (first == "scale") {
-                float x, y, z;
-                ss >> x >> y >> z;
-                obj->transform.scale = glm::vec3(x, y, z);
-            } else if (first == "modelRenderer") {
-                std::getline(in, line);
-                ss.clear();
-                ss.str(line);
-                std::string modelName;
-                // model [model name]
-                ss >> modelName >> modelName;
-                auto model = ResourceManager::GetModel(modelName);
-                if (!model) {
-                    LOG_ERR("No model found with name: ", modelName);
-                    exit(EXIT_FAILURE);
-                }
-                std::vector<std::shared_ptr<Material>> materials;
-                materials = ResourceManager::GetOriginalMaterials(model);
-                for (size_t i = 0; i < model->meshes.size(); ++i)
-                    materials.push_back(ResourceManager::GetMaterial("default"));
-                
-                std::getline(in, line);
-                while (line != "" && !in.eof()) {
-                    ss.clear();
-                    ss.str(line);
-                    ss >> first;
-                    if (first == "material") {
-                        std::string materialName;
-                        int materialIndex;
-                        ss >> materialIndex >> materialName;
-                        auto material = ResourceManager::GetMaterial(materialName);
-                        if (!material) {
-                            LOG_WARN("No match for material", materialName, "in the resource manager");
-                        } else {
-                            materials[materialIndex] = material;
-                        }
-                    }
-                    std::getline(in, line);
-                }
-                obj->AddComponent<ModelRenderer>(new ModelRenderer(obj, model.get(), materials));
-            }
-        }
+unsigned int Scene::GetNumSpotLights() const
+{
+    return m_numSpotLights;
+}
 
-        scene->gameObjects_.push_back(obj);
-    }
+unsigned int Scene::GetNumDirectionalLights() const
+{
+    return m_numDirectionalLights;
+}
 
 } // namespace Progression

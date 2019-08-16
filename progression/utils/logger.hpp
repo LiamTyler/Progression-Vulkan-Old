@@ -1,125 +1,126 @@
 #pragma once
 
-#include <iostream>
+#include "core/platform_defines.hpp"
 #include <fstream>
-#include "core/config.hpp"
-#include "core/configuration.hpp"
+#include <iostream>
+#include <mutex>
+#include <string>
 
-#define LOG(...)      Logger::Write(Logger::DEBUG, __VA_ARGS__);
-#define LOG_WARN(...) Logger::Write(Logger::WARN, __VA_ARGS__);
-#define LOG_ERR(...)  Logger::Write(Logger::ERR, __VA_ARGS__);
+#if USING( SHIP_BUILD )
+#define LOG( ... ) do {} while(0)
+#define LOG_WARN( ... ) do {} while(0)
+#define LOG_ERR( ... ) do {} while(0)
+#else // #if USING( SHIP_BUILD )
+#define LOG( ... ) g_Logger.Write( Logger::DEBUG, __VA_ARGS__ )
+#define LOG_WARN( ... ) g_Logger.Write( Logger::WARN, __VA_ARGS__ )
+#define LOG_ERR( ... ) g_Logger.Write( Logger::ERR, __VA_ARGS__ )
+#endif // #else // #if USING( SHIP_BUILD )
 
-class Modifier {
+class PrintModifier
+{
 public:
-    enum Color {
-        RED = 31,
-        GREEN = 32,
-        YELLOW = 33,
-        BLUE = 34,
+    enum Color
+    {
+        RED     = 31,
+        GREEN   = 32,
+        YELLOW  = 33,
+        BLUE    = 34,
         DEFAULT = 39
     };
 
-    enum Emphasis {
-        NONE = 0,
-        BOLD = 1,
+    enum Emphasis
+    {
+        NONE      = 0,
+        BOLD      = 1,
         UNDERLINE = 4
     };
 
+    PrintModifier( Color c = DEFAULT, Emphasis e = NONE );
 
-    Modifier(Color c = DEFAULT, Emphasis e = NONE) : color(c), emphasis(e) {}
-
-    friend std::ostream& operator<<(std::ostream& out, const Modifier& mod) {
-        return out << "\033[" << mod.emphasis << ";" << mod.color << "m";
-    }
+    friend std::ostream& operator<<( std::ostream& out, const PrintModifier& mod );
 
     Color color;
     Emphasis emphasis;
 };
 
-class Logger {
-    public:
-        enum Severity {
-            DEBUG,
-            WARN,
-            ERR
-        };
+class Logger
+{
+public:
+    enum Severity
+    {
+        DEBUG,
+        WARN,
+        ERR
+    };
 
-        Logger() = delete;
+    Logger() = default;
 
-        static void Init(const Progression::config::Config& config) {
-            auto logConfig = config->get_table("logger");
-            std::string filename = "";
-            if (logConfig) {
-                filename = PG_ROOT_DIR + logConfig->get_as<std::string>("file").value_or("");
-                useColors_ = logConfig->get_as<bool>("useColors").value_or(true);
-            }
+    void Init( const std::string& filename = "", bool useColors = true );
+    void Shutdown();
 
-            if (filename == PG_ROOT_DIR || filename == "")
-                return;
+    template < typename T >
+    void PrintArgs( std::ostream& out, T t )
+    {
+        out << t;
+    }
 
-            out_ = std::make_unique<std::ofstream>();
-            out_->open(filename);
-            if (!out_->is_open()) {
-                out_ = nullptr;
-                LOG_ERR("Failed to open log file: \"" + filename + "\"");
-            }
-        }
+    template < typename T, typename U, typename... Args >
+    void PrintArgs( std::ostream& out, T t, U u, Args... args )
+    {
+        out << t;
+        PrintArgs( out, u, args... );
+    }
 
-        template <typename T>
-        static void printArgs(std::ostream& out, T t)
+    template < typename... Args >
+    void Write( Severity sev, Args... args )
+    {
+        std::string severity;
+        PrintModifier mod;
+        switch ( sev )
         {
-            out << t;
+            case DEBUG:
+                severity = "";
+                mod      = PrintModifier( PrintModifier::GREEN, PrintModifier::NONE );
+                break;
+            case WARN:
+                severity = "WARNING  ";
+                mod      = PrintModifier( PrintModifier::YELLOW, PrintModifier::NONE );
+                break;
+            case ERR:
+                severity = "ERROR    ";
+                mod      = PrintModifier( PrintModifier::RED, PrintModifier::NONE );
+                break;
         }
 
-        template <typename T, typename U, typename... Args>
-        static void printArgs(std::ostream& out, T t, U u, Args... args)
+        m_lock.lock();
+        if ( m_outputFile )
         {
-            out << t << " ";
-            printArgs(out, u, args...);
+            PrintArgs( m_outputFile, severity, args... );
+            m_outputFile << std::endl;
         }
-
-        template <typename...Args>
-        static void Write(Severity sev, Args... args) {
-            std::string severity;
-            Modifier mod;
-            switch (sev) {
-                case DEBUG:
-                    severity = "DEBUG    ";
-                    mod = Modifier(Modifier::GREEN, Modifier::NONE);
-                    break;
-                case WARN:
-                    severity = "WARNING  ";
-                    mod = Modifier(Modifier::YELLOW, Modifier::NONE);
-                    break;
-                case ERR:
-                    severity = "ERROR    ";
-                    mod = Modifier(Modifier::RED, Modifier::NONE);
-                    break;
+        else
+        {
+            if ( m_useColors )
+            {
+                std::cout << mod << severity;
+                PrintArgs( std::cout, args... );
+                std::cout << PrintModifier() << std::endl;
             }
-            if (out_) {
-                printArgs(*out_, severity, args...);
-                (*out_) << std::endl;
-            }
-            else {
-                if (useColors_) {
-                    std::cout << mod << severity;
-                    printArgs(std::cout, args...);
-                    std::cout << Modifier() << std::endl;
-                } else {
-                    printArgs(std::cout, severity, args...);
-                    std::cout << std::endl;
-                }
+            else
+            {
+                PrintArgs( std::cout, severity, args... );
+                std::cout << std::endl;
             }
         }
+        m_lock.unlock();
+    }
 
-        static void Free() {
-            if (out_)
-                out_->close();
-        }
+    void UseColors( bool b ) { m_useColors = b; }
 
-        static void useColors(bool b) { useColors_ = b; }
-
-    private:
-        static bool useColors_;
-        static std::unique_ptr<std::ofstream> out_;
+private:
+    bool m_useColors;
+    std::ofstream m_outputFile;
+    std::mutex m_lock;
 };
+
+extern Logger g_Logger;

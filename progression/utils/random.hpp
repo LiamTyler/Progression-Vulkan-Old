@@ -1,21 +1,31 @@
 #pragma once
 
-#include <time.h>
-#include <stdlib.h>
+#include <cstddef>
 
-namespace Progression { namespace random {
+namespace Progression
+{
+namespace Random
+{
 
-    inline void setSeed(unsigned int seed = time(NULL)) {
-        srand(seed);
-    }
+    /**
+     * \brief Sets the seed for the random number generator
+     */
+    void SetSeed( size_t seed );
 
-    inline int randInt(int l, int h) {
-        return l + rand() % (h - l);
-    }
+    /**
+     * \brief Returns a random int in the range [low, high]
+     */
+    int RandInt( int low, int high );
 
-    inline float randFloat(float l, float h) {
-        float r = rand() / static_cast<float>(RAND_MAX);
-        return r * (h - l) + l;
-    }
+    /**
+     * \brief Returns a random float in the range [low, high]
+     */
+    float RandFloat( float low, float high );
 
-} } // namespace Progression::random
+    /**
+     * \brief Returns a random float in the range [0, 1]
+     */
+    float Rand();
+
+} // namespace Random
+} // namespace Progression

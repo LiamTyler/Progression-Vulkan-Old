@@ -1,103 +1,130 @@
 #include "core/input.hpp"
 #include "core/window.hpp"
 
-namespace Progression {
+static bool s_keysDown[GLFW_KEY_LAST + 1]                 = { 0 };
+static bool s_keysUp[GLFW_KEY_LAST + 1]                   = { 0 };
+static bool s_mouseButtonDown[GLFW_MOUSE_BUTTON_LAST + 1] = { 0 };
+static bool s_mouseButtonUp[GLFW_MOUSE_BUTTON_LAST + 1]   = { 0 };
+static glm::ivec2 s_lastCursorPos                         = glm::ivec2( 0 );
+static glm::ivec2 s_currentCursorPos                      = glm::ivec2( 0 );
+static glm::ivec2 s_scrollOffset                          = glm::ivec2( 0 );
 
-    bool Input::keysDown_[] = { 0 };
-    bool Input::keysUp_[] = { 0 };
-    bool Input::mouseButtonDown_[] = { 0 };
-    bool Input::mouseButtonUp_[] = { 0 };
-    glm::ivec2 Input::lastCursorPos_ = glm::ivec2(0);
-    glm::ivec2 Input::currentCursorPos_ = glm::ivec2(0);
-    glm::ivec2 Input::scrollOffset_ = glm::ivec2(0);
+static void KeyCallback( GLFWwindow* window, int key, int scancode, int action, int mods )
+{
+    (void) window;
+    (void) scancode;
+    (void) mods;
+    if ( action == GLFW_PRESS )
+    {
+        s_keysDown[key] = true;
+    }
+    else if ( action == GLFW_RELEASE )
+    {
+        s_keysUp[key]   = true;
+        s_keysDown[key] = false;
+    }
+}
 
-    void Input::Init(const config::Config& config) {
-        (void)config;
-        GLFWwindow* window = Window::getGLFWHandle();
+static void CursorPositionCallback( GLFWwindow* window, double xpos, double ypos )
+{
+    (void) window;
+    s_currentCursorPos = glm::ivec2( xpos, ypos );
+}
+
+static void MouseButtonCallback( GLFWwindow* window, int button, int action, int mods )
+{
+    (void) window;
+    (void) mods;
+    if ( action == GLFW_PRESS )
+    {
+        s_mouseButtonDown[button] = true;
+    }
+    else if ( action == GLFW_RELEASE )
+    {
+        s_mouseButtonUp[button]   = true;
+        s_mouseButtonDown[button] = false;
+    }
+}
+
+static void ScrollCallback( GLFWwindow* window, double xoffset, double yoffset )
+{
+    (void) window;
+    s_scrollOffset += glm::ivec2( xoffset, yoffset );
+}
+
+
+namespace Progression
+{
+namespace Input
+{
+
+    void Init()
+    {
+        GLFWwindow* window = GetMainWindow()->GetGLFWHandle();
         double x, y;
-        glfwGetCursorPos(window, &x, &y);
-        currentCursorPos_ = glm::ivec2(x, y);
-        lastCursorPos_ = currentCursorPos_;
+        glfwGetCursorPos( window, &x, &y );
+        s_currentCursorPos = glm::ivec2( x, y );
+        s_lastCursorPos    = s_currentCursorPos;
 
-        glfwSetCursorPosCallback(window, cursor_position_callback);
-        glfwSetMouseButtonCallback(window, mouse_button_callback);
-		glfwSetKeyCallback(window, key_callback);
-        glfwSetScrollCallback(window, scroll_callback);
+        glfwSetCursorPosCallback( window, CursorPositionCallback );
+        glfwSetMouseButtonCallback( window, MouseButtonCallback );
+        glfwSetKeyCallback( window, KeyCallback );
+        glfwSetScrollCallback( window, ScrollCallback );
 
         PollEvents();
     }
 
-    void Input::PollEvents() {
-        // Reset all of the states for the next frame
-        memset(keysDown_, false, sizeof(keysDown_));
-        memset(keysUp_, false, sizeof(keysUp_));
-        memset(mouseButtonDown_, false, sizeof(mouseButtonDown_));
-        memset(mouseButtonUp_, false, sizeof(mouseButtonUp_));
-        lastCursorPos_ = currentCursorPos_;
-        scrollOffset_ = glm::ivec2(0);
+    void Free()
+    {
         glfwPollEvents();
     }
 
-    void Input::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-        (void)window;
-        (void)scancode;
-        (void)mods;
-        if (action == GLFW_PRESS) {
-            keysDown_[key] = true;
-        } else if (action == GLFW_RELEASE) {
-            keysUp_[key] = true;
-            keysDown_[key] = false;
-        }
+    void PollEvents()
+    {
+        // Reset all of the states for the next frame
+        memset( s_keysDown, false, sizeof( s_keysDown ) );
+        memset( s_keysUp, false, sizeof( s_keysUp ) );
+        memset( s_mouseButtonDown, false, sizeof( s_mouseButtonDown ) );
+        memset( s_mouseButtonUp, false, sizeof( s_mouseButtonUp ) );
+        s_lastCursorPos = s_currentCursorPos;
+        s_scrollOffset  = glm::ivec2( 0 );
+        glfwPollEvents();
     }
 
-    void Input::cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
-        (void)window;
-        currentCursorPos_ = glm::ivec2(xpos, ypos);
+    bool GetKeyDown( Key k )
+    {
+        return s_keysDown[k];
     }
 
-    void Input::mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
-        (void)window;
-        (void)mods;
-        if (action == GLFW_PRESS) {
-            mouseButtonDown_[button] = true;
-        }
-        else if (action == GLFW_RELEASE) {
-            mouseButtonUp_[button] = true;
-            mouseButtonDown_[button] = false;
-        }
+    bool GetKeyUp( Key k )
+    {
+        return s_keysUp[k];
     }
 
-    void Input::scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
-        (void)window;
-        scrollOffset_ += glm::ivec2(xoffset, yoffset);
+    bool GetMouseButtonDown( MouseButton b )
+    {
+        return s_mouseButtonDown[b];
     }
 
-    bool Input::GetKeyDown(Key k) {
-        return keysDown_[k];
+    bool GetMouseButtonUp( MouseButton b )
+    {
+        return s_mouseButtonUp[b];
     }
 
-    bool Input::GetKeyUp(Key k) {
-        return keysUp_[k];
+    glm::ivec2 GetMousePosition()
+    {
+        return s_currentCursorPos;
     }
 
-    bool Input::GetMouseButtonDown(MouseButton b) {
-        return mouseButtonDown_[b];
+    glm::ivec2 GetMouseChange()
+    {
+        return s_currentCursorPos - s_lastCursorPos;
     }
 
-    bool Input::GetMouseButtonUp(MouseButton b) {
-        return mouseButtonUp_[b];
+    glm::ivec2 GetScrollChange()
+    {
+        return s_scrollOffset;
     }
 
-    glm::ivec2 Input::GetMousePosition() {
-        return currentCursorPos_;
-    }
-
-    glm::ivec2 Input::GetMouseChange() {
-        return currentCursorPos_ - lastCursorPos_;
-    }
-
-    glm::ivec2 Input::GetScrollChange() {
-        return scrollOffset_;
-    }
-
+} // namespace Input
 } // namespace Progression

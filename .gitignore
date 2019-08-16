@@ -1,8 +1,13 @@
 build/
 build_debug/
+build_ship/
 *.swp
 a.out
-progression/core/configuration.hpp
+progression/core/platform_defines.hpp
+resources/sponza
+resources/cache
+resources/fastfiles
+.vscode/
 
 # Prerequisites
 *.d

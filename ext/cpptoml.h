@@ -27,6 +27,7 @@
 #elif defined(__clang__)
 #define CPPTOML_DEPRECATED(reason) __attribute__((deprecated(reason)))
 #elif defined(__GNUG__)
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #define CPPTOML_DEPRECATED(reason) __attribute__((deprecated))
 #elif defined(_MSC_VER)
 #if _MSC_VER < 1910
@@ -35,8 +36,6 @@
 #define CPPTOML_DEPRECATED(reason) [[deprecated(reason)]]
 #endif
 #endif
-
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 
 namespace cpptoml
 {
@@ -2689,7 +2688,7 @@ class parser
         };
 
         auto eat_digits = [&](bool (*check_char)(char)) {
-            auto beg = check_it;
+            // auto beg = check_it;
             while (check_it != end && check_char(*check_it))
             {
                 ++check_it;
@@ -3452,7 +3451,7 @@ class toml_writer
             {
                 res += "\\\\";
             }
-            else if ((const uint32_t)*it <= 0x001f)
+            else if ((uint32_t)*it <= 0x001f)
             {
                 res += "\\u";
                 std::stringstream ss;
