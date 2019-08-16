@@ -4,7 +4,15 @@ project(Progression-lib)
 
 include(Progression-base)
 
-message("PROGRESSION_DIR = '${PROGRESSION_DIR}'")
+set_property(
+    DIRECTORY
+    PROPERTY
+    COMPILE_DEFINITIONS
+    $<$<CONFIG:Debug>:CMAKE_DEFINE_DEBUG_BUILD>
+    $<$<CONFIG:Release>:CMAKE_DEFINE_RELEASE_BUILD>
+    $<$<CONFIG:Ship>:CMAKE_DEFINE_SHIP_BUILD>
+)
+
 configure_file(${PROGRESSION_DIR}/cmake/platform_defines.hpp.in ${PROGRESSION_DIR}/progression/core/platform_defines.hpp)
 
 set(
@@ -31,6 +39,7 @@ set(
     core/transform.cpp
     core/window.cpp
 	
+	core/assert.hpp
 	core/bounding_box.hpp
     core/camera.hpp
     core/common.hpp
@@ -158,11 +167,13 @@ if(MSVC)
     target_compile_options(progression PRIVATE "/MP")
 endif()
 
-set_target_properties(
-    progression
-    PROPERTIES
-    DEBUG_POSTFIX _debug
-)
+#set_target_properties(
+#    progression
+#    PROPERTIES
+#    DEBUG_POSTFIX _debug
+#    DEBUG_POSTFIX _release
+#    SHIP_POSTFIX _ship
+#)
 
 # link in the static libs
 target_link_libraries(progression ${PROGRESSION_LIBS})

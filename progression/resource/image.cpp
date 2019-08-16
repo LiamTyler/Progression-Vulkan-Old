@@ -119,7 +119,9 @@ bool Image::Save( const std::string& fname, bool flipVertically ) const
             return false;
     }
     if ( !ret )
+    {
         LOG_ERR( "failed to write image:", fname );
+    }
 
     return ret;
 }

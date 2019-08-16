@@ -188,7 +188,9 @@ void Window::Init( const WindowCreateInfo& createInfo )
     }
 
     if ( parentWindow )
+    {
         return;
+    }
 
     BindContext();
 
@@ -223,6 +225,7 @@ void Window::Init( const WindowCreateInfo& createInfo )
 
     glViewport( 0, 0, fbW, fbH );
 
+#if !USING( SHIP_BUILD )
     if ( createInfo.debugContext )
     {
         GLint flags;
@@ -236,6 +239,7 @@ void Window::Init( const WindowCreateInfo& createInfo )
             glDebugMessageControl( GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE );
         }
     }
+#endif // #if !USING( SHIP_BUILD )
 
     s_framesDrawnSinceLastFPSUpdate = 0;
     s_lastFPSUpdateTime             = Time::GetTimePoint();

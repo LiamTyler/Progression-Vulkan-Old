@@ -8,14 +8,6 @@
 #include "utils/noncopyable.hpp"
 #include <unordered_set>
 
-#define PG_SHADER_WARNINGS
-
-#ifndef PG_SHADER_WARNINGS
-#define PG_SHADER_GETTER_CONST const
-#else
-#define PG_SHADER_GETTER_CONST
-#endif
-
 namespace Progression
 {
 
@@ -45,8 +37,8 @@ public:
     void QueryUniforms();
     void Enable() const;
     void Disable() const;
-    GLuint GetUniform( const std::string& name ) PG_SHADER_GETTER_CONST;
-    GLuint GetAttribute( const std::string& name ) PG_SHADER_GETTER_CONST;
+    GLuint GetUniform( const std::string& name );
+    GLuint GetAttribute( const std::string& name );
     GLuint GetNativeHandle() const;
 
     void BindTexture( const Gfx::Texture& tex, const std::string& name, uint32_t index );
@@ -71,11 +63,11 @@ protected:
     GLuint m_program;
     std::unordered_map< std::string, GLuint > m_uniforms;
 
-// hash the shader warnings if they are enabled and only display them if the hash isnt
-// present so that the console doesnt overflow with the warnings
-#ifdef PG_SHADER_WARNINGS
+#if USING( DEBUG_BUILD )
+    // hash the shader warnings if they are enabled and only display them if the hash isnt
+    // present so that the console doesnt overflow with the warnings
     std::unordered_set< size_t > m_warnings;
-#endif
+#endif // #if USING( DEBUG_BUILD )
 };
 
 } // namespace Progression

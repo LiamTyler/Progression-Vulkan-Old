@@ -18,5 +18,10 @@ script:
   - gcc -v && g++ -v && cmake --version
   - mkdir build
   - cd build
-  - cmake -DCMAKE_BUILD_TYPE=Release ..
+  - cmake -DCMAKE_BUILD_TYPE=Debug ..
+  - make -j
+  - cd ..
+  - mkdir build_ship
+  - cd build_ship
+  - cmake -DCMAKE_BUILD_TYPE=Ship ..
   - make -j

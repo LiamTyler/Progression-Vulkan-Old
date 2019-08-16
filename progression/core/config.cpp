@@ -15,6 +15,7 @@ namespace config
         }
         catch ( std::exception& e )
         {
+            (void) e;
             LOG_ERR( "config exception:", e.what() );
             handle_ = nullptr;
         }

@@ -320,12 +320,12 @@ void Shader::Disable() const
     glUseProgram( 0 );
 }
 
-GLuint Shader::GetUniform( const std::string& _name ) PG_SHADER_GETTER_CONST
+GLuint Shader::GetUniform( const std::string& _name )
 {
     auto it = m_uniforms.find( _name );
     if ( it == m_uniforms.end() )
     {
-#ifdef PG_SHADER_WARNINGS
+#if USING( DEBUG_BUILD )
         std::hash< std::string > hasher;
         auto hash = hasher( _name );
         if ( m_warnings.find( hash ) == m_warnings.end() )
@@ -334,7 +334,7 @@ GLuint Shader::GetUniform( const std::string& _name ) PG_SHADER_GETTER_CONST
                       ", using -1 instead" );
             m_warnings.insert( hash );
         }
-#endif
+#endif // #if USING( DEBUG_BUILD )
 
         return (GLuint) -1;
     }
@@ -344,10 +344,10 @@ GLuint Shader::GetUniform( const std::string& _name ) PG_SHADER_GETTER_CONST
     }
 }
 
-GLuint Shader::GetAttribute( const std::string& _name ) PG_SHADER_GETTER_CONST
+GLuint Shader::GetAttribute( const std::string& _name )
 {
     GLuint loc = glGetAttribLocation( m_program, _name.c_str() );
-#ifdef PG_SHADER_WARNINGS
+#if USING( DEBUG_BUILD )
     if ( loc == (GLuint) -1 )
     {
         std::hash< std::string > hasher;
@@ -358,7 +358,7 @@ GLuint Shader::GetAttribute( const std::string& _name ) PG_SHADER_GETTER_CONST
             m_warnings.insert( hash );
         }
     }
-#endif
+#endif // #if USING( DEBUG_BUILD )
 
     return loc;
 }
