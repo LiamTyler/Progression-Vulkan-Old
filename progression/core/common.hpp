@@ -3,16 +3,17 @@
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 #include "core/feature_defines.hpp"
-#include "assert.hpp"
+#include "core/assert.hpp"
+#include "core/unused.hpp"
 #include "glm/ext.hpp"
 #include "glm/glm.hpp"
 #include <iostream>
 #include <string>
+
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
-
-#define PG_UNUSED( x ) (void) ( x );
 
 inline std::ostream& operator<<( std::ostream& out, const glm::vec2& v )
 {

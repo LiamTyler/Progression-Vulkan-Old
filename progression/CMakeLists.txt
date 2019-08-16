@@ -40,6 +40,7 @@ set(
     core/window.cpp
 	
 	core/assert.hpp
+	core/unused.hpp
 	core/bounding_box.hpp
     core/camera.hpp
     core/common.hpp

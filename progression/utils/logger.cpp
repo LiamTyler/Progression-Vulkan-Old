@@ -1,4 +1,5 @@
 #include "utils/logger.hpp"
+#include "core/unused.hpp"
 
 Logger g_Logger;
 
@@ -15,6 +16,9 @@ std::ostream& operator<<( std::ostream& out, const PrintModifier& mod )
 
 void Logger::Init( const std::string& filename, bool useColors )
 {
+    PG_MAYBE_UNUSED( filename );
+    PG_MAYBE_UNUSED( useColors );
+
 #if !USING( SHIP_BUILD )
     m_useColors = useColors;
 

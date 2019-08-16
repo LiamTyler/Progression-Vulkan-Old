@@ -4,6 +4,7 @@
 #include <sstream>
 #include <unordered_map>
 #include "core/common.hpp"
+#include "core/unused.hpp"
 
 namespace fileIO {
 
@@ -20,6 +21,7 @@ namespace fileIO {
 
     template <typename T>
     void ParseLineKeyVal(std::istream& in, const char* key, T& val) {
+        PG_MAYBE_UNUSED( key );
         std::string line;
         std::string s;
         std::getline(in, line);
@@ -31,6 +33,7 @@ namespace fileIO {
     }
 
     inline void ParseLineKeyVal(std::istream& in, const char* key, bool& val) {
+        PG_MAYBE_UNUSED( key );
         std::string line;
         std::string s;
         std::getline(in, line);
@@ -43,6 +46,7 @@ namespace fileIO {
 
     template <typename T>
     bool ParseLineKeyValOptional(std::istream& in, const char* key, T& val) {
+        PG_MAYBE_UNUSED( key );
         std::string line;
         std::string s;
         std::getline(in, line);
@@ -63,6 +67,7 @@ namespace fileIO {
     }
 
     inline bool ParseLineKeyValOptional(std::istream& in, const char* key, bool& val) {
+        PG_MAYBE_UNUSED( key );
         std::string line;
         std::string s;
         std::getline(in, line);
@@ -84,6 +89,7 @@ namespace fileIO {
 
     template <typename T>
     bool ParseLineKeyMap(std::istream& in, const char* key, const std::unordered_map<std::string, T>& map, T& val) {
+        PG_MAYBE_UNUSED( key );
         std::string line;
         std::string s;
         std::getline(in, line);

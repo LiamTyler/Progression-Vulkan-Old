@@ -49,6 +49,7 @@ namespace ResourceManager
         }
 
         auto start = Time::GetTimePoint();
+        PG_MAYBE_UNUSED( start );
 
         char* data = (char*) memMappedFile.getData();
 #if USING( LZ4_COMPRESSED_FASTFILES )
