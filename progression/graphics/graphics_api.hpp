@@ -22,6 +22,8 @@ namespace Gfx
         DST_ALPHA                   = 8,
         ONE_MINUS_DST_ALPHA         = 9,
         SRC_ALPHA_SATURATE          = 10,
+
+        NUM_BLEND_FACTORS
     };
 
     enum class BlendEquation
@@ -31,6 +33,8 @@ namespace Gfx
         REVERSE_SUBTRACT    = 2,
         MIN                 = 3,
         MAX                 = 4,
+
+        NUM_BLEND_EQUATIONS
     };
 
     void EnableBlending( bool b );
@@ -41,6 +45,8 @@ namespace Gfx
     {
         CLOCKWISE         = 0,
         COUNTER_CLOCKWISE = 1,
+
+        NUM_WINDING_ORDER
     };
 
     enum class CullFace
@@ -49,6 +55,8 @@ namespace Gfx
         FRONT           = 1,
         BACK            = 2,
         FRONT_AND_BACK  = 3,
+
+        NUM_CULL_FACE
     };
 
     void SetWindingOrder( WindingOrder order );
@@ -75,29 +83,21 @@ namespace Gfx
 
     void SetScissor( const Scissor& viewport );
 
-    /** \brief Blit's the data specified by mask of fromFbo to toFbo.
-     *         When reading from the fromFbo, it will read whichever attachment is currently
-     *         bound using glReadBuffer. This defaults to GL_BACK for the default fbo, otherwise
-     *         it is GL_COLOR_ATTACHMENT0. When blitting to the toFbo, it will blit to whatever
-     *         is bound using glDrawBuffers.
-     *
-     *         Mask needs to be GL_[COLOR,DEPTH,STENCIL]_BUFFER_BIT
-     *
-     *         Note: Need to test this for multiple color attachments
-     */
-    void blitFboToFbo( GLuint fromFbo, GLuint toFbo, int width, int height, GLbitfield mask );
-
     enum class BufferType
     {
         VERTEX = 0,
         INDEX,
+
+        NUM_BUFFER_TYPE
     };
 
     enum class BufferUsage
     {
         STATIC  = 0,
         DYNAMIC = 1,
-        STREAM  = 2
+        STREAM  = 2,
+
+        NUM_BUFFER_USAGE
     };
 
     enum class BufferDataType
@@ -109,7 +109,9 @@ namespace Gfx
         SHORT,
         UNSIGNED_SHORT,
         INT,
-        UNSIGNED_INT
+        UNSIGNED_INT,
+
+        NUM_BUFFER_DATA_TYPE
     };
 
     constexpr int SizeOfBufferDataType( BufferDataType type )
@@ -126,13 +128,17 @@ namespace Gfx
             4, // UNSIGNED_INT
         };
 
+        static_assert( ARRAY_COUNT( size ) == static_cast< int >( BufferDataType::NUM_BUFFER_DATA_TYPE ) );
+
         return size[static_cast< int >( type )];
     }
 
     enum class IndexType
     {
         UNSIGNED_SHORT = 0,
-        UNSIGNED_INT
+        UNSIGNED_INT,
+
+        NUM_INDEX_TYPE
     };
 
     constexpr int SizeOfIndexType( IndexType type )
@@ -142,6 +148,8 @@ namespace Gfx
             2, // UNSIGNED_SHORT
             4, // UNSIGNED_INT
         };
+
+        static_assert( ARRAY_COUNT( size ) == static_cast< int >( IndexType::NUM_INDEX_TYPE ) );
 
         return size[static_cast< int >( type )];
     }
@@ -205,14 +213,16 @@ namespace Gfx
 
     enum class PrimitiveType
     {
-        POINTS = 0,
+        POINTS          = 0,
 
-        LINES,
-        LINE_STRIP,
+        LINES           = 1,
+        LINE_STRIP      = 2,
 
-        TRIANGLES,
-        TRIANGLE_STRIP,
-        TRIANGLE_FAN,
+        TRIANGLES       = 3,
+        TRIANGLE_STRIP  = 4,
+        TRIANGLE_FAN    = 5,
+
+        NUM_PRIMITIVE_TYPE
     };
 
     void DrawIndexedPrimitives( PrimitiveType primType, IndexType indexType, uint32_t offset, uint32_t count );
@@ -229,6 +239,8 @@ namespace Gfx
         LINEAR_MIPMAP_NEAREST  = 3,
         NEAREST_MIPMAP_LINEAR  = 4,
         LINEAR_MIPMAP_LINEAR   = 5,
+
+        NUM_FILTER_MODE
     };
 
     enum class WrapMode
@@ -237,6 +249,8 @@ namespace Gfx
         MIRRORED_REPEAT = 1,
         CLAMP_TO_EDGE   = 2,
         CLAMP_TO_BORDER = 3,
+
+        NUM_WRAP_MODE
     };
 
     class SamplerDescriptor
@@ -300,11 +314,15 @@ namespace Gfx
         R11_G11_B10_Float = 14,
 
         DEPTH32_Float = 15,
+
+        NUM_PIXEL_FORMAT
     };
 
     enum class TextureType
     {
         TEXTURE2D = 0,
+
+        NUM_TEXTURE_TYPE
     };
 
     struct TextureDescriptor
@@ -346,6 +364,8 @@ namespace Gfx
         LOAD      = 0,
         CLEAR     = 1,
         DONT_CARE = 2,
+
+        NUM_LOAD_ACTION
     };
 
     // Note: In opengl the store action is always store. Just adding this for future support of modern apis
@@ -353,6 +373,8 @@ namespace Gfx
     {
         STORE     = 0,
         DONT_CARE = 1,
+
+        NUM_STORE_ACTION
     };
 
     class ColorAttachmentDescriptor
@@ -375,8 +397,10 @@ namespace Gfx
         EQUAL = 3,
         GEQUAL = 4,
         GREATER = 5,
-        NEQUAL = 6,
-        ALWAYS = 7,
+        NEQUAL  = 6,
+        ALWAYS  = 7,
+
+        NUM_COMPARE_FUNCTION
     };
 
     class DepthAttachmentDescriptor
@@ -430,15 +454,17 @@ namespace Gfx
         bool m_allColorAttachmentsSameColor;
     };
 
+    enum RenderTargetBuffers
+    {
+        RENDER_TARGET_COLOR   = 0x1,
+        RENDER_TARGET_DEPTH   = 0x2,
+        RENDER_TARGET_STENCIL = 0x4,
 
-    // render buffers and framebuffers
+        NUM_RENDER_TARGET_BUFFERS
+    };
 
-    /** \brief Creates a render buffer with the given width, height, and internal format, and
-     *         binds the buffer as well. */
-    GLuint createRenderbuffer( int width, int height, GLenum internalFormat = GL_DEPTH_COMPONENT );
-
-    /** \brief Deletes the rbo given. */
-    void deleteRenderbuffer( GLuint rbo );
+    void Blit( const RenderPass& src, const RenderPass& dst, int width, int height,
+               const RenderTargetBuffers& mask, FilterMode filter );
 
 } // namespace Gfx
 } // namespace Progression

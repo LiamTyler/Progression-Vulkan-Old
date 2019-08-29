@@ -61,28 +61,6 @@ namespace Gfx
         glScissor( s.x, s.y, s.width, s.height );
     }
 
-    void blitFboToFbo( GLuint fromFbo, GLuint toFbo, int width, int height, GLbitfield mask )
-    {
-        glBindFramebuffer( GL_READ_FRAMEBUFFER, fromFbo );
-        glBindFramebuffer( GL_DRAW_FRAMEBUFFER, toFbo );
-        glBlitFramebuffer( 0, 0, width, height, 0, 0, width, height, mask, GL_NEAREST );
-    }
-
-    void blendFunction( GLenum srcFactor, GLenum dstFactor )
-    {
-        glBlendFunc( srcFactor, dstFactor );
-    }
-
-    void depthFunction( GLenum depthFunc )
-    {
-        glDepthFunc( depthFunc );
-    }
-
-    void cullFace( GLenum mode )
-    {
-        glCullFace( mode );
-    }
-
     Buffer::~Buffer()
     {
         if ( m_nativeHandle != ~0u )
@@ -381,12 +359,6 @@ namespace Gfx
         return tex;
     }
 
-    // void Texture::Bind( uint32_t index ) const
-    // {
-    //     glActiveTexture( GL_TEXTURE0 + index );
-    //     glBindTexture( GL_TEXTURE_2D, m_gpuHandle );
-    // }
-
     TextureType Texture::GetType() const
     {
         return m_desc.type;
@@ -564,56 +536,14 @@ namespace Gfx
         return m_nativeHandle;
     }
 
-    // ----------------------------------- OLD ------------------------------ //
-    GLuint createRenderbuffer( int width, int height, GLenum internalFormat )
+    void Blit( const RenderPass& src, const RenderPass& dst, int width, int height,
+               const RenderTargetBuffers& mask, FilterMode filter )
     {
-        GLuint rbo;
-        glGenRenderbuffers( 1, &rbo );
-        glBindRenderbuffer( GL_RENDERBUFFER, rbo );
-        glRenderbufferStorage( GL_RENDERBUFFER, internalFormat, width, height );
-
-        return rbo;
-    }
-
-    void deleteRenderbuffer( GLuint rbo )
-    {
-        glDeleteRenderbuffers( 1, &rbo );
-    }
-
-
-    void attachColorTextures( std::initializer_list< GLuint > colorTextures )
-    {
-        if ( !colorTextures.size() )
-        {
-            glDrawBuffer( GL_NONE );
-            glReadBuffer( GL_NONE );
-            return;
-        }
-
-        std::vector< GLuint > attachments;
-        for ( const auto& tex : colorTextures )
-        {
-            GLuint slot = GL_COLOR_ATTACHMENT0 + static_cast< unsigned int >( attachments.size() );
-            glFramebufferTexture2D( GL_FRAMEBUFFER, slot, GL_TEXTURE_2D, tex, 0 );
-            attachments.push_back( slot );
-        }
-        glDrawBuffers( static_cast< int >( attachments.size() ), &attachments[0] );
-    }
-
-    void attachDepthTexture( GLuint texture )
-    {
-        glFramebufferTexture( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, texture, 0 );
-    }
-
-    void attachDepthRbo( GLuint rbo )
-    {
-        glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo );
-    }
-
-    void checkFboCompleteness()
-    {
-        if ( glCheckFramebufferStatus( GL_FRAMEBUFFER ) != GL_FRAMEBUFFER_COMPLETE )
-            LOG_ERR( "Frame buffer incomplete" );
+        glBindFramebuffer( GL_READ_FRAMEBUFFER, src.GetNativeHandle() );
+        glBindFramebuffer( GL_DRAW_FRAMEBUFFER, dst.GetNativeHandle() );
+        auto nativeMask   = PGToOpenGLBitFieldMask( mask );
+        auto nativeFilter = PGToOpenGLFilterMode( filter );
+        glBlitFramebuffer( 0, 0, width, height, 0, 0, width, height, nativeMask, nativeFilter );
     }
 
 } // namespace Gfx

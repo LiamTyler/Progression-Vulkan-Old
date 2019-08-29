@@ -133,7 +133,7 @@ struct PostProcessBuffer
     Gfx::Texture depthRbo;
 };
 
-static RenderPass s_screenFrameBuffer;
+static RenderPass s_screenRenderPass;
 static GBuffer s_gbuffer;
 static PostProcessBuffer s_postProcessBuffer;
 static VertexInputDescriptor s_meshVao;
@@ -340,12 +340,9 @@ namespace RenderSystem
         colorAttachments[0].texture = &s_postProcessBuffer.hdrColorTex;
         depthAttachment.texture     = &s_postProcessBuffer.depthRbo;
 
-        RenderPassDescriptor postProcessDescriptor;
-        postProcessDescriptor.SetColorAttachments( colorAttachments );
-        postProcessDescriptor.SetDepthAttachment( depthAttachment );
-        s_postProcessBuffer.renderPass = RenderPass::Create( postProcessDescriptor );
-
-        s_screenFrameBuffer = RenderPass::CreateDefault( postProcessDescriptor );
+        RenderPassDescriptor mainScreenDescriptor;
+        // mainScreenDescriptor.depthAttachment.depthWriteEnabled = false;
+        s_screenRenderPass = RenderPass::Create( mainScreenDescriptor );
 
         s_windowViewport.x = 0;
         s_windowViewport.y = 0;
@@ -398,6 +395,9 @@ namespace RenderSystem
         // shadowPass(scene);
 
         GBufferPass( scene );
+
+        Blit( s_gbuffer.renderPass, s_postProcessBuffer.renderPass, s_window->Width(), s_window->Height(),
+              RenderTargetBuffers::RENDER_TARGET_DEPTH, FilterMode::NEAREST );
 
         // write the result of the lighting pass to the post processing FBO
         // Gfx::bindFramebuffer( s_postProcessBuffer.fbo );
@@ -526,6 +526,7 @@ namespace RenderSystem
         auto& shader = s_shaders[ShaderNames::GBUFFER_PASS];
         shader.Enable();
         const auto& VP = scene->camera.GetVP();
+        s_meshVao.Bind();
 
         ECS::component::for_each< ModelRenderComponent >(
             [&shader, &VP]( const ECS::Entity& e, ModelRenderComponent& c )
@@ -540,7 +541,7 @@ namespace RenderSystem
             {
                 const auto& mesh   = c.model->meshes[i];
                 const auto& matPtr = c.materials[i];
-                s_meshVao.Bind();
+
                 shader.SetUniform( "kd", matPtr->Kd );
                 shader.SetUniform( "ks", matPtr->Ks );
                 shader.SetUniform( "ke", matPtr->Ke );
@@ -554,8 +555,14 @@ namespace RenderSystem
                 else
                 {
                     shader.SetUniform( "textured", false );
-                };
-                glDrawElements( GL_TRIANGLES, mesh.GetNumIndices(), GL_UNSIGNED_INT, 0 );
+                }
+
+                Gfx::BindVertexBuffer( mesh.vertexBuffer, 0, mesh.GetVertexOffset(), 12 );
+                Gfx::BindVertexBuffer( mesh.vertexBuffer, 1, mesh.GetNormalOffset(), 12 );
+                Gfx::BindVertexBuffer( mesh.vertexBuffer, 2, mesh.GetUVOffset(), 8 );
+                Gfx::BindIndexBuffer( mesh.indexBuffer );
+                Gfx::DrawIndexedPrimitives( PrimitiveType::TRIANGLES, IndexType::UNSIGNED_INT, 0, mesh.GetNumIndices() );
+                // glDrawElements( GL_TRIANGLES, mesh.GetNumIndices(), GL_UNSIGNED_INT, 0 );
             }
         } );
     }
@@ -678,35 +685,35 @@ namespace RenderSystem
 
         // graphicsApi::toggleCulling( false );
         // graphicsApi::toggleDepthTest( false );
-        // // directional lights
-        // {
-        //     auto& shader = s_shaders[ShaderNames::LIGHTPASS_DIRECTIONAL];
-        //     shader.enable();
-        //     s_gbuffer.BindForReading( shader );
-        //     graphicsApi::bindVao( s_quadVao );
-        //     shader.setUniform( "cameraPos", scene->camera.position );
-        //     for ( unsigned int i = 0; i < numDirectionalLights; ++i )
-        //     {
-        //         Light* l = lights[index + i];
+        // directional lights
+        {
+            auto& shader = s_shaders[ShaderNames::LIGHTPASS_DIRECTIONAL];
+            shader.Enable();
+            s_gbuffer.BindForReading( shader );
+            // graphicsApi::bindVao( s_quadVao );
+            shader.SetUniform( "cameraPos", scene->camera.position );
+            for ( unsigned int i = 0; i < numDirectionalLights; ++i )
+            {
+                Light* l = lights[index + i];
 
-        //         shader.setUniform( "lightColor", l->color * l->intensity );
-        //         shader.setUniform( "lightDir", -l->direction );
+                shader.SetUniform( "lightColor", l->color * l->intensity );
+                shader.SetUniform( "lightDir", -l->direction );
 
-        //         // if (l->shadowMap) {
-        //         //     graphicsApi::bind2DTexture(l->shadowMap->texture(),
-        //         //     shader.getUniform("shadowMap"), 5); shader.setUniform("LSM",
-        //         //     l->shadowMap->LSMs[0]); shader.setUniform("shadows", true);
-        //         // } else {
-        //         //     shader.setUniform("shadows", false);
-        //         // }
+                // if (l->shadowMap) {
+                //     graphicsApi::bind2DTexture(l->shadowMap->texture(),
+                //     shader.getUniform("shadowMap"), 5); shader.setUniform("LSM",
+                //     l->shadowMap->LSMs[0]); shader.setUniform("shadows", true);
+                // } else {
+                //     shader.setUniform("shadows", false);
+                // }
 
-        //         glDrawArrays( GL_TRIANGLES, 0, 6 );
-        //     }
-        // }
+                glDrawArrays( GL_TRIANGLES, 0, 6 );
+            }
+        }
 
-        // graphicsApi::toggleBlending( false );
-        // graphicsApi::toggleDepthWrite( true );
-        // graphicsApi::toggleDepthTest( true );
+        Gfx::EnableBlending( false );
+        // Gfx::toggleDepthWrite( true );
+        // Gfx::toggleDepthTest( true );
     }
 
     void BackgroundPass( Scene* scene )
@@ -725,12 +732,12 @@ namespace RenderSystem
         // shader.getUniform("cubeMap"),
         //     0); glDrawArrays(GL_TRIANGLES, 0, 36);
         // } else {
-        shader.SetUniform( "MVP", glm::mat4( 1 ) );
-        shader.SetUniform( "skybox", false );
-        shader.SetUniform( "color", scene->backgroundColor );
-        s_quadVao.Bind();
-        DrawNonIndexedPrimitives( PrimitiveType::TRIANGLES, 0, 6 );
-        //glDrawArrays( GL_TRIANGLES, 0, 6 );
+            shader.SetUniform( "MVP", glm::mat4( 1 ) );
+            shader.SetUniform( "skybox", false );
+            shader.SetUniform( "color", scene->backgroundColor );
+            s_quadVao.Bind();
+            DrawNonIndexedPrimitives( PrimitiveType::TRIANGLES, 0, 6 );
+            //glDrawArrays( GL_TRIANGLES, 0, 6 );
         //}
 
         //graphicsApi::toggleDepthWrite( true );
@@ -739,6 +746,20 @@ namespace RenderSystem
     void PostProcessPass( Scene* scene )
     {
         PG_UNUSED( scene );
+
+        s_screenRenderPass.Bind();
+
+        Blit( s_postProcessBuffer.renderPass, s_screenRenderPass, s_window->Width(), s_window->Height(),
+              RenderTargetBuffers::RENDER_TARGET_DEPTH, FilterMode::NEAREST );
+
+        auto& shader = s_shaders[ShaderNames::POST_PROCESS];
+        shader.Enable();
+        // shader.setUniform("exposure", 1.0f); // TODO: Actually calculate exposure
+        shader.BindTexture( s_postProcessBuffer.hdrColorTex, "originalColor", 0 );
+        s_quadVao.Bind();
+        Gfx::BindVertexBuffer( s_quadVertexBuffer, 0, 0, 8 );
+        Gfx::DrawNonIndexedPrimitives( PrimitiveType::TRIANGLES, 0, 6 );
+
         // Bind and clear the main screen
         // graphicsApi::bindFramebuffer( 0 );
         // graphicsApi::setViewport( s_window->Width(), s_window->Height() );

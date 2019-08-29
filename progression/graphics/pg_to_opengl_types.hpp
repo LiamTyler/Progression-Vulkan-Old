@@ -2,6 +2,7 @@
 
 #include "graphics/graphics_api.hpp"
 #include <tuple>
+#include <assert.h>
 
 namespace Progression
 {
@@ -24,6 +25,8 @@ namespace Gfx
             GL_SRC_ALPHA_SATURATE,  // SRC_ALPHA_SATURATE
         };
 
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( BlendFactor::NUM_BLEND_FACTORS ) );
+
         return convert[static_cast< int >( factor )];
     }
 
@@ -37,6 +40,8 @@ namespace Gfx
             GL_MAX,                     // MAX
         };
 
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( BlendEquation::NUM_BLEND_EQUATIONS) );
+
         return convert[static_cast< int >( eq )];
     }
 
@@ -46,6 +51,8 @@ namespace Gfx
             GL_CW,
             GL_CCW
         };
+
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( WindingOrder::NUM_WINDING_ORDER ) );
 
         return convert[static_cast< int >( order )];
     }
@@ -59,6 +66,8 @@ namespace Gfx
             GL_FRONT_AND_BACK,  // FRONT_AND_BACK
         };
 
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( CullFace::NUM_CULL_FACE ) );
+
         return convert[static_cast< int >( face )];
     }
 
@@ -68,6 +77,8 @@ namespace Gfx
             GL_ARRAY_BUFFER,         // VERTEX
             GL_ELEMENT_ARRAY_BUFFER, // INDEX
         };
+
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( BufferType::NUM_BUFFER_TYPE) );
 
         return convert[static_cast< int >( type )];
     }
@@ -79,6 +90,8 @@ namespace Gfx
             GL_DYNAMIC_DRAW, // DYNAMIC
             GL_STREAM_DRAW,  // STREAM
         };
+
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( BufferUsage::NUM_BUFFER_USAGE ) );
 
         return convert[static_cast< int >( usage )];
     }
@@ -96,6 +109,8 @@ namespace Gfx
             GL_UNSIGNED_INT,   // UNSIGNED_INT
         };
 
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( BufferDataType::NUM_BUFFER_DATA_TYPE ) );
+
         return convert[static_cast< int >( dataType )];
     }
 
@@ -110,6 +125,8 @@ namespace Gfx
             GL_TRIANGLE_FAN,   // TRIANGLE_FAN
         };
 
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( PrimitiveType::NUM_PRIMITIVE_TYPE ) );
+
         return convert[static_cast< int >( topology )];
     }
 
@@ -119,6 +136,8 @@ namespace Gfx
             GL_UNSIGNED_SHORT, // UNSIGNED_SHORT
             GL_UNSIGNED_INT,   // UNSIGNED_INT
         };
+
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( IndexType::NUM_INDEX_TYPE ) );
 
         return convert[static_cast< int >( indexType )];
     }
@@ -134,6 +153,8 @@ namespace Gfx
             GL_LINEAR_MIPMAP_LINEAR,   // LINEAR_MIPMAP_LINEAR
         };
 
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( FilterMode::NUM_FILTER_MODE ) );
+
         return convert[static_cast< int >( mode )];
     }
 
@@ -146,6 +167,8 @@ namespace Gfx
             GL_CLAMP_TO_BORDER, // CLAMP_TO_BORDER
         };
 
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( WrapMode::NUM_WRAP_MODE ) );
+
         return convert[static_cast< int >( mode )];
     }
 
@@ -154,6 +177,8 @@ namespace Gfx
         GLenum convert[] = {
             GL_TEXTURE_2D, // TEXTURE2D
         };
+
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( TextureType::NUM_TEXTURE_TYPE ) );
 
         return convert[static_cast< int >( type )];
     }
@@ -179,6 +204,8 @@ namespace Gfx
             GL_DEPTH_COMPONENT32, // DEPTH32_Float
         };
 
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( PixelFormat::NUM_PIXEL_FORMAT ) );
+
         return convert[static_cast< int >( format )];
     }
 
@@ -203,6 +230,8 @@ namespace Gfx
             { GL_DEPTH_COMPONENT, GL_FLOAT }, // DEPTH32_Float
         };
 
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( PixelFormat::NUM_PIXEL_FORMAT ) );
+
         return convert[static_cast< int >( format )];
     }
 
@@ -219,7 +248,28 @@ namespace Gfx
             GL_ALWAYS,   // ALWAYS
         };
 
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( CompareFunction::NUM_COMPARE_FUNCTION ) );
+
         return convert[static_cast< int >( func )];
+    }
+
+    constexpr GLenum PGToOpenGLBitFieldMask( RenderTargetBuffers mask )
+    {
+        GLenum glMask = 0;
+        if ( mask & RenderTargetBuffers::RENDER_TARGET_COLOR )
+        {
+            glMask |= GL_COLOR_BUFFER_BIT;
+        }
+        if ( mask & RenderTargetBuffers::RENDER_TARGET_DEPTH )
+        {
+            glMask |= GL_DEPTH_BUFFER_BIT;
+        }
+        if ( mask & RenderTargetBuffers::RENDER_TARGET_STENCIL )
+        {
+            glMask |= GL_STENCIL_BUFFER_BIT;
+        }
+
+        return glMask;
     }
 
 } // namespace Gfx
