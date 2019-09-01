@@ -35,14 +35,14 @@ elseif(MSVC)
 endif()
 
 if (MSVC)
-    #SET(CMAKE_CXX_FLAGS_SHIP
-    #    ""
-    #    CACHE STRING "Flags used by the C++ compiler during coverage builds."
-    #    FORCE )
-    #SET(CMAKE_C_FLAGS_SHIP
-    #    ""
-    #    CACHE STRING "Flags used by the C compiler during coverage builds."
-    #    FORCE )
+    SET(CMAKE_CXX_FLAGS_SHIP
+        "${CMAKE_CXX_FLAGS_SHIP} /O2"
+        CACHE STRING "Flags used by the C++ compiler during coverage builds."
+        FORCE )
+    SET(CMAKE_C_FLAGS_SHIP
+        ""
+        CACHE STRING "Flags used by the C compiler during coverage builds."
+        FORCE )
     SET(CMAKE_EXE_LINKER_FLAGS_SHIP
         ""
         CACHE STRING "Flags used for linking binaries during coverage builds."
@@ -54,8 +54,8 @@ if (MSVC)
         FORCE
     )
     MARK_AS_ADVANCED(
-        #CMAKE_CXX_FLAGS_SHIP
-        #CMAKE_C_FLAGS_SHIP
+        CMAKE_CXX_FLAGS_SHIP
+        CMAKE_C_FLAGS_SHIP
         CMAKE_EXE_LINKER_FLAGS_SHIP
         CMAKE_SHARED_LINKER_FLAGS_SHIP
     )

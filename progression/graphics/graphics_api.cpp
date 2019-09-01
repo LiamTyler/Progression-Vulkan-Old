@@ -396,30 +396,9 @@ namespace Gfx
 
 
     // ------------- RENDER PASS ----------------//
-    void RenderPassDescriptor::SetColorAttachments( const std::vector< ColorAttachmentDescriptor >& attachments )
-    {
-        m_colorAttachmentDescriptors = attachments;
-    }
-
-    void RenderPassDescriptor::SetDepthAttachment( const DepthAttachmentDescriptor& attachment )
-    {
-        m_depthAttachmentDescriptor = attachment;
-        m_hasDepthAttachment = true;
-    }
-
-    std::vector< ColorAttachmentDescriptor > RenderPassDescriptor::GetColorAttachmentDescriptors() const
-    {
-        return m_colorAttachmentDescriptors;
-    }
-
-    DepthAttachmentDescriptor RenderPassDescriptor::GetDepthAttachmentDescriptor() const
-    {
-        return m_depthAttachmentDescriptor;
-    }
-
     RenderPass::~RenderPass()
     {
-        if ( m_nativeHandle != 0 )
+        if ( m_nativeHandle != 0 && m_nativeHandle != ~0u )
         {
             glDeleteFramebuffers( 1, &m_nativeHandle );
         }
@@ -435,48 +414,30 @@ namespace Gfx
         m_allColorAttachmentsSameColor = std::move( r.m_allColorAttachmentsSameColor );
         m_desc = std::move( r.m_desc );
         m_nativeHandle   = std::move( r.m_nativeHandle );
-        r.m_nativeHandle = 0;
+        r.m_nativeHandle = ~0u;
 
         return *this;
     }
 
     void RenderPass::Bind() const
     {
+        PG_ASSERT( m_nativeHandle != ~0u );
         glBindFramebuffer( GL_FRAMEBUFFER, m_nativeHandle );
-        if ( m_desc.m_colorAttachmentDescriptors.size() )
+        if ( m_desc.colorAttachmentDescriptors.size() )
         {
-            if ( m_allColorAttachmentsSameColor && m_desc.m_colorAttachmentDescriptors[0].loadAction == LoadAction::CLEAR )
+            if ( m_allColorAttachmentsSameColor && m_desc.colorAttachmentDescriptors[0].loadAction == LoadAction::CLEAR )
             {
-                auto& c = m_desc.m_colorAttachmentDescriptors[0].clearColor;
+                auto& c = m_desc.colorAttachmentDescriptors[0].clearColor;
                 glClearColor( c.r, c.g, c.b, c.a );
                 glClear( GL_COLOR_BUFFER_BIT );
             }
         }
 
-        if ( m_desc.m_hasDepthAttachment )
+        if ( m_desc.depthAttachmentDescriptor.loadAction == LoadAction::CLEAR )
         {
-            glEnable( GL_DEPTH_TEST );
-            glDepthMask( m_desc.m_depthAttachmentDescriptor.depthWriteEnabled ? GL_TRUE : GL_FALSE );
-            if ( m_desc.m_depthAttachmentDescriptor.loadAction == LoadAction::CLEAR )
-            {
-                glClearDepthf( m_desc.m_depthAttachmentDescriptor.clearValue );
-                glClear( GL_DEPTH_BUFFER_BIT );
-            }
-            
-            auto nativeDepthFunc = PGToOpenGLDepthCompareFunction( m_desc.m_depthAttachmentDescriptor.compareFunc );
-            glDepthFunc( nativeDepthFunc );
+            glClearDepthf( m_desc.depthAttachmentDescriptor.clearValue );
+            glClear( GL_DEPTH_BUFFER_BIT );
         }
-    }
-
-    RenderPass RenderPass::CreateDefault( const RenderPassDescriptor& desc )
-    {
-        PG_ASSERT( desc.m_colorAttachmentDescriptors.size() == 1 );
-        RenderPass pass;
-        pass.m_nativeHandle = 0;
-        pass.m_desc = desc;
-        pass.m_allColorAttachmentsSameColor = true;
-
-        return pass;
     }
 
     RenderPass RenderPass::Create( const RenderPassDescriptor& desc )
@@ -485,39 +446,43 @@ namespace Gfx
         glGenFramebuffers( 1, &pass.m_nativeHandle );
         glBindFramebuffer( GL_FRAMEBUFFER, pass.m_nativeHandle );
         pass.m_desc = desc;
-        if ( desc.m_colorAttachmentDescriptors.empty() )
-        {
-            glDrawBuffer( GL_NONE );
-            glReadBuffer( GL_NONE );
 
+        // Check if this is the screen/default framebuffer
+        if ( desc.colorAttachmentDescriptors[0].texture == nullptr && desc.depthAttachmentDescriptor.texture == nullptr )
+        {
+            pass.m_nativeHandle = 0;
             return pass;
         }
 
-        LoadAction loadAction = desc.m_colorAttachmentDescriptors[0].loadAction;
-        glm::vec4 clearColor = desc.m_colorAttachmentDescriptors[0].clearColor;
+        LoadAction loadAction = desc.colorAttachmentDescriptors[0].loadAction;
+        glm::vec4 clearColor  = desc.colorAttachmentDescriptors[0].clearColor;
 
-        for ( size_t i = 1; i < desc.m_colorAttachmentDescriptors.size(); ++i )
+        // Currently am not supporting color attachments to have different clear values
+        for ( size_t i = 1; i < desc.colorAttachmentDescriptors.size() && 
+              desc.colorAttachmentDescriptors[i].texture != nullptr; ++i )
         {
-            if ( desc.m_colorAttachmentDescriptors[0].loadAction != loadAction ||
-                 desc.m_colorAttachmentDescriptors[0].clearColor != clearColor )
+            if ( desc.colorAttachmentDescriptors[0].loadAction != loadAction ||
+                 desc.colorAttachmentDescriptors[0].clearColor != clearColor )
             {
                 LOG_ERR( "Currently need all color attachments to have the same clear color and load action" );
-                PG_ASSERT( desc.m_colorAttachmentDescriptors[0].loadAction == loadAction &&
-                           desc.m_colorAttachmentDescriptors[0].clearColor == clearColor );
+                PG_ASSERT( desc.colorAttachmentDescriptors[0].loadAction == loadAction &&
+                           desc.colorAttachmentDescriptors[0].clearColor == clearColor );
             }
         }
 
-        if ( desc.m_depthAttachmentDescriptor.texture )
+        if ( desc.depthAttachmentDescriptor.texture )
         {
-            auto nativeHandle = desc.m_depthAttachmentDescriptor.texture->GetNativeHandle();
+            auto nativeHandle = desc.depthAttachmentDescriptor.texture->GetNativeHandle();
             glFramebufferTexture( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, nativeHandle, 0 );
         }
 
         std::vector< GLuint > attachments;
-        for ( const auto& tex : desc.m_colorAttachmentDescriptors )
+        for ( unsigned int i = 0; i < (unsigned int) desc.colorAttachmentDescriptors.size() && 
+              desc.colorAttachmentDescriptors[i].texture != nullptr; ++i )
         {
-            GLuint slot = GL_COLOR_ATTACHMENT0 + static_cast< unsigned int >( attachments.size() );
-            glFramebufferTexture2D( GL_FRAMEBUFFER, slot, GL_TEXTURE_2D, tex.texture->GetNativeHandle(), 0 );
+            GLuint slot = GL_COLOR_ATTACHMENT0 + i ;
+            glFramebufferTexture2D( GL_FRAMEBUFFER, slot, GL_TEXTURE_2D,
+                                    desc.colorAttachmentDescriptors[i].texture->GetNativeHandle(), 0 );
             attachments.push_back( slot );
         }
         glDrawBuffers( static_cast< int >( attachments.size() ), &attachments[0] );

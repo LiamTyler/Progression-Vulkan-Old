@@ -327,8 +327,8 @@ namespace RenderSystem
         depthAttachment.texture = &s_gbuffer.depthRbo;
 
         RenderPassDescriptor gBufferDescriptor;
-        gBufferDescriptor.SetColorAttachments( colorAttachments );
-        gBufferDescriptor.SetDepthAttachment( depthAttachment );
+        //gBufferDescriptor.co( colorAttachments );
+        //gBufferDescriptor.SetDepthAttachment( depthAttachment );
         s_gbuffer.renderPass = RenderPass::Create( gBufferDescriptor );
 
         texDesc.format = PixelFormat::R16_G16_B16_A16_Float;
@@ -349,10 +349,6 @@ namespace RenderSystem
         s_windowViewport.width = s_window->Width();
         s_windowViewport.height = s_window->Height();
         SetViewport( s_windowViewport );
-
-        EnableBlending( false );
-        SetWindingOrder( WindingOrder::COUNTER_CLOCKWISE );
-        SetCullFace( CullFace::BACK );
 
         return true;
     }
@@ -574,9 +570,9 @@ namespace RenderSystem
         const auto& lights = scene->GetLights();
         const auto& VP     = scene->camera.GetVP();
 
-        Gfx::EnableBlending( true );
-        Gfx::SetBlendEquations( Gfx::BlendEquation::ADD, Gfx::BlendEquation::ADD );
-        Gfx::SetBlendFactors( Gfx::BlendFactor::ONE, Gfx::BlendFactor::ONE, Gfx::BlendFactor::ONE, Gfx::BlendFactor::ONE );
+        //Gfx::EnableBlending( true );
+        //Gfx::SetBlendEquations( Gfx::BlendEquation::ADD, Gfx::BlendEquation::ADD );
+        //Gfx::SetBlendFactors( Gfx::BlendFactor::ONE, Gfx::BlendFactor::ONE, Gfx::BlendFactor::ONE, Gfx::BlendFactor::ONE );
 
         //Gfx::toggleDepthWrite( false );
         //Gfx::toggleDepthTest( true );
@@ -711,7 +707,7 @@ namespace RenderSystem
             }
         }
 
-        Gfx::EnableBlending( false );
+        // Gfx::EnableBlending( false );
         // Gfx::toggleDepthWrite( true );
         // Gfx::toggleDepthTest( true );
     }

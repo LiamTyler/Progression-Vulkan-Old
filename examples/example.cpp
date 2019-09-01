@@ -82,17 +82,17 @@ int main( int argc, char* argv[] )
     model2.materials.push_back( mat2 );
 
     DepthAttachmentDescriptor depthAttachmentDesc;
-    depthAttachmentDesc.depthTestEnabled = true;
-    depthAttachmentDesc.compareFunc = Gfx::CompareFunction::LESS;
+    //depthAttachmentDesc.depthTestEnabled = true;
+    //depthAttachmentDesc.compareFunc = Gfx::CompareFunction::LESS;
 
     ColorAttachmentDescriptor colorAttachmentDescriptor;
     colorAttachmentDescriptor.clearColor = glm::vec4( 0, 0, 0, 0 );
 
     RenderPassDescriptor renderPassDesc;
-    renderPassDesc.SetDepthAttachment( depthAttachmentDesc );
-    renderPassDesc.SetColorAttachments( { colorAttachmentDescriptor } );
+    //renderPassDesc.depthAttachmentDescriptor = depthAttachmentDesc );
+    //renderPassDesc.SetColorAttachments( { colorAttachmentDescriptor } );
 
-    RenderPass renderPass = RenderPass::CreateDefault( renderPassDesc );
+    RenderPass renderPass = RenderPass::Create( renderPassDesc );
     Model& drawModel = model;
     {
         std::array< VertexAttributeDescriptor, 3 > attribDescs;

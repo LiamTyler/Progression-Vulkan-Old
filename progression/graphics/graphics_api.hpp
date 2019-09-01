@@ -2,7 +2,7 @@
 
 #include "core/common.hpp"
 #include "utils/noncopyable.hpp"
-#include <vector>
+#include <array>
 
 namespace Progression
 {
@@ -37,10 +37,6 @@ namespace Gfx
         NUM_BLEND_EQUATIONS
     };
 
-    void EnableBlending( bool b );
-    void SetBlendEquations( BlendEquation color, BlendEquation alpha );
-    void SetBlendFactors( BlendFactor srcColor, BlendFactor dstColor, BlendFactor srcAlpha, BlendFactor dstAlpha );
-
     enum class WindingOrder
     {
         CLOCKWISE         = 0,
@@ -58,10 +54,6 @@ namespace Gfx
 
         NUM_CULL_FACE
     };
-
-    void SetWindingOrder( WindingOrder order );
-    void SetCullFace( CullFace cullFace );
-
 
     struct Viewport
     {
@@ -292,28 +284,28 @@ namespace Gfx
 
     enum class PixelFormat
     {
-        R8_Uint   = 0,
-        R16_Float = 1,
-        R32_Float = 2,
+        R8_Uint                 = 0,
+        R16_Float               = 1,
+        R32_Float               = 2,
 
-        R8_G8_Uint    = 3,
-        R16_G16_Float = 4,
-        R32_G32_Float = 5,
+        R8_G8_Uint              = 3,
+        R16_G16_Float           = 4,
+        R32_G32_Float           = 5,
 
-        R8_G8_B8_Uint     = 6,
-        R16_G16_B16_Float = 7,
-        R32_G32_B32_Float = 8,
+        R8_G8_B8_Uint           = 6,
+        R16_G16_B16_Float       = 7,
+        R32_G32_B32_Float       = 8,
 
-        R8_G8_B8_A8_Uint      = 9,
-        R16_G16_B16_A16_Float = 10,
-        R32_G32_B32_A32_Float = 11,
+        R8_G8_B8_A8_Uint        = 9,
+        R16_G16_B16_A16_Float   = 10,
+        R32_G32_B32_A32_Float   = 11,
 
-        R8_G8_B8_Uint_sRGB    = 12,
-        R8_G8_B8_A8_Uint_sRGB = 13,
+        R8_G8_B8_Uint_sRGB      = 12,
+        R8_G8_B8_A8_Uint_sRGB   = 13,
 
-        R11_G11_B10_Float = 14,
+        R11_G11_B10_Float       = 14,
 
-        DEPTH32_Float = 15,
+        DEPTH32_Float           = 15,
 
         NUM_PIXEL_FORMAT
     };
@@ -382,7 +374,6 @@ namespace Gfx
     public:
         ColorAttachmentDescriptor() = default;
 
-        
         glm::vec4 clearColor = glm::vec4( 0 );
         LoadAction loadAction = LoadAction::CLEAR;
         StoreAction storeAction = StoreAction::STORE;
@@ -408,9 +399,6 @@ namespace Gfx
     public:
         DepthAttachmentDescriptor() = default;
 
-        bool depthTestEnabled  = true;
-        bool depthWriteEnabled = true;
-        CompareFunction compareFunc = CompareFunction::LESS;
         float clearValue = 1.0f;
         LoadAction loadAction = LoadAction::CLEAR;
         StoreAction storeAction = StoreAction::STORE;
@@ -423,15 +411,8 @@ namespace Gfx
     public:
         RenderPassDescriptor() = default;
 
-        void SetColorAttachments( const std::vector< ColorAttachmentDescriptor >& attachments );
-        void SetDepthAttachment( const DepthAttachmentDescriptor& attachment );
-        std::vector< ColorAttachmentDescriptor > GetColorAttachmentDescriptors() const;
-        DepthAttachmentDescriptor GetDepthAttachmentDescriptor() const;
-    
-    private:
-        std::vector< ColorAttachmentDescriptor > m_colorAttachmentDescriptors;
-        DepthAttachmentDescriptor m_depthAttachmentDescriptor;
-        bool m_hasDepthAttachment = false;
+        std::array< ColorAttachmentDescriptor, 8 > colorAttachmentDescriptors;
+        DepthAttachmentDescriptor depthAttachmentDescriptor;
     };
 
     class RenderPass : public NonCopyable
@@ -444,13 +425,12 @@ namespace Gfx
 
         void Bind() const;
 
-        static RenderPass CreateDefault( const RenderPassDescriptor& desc );
         static RenderPass Create( const RenderPassDescriptor& desc );
         GLuint GetNativeHandle() const;
 
     private:
         RenderPassDescriptor m_desc;
-        GLuint m_nativeHandle = 0;
+        GLuint m_nativeHandle = ~0u;
         bool m_allColorAttachmentsSameColor;
     };
 
@@ -461,6 +441,50 @@ namespace Gfx
         RENDER_TARGET_STENCIL = 0x4,
 
         NUM_RENDER_TARGET_BUFFERS
+    };
+
+    class PipelineDepthInfo
+    {
+    public:
+        bool depthTestEnabled  = true;
+        bool depthWriteEnabled = true;
+        CompareFunction compareFunc = CompareFunction::LESS; 
+    };
+
+    class PipelineColorAttachmentInfo
+    {
+    public:
+        BlendFactor srcColorBlendFactor;
+        BlendFactor dstColorBlendFactor;
+        BlendFactor srcAlphaBlendFactor;
+        BlendFactor dstAlphaBlendFactor;
+        BlendEquation colorBlendEquation = BlendEquation::ADD;
+        BlendEquation alphaBlendEquation = BlendEquation::ADD;
+        bool blendingEnabled = false;
+    };
+
+    class PipelineDescriptor
+    {
+    public:
+        VertexInputDescriptor vertexDescriptor;
+        PipelineColorAttachmentInfo colorAttachmentInfos[8];
+        uint8_t numColorAttachments = 0;
+        PipelineDepthInfo depthInfo = {};
+        WindingOrder windingOrder   = WindingOrder::COUNTER_CLOCKWISE;
+        CullFace cullFace           = CullFace::BACK;
+    };
+
+    class Pipeline
+    {
+    public:
+        Pipeline() = default;
+
+        static Pipeline Create( const PipelineDescriptor& desc );
+
+        void Bind() const;
+
+    private:
+        PipelineDescriptor m_desc;
     };
 
     void Blit( const RenderPass& src, const RenderPass& dst, int width, int height,
