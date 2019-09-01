@@ -11,17 +11,17 @@ namespace Gfx
 
     enum class BlendFactor
     {
-        ZERO                        = 0,
-        ONE                         = 1,
-        SRC_COLOR                   = 2,
-        ONE_MINUS_SRC_COLOR         = 3,
-        SRC_ALPHA                   = 4,
-        ONE_MINUS_SRC_ALPHA         = 5,
-        DST_COLOR                   = 6,
-        ONE_MINUS_DST_COLOR         = 7,
-        DST_ALPHA                   = 8,
-        ONE_MINUS_DST_ALPHA         = 9,
-        SRC_ALPHA_SATURATE          = 10,
+        ZERO                    = 0,
+        ONE                     = 1,
+        SRC_COLOR               = 2,
+        ONE_MINUS_SRC_COLOR     = 3,
+        SRC_ALPHA               = 4,
+        ONE_MINUS_SRC_ALPHA     = 5,
+        DST_COLOR               = 6,
+        ONE_MINUS_DST_COLOR     = 7,
+        DST_ALPHA               = 8,
+        ONE_MINUS_DST_ALPHA     = 9,
+        SRC_ALPHA_SATURATE      = 10,
 
         NUM_BLEND_FACTORS
     };
@@ -78,7 +78,7 @@ namespace Gfx
     enum class BufferType
     {
         VERTEX = 0,
-        INDEX,
+        INDEX  = 1,
 
         NUM_BUFFER_TYPE
     };
@@ -94,14 +94,14 @@ namespace Gfx
 
     enum class BufferDataType
     {
-        FLOAT16 = 0,
-        FLOAT32,
-        BYTE,
-        UNSIGNED_BYTE,
-        SHORT,
-        UNSIGNED_SHORT,
-        INT,
-        UNSIGNED_INT,
+        FLOAT16         = 0,
+        FLOAT32         = 1,
+        BYTE            = 2,
+        UNSIGNED_BYTE   = 3,
+        SHORT           = 4,
+        UNSIGNED_SHORT  = 5,
+        INT             = 6,
+        UNSIGNED_INT    = 7,
 
         NUM_BUFFER_DATA_TYPE
     };
@@ -220,9 +220,6 @@ namespace Gfx
     void DrawIndexedPrimitives( PrimitiveType primType, IndexType indexType, uint32_t offset, uint32_t count );
     void DrawNonIndexedPrimitives( PrimitiveType primType, uint32_t vertexStart, uint32_t vertexCount );
 
-
-    // textures
-
     enum class FilterMode
     {
         NEAREST                = 0,
@@ -321,10 +318,10 @@ namespace Gfx
     {
     public:
         TextureType type;
+        PixelFormat format;
         uint32_t width  = 0;
         uint32_t height = 0;
-        PixelFormat format;
-        bool mipmapped = true;
+        bool mipmapped  = true;
     };
 
     class Texture : public NonCopyable
@@ -374,19 +371,19 @@ namespace Gfx
     public:
         ColorAttachmentDescriptor() = default;
 
-        glm::vec4 clearColor = glm::vec4( 0 );
-        LoadAction loadAction = LoadAction::CLEAR;
+        glm::vec4 clearColor    = glm::vec4( 0 );
+        LoadAction loadAction   = LoadAction::CLEAR;
         StoreAction storeAction = StoreAction::STORE;
-        Texture* texture = nullptr;
+        Texture* texture        = nullptr;
     };
 
     enum class CompareFunction
     {
-        NEVER = 0,
-        LESS = 1,
-        LEQUAL = 2,
-        EQUAL = 3,
-        GEQUAL = 4,
+        NEVER   = 0,
+        LESS    = 1,
+        LEQUAL  = 2,
+        EQUAL   = 3,
+        GEQUAL  = 4,
         GREATER = 5,
         NEQUAL  = 6,
         ALWAYS  = 7,
@@ -399,10 +396,10 @@ namespace Gfx
     public:
         DepthAttachmentDescriptor() = default;
 
-        float clearValue = 1.0f;
-        LoadAction loadAction = LoadAction::CLEAR;
+        float clearValue        = 1.0f;
+        LoadAction loadAction   = LoadAction::CLEAR;
         StoreAction storeAction = StoreAction::STORE;
-        Texture* texture = nullptr;
+        Texture* texture        = nullptr;
     };
 
     class RenderPassDescriptor
@@ -446,8 +443,8 @@ namespace Gfx
     class PipelineDepthInfo
     {
     public:
-        bool depthTestEnabled  = true;
-        bool depthWriteEnabled = true;
+        bool depthTestEnabled       = true;
+        bool depthWriteEnabled      = true;
         CompareFunction compareFunc = CompareFunction::LESS; 
     };
 
@@ -460,24 +457,27 @@ namespace Gfx
         BlendFactor dstAlphaBlendFactor;
         BlendEquation colorBlendEquation = BlendEquation::ADD;
         BlendEquation alphaBlendEquation = BlendEquation::ADD;
-        bool blendingEnabled = false;
+        bool blendingEnabled             = false;
     };
 
     class PipelineDescriptor
     {
     public:
-        VertexInputDescriptor vertexDescriptor;
-        PipelineColorAttachmentInfo colorAttachmentInfos[8];
-        uint8_t numColorAttachments = 0;
-        PipelineDepthInfo depthInfo = {};
-        WindingOrder windingOrder   = WindingOrder::COUNTER_CLOCKWISE;
-        CullFace cullFace           = CullFace::BACK;
+        VertexAttributeDescriptor* vertexDescriptors;
+        uint32_t numVertexDescriptors   = 0;
+        std::array< PipelineColorAttachmentInfo, 8 > colorAttachmentInfos;
+        uint8_t numColorAttachments     = 0;
+        PipelineDepthInfo depthInfo     = {};
+        WindingOrder windingOrder       = WindingOrder::COUNTER_CLOCKWISE;
+        CullFace cullFace               = CullFace::BACK;
     };
 
-    class Pipeline
+    class Pipeline : public NonCopyable
     {
     public:
         Pipeline() = default;
+        Pipeline( Pipeline&& pipeline ) = default;
+        Pipeline& operator=( Pipeline&& pipeline ) = default;
 
         static Pipeline Create( const PipelineDescriptor& desc );
 
@@ -485,6 +485,7 @@ namespace Gfx
 
     private:
         PipelineDescriptor m_desc;
+        VertexInputDescriptor m_vertexDesc;
     };
 
     void Blit( const RenderPass& src, const RenderPass& dst, int width, int height,

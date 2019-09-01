@@ -7,50 +7,6 @@ namespace Progression
 {
 namespace Gfx
 {
-
-    void EnableBlending( bool b )
-    {
-        if ( b )
-            glEnable( GL_BLEND );
-        else
-            glDisable( GL_BLEND );
-    }
-
-    void SetBlendEquations( BlendEquation colorEquation, BlendEquation alphaEquation )
-    {
-        auto nativeColorEq = PGToOpenGLBlendEquation( colorEquation );
-        auto nativeAlphaEq = PGToOpenGLBlendEquation( alphaEquation );
-        glBlendEquationSeparate( nativeColorEq, nativeAlphaEq );
-    }
-
-    void SetBlendFactors( BlendFactor srcColor, BlendFactor dstColor, BlendFactor srcAlpha, BlendFactor dstAlpha )
-    {
-        auto nativeSrcColor = PGToOpenGLBlendFactor( srcColor );
-        auto nativeDstColor = PGToOpenGLBlendFactor( dstColor );
-        auto nativeSrcAlpha = PGToOpenGLBlendFactor( srcAlpha );
-        auto nativeDstAlpha = PGToOpenGLBlendFactor( dstAlpha );
-        glBlendFuncSeparate( nativeSrcColor, nativeDstColor, nativeSrcAlpha, nativeDstAlpha );
-    }
-
-    void SetWindingOrder( WindingOrder order )
-    {
-        auto nativeWindingOrder = PGToOpenGLWindingOrder( order );
-        glFrontFace( nativeWindingOrder );
-    }
-
-    void SetCullFace( CullFace cullFace )
-    {
-        if ( cullFace == CullFace::NONE )
-        {
-            glDisable( GL_CULL_FACE );
-            return;
-        }
-
-        glEnable( GL_CULL_FACE );
-        auto nativeFrontFace = PGToOpenGLCullFace( cullFace );
-        glFrontFace( nativeFrontFace );
-    }
-
     void SetViewport( const Viewport& v )
     {
         glViewport( v.x, v.y, v.width, v.height );
@@ -443,8 +399,6 @@ namespace Gfx
     RenderPass RenderPass::Create( const RenderPassDescriptor& desc )
     {
         RenderPass pass;
-        glGenFramebuffers( 1, &pass.m_nativeHandle );
-        glBindFramebuffer( GL_FRAMEBUFFER, pass.m_nativeHandle );
         pass.m_desc = desc;
 
         // Check if this is the screen/default framebuffer
@@ -453,6 +407,9 @@ namespace Gfx
             pass.m_nativeHandle = 0;
             return pass;
         }
+
+        glGenFramebuffers( 1, &pass.m_nativeHandle );
+        glBindFramebuffer( GL_FRAMEBUFFER, pass.m_nativeHandle );
 
         LoadAction loadAction = desc.colorAttachmentDescriptors[0].loadAction;
         glm::vec4 clearColor  = desc.colorAttachmentDescriptors[0].clearColor;
@@ -499,6 +456,70 @@ namespace Gfx
     GLuint RenderPass::GetNativeHandle() const
     {
         return m_nativeHandle;
+    }
+
+    Pipeline Pipeline::Create( const PipelineDescriptor& desc )
+    {
+        Pipeline p;
+        p.m_desc = desc;
+        p.m_vertexDesc = VertexInputDescriptor::Create( desc.numVertexDescriptors, desc.vertexDescriptors );
+
+        return p;
+    }
+
+    void Pipeline::Bind() const
+    {
+        m_vertexDesc.Bind();
+
+        if ( m_desc.depthInfo.depthTestEnabled )
+        {
+            glEnable( GL_DEPTH_TEST );
+        }
+        else
+        {
+            glDisable( GL_DEPTH_TEST );
+        }
+
+        glDepthMask( m_desc.depthInfo.depthWriteEnabled );
+
+        auto nativeDepthCompareFunc = PGToOpenGLDepthCompareFunction( m_desc.depthInfo.compareFunc );
+        glDepthMask( m_desc.depthInfo.depthWriteEnabled );
+
+        auto nativeWindingOrder = PGToOpenGLWindingOrder( m_desc.windingOrder );
+        glFrontFace( nativeWindingOrder );
+
+        if ( m_desc.cullFace == CullFace::NONE )
+        {
+            glDisable( GL_CULL_FACE );
+        }
+        else
+        {
+            glEnable( GL_CULL_FACE );
+            auto nativeFrontFace = PGToOpenGLCullFace( m_desc.cullFace );
+            glCullFace( nativeFrontFace );
+        }
+
+        for ( int i = 0; i < m_desc.numColorAttachments; ++i )
+        {
+            auto& c = m_desc.colorAttachmentInfos[i];
+            if ( c.blendingEnabled )
+            {
+                glEnablei( GL_BLEND, i );
+                auto nativeColorEq = PGToOpenGLBlendEquation( c.colorBlendEquation );
+                auto nativeAlphaEq = PGToOpenGLBlendEquation( c.alphaBlendEquation );
+                glBlendEquationSeparatei( i, nativeColorEq, nativeAlphaEq );
+
+                auto nativeSrcColor = PGToOpenGLBlendFactor( c.srcColorBlendFactor );
+                auto nativeDstColor = PGToOpenGLBlendFactor( c.dstColorBlendFactor );
+                auto nativeSrcAlpha = PGToOpenGLBlendFactor( c.srcAlphaBlendFactor );
+                auto nativeDstAlpha = PGToOpenGLBlendFactor( c.dstAlphaBlendFactor );
+                glBlendFuncSeparatei( i, nativeSrcColor, nativeDstColor, nativeSrcAlpha, nativeDstAlpha );
+            }
+            else
+            {
+                glDisablei( GL_BLEND, i );
+            }
+        }
     }
 
     void Blit( const RenderPass& src, const RenderPass& dst, int width, int height,
