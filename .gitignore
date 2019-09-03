@@ -6,7 +6,6 @@ a.out
 progression/core/platform_defines.hpp
 resources/sponza
 resources/cache
-resources/fastfiles
 .vscode/
 
 # Prerequisites

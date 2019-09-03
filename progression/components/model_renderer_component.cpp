@@ -13,7 +13,7 @@ void ParseModelRendererComponentFromFile( std::istream& in, ModelRenderComponent
     std::string tmp;
     fileIO::ParseLineKeyVal( in, "model", tmp );
     comp.model = ResourceManager::Get< Model >( tmp );
-    PG_ASSERT( comp.model );
+    PG_ASSERT( comp.model, std::string( "No model with name '" + tmp + "'" ).c_str() );
     comp.materials = comp.model->materials;
     int numMaterials;
     fileIO::ParseLineKeyVal( in, "CustomMaterials", numMaterials );

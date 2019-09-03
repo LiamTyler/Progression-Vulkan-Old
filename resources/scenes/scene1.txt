@@ -7,7 +7,7 @@ near-plane .1
 far-plane 100
 
 Resourcefile
-filename scenes/resource2.txt.ff
+filename resource.txt.ff
 
 BackgroundColor
 color 0 0 0
@@ -33,5 +33,5 @@ scale 1 1 1
 static false
 numComponents 1
 Component ModelRenderer
-model chalet
+model chalet2
 CustomMaterials 0

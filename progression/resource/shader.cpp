@@ -5,6 +5,7 @@
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
 
+
 // TODO: faster read file
 static bool LoadShaderTextFile( std::string& source, const std::string& filename )
 {
@@ -106,6 +107,9 @@ Shader& Shader::operator=( Shader&& shader )
 bool Shader::Load( ResourceCreateInfo* info )
 {
     ShaderCreateInfo* createInfo = static_cast< ShaderCreateInfo* >( info );
+#if USING( SERIALIZE_SHADER_TEXT )
+    m_createInfo = *createInfo;
+#endif // #if USING( SERIALIZE_SHADER_TEXT )
     Free();
 
     std::string shaderSource;
@@ -175,16 +179,27 @@ void Shader::Move( std::shared_ptr< Resource > dst )
 
 bool Shader::Serialize( std::ofstream& out ) const
 {
+    serialize::Write( out, name );
+
+#if USING( SERIALIZE_SHADER_TEXT )
+    serialize::Write( out, m_createInfo.vertex );
+    serialize::Write( out, m_createInfo.geometry );
+    serialize::Write( out, m_createInfo.fragment );
+    serialize::Write( out, m_createInfo.compute );
+#else // #if USING( SERIALIZE_SHADER_TEXT )
     GLint len;
     GLenum format;
     auto binary = GetShaderBinary( len, format );
     if ( !binary.size() )
+    {
         return false;
+    }
 
-    serialize::Write( out, name );
     serialize::Write( out, len );
     serialize::Write( out, format );
     serialize::Write( out, binary.data(), len );
+
+#endif // #else // #if USING( SERIALIZE_SHADER_TEXT )
 
     uint32_t numUniforms = (uint32_t) m_uniforms.size();
     serialize::Write( out, numUniforms );
@@ -200,6 +215,18 @@ bool Shader::Serialize( std::ofstream& out ) const
 bool Shader::Deserialize( char*& buffer )
 {
     serialize::Read( buffer, name );
+#if USING( SERIALIZE_SHADER_TEXT )
+    m_createInfo.name = name;
+    serialize::Read( buffer, m_createInfo.vertex );
+    serialize::Read( buffer, m_createInfo.geometry );
+    serialize::Read( buffer, m_createInfo.fragment );
+    serialize::Read( buffer, m_createInfo.compute );
+    
+    if( !Load( &m_createInfo ) )
+    {
+        return false;
+    }
+#else // #if USING( SERIALIZE_SHADER_TEXT )
     GLint len;
     GLenum format;
     serialize::Read( buffer, len );
@@ -208,9 +235,9 @@ bool Shader::Deserialize( char*& buffer )
     serialize::Read( buffer, binary.data(), len );
     if ( !LoadFromBinary( binary.data(), len, format ) )
     {
-        LOG_ERR( "Failed to load shader from binary" );
         return false;
     }
+#endif // #else // #if USING( SERIALIZE_SHADER_TEXT )
 
     uint32_t numUniforms;
     serialize::Read( buffer, numUniforms );
@@ -234,9 +261,10 @@ bool Shader::LoadFromBinary( const char* binarySource, GLint len, GLenum format 
 
     GLint status;
     glGetProgramiv( program, GL_LINK_STATUS, &status );
+    GLenum err;
     if ( GL_FALSE == status )
     {
-        LOG_ERR( "Failed to create program from the binary" );
+        LOG_ERR( "Failed to create program from binary" );
         return false;
     }
     m_program = program;
@@ -294,17 +322,17 @@ void Shader::QueryUniforms()
             if ( sName[len - 1] == ']' && sName[len - 3] == '[' )
             {
                 m_uniforms[sName.substr( 0, len - 3 )] = location;
-#ifdef PG_SHADER_WARNINGS
+#if USING( DEBUG_BUILD )
                 LOG( "Uniform: ", location, " = ", sName.substr( 0, len - 3 ) );
 #endif
             }
         }
         m_uniforms[sName] = location;
-#ifdef PG_SHADER_WARNINGS
-        LOG( "Uniform:", location, "=", sName );
+#if USING( DEBUG_BUILD )
+        LOG( "Uniform: ", location, " = '", sName, "'" );
 #endif
     }
-#ifdef PG_SHADER_WARNINGS
+#if USING( DEBUG_BUILD )
     LOG( "" );
 #endif
     delete[] uniformName;

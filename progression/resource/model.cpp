@@ -272,8 +272,6 @@ bool Model::LoadFromObj( ModelCreateInfo* createInfo, bool loadTexturesIfNotInRe
             }
         }
 
-        LOG( "Mat #: ", currentMaterialID, ", min: ", min, ", max: ", max );
-
         // create mesh and upload to GPU
         if ( currentMesh.vertices.size() )
         {
@@ -309,7 +307,6 @@ bool Model::LoadFromObj( ModelCreateInfo* createInfo, bool loadTexturesIfNotInRe
             currentMesh.aabb = AABB( min, max );
             aabb.min         = glm::min( min, aabb.min );
             aabb.max         = glm::max( max, aabb.max );
-            LOG( "Mat #: ", currentMaterialID, ", aabb min: ", aabb.min, ", aabb max : ", aabb.max );
 
             if ( createInfo->optimize )
             {
@@ -324,7 +321,7 @@ bool Model::LoadFromObj( ModelCreateInfo* createInfo, bool loadTexturesIfNotInRe
     }
 
     aabb = AABB( aabb.min, aabb.max );
-    LOG( "aabb min: ", aabb.min, ", aabb max : ", aabb.max );
+
     return true;
 }
 

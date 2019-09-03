@@ -16,7 +16,7 @@ static bool ParseResourcefile( std::istream& in )
 {
     std::string fname;
     fileIO::ParseLineKeyVal( in, "filename", fname );
-    return !in.fail() && ResourceManager::LoadFastFile( PG_RESOURCE_DIR + fname );
+    return !in.fail() && ResourceManager::LoadFastFile( PG_RESOURCE_DIR "cache/fastfiles/" + fname );
 }
 
 static bool ParseCamera( Scene* scene, std::istream& in )

@@ -211,9 +211,9 @@ void Window::Init( const WindowCreateInfo& createInfo )
 
     if ( GetMainWindow() == this )
     {
-        LOG( "Vendor:", glGetString( GL_VENDOR ) );
-        LOG( "Renderer:", glGetString( GL_RENDERER ) );
-        LOG( "Version:", glGetString( GL_VERSION ) );
+        LOG( "Vendor: ", glGetString( GL_VENDOR ) );
+        LOG( "Renderer: ", glGetString( GL_RENDERER ) );
+        LOG( "Version: ", glGetString( GL_VERSION ) );
     }
 
     if ( createInfo.vsync )

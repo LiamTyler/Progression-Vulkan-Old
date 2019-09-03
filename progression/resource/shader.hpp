@@ -8,6 +8,8 @@
 #include "utils/noncopyable.hpp"
 #include <unordered_set>
 
+#define SERIALIZE_SHADER_TEXT IN_USE
+
 namespace Progression
 {
 
@@ -62,6 +64,10 @@ protected:
 
     GLuint m_program;
     std::unordered_map< std::string, GLuint > m_uniforms;
+
+#if USING( SERIALIZE_SHADER_TEXT )
+    ShaderCreateInfo m_createInfo;
+#endif // #if USING( SERIALIZE_SHADER_TEXT )
 
 #if USING( DEBUG_BUILD )
     // hash the shader warnings if they are enabled and only display them if the hash isnt

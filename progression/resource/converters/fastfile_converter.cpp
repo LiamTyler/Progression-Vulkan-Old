@@ -161,7 +161,7 @@ AssetStatus FastfileConverter::CheckDependencies()
 
     if ( outputFile.empty() )
     {
-        outputFile = PG_RESOURCE_DIR "fastfiles/" +
+        outputFile = PG_RESOURCE_DIR "cache/fastfiles/" +
                      std::filesystem::path( inputFile ).filename().string() + ".ff";
     }
     if ( !std::filesystem::exists( outputFile ) )
