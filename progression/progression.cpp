@@ -62,12 +62,12 @@ void EngineInitialize( std::string config_name )
     Input::Init();
     ResourceManager::Init();
     ECS::init();
-    // RenderSystem::Init();
+    RenderSystem::Init();
 }
 
 void EngineQuit()
 {
-    // RenderSystem::Shutdown();
+    RenderSystem::Shutdown();
     ECS::shutdown();
     ResourceManager::Shutdown();
     Input::Free();

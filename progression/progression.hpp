@@ -14,7 +14,7 @@
 #include "core/window.hpp"
 
 #include "graphics/graphics_api.hpp"
-//#include "graphics/render_system.hpp"
+#include "graphics/render_system.hpp"
 
 #include "graphics/lights.hpp"
 

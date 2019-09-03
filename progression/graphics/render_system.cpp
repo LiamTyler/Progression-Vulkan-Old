@@ -133,16 +133,14 @@ struct PostProcessBuffer
     Gfx::Texture depthRbo;
 };
 
+static Window* s_window;
+static Viewport s_windowViewport;
 static RenderPass s_screenRenderPass;
 static GBuffer s_gbuffer;
 static PostProcessBuffer s_postProcessBuffer;
-static VertexInputDescriptor s_meshVao;
-static VertexInputDescriptor s_quadVao;
 static Buffer s_quadVertexBuffer;
-static VertexInputDescriptor s_cubeVao;
 static Buffer s_cubeVertexBuffer;
-static Window* s_window;
-static Viewport s_windowViewport;
+static Pipeline s_gbufferPipeline;
 
 // helper functions
 // void depthRender(Scene* scene, Shader& shader, const glm::mat4& LSM) {
@@ -176,6 +174,14 @@ namespace RenderSystem
 
     bool Init()
     {
+        s_window = GetMainWindow();
+
+        s_windowViewport.x = 0;
+        s_windowViewport.y = 0;
+        s_windowViewport.width = s_window->Width();
+        s_windowViewport.height = s_window->Height();
+        SetViewport( s_windowViewport );
+
         // load shaders
         for ( int i = 0; i < TOTAL_SHADERS; ++i )
         {
@@ -192,26 +198,7 @@ namespace RenderSystem
             }
         }
 
-        std::array< VertexAttributeDescriptor, 3 > meshAttribDescs;
-        meshAttribDescs[0].binding  = 0;
-        meshAttribDescs[0].location = 0;
-        meshAttribDescs[0].count    = 3;
-        meshAttribDescs[0].format   = BufferDataType::FLOAT32;
-        meshAttribDescs[0].offset   = 0;
 
-        meshAttribDescs[1].binding  = 1;
-        meshAttribDescs[1].location = 1;
-        meshAttribDescs[1].count    = 3;
-        meshAttribDescs[1].format   = BufferDataType::FLOAT32;
-        meshAttribDescs[1].offset   = 0;
-
-        meshAttribDescs[2].binding  = 2;
-        meshAttribDescs[2].location = 2;
-        meshAttribDescs[2].count    = 2;
-        meshAttribDescs[2].format   = BufferDataType::FLOAT32;
-        meshAttribDescs[2].offset   = 0;
-
-        s_meshVao = VertexInputDescriptor::Create( 3, &meshAttribDescs[0] );
 
         // load quad data
         float quadVerts[] =
@@ -227,7 +214,6 @@ namespace RenderSystem
         attribDescs[0].format   = BufferDataType::FLOAT32;
         attribDescs[0].offset   = 0;
 
-        s_quadVao = VertexInputDescriptor::Create( 1, &attribDescs[0] );
         s_quadVertexBuffer = Buffer::Create( quadVerts, sizeof( quadVerts ), BufferType::VERTEX, BufferUsage::STATIC );
 
         // load cube data
@@ -289,10 +275,10 @@ namespace RenderSystem
         attribDescs[0].format   = BufferDataType::FLOAT32;
         attribDescs[0].offset   = 0;
 
-        s_cubeVao = VertexInputDescriptor::Create( 1, &attribDescs[0] );
         s_cubeVertexBuffer = Buffer::Create( skyboxVertices, sizeof( skyboxVertices ), BufferType::VERTEX, BufferUsage::STATIC );
 
-        s_window = GetMainWindow();
+        // gbuffer render pass
+        RenderPassDescriptor gBufferRenderPassDesc;
 
         TextureDescriptor texDesc;
         texDesc.width     = s_window->Width();
@@ -303,63 +289,89 @@ namespace RenderSystem
         
         s_gbuffer.positionTex = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
         s_gbuffer.normalTex   = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
-
         texDesc.format = PixelFormat::R16_G16_B16_A16_Float;
         s_gbuffer.specularTex = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
-
         texDesc.format = PixelFormat::R16_G16_B16_Float;
         s_gbuffer.emissiveTex = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
-
         texDesc.format = PixelFormat::R8_G8_B8_Uint; // TODO: should this be sRGB?
         s_gbuffer.diffuseTex  = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
-
         texDesc.format = PixelFormat::DEPTH32_Float;
         s_gbuffer.depthRbo  = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
 
-        std::vector< ColorAttachmentDescriptor > colorAttachments( 5 );
-        colorAttachments[0].texture = &s_gbuffer.positionTex;
-        colorAttachments[1].texture = &s_gbuffer.normalTex;
-        colorAttachments[2].texture = &s_gbuffer.specularTex;
-        colorAttachments[3].texture = &s_gbuffer.emissiveTex;
-        colorAttachments[4].texture = &s_gbuffer.diffuseTex;
 
-        DepthAttachmentDescriptor depthAttachment;
-        depthAttachment.texture = &s_gbuffer.depthRbo;
+        gBufferRenderPassDesc.colorAttachmentDescriptors[0].texture = &s_gbuffer.positionTex;
+        gBufferRenderPassDesc.colorAttachmentDescriptors[1].texture = &s_gbuffer.normalTex;
+        gBufferRenderPassDesc.colorAttachmentDescriptors[2].texture = &s_gbuffer.specularTex;
+        gBufferRenderPassDesc.colorAttachmentDescriptors[3].texture = &s_gbuffer.emissiveTex;
+        gBufferRenderPassDesc.colorAttachmentDescriptors[4].texture = &s_gbuffer.diffuseTex;
+        gBufferRenderPassDesc.depthAttachmentDescriptor.texture = &s_gbuffer.depthRbo;
 
-        RenderPassDescriptor gBufferDescriptor;
-        //gBufferDescriptor.co( colorAttachments );
-        //gBufferDescriptor.SetDepthAttachment( depthAttachment );
-        s_gbuffer.renderPass = RenderPass::Create( gBufferDescriptor );
+        s_gbuffer.renderPass = RenderPass::Create( gBufferRenderPassDesc );
+
+        // gbuffer pass pipeline
+        PipelineDescriptor pipelineDesc;
+
+        std::array< VertexAttributeDescriptor, 3 > meshAttribDescs;
+        meshAttribDescs[0].binding  = 0;
+        meshAttribDescs[0].location = 0;
+        meshAttribDescs[0].count    = 3;
+        meshAttribDescs[0].format   = BufferDataType::FLOAT32;
+        meshAttribDescs[0].offset   = 0;
+
+        meshAttribDescs[1].binding  = 1;
+        meshAttribDescs[1].location = 1;
+        meshAttribDescs[1].count    = 3;
+        meshAttribDescs[1].format   = BufferDataType::FLOAT32;
+        meshAttribDescs[1].offset   = 0;
+
+        meshAttribDescs[2].binding  = 2;
+        meshAttribDescs[2].location = 2;
+        meshAttribDescs[2].count    = 2;
+        meshAttribDescs[2].format   = BufferDataType::FLOAT32;
+        meshAttribDescs[2].offset   = 0;
+
+        pipelineDesc.numVertexDescriptors   = 3;
+        pipelineDesc.vertexDescriptors      = &meshAttribDescs[0];
+        pipelineDesc.windingOrder           = WindingOrder::COUNTER_CLOCKWISE;
+        pipelineDesc.cullFace               = CullFace::BACK;
+
+        pipelineDesc.colorAttachmentInfos[0].blendingEnabled = false;
+        pipelineDesc.colorAttachmentInfos[1].blendingEnabled = false;
+        pipelineDesc.colorAttachmentInfos[2].blendingEnabled = false;
+        pipelineDesc.colorAttachmentInfos[3].blendingEnabled = false;
+        pipelineDesc.colorAttachmentInfos[4].blendingEnabled = false;
+        pipelineDesc.depthInfo.depthTestEnabled     = true;
+        pipelineDesc.depthInfo.depthWriteEnabled    = true;
+        pipelineDesc.depthInfo.compareFunc          = CompareFunction::LESS;
+
+        s_gbufferPipeline = Pipeline::Create( pipelineDesc );
+
+        // postprocess render pass
+        /*
+        RenderPassDescriptor postProcessRenderPassDesc;
 
         texDesc.format = PixelFormat::R16_G16_B16_A16_Float;
         s_postProcessBuffer.depthRbo  = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
         texDesc.format = PixelFormat::DEPTH32_Float;
         s_postProcessBuffer.depthRbo  = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
         
-        colorAttachments.resize( 1 );
-        colorAttachments[0].texture = &s_postProcessBuffer.hdrColorTex;
+        postProcessRenderPassDesc.colorAttachmentDescriptors[0].texture = &s_postProcessBuffer.hdrColorTex;
         depthAttachment.texture     = &s_postProcessBuffer.depthRbo;
+        */
 
         RenderPassDescriptor mainScreenDescriptor;
         // mainScreenDescriptor.depthAttachment.depthWriteEnabled = false;
         s_screenRenderPass = RenderPass::Create( mainScreenDescriptor );
-
-        s_windowViewport.x = 0;
-        s_windowViewport.y = 0;
-        s_windowViewport.width = s_window->Width();
-        s_windowViewport.height = s_window->Height();
-        SetViewport( s_windowViewport );
 
         return true;
     }
 
     void Shutdown()
     {
+        s_gbufferPipeline = {};
+
         s_quadVertexBuffer = {};
-        s_quadVao = {};
-        s_cubeVao = {};
         s_cubeVertexBuffer = {};
-        s_meshVao = {};
 
         s_gbuffer.renderPass = {};
         s_gbuffer.positionTex = {};
@@ -392,8 +404,8 @@ namespace RenderSystem
 
         GBufferPass( scene );
 
-        Blit( s_gbuffer.renderPass, s_postProcessBuffer.renderPass, s_window->Width(), s_window->Height(),
-              RenderTargetBuffers::RENDER_TARGET_DEPTH, FilterMode::NEAREST );
+        // Blit( s_gbuffer.renderPass, s_postProcessBuffer.renderPass, s_window->Width(), s_window->Height(),
+        //       RenderTargetBuffers::RENDER_TARGET_DEPTH, FilterMode::NEAREST );
 
         // write the result of the lighting pass to the post processing FBO
         // Gfx::bindFramebuffer( s_postProcessBuffer.fbo );
@@ -402,11 +414,11 @@ namespace RenderSystem
         // Gfx::blitFboToFbo( s_gbuffer.fbo, s_postProcessBuffer.fbo, s_window->Width(),
         //  s_window->Height(), GL_DEPTH_BUFFER_BIT );
 
-        LightingPass( scene );
+        // LightingPass( scene );
 
-        BackgroundPass( scene );
+        // BackgroundPass( scene );
 
-        PostProcessPass( scene );
+        // PostProcessPass( scene );
     }
 
 /*
@@ -513,16 +525,12 @@ namespace RenderSystem
 
     void GBufferPass( Scene* scene )
     {
-        PG_UNUSED( scene );
         s_gbuffer.renderPass.Bind();
-        
-        //Gfx::SetViewport( s_windowViewport );
-        //Gfx::SetCullFace( CullFace::BACK );
 
         auto& shader = s_shaders[ShaderNames::GBUFFER_PASS];
         shader.Enable();
         const auto& VP = scene->camera.GetVP();
-        s_meshVao.Bind();
+        s_gbufferPipeline.Bind();
 
         ECS::component::for_each< ModelRenderComponent >(
             [&shader, &VP]( const ECS::Entity& e, ModelRenderComponent& c )
@@ -558,7 +566,6 @@ namespace RenderSystem
                 Gfx::BindVertexBuffer( mesh.vertexBuffer, 2, mesh.GetUVOffset(), 8 );
                 Gfx::BindIndexBuffer( mesh.indexBuffer );
                 Gfx::DrawIndexedPrimitives( PrimitiveType::TRIANGLES, IndexType::UNSIGNED_INT, 0, mesh.GetNumIndices() );
-                // glDrawElements( GL_TRIANGLES, mesh.GetNumIndices(), GL_UNSIGNED_INT, 0 );
             }
         } );
     }
@@ -567,6 +574,8 @@ namespace RenderSystem
     //       to help not light pixels that intersect the volume only in screen space, not world
     void LightingPass( Scene* scene )
     {
+        PG_UNUSED( scene) ;
+        /*
         const auto& lights = scene->GetLights();
         const auto& VP     = scene->camera.GetVP();
 
@@ -710,10 +719,13 @@ namespace RenderSystem
         // Gfx::EnableBlending( false );
         // Gfx::toggleDepthWrite( true );
         // Gfx::toggleDepthTest( true );
+        */
     }
 
     void BackgroundPass( Scene* scene )
     {
+        PG_UNUSED( scene );
+        /*
         Shader& shader = s_shaders[ShaderNames::BACKGROUND_OR_SKYBOX];
         shader.Enable();
         //graphicsApi::toggleDepthWrite( false );
@@ -737,12 +749,14 @@ namespace RenderSystem
         //}
 
         //graphicsApi::toggleDepthWrite( true );
+        */
     }
 
     void PostProcessPass( Scene* scene )
     {
         PG_UNUSED( scene );
 
+        /*
         s_screenRenderPass.Bind();
 
         Blit( s_postProcessBuffer.renderPass, s_screenRenderPass, s_window->Width(), s_window->Height(),
@@ -781,6 +795,7 @@ namespace RenderSystem
 
         // graphicsApi::toggleDepthWrite( true );
         // graphicsApi::toggleDepthTest( true );
+        */
     }
 
 

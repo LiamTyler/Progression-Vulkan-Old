@@ -483,7 +483,7 @@ namespace Gfx
         glDepthMask( m_desc.depthInfo.depthWriteEnabled );
 
         auto nativeDepthCompareFunc = PGToOpenGLDepthCompareFunction( m_desc.depthInfo.compareFunc );
-        glDepthMask( m_desc.depthInfo.depthWriteEnabled );
+        glDepthFunc( nativeDepthCompareFunc );
 
         auto nativeWindingOrder = PGToOpenGLWindingOrder( m_desc.windingOrder );
         glFrontFace( nativeWindingOrder );

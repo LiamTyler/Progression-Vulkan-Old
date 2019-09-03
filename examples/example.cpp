@@ -19,26 +19,26 @@ int main( int argc, char* argv[] )
 
     PG::EngineInitialize();
 
-    Window* window = GetMainWindow();
-    // window->setRelativeMouse(true);
-
-    // Scene* scene = Scene::load( PG_RESOURCE_DIR "scenes/scene1.txt" );
-    ResourceManager::LoadFastFile( PG_RESOURCE_DIR "fastfiles/resource.txt.ff" );
-
-    PG_ASSERT( ResourceManager::Get< Shader >( "test" ) );
-    Shader& shader = *ResourceManager::Get< Shader >( "test" );
-
-    PG_ASSERT( ResourceManager::Get<::Progression::Texture >( "cockatoo" ) );
-    auto tex = ResourceManager::Get<::Progression::Texture >( "cockatoo" );
-
-    PG_ASSERT( ResourceManager::Get< Material >( "cockatooMaterial" ) );
-    auto mat = ResourceManager::Get< Material >( "cockatooMaterial" );
-
-    PG_ASSERT( ResourceManager::Get< Model >( "chalet2" ) );
-    Model& model = *ResourceManager::Get< Model >( "chalet2" );
-    Model& drawModel = model;
-
     {
+        Window* window = GetMainWindow();
+        // window->setRelativeMouse(true);
+
+        Scene* scene = Scene::Load( PG_RESOURCE_DIR "scenes/scene1.txt" );
+        // ResourceManager::LoadFastFile( PG_RESOURCE_DIR "fastfiles/resource.txt.ff" );
+
+        PG_ASSERT( ResourceManager::Get< Shader >( "test" ) );
+        Shader& shader = *ResourceManager::Get< Shader >( "test" );
+
+        PG_ASSERT( ResourceManager::Get<::Progression::Texture >( "cockatoo" ) );
+        auto tex = ResourceManager::Get<::Progression::Texture >( "cockatoo" );
+
+        PG_ASSERT( ResourceManager::Get< Material >( "cockatooMaterial" ) );
+        auto mat = ResourceManager::Get< Material >( "cockatooMaterial" );
+
+        PG_ASSERT( ResourceManager::Get< Model >( "chalet2" ) );
+        Model& model = *ResourceManager::Get< Model >( "chalet2" );
+        Model& drawModel = model;
+
         RenderPassDescriptor renderPassDesc;
         renderPassDesc.colorAttachmentDescriptors[0].clearColor = glm::vec4( 0, 0, 0, 1 );
         RenderPass renderPass = RenderPass::Create( renderPassDesc );
@@ -67,12 +67,12 @@ int main( int argc, char* argv[] )
         pipelineDesc.numVertexDescriptors   = 3;
         pipelineDesc.vertexDescriptors      = &attribDescs[0];
         pipelineDesc.windingOrder           = WindingOrder::COUNTER_CLOCKWISE;
-        pipelineDesc.cullFace               = CullFace::FRONT_AND_BACK;
+        pipelineDesc.cullFace               = CullFace::BACK;
 
         pipelineDesc.colorAttachmentInfos[0].blendingEnabled = false;
         pipelineDesc.depthInfo.depthTestEnabled     = true;
         pipelineDesc.depthInfo.depthWriteEnabled    = true;
-        pipelineDesc.depthInfo.compareFunc          = CompareFunction::EQUAL;
+        pipelineDesc.depthInfo.compareFunc          = CompareFunction::LESS;
 
         Pipeline pipeline = Pipeline::Create( pipelineDesc );
 
@@ -99,9 +99,12 @@ int main( int argc, char* argv[] )
                 PG::EngineShutdown = true;
             }
 
+            RenderSystem::Render( scene );
+
+            /*
             renderPass.Bind();
-            pipeline.Bind();
             shader.Enable();
+            pipeline.Bind();
 
             glm::mat4 M   = modelTransform.getModelMatrix();
             glm::mat4 N   = glm::transpose( glm::inverse( M ) );
@@ -140,6 +143,7 @@ int main( int argc, char* argv[] )
 
                 DrawIndexedPrimitives( PrimitiveType::TRIANGLES, IndexType::UNSIGNED_INT, 0, mesh.GetNumIndices() );
             }
+            */
 
             window->EndFrame();
         }

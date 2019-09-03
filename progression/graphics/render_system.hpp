@@ -32,7 +32,7 @@ namespace RenderSystem
     /**
      * \brief Will render the given scene.
      */
-    inline void Render( Scene* scene );
+    void Render( Scene* scene );
 
     
     Gfx::Sampler* GetSampler( Gfx::SamplerDescriptor* sampler );
