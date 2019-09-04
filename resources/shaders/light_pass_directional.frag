@@ -2,24 +2,23 @@
 
 #define EPSILON 0.000001
 
-in vec2 UV;
+layout( location = 0 ) in vec2 UV;
 
-uniform sampler2D gPosition;
-uniform sampler2D gNormal;
-uniform sampler2D gDiffuse;
-uniform sampler2D gSpecularExp;
-uniform sampler2D gEmissive;
+layout( location = 0 ) uniform sampler2D gPosition;
+layout( location = 1 ) uniform sampler2D gNormal;
+layout( location = 2 ) uniform sampler2D gDiffuse;
+layout( location = 3 ) uniform sampler2D gSpecularExp;
+layout( location = 4 ) uniform sampler2D gEmissive;
 
 // uniform sampler2D shadowMap;
 // uniform bool shadows;
 // uniform mat4 LSM;
 
-uniform vec3 cameraPos;
+layout( location = 5 ) uniform vec3 cameraPos;
+layout( location = 6 ) uniform vec3 lightDir;
+layout( location = 7 ) uniform vec3 lightColor;
 
-uniform vec3 lightDir;
-uniform vec3 lightColor;
-
-out vec4 finalColor;
+layout( location = 0 ) out vec4 finalColor;
 
 /*
 // return how much the fragment is 'in' the shadow.
@@ -45,11 +44,11 @@ float shadowAmount(const in vec3 fragPos, const in vec3 n, const in vec3 l) {
 */
 
 void main() {    
-    vec3 fragPos      = texture(gPosition, UV).rgb;
-    vec3 n            = texture(gNormal, UV).rgb;
-    vec3 diffuseColor = texture(gDiffuse, UV).rgb;
-    vec4 specExp      = texture(gSpecularExp, UV);
-    vec3 ke           = texture(gEmissive, UV).rgb;
+    vec3 fragPos      = texture( gPosition,     UV ).rgb;
+    vec3 n            = texture( gNormal,       UV ).rgb;
+    vec3 diffuseColor = texture(gDiffuse,       UV).rgb;
+    vec4 specExp      = texture(gSpecularExp,   UV);
+    vec3 ke           = texture(gEmissive,      UV).rgb;
 
     vec3 e = normalize(cameraPos - fragPos);
 
@@ -65,6 +64,7 @@ void main() {
     //     outColor *= (1.0f - shadowAmount(fragPos, n, l));
     // }
     
+    // finalColor.rgb = n + EPSILON * ( fragPos + diffuseColor + specExp.rgb * specExp.a + ke );
     finalColor.rgb = outColor;
     finalColor.a   = 1.0;
 }

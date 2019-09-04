@@ -367,7 +367,6 @@ namespace Gfx
 
     RenderPass& RenderPass::operator=( RenderPass&& r )
     {
-        m_allColorAttachmentsSameColor = std::move( r.m_allColorAttachmentsSameColor );
         m_desc = std::move( r.m_desc );
         m_nativeHandle   = std::move( r.m_nativeHandle );
         r.m_nativeHandle = ~0u;
@@ -381,7 +380,7 @@ namespace Gfx
         glBindFramebuffer( GL_FRAMEBUFFER, m_nativeHandle );
         if ( m_desc.colorAttachmentDescriptors.size() )
         {
-            if ( m_allColorAttachmentsSameColor && m_desc.colorAttachmentDescriptors[0].loadAction == LoadAction::CLEAR )
+            if ( m_desc.colorAttachmentDescriptors[0].loadAction == LoadAction::CLEAR )
             {
                 auto& c = m_desc.colorAttachmentDescriptors[0].clearColor;
                 glClearColor( c.r, c.g, c.b, c.a );
@@ -391,6 +390,7 @@ namespace Gfx
 
         if ( m_desc.depthAttachmentDescriptor.loadAction == LoadAction::CLEAR )
         {
+            glDepthMask( true );
             glClearDepthf( m_desc.depthAttachmentDescriptor.clearValue );
             glClear( GL_DEPTH_BUFFER_BIT );
         }
@@ -433,7 +433,7 @@ namespace Gfx
             glFramebufferTexture( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, nativeHandle, 0 );
         }
 
-        std::vector< GLuint > attachments;
+        std::vector< GLenum > attachments;
         for ( unsigned int i = 0; i < (unsigned int) desc.colorAttachmentDescriptors.size() && 
               desc.colorAttachmentDescriptors[i].texture != nullptr; ++i )
         {

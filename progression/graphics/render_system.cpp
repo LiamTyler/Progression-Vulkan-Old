@@ -12,6 +12,7 @@
 #include "resource/texture.hpp"
 //#include "graphics/shadow_map.hpp"
 #include <array>
+#include "graphics/pg_to_opengl_types.hpp"
 
 using namespace Progression;
 using namespace Gfx;
@@ -106,31 +107,13 @@ struct GBuffer
     Gfx::Texture emissiveTex;
     Gfx::Texture depthRbo;
 
-    void BindForWriting()
-    {
-        // graphicsApi::bindFramebuffer( fbo );
-        // graphicsApi::clearColor( 0, 0, 0, 0 );
-        // graphicsApi::clearColorBuffer();
-        // graphicsApi::clearDepthBuffer();
-    }
-
-    void BindForReading( Shader& shader )
-    {
-        PG_UNUSED( shader );
-        // graphicsApi::bind2DTexture( positionTex, shader.getUniform( "gPosition" ), 0 );
-        // graphicsApi::bind2DTexture( normalTex, shader.getUniform( "gNormal" ), 1 );
-        // graphicsApi::bind2DTexture( diffuseTex, shader.getUniform( "gDiffuse" ), 2 );
-        // graphicsApi::bind2DTexture( specularTex, shader.getUniform( "gSpecularExp" ), 3 );
-        // graphicsApi::bind2DTexture( emissiveTex, shader.getUniform( "gEmissive" ), 4 );
-
-    }
+    void BindForReading( Shader& shader );
 };
 
 struct PostProcessBuffer
 {
     RenderPass renderPass;
     Gfx::Texture hdrColorTex;
-    Gfx::Texture depthRbo;
 };
 
 static Window* s_window;
@@ -141,6 +124,25 @@ static PostProcessBuffer s_postProcessBuffer;
 static Buffer s_quadVertexBuffer;
 static Buffer s_cubeVertexBuffer;
 static Pipeline s_gbufferPipeline;
+static Pipeline s_directionalLightPipeline;
+static Pipeline s_backgroundPipeline;
+static Pipeline s_postProcessPipeline;
+static Sampler* s_nearestSampler;
+
+void GBuffer::BindForReading( Shader& shader )
+{
+    shader.BindTexture( positionTex, "gPosition",    0 );
+    shader.BindTexture( normalTex,   "gNormal",      1 );
+    shader.BindTexture( diffuseTex,  "gDiffuse",     2 );
+    shader.BindTexture( specularTex, "gSpecularExp", 3 );
+    shader.BindTexture( emissiveTex, "gEmissive",    4 );
+
+    s_nearestSampler->Bind( 0 );
+    s_nearestSampler->Bind( 1 );
+    s_nearestSampler->Bind( 2 );
+    s_nearestSampler->Bind( 3 );
+    s_nearestSampler->Bind( 4 );
+}
 
 // helper functions
 // void depthRender(Scene* scene, Shader& shader, const glm::mat4& LSM) {
@@ -203,16 +205,16 @@ namespace RenderSystem
         // load quad data
         float quadVerts[] =
         {
-            -1, 1,  -1, -1,   1, -1,
-            -1, 1,   1, -1,   1, 1
+            -1, 1, 0,  -1, -1, 0,   1, -1, 0,
+            -1, 1, 0,   1, -1, 0,   1,  1, 0
         };
         
-        std::array< VertexAttributeDescriptor, 1 > attribDescs;
-        attribDescs[0].binding  = 0;
-        attribDescs[0].location = 0;
-        attribDescs[0].count    = 2;
-        attribDescs[0].format   = BufferDataType::FLOAT32;
-        attribDescs[0].offset   = 0;
+        std::array< VertexAttributeDescriptor, 1 > quadVertexDesc;
+        quadVertexDesc[0].binding  = 0;
+        quadVertexDesc[0].location = 0;
+        quadVertexDesc[0].count    = 3;
+        quadVertexDesc[0].format   = BufferDataType::FLOAT32;
+        quadVertexDesc[0].offset   = 0;
 
         s_quadVertexBuffer = Buffer::Create( quadVerts, sizeof( quadVerts ), BufferType::VERTEX, BufferUsage::STATIC );
 
@@ -269,11 +271,13 @@ namespace RenderSystem
             -1.0f, -1.0f, 1.0f,
         };
 
-        attribDescs[0].binding  = 0;
-        attribDescs[0].location = 0;
-        attribDescs[0].count    = 3;
-        attribDescs[0].format   = BufferDataType::FLOAT32;
-        attribDescs[0].offset   = 0;
+
+        std::array< VertexAttributeDescriptor, 1 > cubeVertexDesc;
+        cubeVertexDesc[0].binding  = 0;
+        cubeVertexDesc[0].location = 0;
+        cubeVertexDesc[0].count    = 3;
+        cubeVertexDesc[0].format   = BufferDataType::FLOAT32;
+        cubeVertexDesc[0].offset   = 0;
 
         s_cubeVertexBuffer = Buffer::Create( skyboxVertices, sizeof( skyboxVertices ), BufferType::VERTEX, BufferUsage::STATIC );
 
@@ -289,27 +293,43 @@ namespace RenderSystem
         
         s_gbuffer.positionTex = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
         s_gbuffer.normalTex   = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
+        texDesc.format = PixelFormat::R8_G8_B8_Uint; // TODO: should this be sRGB?
+        s_gbuffer.diffuseTex  = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
         texDesc.format = PixelFormat::R16_G16_B16_A16_Float;
         s_gbuffer.specularTex = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
         texDesc.format = PixelFormat::R16_G16_B16_Float;
         s_gbuffer.emissiveTex = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
-        texDesc.format = PixelFormat::R8_G8_B8_Uint; // TODO: should this be sRGB?
-        s_gbuffer.diffuseTex  = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
         texDesc.format = PixelFormat::DEPTH32_Float;
         s_gbuffer.depthRbo  = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
 
-
         gBufferRenderPassDesc.colorAttachmentDescriptors[0].texture = &s_gbuffer.positionTex;
         gBufferRenderPassDesc.colorAttachmentDescriptors[1].texture = &s_gbuffer.normalTex;
-        gBufferRenderPassDesc.colorAttachmentDescriptors[2].texture = &s_gbuffer.specularTex;
-        gBufferRenderPassDesc.colorAttachmentDescriptors[3].texture = &s_gbuffer.emissiveTex;
-        gBufferRenderPassDesc.colorAttachmentDescriptors[4].texture = &s_gbuffer.diffuseTex;
+        gBufferRenderPassDesc.colorAttachmentDescriptors[2].texture = &s_gbuffer.diffuseTex;
+        gBufferRenderPassDesc.colorAttachmentDescriptors[3].texture = &s_gbuffer.specularTex;
+        gBufferRenderPassDesc.colorAttachmentDescriptors[4].texture = &s_gbuffer.emissiveTex;
         gBufferRenderPassDesc.depthAttachmentDescriptor.texture = &s_gbuffer.depthRbo;
 
         s_gbuffer.renderPass = RenderPass::Create( gBufferRenderPassDesc );
 
+        // postprocess render pass
+        RenderPassDescriptor postProcessRenderPassDesc;
+
+        texDesc.format = PixelFormat::R16_G16_B16_A16_Float;
+        s_postProcessBuffer.hdrColorTex = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
+        postProcessRenderPassDesc.colorAttachmentDescriptors[0].texture = &s_postProcessBuffer.hdrColorTex;
+        postProcessRenderPassDesc.colorAttachmentDescriptors[0].loadAction = LoadAction::CLEAR;
+        postProcessRenderPassDesc.depthAttachmentDescriptor.texture = &s_gbuffer.depthRbo;
+        postProcessRenderPassDesc.depthAttachmentDescriptor.loadAction = LoadAction::LOAD;
+
+        s_postProcessBuffer.renderPass = RenderPass::Create( postProcessRenderPassDesc );
+
+        RenderPassDescriptor mainScreenDescriptor;
+        mainScreenDescriptor.colorAttachmentDescriptors[0].loadAction = LoadAction::CLEAR;
+        mainScreenDescriptor.depthAttachmentDescriptor.loadAction     = LoadAction::DONT_CARE;
+        s_screenRenderPass = RenderPass::Create( mainScreenDescriptor );
+
         // gbuffer pass pipeline
-        PipelineDescriptor pipelineDesc;
+        PipelineDescriptor gbufferPipelineDesc;
 
         std::array< VertexAttributeDescriptor, 3 > meshAttribDescs;
         meshAttribDescs[0].binding  = 0;
@@ -330,38 +350,84 @@ namespace RenderSystem
         meshAttribDescs[2].format   = BufferDataType::FLOAT32;
         meshAttribDescs[2].offset   = 0;
 
-        pipelineDesc.numVertexDescriptors   = 3;
-        pipelineDesc.vertexDescriptors      = &meshAttribDescs[0];
-        pipelineDesc.windingOrder           = WindingOrder::COUNTER_CLOCKWISE;
-        pipelineDesc.cullFace               = CullFace::BACK;
+        gbufferPipelineDesc.numVertexDescriptors = 3;
+        gbufferPipelineDesc.vertexDescriptors    = &meshAttribDescs[0];
+        gbufferPipelineDesc.windingOrder         = WindingOrder::COUNTER_CLOCKWISE;
+        gbufferPipelineDesc.cullFace             = CullFace::BACK;
 
-        pipelineDesc.colorAttachmentInfos[0].blendingEnabled = false;
-        pipelineDesc.colorAttachmentInfos[1].blendingEnabled = false;
-        pipelineDesc.colorAttachmentInfos[2].blendingEnabled = false;
-        pipelineDesc.colorAttachmentInfos[3].blendingEnabled = false;
-        pipelineDesc.colorAttachmentInfos[4].blendingEnabled = false;
-        pipelineDesc.depthInfo.depthTestEnabled     = true;
-        pipelineDesc.depthInfo.depthWriteEnabled    = true;
-        pipelineDesc.depthInfo.compareFunc          = CompareFunction::LESS;
+        gbufferPipelineDesc.colorAttachmentInfos[0].blendingEnabled = false;
+        gbufferPipelineDesc.colorAttachmentInfos[1].blendingEnabled = false;
+        gbufferPipelineDesc.colorAttachmentInfos[2].blendingEnabled = false;
+        gbufferPipelineDesc.colorAttachmentInfos[3].blendingEnabled = false;
+        gbufferPipelineDesc.colorAttachmentInfos[4].blendingEnabled = false;
+        gbufferPipelineDesc.depthInfo.depthTestEnabled              = true;
+        gbufferPipelineDesc.depthInfo.depthWriteEnabled             = true;
+        gbufferPipelineDesc.depthInfo.compareFunc                   = CompareFunction::LESS;
 
-        s_gbufferPipeline = Pipeline::Create( pipelineDesc );
-
-        // postprocess render pass
-        /*
-        RenderPassDescriptor postProcessRenderPassDesc;
-
-        texDesc.format = PixelFormat::R16_G16_B16_A16_Float;
-        s_postProcessBuffer.depthRbo  = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
-        texDesc.format = PixelFormat::DEPTH32_Float;
-        s_postProcessBuffer.depthRbo  = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
+        s_gbufferPipeline = Pipeline::Create( gbufferPipelineDesc );
         
-        postProcessRenderPassDesc.colorAttachmentDescriptors[0].texture = &s_postProcessBuffer.hdrColorTex;
-        depthAttachment.texture     = &s_postProcessBuffer.depthRbo;
-        */
+        // lighting pass pipeline
+        PipelineDescriptor directionalLightPipelineDesc;
 
-        RenderPassDescriptor mainScreenDescriptor;
-        // mainScreenDescriptor.depthAttachment.depthWriteEnabled = false;
-        s_screenRenderPass = RenderPass::Create( mainScreenDescriptor );
+        directionalLightPipelineDesc.numVertexDescriptors = 1;
+        directionalLightPipelineDesc.vertexDescriptors    = &quadVertexDesc[0];
+        directionalLightPipelineDesc.windingOrder         = WindingOrder::COUNTER_CLOCKWISE;
+        directionalLightPipelineDesc.cullFace             = CullFace::BACK;
+
+        auto& hdrColorAttachment = directionalLightPipelineDesc.colorAttachmentInfos[0];
+        hdrColorAttachment.blendingEnabled     = true;
+        hdrColorAttachment.colorBlendEquation  = BlendEquation::ADD;
+        hdrColorAttachment.alphaBlendEquation  = BlendEquation::ADD;
+        hdrColorAttachment.srcColorBlendFactor = BlendFactor::ONE;
+        hdrColorAttachment.dstColorBlendFactor = BlendFactor::ONE;
+        hdrColorAttachment.srcAlphaBlendFactor = BlendFactor::ONE;
+        hdrColorAttachment.dstAlphaBlendFactor = BlendFactor::ONE;
+
+        directionalLightPipelineDesc.depthInfo.depthTestEnabled  = false;
+        directionalLightPipelineDesc.depthInfo.depthWriteEnabled = false;
+        directionalLightPipelineDesc.depthInfo.compareFunc       = CompareFunction::LESS;
+
+        s_directionalLightPipeline = Pipeline::Create( directionalLightPipelineDesc );
+
+        // background pass pipeline
+        PipelineDescriptor backgroundPipelineDesc;
+
+        backgroundPipelineDesc.numVertexDescriptors = 1;
+        backgroundPipelineDesc.vertexDescriptors    = &quadVertexDesc[0];
+        backgroundPipelineDesc.windingOrder         = WindingOrder::COUNTER_CLOCKWISE;
+        backgroundPipelineDesc.cullFace             = CullFace::BACK;
+
+        backgroundPipelineDesc.colorAttachmentInfos[0].blendingEnabled = false;
+
+        backgroundPipelineDesc.depthInfo.depthTestEnabled  = true;
+        backgroundPipelineDesc.depthInfo.depthWriteEnabled = false;
+        backgroundPipelineDesc.depthInfo.compareFunc       = CompareFunction::LESS;
+
+        s_backgroundPipeline = Pipeline::Create( backgroundPipelineDesc );
+
+        // postprocess pipeline
+        PipelineDescriptor postProcessPipelineDesc;
+
+        postProcessPipelineDesc.numVertexDescriptors = 1;
+        postProcessPipelineDesc.vertexDescriptors    = &quadVertexDesc[0];
+        postProcessPipelineDesc.windingOrder         = WindingOrder::COUNTER_CLOCKWISE;
+        postProcessPipelineDesc.cullFace             = CullFace::BACK;
+
+        postProcessPipelineDesc.colorAttachmentInfos[0].blendingEnabled = false;
+
+        postProcessPipelineDesc.depthInfo.depthTestEnabled  = false;
+        postProcessPipelineDesc.depthInfo.depthWriteEnabled = false;
+        postProcessPipelineDesc.depthInfo.compareFunc       = CompareFunction::LESS;
+
+        s_postProcessPipeline = Pipeline::Create( postProcessPipelineDesc );
+
+        SamplerDescriptor samplerDesc;
+        samplerDesc.minFilter = FilterMode::NEAREST;
+        samplerDesc.magFilter = FilterMode::NEAREST;
+        samplerDesc.wrapModeS = WrapMode::CLAMP_TO_EDGE;
+        samplerDesc.wrapModeT = WrapMode::CLAMP_TO_EDGE;
+        samplerDesc.wrapModeR = WrapMode::CLAMP_TO_EDGE;
+        s_nearestSampler = RenderSystem::GetSampler( &samplerDesc );
 
         return true;
     }
@@ -369,6 +435,9 @@ namespace RenderSystem
     void Shutdown()
     {
         s_gbufferPipeline = {};
+        s_directionalLightPipeline = {};
+        s_backgroundPipeline = {};
+        s_postProcessBuffer = {};
 
         s_quadVertexBuffer = {};
         s_cubeVertexBuffer = {};
@@ -383,7 +452,6 @@ namespace RenderSystem
 
         s_postProcessBuffer.renderPass = {};
         s_postProcessBuffer.hdrColorTex = {};
-        s_postProcessBuffer.depthRbo = {};
 
         for ( int i = 0; i < TOTAL_SHADERS; ++i )
         {
@@ -400,29 +468,19 @@ namespace RenderSystem
     {
         scene->SortLights();
 
-        // shadowPass(scene);
+        // ShadowPass(scene);
 
         GBufferPass( scene );
 
-        // Blit( s_gbuffer.renderPass, s_postProcessBuffer.renderPass, s_window->Width(), s_window->Height(),
-        //       RenderTargetBuffers::RENDER_TARGET_DEPTH, FilterMode::NEAREST );
+        LightingPass( scene );
 
-        // write the result of the lighting pass to the post processing FBO
-        // Gfx::bindFramebuffer( s_postProcessBuffer.fbo );
-        // Gfx::clearColor( 0, 0, 0, 0 );
-        // Gfx::clearColorBuffer();
-        // Gfx::blitFboToFbo( s_gbuffer.fbo, s_postProcessBuffer.fbo, s_window->Width(),
-        //  s_window->Height(), GL_DEPTH_BUFFER_BIT );
+        BackgroundPass( scene );
 
-        // LightingPass( scene );
-
-        // BackgroundPass( scene );
-
-        // PostProcessPass( scene );
+        PostProcessPass( scene );
     }
 
 /*
-    void shadowPass(Scene* scene) {
+    void ShadowPass(Scene* scene) {
         const auto& lights = scene->getLights();
         const auto& camera = *scene->getCamera();
         Frustum frustum = camera.GetFrustum();
@@ -574,14 +632,10 @@ namespace RenderSystem
     //       to help not light pixels that intersect the volume only in screen space, not world
     void LightingPass( Scene* scene )
     {
-        PG_UNUSED( scene) ;
-        /*
         const auto& lights = scene->GetLights();
         const auto& VP     = scene->camera.GetVP();
 
-        //Gfx::EnableBlending( true );
-        //Gfx::SetBlendEquations( Gfx::BlendEquation::ADD, Gfx::BlendEquation::ADD );
-        //Gfx::SetBlendFactors( Gfx::BlendFactor::ONE, Gfx::BlendFactor::ONE, Gfx::BlendFactor::ONE, Gfx::BlendFactor::ONE );
+        s_postProcessBuffer.renderPass.Bind();
 
         //Gfx::toggleDepthWrite( false );
         //Gfx::toggleDepthTest( true );
@@ -688,14 +742,12 @@ namespace RenderSystem
         //     index += numSpotLights;
         // }
 
-        // graphicsApi::toggleCulling( false );
-        // graphicsApi::toggleDepthTest( false );
         // directional lights
         {
             auto& shader = s_shaders[ShaderNames::LIGHTPASS_DIRECTIONAL];
             shader.Enable();
+            s_directionalLightPipeline.Bind();
             s_gbuffer.BindForReading( shader );
-            // graphicsApi::bindVao( s_quadVao );
             shader.SetUniform( "cameraPos", scene->camera.position );
             for ( unsigned int i = 0; i < numDirectionalLights; ++i )
             {
@@ -704,6 +756,9 @@ namespace RenderSystem
                 shader.SetUniform( "lightColor", l->color * l->intensity );
                 shader.SetUniform( "lightDir", -l->direction );
 
+                Gfx::BindVertexBuffer( s_quadVertexBuffer, 0, 0, 12 );
+                Gfx::DrawNonIndexedPrimitives( PrimitiveType::TRIANGLES, 0, 6 );
+
                 // if (l->shadowMap) {
                 //     graphicsApi::bind2DTexture(l->shadowMap->texture(),
                 //     shader.getUniform("shadowMap"), 5); shader.setUniform("LSM",
@@ -711,23 +766,16 @@ namespace RenderSystem
                 // } else {
                 //     shader.setUniform("shadows", false);
                 // }
-
-                glDrawArrays( GL_TRIANGLES, 0, 6 );
             }
         }
-
-        // Gfx::EnableBlending( false );
-        // Gfx::toggleDepthWrite( true );
-        // Gfx::toggleDepthTest( true );
-        */
     }
 
     void BackgroundPass( Scene* scene )
     {
         PG_UNUSED( scene );
-        /*
         Shader& shader = s_shaders[ShaderNames::BACKGROUND_OR_SKYBOX];
         shader.Enable();
+        s_backgroundPipeline.Bind();
         //graphicsApi::toggleDepthWrite( false );
 
         // if (scene->skybox) {
@@ -743,20 +791,17 @@ namespace RenderSystem
             shader.SetUniform( "MVP", glm::mat4( 1 ) );
             shader.SetUniform( "skybox", false );
             shader.SetUniform( "color", scene->backgroundColor );
-            s_quadVao.Bind();
+            Gfx::BindVertexBuffer( s_quadVertexBuffer, 0, 0, 12 );
             DrawNonIndexedPrimitives( PrimitiveType::TRIANGLES, 0, 6 );
-            //glDrawArrays( GL_TRIANGLES, 0, 6 );
         //}
 
         //graphicsApi::toggleDepthWrite( true );
-        */
     }
 
     void PostProcessPass( Scene* scene )
     {
         PG_UNUSED( scene );
 
-        /*
         s_screenRenderPass.Bind();
 
         Blit( s_postProcessBuffer.renderPass, s_screenRenderPass, s_window->Width(), s_window->Height(),
@@ -764,12 +809,14 @@ namespace RenderSystem
 
         auto& shader = s_shaders[ShaderNames::POST_PROCESS];
         shader.Enable();
+        s_postProcessPipeline.Bind();
+
         // shader.setUniform("exposure", 1.0f); // TODO: Actually calculate exposure
         shader.BindTexture( s_postProcessBuffer.hdrColorTex, "originalColor", 0 );
-        s_quadVao.Bind();
-        Gfx::BindVertexBuffer( s_quadVertexBuffer, 0, 0, 8 );
+        Gfx::BindVertexBuffer( s_quadVertexBuffer, 0, 0, 12 );
         Gfx::DrawNonIndexedPrimitives( PrimitiveType::TRIANGLES, 0, 6 );
 
+        /*
         // Bind and clear the main screen
         // graphicsApi::bindFramebuffer( 0 );
         // graphicsApi::setViewport( s_window->Width(), s_window->Height() );

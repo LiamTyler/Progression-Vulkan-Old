@@ -428,7 +428,6 @@ namespace Gfx
     private:
         RenderPassDescriptor m_desc;
         GLuint m_nativeHandle = ~0u;
-        bool m_allColorAttachmentsSameColor;
     };
 
     enum RenderTargetBuffers
