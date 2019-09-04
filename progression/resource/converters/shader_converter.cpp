@@ -1,5 +1,6 @@
 #include "resource/converters/shader_converter.hpp"
 #include "resource/shader.hpp"
+#include "utils/logger.hpp"
 #include "utils/serialize.hpp"
 #include "utils/timestamp.hpp"
 #include <filesystem>

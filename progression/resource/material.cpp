@@ -1,7 +1,10 @@
+#include "core/assert.hpp"
+#include "core/core_defines.hpp"
 #include "resource/material.hpp"
 #include "resource/resource_manager.hpp"
 #include "resource/texture.hpp"
 #include "utils/fileIO.hpp"
+#include "utils/logger.hpp"
 #include "utils/serialize.hpp"
 
 namespace Progression

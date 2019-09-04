@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/camera.hpp"
-#include "core/common.hpp"
 #include "core/config.hpp"
 #include "core/platform_defines.hpp"
 #include "core/ecs.hpp"

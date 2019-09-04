@@ -1,5 +1,6 @@
 #include "core/window.hpp"
 #include "core/time.hpp"
+#include "glad/glad.h"
 #include "utils/logger.hpp"
 #include <unordered_set>
 

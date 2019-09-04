@@ -1,7 +1,8 @@
 #pragma once
 
-#include "core/common.hpp"
+#include "core/math.hpp"
 #include "resource/resource.hpp"
+#include <vector>
 
 namespace Progression
 {

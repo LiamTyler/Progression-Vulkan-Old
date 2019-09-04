@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/common.hpp"
+#include "core/assert.hpp"
 #include "core/transform.hpp"
 #include <bitset>
 #include <cstring>

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/camera.hpp"
-#include "core/common.hpp"
 #include "graphics/shader.hpp"
 #include "utils/noncopyable.hpp"
 

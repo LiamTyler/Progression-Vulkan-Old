@@ -2,7 +2,7 @@
 
 #include <AL/al.h>
 #include <AL/alc.h>
-#include "core/common.hpp"
+#include "core/math.hpp"
 #include "audio/audio_file.hpp"
 
 namespace Progression {

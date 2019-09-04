@@ -1,8 +1,10 @@
 #include "resource/converters/texture_converter.hpp"
+#include "core/assert.hpp"
 #include "resource/image.hpp"
 #include "resource/resource_manager.hpp"
 #include "resource/texture.hpp"
 #include "utils/fileIO.hpp"
+#include "utils/logger.hpp"
 #include "utils/serialize.hpp"
 #include "utils/timestamp.hpp"
 #include <filesystem>

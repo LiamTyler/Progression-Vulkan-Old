@@ -1,4 +1,6 @@
 #include "resource/mesh.hpp"
+
+#include "core/assert.hpp"
 #include "graphics/graphics_api.hpp"
 #include "meshoptimizer/src/meshoptimizer.h"
 #include "utils/logger.hpp"

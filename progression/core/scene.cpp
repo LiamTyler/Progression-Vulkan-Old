@@ -1,4 +1,5 @@
 #include "core/scene.hpp"
+#include "core/assert.hpp"
 #include "core/ecs.hpp"
 #include "graphics/lights.hpp"
 #include "resource/resource_manager.hpp"

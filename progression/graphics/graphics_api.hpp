@@ -1,6 +1,8 @@
 #pragma once
 
-#include "core/common.hpp"
+#include "core/core_defines.hpp"
+#include "core/math.hpp"
+#include "glad/glad.h"
 #include "utils/noncopyable.hpp"
 #include <array>
 

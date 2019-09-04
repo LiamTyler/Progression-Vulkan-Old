@@ -1,5 +1,6 @@
 #include "core/time.hpp"
-#include "core/common.hpp"
+#define GLFW_INCLUDE_NONE
+#include "GLFW/glfw3.h"
 
 static float s_currentFrameStartTime = 0;
 static float s_lastFrameStartTime    = 0;
