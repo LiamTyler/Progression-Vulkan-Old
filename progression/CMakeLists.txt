@@ -4,14 +4,6 @@ project(Progression-lib)
 
 include(Progression-base)
 
-set_property(
-    DIRECTORY
-    PROPERTY
-    COMPILE_DEFINITIONS
-    $<$<CONFIG:Debug>:CMAKE_DEFINE_DEBUG_BUILD>
-    $<$<CONFIG:Release>:CMAKE_DEFINE_RELEASE_BUILD>
-    $<$<CONFIG:Ship>:CMAKE_DEFINE_SHIP_BUILD>
-)
 
 configure_file(${PROGRESSION_DIR}/cmake/platform_defines.hpp.in ${PROGRESSION_DIR}/progression/core/platform_defines.hpp)
 

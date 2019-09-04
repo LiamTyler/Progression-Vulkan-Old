@@ -304,7 +304,6 @@ void Shader::QueryUniforms()
     glGetProgramiv( m_program, GL_ACTIVE_UNIFORM_MAX_LENGTH, &uniformBufSize );
     GLchar* uniformName = new GLchar[uniformBufSize];
     glGetProgramiv( m_program, GL_ACTIVE_UNIFORMS, &count );
-    // LOG("Num uniforms:",count);
     for ( int i = 0; i < count; i++ )
     {
         GLint size;
