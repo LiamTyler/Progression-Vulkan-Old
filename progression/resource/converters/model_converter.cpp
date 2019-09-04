@@ -1,5 +1,7 @@
 #include "resource/converters/model_converter.hpp"
+#include "core/assert.hpp"
 #include "resource/model.hpp"
+#include "utils/logger.hpp"
 #include "utils/serialize.hpp"
 #include "utils/timestamp.hpp"
 #include <filesystem>

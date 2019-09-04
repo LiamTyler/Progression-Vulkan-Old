@@ -1,5 +1,4 @@
 #include "resource/model.hpp"
-#include "core/common.hpp"
 #include "resource/material.hpp"
 #include "resource/texture.hpp"
 #include "resource/resource_manager.hpp"

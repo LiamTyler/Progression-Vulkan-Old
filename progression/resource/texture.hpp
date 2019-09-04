@@ -1,9 +1,7 @@
 #pragma once
 
-#include "core/common.hpp"
 #include "graphics/graphics_api.hpp"
 #include "resource/resource.hpp"
-#include "utils/noncopyable.hpp"
 
 namespace Progression
 {

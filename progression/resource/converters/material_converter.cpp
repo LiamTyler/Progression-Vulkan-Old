@@ -1,5 +1,6 @@
 #include "resource/converters/material_converter.hpp"
 #include "resource/material.hpp"
+#include "utils/logger.hpp"
 #include "utils/serialize.hpp"
 #include "utils/timestamp.hpp"
 #include <filesystem>

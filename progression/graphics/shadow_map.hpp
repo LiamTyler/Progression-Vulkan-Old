@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/common.hpp"
 #include "utils/noncopyable.hpp"
 
 namespace Progression

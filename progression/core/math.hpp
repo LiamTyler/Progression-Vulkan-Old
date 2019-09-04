@@ -1,16 +1,9 @@
 #pragma once
 
-#include "glad/glad.h"
-#include "GLFW/glfw3.h"
-#include "core/feature_defines.hpp"
-#include "core/assert.hpp"
-#include "core/unused.hpp"
-#include "glm/ext.hpp"
 #include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/type_ptr.hpp"
 #include <iostream>
-#include <string>
-
-#define ARRAY_COUNT( array ) ( static_cast< int >( sizeof( array ) / sizeof( array[0] ) ) )
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846

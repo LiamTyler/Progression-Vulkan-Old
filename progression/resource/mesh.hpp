@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/common.hpp"
+#include "core/math.hpp"
 #include "graphics/graphics_api.hpp"
 #include "utils/noncopyable.hpp"
 #include "core/bounding_box.hpp"

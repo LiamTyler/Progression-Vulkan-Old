@@ -1,22 +1,9 @@
 #pragma once
 
 #include "resource/resource.hpp"
-#include "utils/logger.hpp"
 #include <memory>
 #include <unordered_map>
 #include <vector>
-
-class ResourceTypeID
-{
-    inline static uint32_t identifier = 0;
-
-    template < typename... >
-    inline static const auto inner = identifier++;
-
-public:
-    template < typename... Type >
-    inline static const uint32_t id = inner< std::decay_t< Type >... >;
-};
 
 class BaseFamily {
 public:
@@ -32,11 +19,9 @@ public:
     }
 };
 
-
 template < typename Resource >
 uint32_t GetResourceTypeID()
 {
-    // return ResourceTypeID::id< Resource >;
     return DerivedFamily< Resource >::typeCounter();
 }
 
@@ -106,7 +91,6 @@ namespace ResourceManager
     {
         static_assert( std::is_base_of< Resource, T >::value && !std::is_same< Resource, T >::value,
                        "Can only call load with a class that inherits from Resource" );
-        // PG_ASSERT( createInfo != nullptr );
 
         auto currentResPtr = Get< T >( createInfo->name );
         if ( currentResPtr )
@@ -118,7 +102,6 @@ namespace ResourceManager
         resourcePtr->name = createInfo->name;
         if ( !resourcePtr->Load( createInfo ) )
         {
-            LOG_ERR( "Failed to load resource with name '", createInfo->name, "'" );
             return nullptr;
         }
         f_resources.GetMap< T >()[createInfo->name] = resourcePtr;

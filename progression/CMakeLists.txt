@@ -32,21 +32,20 @@ set(
     core/window.cpp
 	
 	core/assert.hpp
-	core/unused.hpp
 	core/bounding_box.hpp
     core/camera.hpp
-    core/common.hpp
     core/config.hpp
+    core/core_defines.hpp
     core/ecs.hpp
     core/frustum.hpp
     core/feature_defines.hpp
     core/input.hpp
     core/input_types.hpp
+    core/math.hpp
     core/platform_defines.hpp
     core/scene.hpp
     core/time.hpp
     core/transform.hpp
-    core/using_defines.hpp
     core/window.hpp
 )
 

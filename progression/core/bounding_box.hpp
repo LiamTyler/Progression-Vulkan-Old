@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/common.hpp"
 #include "core/transform.hpp"
 
 namespace Progression

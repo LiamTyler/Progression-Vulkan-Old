@@ -3,7 +3,6 @@
 #include "glm/glm.hpp"
 #include <fstream>
 #include <vector>
-#include <iostream>
 
 namespace serialize
 {

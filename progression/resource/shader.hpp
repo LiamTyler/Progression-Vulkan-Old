@@ -1,12 +1,12 @@
 #pragma once
 
-#include <unordered_map>
-
-#include "core/common.hpp"
+#include "core/math.hpp"
+#include "core/platform_defines.hpp"
 #include "graphics/graphics_api.hpp"
 #include "resource/resource.hpp"
-#include "utils/noncopyable.hpp"
+#include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #define SERIALIZE_SHADER_TEXT IN_USE
 

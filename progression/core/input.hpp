@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/input_types.hpp"
+#include "core/math.hpp"
 
 // TODO: Separate this better from GLFW, add game controller support, and concept of multiple
 // controllers

@@ -1,4 +1,5 @@
 #include "resource/texture.hpp"
+#include "core/assert.hpp"
 #include "graphics/render_system.hpp"
 #include "resource/image.hpp"
 #include "resource/resource_manager.hpp"

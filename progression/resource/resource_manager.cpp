@@ -1,19 +1,15 @@
-#include "resource/resource_manager.hpp"
+#include "core/feature_defines.hpp"
 #include "core/time.hpp"
 #include "core/window.hpp"
 #include "lz4/lz4.h"
 #include "memory_map/MemoryMapped.h"
 #include "resource/material.hpp"
 #include "resource/model.hpp"
+#include "resource/resource_manager.hpp"
 #include "resource/shader.hpp"
 #include "resource/texture.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
-#include <future>
-#include <mutex>
-#include <sys/stat.h>
-#include <thread>
-#include <tuple>
 
 uint32_t BaseFamily::typeCounter_ = 0;
 

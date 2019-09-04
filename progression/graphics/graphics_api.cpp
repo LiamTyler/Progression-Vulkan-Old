@@ -1,3 +1,4 @@
+#include "core/assert.hpp"
 #include "graphics/graphics_api.hpp"
 #include "graphics/pg_to_opengl_types.hpp"
 #include "utils/logger.hpp"
