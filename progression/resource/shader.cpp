@@ -261,7 +261,6 @@ bool Shader::LoadFromBinary( const char* binarySource, GLint len, GLenum format 
 
     GLint status;
     glGetProgramiv( program, GL_LINK_STATUS, &status );
-    GLenum err;
     if ( GL_FALSE == status )
     {
         LOG_ERR( "Failed to create program from binary" );
