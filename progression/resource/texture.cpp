@@ -10,18 +10,6 @@
 namespace Progression
 {
 
-static Gfx::PixelFormat GetSourceFormatFromNumComponents( int numComponents )
-{
-    Gfx::PixelFormat srcFormat[] = {
-        Gfx::PixelFormat::R8_Uint,
-        Gfx::PixelFormat::R8_G8_Uint,
-        Gfx::PixelFormat::R8_G8_B8_Uint,
-        Gfx::PixelFormat::R8_G8_B8_A8_Uint,
-    };
-
-    return srcFormat[numComponents - 1];
-}
-
 Texture::Texture() : Resource( "" )
 {
 }
@@ -35,6 +23,7 @@ Texture& Texture::operator=( Texture&& texture )
 {
     name       = std::move( texture.name );
     gfxTexture = std::move( texture.gfxTexture );
+    sampler    = std::move( texture.sampler );
 
     return *this;
 }
@@ -51,12 +40,10 @@ bool Texture::Load( ResourceCreateInfo* createInfo )
         LOG_ERR( "Could not load texture image: ", info->filename );
         return false;
     }
-    info->texDesc.height = img.Height();
-    info->texDesc.width  = img.Width();
+    info->imageDesc = img.GetDescriptor();
 
-    gfxTexture = Gfx::Texture::Create( info->texDesc, img.Pixels(),
-                                       GetSourceFormatFromNumComponents( img.NumComponents() ) );
-    sampler    = RenderSystem::GetSampler( &info->samplerDesc );
+    gfxTexture = Gfx::Texture::Create( info->imageDesc, img.GetPixels() );
+    // sampler    = RenderSystem::GetSampler( &info->samplerDesc );
 
     return true;
 }
@@ -77,6 +64,18 @@ bool Texture::Serialize( std::ofstream& out ) const
 
 bool Texture::Deserialize( char*& buffer )
 {
+    // serialize::Read( buffer, m_desc.type );
+    // serialize::Read( buffer, m_desc.format );
+    // serialize::Read( buffer, m_desc.mipLevels );
+    // serialize::Read( buffer, m_desc.arrayLayers  );
+    // serialize::Read( buffer, m_desc.width );
+    // serialize::Read( buffer, m_desc.height );
+    // serialize::Read( buffer, m_desc.depth );
+    // size_t totalSize;
+    // serialize::Read( buffer, totalSize );
+    // m_pixels = (unsigned char*) malloc( totalSize );
+    // serialize::Read( buffer, (char*) m_pixels, totalSize );
+    /*
     Gfx::TextureDescriptor texDesc;
     serialize::Read( buffer, name );
     serialize::Read( buffer, texDesc.format );
@@ -99,38 +98,10 @@ bool Texture::Deserialize( char*& buffer )
     serialize::Read( buffer, numComponents );
     gfxTexture = Gfx::Texture::Create( texDesc, buffer, GetSourceFormatFromNumComponents( numComponents ) );
     buffer += texDesc.width * texDesc.height * numComponents;
+    */
+    PG_UNUSED( buffer );
 
     return true;
-}
-
-GLuint Texture::GetNativeHandle() const
-{
-    return gfxTexture.GetNativeHandle();
-}
-
-Gfx::PixelFormat Texture::GetFormat() const
-{
-    return gfxTexture.GetFormat();
-}
-
-Gfx::TextureType Texture::GetType() const
-{
-    return gfxTexture.GetType();
-}
-
-uint32_t Texture::Width() const
-{
-    return gfxTexture.GetWidth();
-}
-
-uint32_t Texture::Height() const
-{
-    return gfxTexture.GetHeight();
-}
-
-bool Texture::GetMipMapped() const
-{
-    return gfxTexture.GetMipMapped();
 }
 
 } // namespace Progression

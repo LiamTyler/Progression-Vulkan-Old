@@ -3,7 +3,7 @@ cmake_minimum_required (VERSION 3.8)
 project(Progression LANGUAGES CXX C)
 
 option(PROGRESSION_BUILD_EXAMPLES "Build the example programs" ON)
-option(PROGRESSION_BUILD_TOOLS "Build the tools, such as the OBJ converter" OFF)
+option(PROGRESSION_BUILD_TOOLS "Build the tools, such as the OBJ converter" ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

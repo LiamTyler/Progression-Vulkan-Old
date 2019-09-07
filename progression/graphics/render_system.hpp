@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 namespace Progression
 {
 
@@ -32,7 +34,8 @@ namespace RenderSystem
     void Render( Scene* scene );
 
     
-    Gfx::Sampler* GetSampler( Gfx::SamplerDescriptor* sampler );
+    Gfx::Sampler* AddSampler( const std::string& name, Gfx::SamplerDescriptor& desc );
+    Gfx::Sampler* GetSampler( const std::string& name );
 
 } // namespace RenderSystem
 } // namespace Progression

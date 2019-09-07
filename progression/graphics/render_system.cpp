@@ -42,54 +42,37 @@ static const std::string s_shaderPaths[TOTAL_SHADERS][3] = {
     { "quad.vert", "post_process.frag", "" },
     { "flat.vert", "flat.frag", "" },
 };
-template < class T >
-inline void hash_combine( std::size_t& seed, const T& v )
-{
-    std::hash< T > hasher;
-    seed ^= hasher( v ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
-}
 
-namespace std
-{
-template <>
-struct hash< Gfx::SamplerDescriptor >
-{
-    std::size_t operator()( const Gfx::SamplerDescriptor& s ) const noexcept
-    {
-        std::size_t h( std::hash< int >{}( (int) s.minFilter ) );
-        hash_combine( h, (int) s.minFilter );
-        hash_combine( h, (int) s.magFilter );
-        hash_combine( h, (int) s.wrapModeS );
-        hash_combine( h, (int) s.wrapModeT );
-        hash_combine( h, (int) s.wrapModeR );
-        hash_combine( h, s.borderColor.x );
-        hash_combine( h, s.borderColor.y );
-        hash_combine( h, s.borderColor.z );
-        hash_combine( h, s.borderColor.w );
-        hash_combine( h, s.maxAnisotropy );
-
-        return h;
-    }
-};
-} // namespace std
-
-static std::unordered_map< std::size_t, Gfx::Sampler > s_samplers;
+static std::unordered_map< std::string, Gfx::Sampler > s_samplers;
 
 namespace Progression
 {
 namespace RenderSystem
 {
 
-    Gfx::Sampler* GetSampler( Gfx::SamplerDescriptor* desc )
+    Gfx::Sampler* AddSampler( const std::string& name, Gfx::SamplerDescriptor& desc )
     {
-        auto hash = std::hash< Gfx::SamplerDescriptor >{}( *desc );
-        auto it   = s_samplers.find( hash );
+        auto it = s_samplers.find( name );
         if ( it != s_samplers.end() )
         {
             return &it->second;
         }
-        s_samplers[hash] = Gfx::Sampler::Create( *desc );
-        return &s_samplers[hash];
+        else
+        {
+            s_samplers[name] = Gfx::Sampler::Create( desc );
+            return &s_samplers[name];
+        }
+    }
+
+    Gfx::Sampler* GetSampler( const std::string& name )
+    {
+        auto it = s_samplers.find( name );
+        if ( it != s_samplers.end() )
+        {
+            return &it->second;
+        }
+
+        return nullptr;
     }
 
 } // namespace RenderSystem
@@ -127,7 +110,6 @@ static Pipeline s_gbufferPipeline;
 static Pipeline s_directionalLightPipeline;
 static Pipeline s_backgroundPipeline;
 static Pipeline s_postProcessPipeline;
-static Sampler* s_nearestSampler;
 
 void GBuffer::BindForReading( Shader& shader )
 {
@@ -137,11 +119,12 @@ void GBuffer::BindForReading( Shader& shader )
     shader.BindTexture( specularTex, "gSpecularExp", 3 );
     shader.BindTexture( emissiveTex, "gEmissive",    4 );
 
-    s_nearestSampler->Bind( 0 );
-    s_nearestSampler->Bind( 1 );
-    s_nearestSampler->Bind( 2 );
-    s_nearestSampler->Bind( 3 );
-    s_nearestSampler->Bind( 4 );
+    Sampler* nearestSampler = RenderSystem::GetSampler( "nearest" );
+    nearestSampler->Bind( 0 );
+    nearestSampler->Bind( 1 );
+    nearestSampler->Bind( 2 );
+    nearestSampler->Bind( 3 );
+    nearestSampler->Bind( 4 );
 }
 
 // helper functions
@@ -168,6 +151,7 @@ namespace Progression
 namespace RenderSystem
 {
 
+    void InitSamplers();
     // void shadowPass(Scene* scene);
     void GBufferPass( Scene* scene );
     void LightingPass( Scene* scene );
@@ -176,6 +160,7 @@ namespace RenderSystem
 
     bool Init()
     {
+        InitSamplers();
         s_window = GetMainWindow();
 
         s_windowViewport.x = 0;
@@ -284,23 +269,22 @@ namespace RenderSystem
         // gbuffer render pass
         RenderPassDescriptor gBufferRenderPassDesc;
 
-        TextureDescriptor texDesc;
+        ImageDesc texDesc;
         texDesc.width     = s_window->Width();
         texDesc.height    = s_window->Height();
-        texDesc.type      = TextureType::TEXTURE2D;
-        texDesc.mipmapped = false;
+        texDesc.type      = ImageType::TYPE_2D;
         texDesc.format    = PixelFormat::R32_G32_B32_A32_Float;
         
-        s_gbuffer.positionTex = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
-        s_gbuffer.normalTex   = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
+        s_gbuffer.positionTex = Gfx::Texture::Create( texDesc, nullptr );
+        s_gbuffer.normalTex   = Gfx::Texture::Create( texDesc, nullptr );
         texDesc.format = PixelFormat::R8_G8_B8_Uint; // TODO: should this be sRGB?
-        s_gbuffer.diffuseTex  = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
+        s_gbuffer.diffuseTex  = Gfx::Texture::Create( texDesc, nullptr );
         texDesc.format = PixelFormat::R16_G16_B16_A16_Float;
-        s_gbuffer.specularTex = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
+        s_gbuffer.specularTex = Gfx::Texture::Create( texDesc, nullptr );
         texDesc.format = PixelFormat::R16_G16_B16_Float;
-        s_gbuffer.emissiveTex = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
+        s_gbuffer.emissiveTex = Gfx::Texture::Create( texDesc, nullptr );
         texDesc.format = PixelFormat::DEPTH32_Float;
-        s_gbuffer.depthRbo  = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
+        s_gbuffer.depthRbo  = Gfx::Texture::Create( texDesc, nullptr );
 
         gBufferRenderPassDesc.colorAttachmentDescriptors[0].texture = &s_gbuffer.positionTex;
         gBufferRenderPassDesc.colorAttachmentDescriptors[1].texture = &s_gbuffer.normalTex;
@@ -315,7 +299,7 @@ namespace RenderSystem
         RenderPassDescriptor postProcessRenderPassDesc;
 
         texDesc.format = PixelFormat::R16_G16_B16_A16_Float;
-        s_postProcessBuffer.hdrColorTex = Gfx::Texture::Create( texDesc, nullptr, texDesc.format );
+        s_postProcessBuffer.hdrColorTex = Gfx::Texture::Create( texDesc, nullptr );
         postProcessRenderPassDesc.colorAttachmentDescriptors[0].texture = &s_postProcessBuffer.hdrColorTex;
         postProcessRenderPassDesc.colorAttachmentDescriptors[0].loadAction = LoadAction::CLEAR;
         postProcessRenderPassDesc.depthAttachmentDescriptor.texture = &s_gbuffer.depthRbo;
@@ -420,14 +404,6 @@ namespace RenderSystem
         postProcessPipelineDesc.depthInfo.compareFunc       = CompareFunction::LESS;
 
         s_postProcessPipeline = Pipeline::Create( postProcessPipelineDesc );
-
-        SamplerDescriptor samplerDesc;
-        samplerDesc.minFilter = FilterMode::NEAREST;
-        samplerDesc.magFilter = FilterMode::NEAREST;
-        samplerDesc.wrapModeS = WrapMode::CLAMP_TO_EDGE;
-        samplerDesc.wrapModeT = WrapMode::CLAMP_TO_EDGE;
-        samplerDesc.wrapModeR = WrapMode::CLAMP_TO_EDGE;
-        s_nearestSampler = RenderSystem::GetSampler( &samplerDesc );
 
         return true;
     }
@@ -843,6 +819,22 @@ namespace RenderSystem
         // graphicsApi::toggleDepthWrite( true );
         // graphicsApi::toggleDepthTest( true );
         */
+    }
+
+    void InitSamplers()
+    {
+        SamplerDescriptor samplerDesc;
+
+        samplerDesc.minFilter = FilterMode::NEAREST;
+        samplerDesc.magFilter = FilterMode::NEAREST;
+        samplerDesc.wrapModeS = WrapMode::CLAMP_TO_EDGE;
+        samplerDesc.wrapModeT = WrapMode::CLAMP_TO_EDGE;
+        samplerDesc.wrapModeR = WrapMode::CLAMP_TO_EDGE;
+        s_samplers["nearest"] = Sampler::Create( samplerDesc );
+
+        samplerDesc.minFilter = FilterMode::LINEAR;
+        samplerDesc.magFilter = FilterMode::LINEAR;
+        s_samplers["linear"] = Sampler::Create( samplerDesc );
     }
 
 

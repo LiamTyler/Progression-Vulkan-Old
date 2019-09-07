@@ -9,8 +9,8 @@ namespace Progression
 struct TextureCreateInfo : public ResourceCreateInfo
 {
     std::string filename;
-    Gfx::TextureDescriptor texDesc;
-    Gfx::SamplerDescriptor samplerDesc;
+    ImageDesc imageDesc;
+    std::string samplerName;
 };
 
 class Texture : public Resource
@@ -26,13 +26,6 @@ public:
     void Move( std::shared_ptr< Resource > dst ) override;
     bool Serialize( std::ofstream& outFile ) const override;
     bool Deserialize( char*& buffer ) override;
-
-    GLuint GetNativeHandle() const;
-    Gfx::PixelFormat GetFormat() const;
-    Gfx::TextureType GetType() const;
-    uint32_t Width() const;
-    uint32_t Height() const;
-    bool GetMipMapped() const;
 
     Gfx::Texture gfxTexture;
     Gfx::Sampler* sampler;

@@ -172,13 +172,19 @@ namespace Gfx
         return convert[static_cast< int >( mode )];
     }
 
-    constexpr GLenum PGToOpenGLTextureType( TextureType type )
+    constexpr GLenum PGToOpenGLImageType( ImageType type )
     {
         GLenum convert[] = {
-            GL_TEXTURE_2D, // TEXTURE2D
+            GL_TEXTURE_1D,              // TYPE_1D
+            GL_TEXTURE_1D_ARRAY,        // TYPE_1D_ARRAY
+            GL_TEXTURE_2D,              // TYPE_2D 
+            GL_TEXTURE_2D_ARRAY,        // TYPE_2D_ARRAY
+            GL_TEXTURE_CUBE_MAP,        // TYPE_2D_ARRAY
+            GL_TEXTURE_CUBE_MAP_ARRAY,  // TYPE_CUBEMAP_ARRAY
+            GL_TEXTURE_3D,              // TYPE_3D_ARRAY
         };
 
-        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( TextureType::NUM_TEXTURE_TYPE ) );
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( ImageType::NUM_IMAGE_TYPES ) );
 
         return convert[static_cast< int >( type )];
     }
@@ -204,7 +210,7 @@ namespace Gfx
             GL_DEPTH_COMPONENT32, // DEPTH32_Float
         };
 
-        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( PixelFormat::NUM_PIXEL_FORMAT ) );
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( PixelFormat::NUM_PIXEL_FORMATS ) );
 
         return convert[static_cast< int >( format )];
     }
@@ -230,7 +236,7 @@ namespace Gfx
             { GL_DEPTH_COMPONENT, GL_FLOAT }, // DEPTH32_Float
         };
 
-        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( PixelFormat::NUM_PIXEL_FORMAT ) );
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( PixelFormat::NUM_PIXEL_FORMATS ) );
 
         return convert[static_cast< int >( format )];
     }

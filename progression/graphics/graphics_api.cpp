@@ -296,29 +296,41 @@ namespace Gfx
         return *this;
     }
 
-    Texture Texture::Create( const TextureDescriptor& desc, void* data, PixelFormat srcFormat )
+    Texture Texture::Create( const ImageDesc& desc, void* data )
     {
+        PG_ASSERT( desc.type == ImageType::TYPE_2D, "Currently can't upload non-2d images, (will fix when switching to vulkan" );
         Texture tex;
         tex.m_desc = desc;
         glGenTextures( 1, &tex.m_nativeHandle );
         
-        auto nativeTexType              = PGToOpenGLTextureType( desc.type );
+        auto nativeTexType              = PGToOpenGLImageType( desc.type );
         auto nativeDstFormat            = PGToOpenGLPixelFormat( desc.format );
-        auto [nativeFormat, nativeType] = PGToOpenGLFormatAndType( srcFormat );
+        auto [nativeFormat, nativeType] = PGToOpenGLFormatAndType( desc.format );
         glBindTexture( nativeTexType, tex.m_nativeHandle );
         glTexImage2D( nativeTexType, 0, nativeDstFormat, desc.width, desc.height, 0, nativeFormat,
                       nativeType, data );
-        if ( desc.mipmapped )
-        {
-            glGenerateMipmap( nativeTexType );
-        }
 
         return tex;
     }
 
-    TextureType Texture::GetType() const
+    ImageType Texture::GetType() const
     {
         return m_desc.type;
+    }
+
+    PixelFormat Texture::GetPixelFormat() const
+    {
+        return m_desc.format;
+    }
+
+    uint8_t Texture::GetMipLevels() const
+    {
+        return m_desc.mipLevels;
+    }
+
+    uint8_t Texture::GetArrayLayers() const
+    {
+        return m_desc.arrayLayers;
     }
 
     uint32_t Texture::GetWidth() const
@@ -331,14 +343,9 @@ namespace Gfx
         return m_desc.height;
     }
 
-    PixelFormat Texture::GetFormat() const
+    uint32_t Texture::GetDepth() const
     {
-        return m_desc.format;
-    }
-
-    bool Texture::GetMipMapped() const
-    {
-        return m_desc.mipmapped;
+        return m_desc.depth;
     }
 
     GLuint Texture::GetNativeHandle() const

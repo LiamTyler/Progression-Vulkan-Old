@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/core_defines.hpp"
+#include "resource/image.hpp"
 #include "core/math.hpp"
 #include "glad/glad.h"
 #include "utils/noncopyable.hpp"
@@ -281,51 +282,6 @@ namespace Gfx
         GLuint m_nativeHandle = ~0u;
     };
 
-    enum class PixelFormat
-    {
-        R8_Uint                 = 0,
-        R16_Float               = 1,
-        R32_Float               = 2,
-
-        R8_G8_Uint              = 3,
-        R16_G16_Float           = 4,
-        R32_G32_Float           = 5,
-
-        R8_G8_B8_Uint           = 6,
-        R16_G16_B16_Float       = 7,
-        R32_G32_B32_Float       = 8,
-
-        R8_G8_B8_A8_Uint        = 9,
-        R16_G16_B16_A16_Float   = 10,
-        R32_G32_B32_A32_Float   = 11,
-
-        R8_G8_B8_Uint_sRGB      = 12,
-        R8_G8_B8_A8_Uint_sRGB   = 13,
-
-        R11_G11_B10_Float       = 14,
-
-        DEPTH32_Float           = 15,
-
-        NUM_PIXEL_FORMAT
-    };
-
-    enum class TextureType
-    {
-        TEXTURE2D = 0,
-
-        NUM_TEXTURE_TYPE
-    };
-
-    struct TextureDescriptor
-    {
-    public:
-        TextureType type;
-        PixelFormat format;
-        uint32_t width  = 0;
-        uint32_t height = 0;
-        bool mipmapped  = true;
-    };
-
     class Texture : public NonCopyable
     {
     public:
@@ -334,18 +290,20 @@ namespace Gfx
         Texture( Texture&& tex );
         Texture& operator=( Texture&& tex );
 
-        static Texture Create( const TextureDescriptor& desc, void* data, PixelFormat srcFormat );
+        static Texture Create( const ImageDesc& desc, void* data );
         // void Bind( uint32_t ) const;
-        TextureType GetType() const;
+        ImageType GetType() const;
+        PixelFormat GetPixelFormat() const;
+        uint8_t GetMipLevels() const;
+        uint8_t GetArrayLayers() const;
         uint32_t GetWidth() const;
         uint32_t GetHeight() const;
-        PixelFormat GetFormat() const;
-        bool GetMipMapped() const;
+        uint32_t GetDepth() const;
         GLuint GetNativeHandle() const;
         operator bool() const;
 
     private:
-        TextureDescriptor m_desc;
+        ImageDesc m_desc;
         GLuint m_nativeHandle = ~0u;
     };
 

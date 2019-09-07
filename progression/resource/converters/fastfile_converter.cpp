@@ -42,64 +42,36 @@ bool ParseShaderCreateInfoFromFile( std::istream& in, ShaderCreateInfo& info )
     return true;
 }
 
-static std::unordered_map< std::string, Gfx::PixelFormat > internalFormatMap = {
-    { "R8_Uint", Gfx::PixelFormat::R8_Uint },
-    { "R16_Float", Gfx::PixelFormat::R16_Float },
-    { "R32_Float", Gfx::PixelFormat::R32_Float },
-    { "R8_G8_Uint", Gfx::PixelFormat::R8_G8_Uint },
-    { "R16_G16_Float", Gfx::PixelFormat::R16_G16_Float },
-    { "R32_G32_Float", Gfx::PixelFormat::R32_G32_Float },
-    { "R8_G8_B8_Uint", Gfx::PixelFormat::R8_G8_B8_Uint },
-    { "R16_G16_B16_Float", Gfx::PixelFormat::R16_G16_B16_Float },
-    { "R32_G32_B32_Float", Gfx::PixelFormat::R32_G32_B32_Float },
-    { "R8_G8_B8_A8_Uint", Gfx::PixelFormat::R8_G8_B8_A8_Uint },
-    { "R16_G16_B16_A16_Float", Gfx::PixelFormat::R16_G16_B16_A16_Float },
-    { "R32_G32_B32_A32_Float", Gfx::PixelFormat::R32_G32_B32_A32_Float },
-    { "R8_G8_B8_Uint_sRGB", Gfx::PixelFormat::R8_G8_B8_Uint_sRGB },
-    { "R8_G8_B8_A8_Uint_sRGB", Gfx::PixelFormat::R8_G8_B8_A8_Uint_sRGB },
-    { "R11_G11_B10_Float", Gfx::PixelFormat::R11_G11_B10_Float },
-    { "DEPTH32_Float", Gfx::PixelFormat::DEPTH32_Float },
-};
-
-static std::unordered_map< std::string, Gfx::FilterMode > minFilterMap = {
-    { "nearest", Gfx::FilterMode::NEAREST },
-    { "linear", Gfx::FilterMode::LINEAR },
-    { "nearest_mipmap_nearest", Gfx::FilterMode::NEAREST_MIPMAP_NEAREST },
-    { "linear_mipmap_nearest", Gfx::FilterMode::LINEAR_MIPMAP_NEAREST },
-    { "nearest_mipmap_linear", Gfx::FilterMode::NEAREST_MIPMAP_LINEAR },
-    { "linear_mipmap_linear", Gfx::FilterMode::LINEAR_MIPMAP_LINEAR },
-};
-
-static std::unordered_map< std::string, Gfx::FilterMode > magFilterMap = {
-    { "nearest", Gfx::FilterMode::NEAREST },
-    { "linear", Gfx::FilterMode::LINEAR },
-};
-
-static std::unordered_map< std::string, Gfx::WrapMode > wrapMap = {
-    { "clamp_to_edge", Gfx::WrapMode::CLAMP_TO_EDGE },
-    { "clamp_to_border", Gfx::WrapMode::CLAMP_TO_BORDER },
-    { "mirror_repeat", Gfx::WrapMode::MIRRORED_REPEAT },
-    { "repeat", Gfx::WrapMode::REPEAT },
+static std::unordered_map< std::string, PixelFormat > internalFormatMap = {
+    { "R8_Uint", PixelFormat::R8_Uint },
+    { "R16_Float", PixelFormat::R16_Float },
+    { "R32_Float", PixelFormat::R32_Float },
+    { "R8_G8_Uint", PixelFormat::R8_G8_Uint },
+    { "R16_G16_Float", PixelFormat::R16_G16_Float },
+    { "R32_G32_Float", PixelFormat::R32_G32_Float },
+    { "R8_G8_B8_Uint", PixelFormat::R8_G8_B8_Uint },
+    { "R16_G16_B16_Float", PixelFormat::R16_G16_B16_Float },
+    { "R32_G32_B32_Float", PixelFormat::R32_G32_B32_Float },
+    { "R8_G8_B8_A8_Uint", PixelFormat::R8_G8_B8_A8_Uint },
+    { "R16_G16_B16_A16_Float", PixelFormat::R16_G16_B16_A16_Float },
+    { "R32_G32_B32_A32_Float", PixelFormat::R32_G32_B32_A32_Float },
+    { "R8_G8_B8_Uint_sRGB", PixelFormat::R8_G8_B8_Uint_sRGB },
+    { "R8_G8_B8_A8_Uint_sRGB", PixelFormat::R8_G8_B8_A8_Uint_sRGB },
+    { "R11_G11_B10_Float", PixelFormat::R11_G11_B10_Float },
+    { "DEPTH32_Float", PixelFormat::DEPTH32_Float },
 };
 
 bool ParseTextureCreateInfoFromFile( std::istream& in, TextureCreateInfo& info )
 {
+    PG_UNUSED( in );
+    PG_UNUSED( info );
+    /*
     info.texDesc.type = Gfx::TextureType::TEXTURE2D;
 
     fileIO::ParseLineKeyVal( in, "name", info.name );
     fileIO::ParseLineKeyVal( in, "filename", info.filename );
     info.filename          = PG_RESOURCE_DIR + info.filename;
     fileIO::ParseLineKeyVal( in, "mipmapped", info.texDesc.mipmapped );
-    if ( !fileIO::ParseLineKeyMap( in, "internalFormat", internalFormatMap, info.texDesc.format ) )
-    {
-        LOG_ERR( "Invalid texture2D 'internalFormat'" );
-        return false;
-    }
-    if ( !fileIO::ParseLineKeyMap( in, "minFilter", minFilterMap, info.samplerDesc.minFilter ) )
-    {
-        LOG_ERR( "Invalid texture2D minFilter" );
-        return false;
-    }
     if ( !info.texDesc.mipmapped && ( info.samplerDesc.minFilter != Gfx::FilterMode::NEAREST &&
                                       info.samplerDesc.minFilter != Gfx::FilterMode::LINEAR ) )
     {
@@ -107,28 +79,7 @@ bool ParseTextureCreateInfoFromFile( std::istream& in, TextureCreateInfo& info )
                  info.filename );
         return false;
     }
-    if ( !fileIO::ParseLineKeyMap( in, "magFilter", magFilterMap, info.samplerDesc.magFilter ) )
-    {
-        LOG_ERR( "Invalid texture2D magFilter" );
-        return false;
-    }
-    if ( !fileIO::ParseLineKeyMap( in, "wrapModeS", wrapMap, info.samplerDesc.wrapModeS ) )
-    {
-        LOG_ERR( "Invalid texture2D wrapModeS" );
-        return false;
-    }
-    if ( !fileIO::ParseLineKeyMap( in, "wrapModeT", wrapMap, info.samplerDesc.wrapModeT ) )
-    {
-        LOG_ERR( "Invalid texture2D wrapModeT" );
-        return false;
-    }
-    if ( !fileIO::ParseLineKeyMap( in, "wrapModeR", wrapMap, info.samplerDesc.wrapModeR ) )
-    {
-        LOG_ERR( "Invalid texture2D wrapModeR" );
-        return false;
-    }
-    fileIO::ParseLineKeyVal( in, "borderColor", info.samplerDesc.borderColor );
-    fileIO::ParseLineKeyVal( in, "maxAnisotropy", info.samplerDesc.maxAnisotropy );
+    */
 
     return true;
 }

@@ -56,6 +56,7 @@ AssetStatus TextureConverter::CheckDependencies()
     std::ifstream in( outputFile, std::ios::binary );
     PG_ASSERT( in );
 
+    /*
     TextureCreateInfo savedCreateInfo;
     serialize::Read( in, savedCreateInfo.name );
     serialize::Read( in, savedCreateInfo.texDesc.format );
@@ -93,6 +94,7 @@ AssetStatus TextureConverter::CheckDependencies()
 
     LOG( "UP TO DATE: Image with name '", createInfo.name, "' and filename '", createInfo.filename,
          "'" );
+    */
 
     m_status = ASSET_UP_TO_DATE;
     return m_status;
@@ -121,17 +123,13 @@ ConverterStatus TextureConverter::Convert()
 
     serialize::Write( out, createInfo.name );
 
+    /*
     serialize::Write( out, createInfo.texDesc.format );
     serialize::Write( out, createInfo.texDesc.type );
     serialize::Write( out, createInfo.texDesc.mipmapped );
 
     serialize::Write( out, createInfo.samplerDesc.minFilter );
-    serialize::Write( out, createInfo.samplerDesc.magFilter );
-    serialize::Write( out, createInfo.samplerDesc.wrapModeS );
-    serialize::Write( out, createInfo.samplerDesc.wrapModeT );
-    serialize::Write( out, createInfo.samplerDesc.wrapModeR );
-    serialize::Write( out, createInfo.samplerDesc.borderColor );
-    serialize::Write( out, createInfo.samplerDesc.maxAnisotropy );
+    */
 
     if ( m_justMetaDataOutOfDate )
     {

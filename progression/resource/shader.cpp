@@ -393,7 +393,7 @@ void Shader::BindTexture( const Gfx::Texture& tex, const std::string& texName, u
 {
 
     glActiveTexture( GL_TEXTURE0 + index );
-    auto nativeTexType = Gfx::PGToOpenGLTextureType( tex.GetType() );
+    auto nativeTexType = Gfx::PGToOpenGLImageType( tex.GetType() );
     glBindTexture( nativeTexType, tex.GetNativeHandle() );
     SetUniform( texName, (int) index );
 }
