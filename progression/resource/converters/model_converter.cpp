@@ -9,10 +9,10 @@
 
 using namespace Progression;
 
-static std::string GetModelFastFileName( struct ModelCreateInfo& createInfo )
-{
-    namespace fs = std::filesystem;
+namespace fs = std::filesystem;
 
+static std::string GetContentFastFileName( struct ModelCreateInfo& createInfo )
+{
     PG_ASSERT( !createInfo.filename.empty() );
     fs::path filePath = fs::absolute( createInfo.filename );
 
@@ -22,29 +22,42 @@ static std::string GetModelFastFileName( struct ModelCreateInfo& createInfo )
     return PG_RESOURCE_DIR "cache/models/" + baseName + "_" + std::to_string( hash ) + ".ffi";
 }
 
+static std::string GetSettingsFastFileName( const ModelCreateInfo& createInfo )
+{
+    PG_ASSERT( !createInfo.filename.empty() );
+
+    int optimize    = createInfo.optimize;
+    int freeCpuCopy = createInfo.freeCpuCopy;
+
+    return PG_RESOURCE_DIR "cache/models/settings_" + createInfo.name +
+           std::to_string( optimize ) + std::to_string( freeCpuCopy ) + ".ffi";
+}
+
 AssetStatus ModelConverter::CheckDependencies()
 {
     PG_ASSERT( !createInfo.filename.empty() );
 
-    if ( outputFile.empty() )
+    m_outputContentFile  = GetContentFastFileName( createInfo );
+    m_outputSettingsFile = GetSettingsFastFileName( createInfo );
+
+    if ( !std::filesystem::exists( m_outputSettingsFile ) )
     {
-        outputFile = GetModelFastFileName( createInfo );
+        LOG( "OUT OF DATE: FFI File for settings file '", m_outputSettingsFile, "' does not exist, needs to be generated" );
+        m_settingsNeedsConverting = true;
+    }
+    else
+    {
+        m_settingsNeedsConverting = false;
     }
 
-    if ( !std::filesystem::exists( outputFile ) )
-    {
-        LOG( "OUT OF DATE: FFI File for Model '", createInfo.filename, "' does not exist, convert required" );
-        return ASSET_OUT_OF_DATE;
-    }
-
-    namespace fs = std::filesystem;
     auto path = fs::path( createInfo.filename );
     std::string matFile = path.parent_path().string() + "/" + path.stem().string() + ".mtl";
-    Timestamp outTimestamp( outputFile );
+    Timestamp outTimestamp( m_outputContentFile );
     Timestamp mtlTimestamp( matFile );
     Timestamp objFileTime( createInfo.filename );
 
-    m_status = outTimestamp <= objFileTime || outTimestamp <= mtlTimestamp ? ASSET_OUT_OF_DATE : ASSET_UP_TO_DATE;
+     m_contentNeedsConverting = outTimestamp <= objFileTime || outTimestamp <= mtlTimestamp;
+    m_status =  m_contentNeedsConverting ||  m_settingsNeedsConverting ? ASSET_OUT_OF_DATE : ASSET_UP_TO_DATE;
 
     if ( outTimestamp <= mtlTimestamp )
     {
@@ -71,25 +84,32 @@ ConverterStatus ModelConverter::Convert()
         return CONVERT_SUCCESS;
     }
 
-    Model model;
-
-    createInfo.freeCpuCopy = false;
-    createInfo.optimize    = true;
-    if ( !model.Load( &createInfo ) )
+    if ( m_settingsNeedsConverting )
     {
-        LOG_ERR( "Could not load the model '", createInfo.filename, "'" );
-        return CONVERT_ERROR;
+        std::ofstream out( m_outputSettingsFile, std::ios::binary );
+        serialize::Write( out, createInfo.name );
+        serialize::Write( out, createInfo.freeCpuCopy );
+        serialize::Write( out, createInfo.createGpuCopy );
     }
 
-    std::ofstream out( outputFile, std::ios::binary );
-
-    if ( !model.Serialize( out ) )
+    if ( m_contentNeedsConverting )
     {
-        LOG_ERR( "Could not save the model '", createInfo.filename, "' to fastfile" );
-        return CONVERT_ERROR;
-    }
+        Model model;
+        createInfo.freeCpuCopy = false;
+        if ( !model.Load( &createInfo ) )
+        {
+            LOG_ERR( "Could not load the model '", createInfo.filename, "'" );
+            return CONVERT_ERROR;
+        }
 
-    out.close();
+        std::ofstream out( m_outputContentFile, std::ios::binary );
+
+        if ( !model.Serialize( out ) )
+        {
+            LOG_ERR( "Could not serialize the model '", createInfo.filename, "'" );
+            return CONVERT_ERROR;
+        }
+    }
 
     return CONVERT_SUCCESS;
 }

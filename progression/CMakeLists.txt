@@ -57,8 +57,6 @@ set(
     resource/model.cpp
     resource/resource_manager.cpp
     resource/shader.cpp
-    resource/texture.cpp
-    
 	
 	resource/resource_manager.hpp
     resource/resource.hpp
@@ -67,23 +65,22 @@ set(
     resource/mesh.hpp
     resource/model.hpp
     resource/shader.hpp
-    resource/texture.hpp
 )
 
 set(
 	RESOURCE_CONVERTERS
-	resource/converters/converter.cpp
+    resource/converters/converter.cpp
     resource/converters/material_converter.cpp
     resource/converters/model_converter.cpp
     resource/converters/shader_converter.cpp
-    resource/converters/texture_converter.cpp
+    resource/converters/image_converter.cpp
     resource/converters/fastfile_converter.cpp
 	
 	resource/converters/converter.hpp
     resource/converters/material_converter.hpp
     resource/converters/model_converter.hpp
     resource/converters/shader_converter.hpp
-    resource/converters/texture_converter.hpp
+    resource/converters/image_converter.hpp
     resource/converters/fastfile_converter.hpp
 )	
 

@@ -15,9 +15,9 @@
 - [x] re-use materials when loading models if its already been loaded
 - [x] detect changed files + reload them
 - [x] convert resource file into 1 binary file
-- [ ] deserialization from RAM, not file
-- [ ] avoid copies during deserialization if freeCpuCopy == true
-- [ ] LZ4 compress / decompress resource file
+- [x] deserialization from RAM, not file
+- [x] avoid copies during deserialization if freeCpuCopy == true
+- [x] LZ4 compress / decompress resource file
 - [ ] Resource file loading from "my changes" workflow
 - [ ] skybox loading
 - [ ] Change the resource DB types so that you dont have to resize by hand / forget
@@ -35,7 +35,7 @@
 - [ ] Mipmap generation
 
 ## Rendering
-- [ ] Expand graphics api so there are 0 opengl calls otherwise
+- [x] Expand graphics api so there are 0 opengl calls otherwise
 - [ ] Meshes easily
 - [ ] Frustum culling
 - [ ] Shadows
@@ -53,7 +53,7 @@
 - [ ] Get working on linux and windows
 
 ## Core
-- [ ] switch to using ECS
+- [x] switch to using ECS
 - [ ] imgui
 - [ ] add in Lua scripting
 - [x] multi-threaded logger
@@ -61,9 +61,9 @@
 ## Other
 - [ ] have a remote console
 - [x] Have a full converter for each resource type and fastfiles
-- [ ] have a defines file instead of just common
+- [x] have a defines file instead of just common
 - [ ] using #includes in the glsl
-- [ ] Debug, Release, Ship modes
+- [x] Debug, Release, Ship modes
 - [x] Get rid of the config initialization style when dumb, like logger
 
 ## Low priority software engineering related

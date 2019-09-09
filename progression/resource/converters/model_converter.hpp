@@ -11,5 +11,4 @@ public:
     ConverterStatus Convert();
 
     struct Progression::ModelCreateInfo createInfo;
-    std::string outputFile;
 };

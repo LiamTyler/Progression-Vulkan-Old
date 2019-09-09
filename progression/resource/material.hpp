@@ -1,13 +1,11 @@
 #pragma once
 
 #include "core/math.hpp"
-#include "resource/resource.hpp"
+#include "resource/image.hpp"
 #include <vector>
 
 namespace Progression
 {
-
-class Texture;
 
 class MaterialCreateInfo : public ResourceCreateInfo
 {
@@ -36,7 +34,7 @@ public:
     glm::vec3 Ks;
     glm::vec3 Ke;
     float Ns;
-    std::shared_ptr<Texture> map_Kd = nullptr;
+    std::shared_ptr< Image > map_Kd = nullptr;
 };
 
 } // namespace Progression

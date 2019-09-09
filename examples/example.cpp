@@ -29,8 +29,8 @@ int main( int argc, char* argv[] )
         PG_ASSERT( ResourceManager::Get< Shader >( "test" ) );
         Shader& shader = *ResourceManager::Get< Shader >( "test" );
 
-        PG_ASSERT( ResourceManager::Get<::Progression::Texture >( "cockatoo" ) );
-        auto tex = ResourceManager::Get<::Progression::Texture >( "cockatoo" );
+        // PG_ASSERT( ResourceManager::Get<::Progression::Texture >( "cockatoo" ) );
+        // auto tex = ResourceManager::Get<::Progression::Texture >( "cockatoo" );
 
         PG_ASSERT( ResourceManager::Get< Material >( "cockatooMaterial" ) );
         auto mat = ResourceManager::Get< Material >( "cockatooMaterial" );

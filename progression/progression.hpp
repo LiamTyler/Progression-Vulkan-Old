@@ -23,7 +23,6 @@
 #include "resource/model.hpp"
 #include "resource/resource_manager.hpp"
 #include "resource/shader.hpp"
-#include "resource/texture.hpp"
 #include "utils/logger.hpp"
 #include "utils/random.hpp"
 

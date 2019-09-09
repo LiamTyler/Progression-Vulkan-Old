@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-enum ConverterStatus : int
+enum ConverterStatus
 {
     CONVERT_SUCCESS,
     CONVERT_HELP_DISPLAYED,
@@ -12,21 +12,11 @@ enum ConverterStatus : int
     CONVERT_ERROR,
 };
 
-enum AssetStatus : int
+enum AssetStatus
 {
     ASSET_UP_TO_DATE,
     ASSET_OUT_OF_DATE,
     ASSET_CHECKING_ERROR,
-};
-
-class ConvertHeader
-{
-public:
-    virtual void serialize( std::ofstream& out );
-    virtual void deserialize( std::ifstream& in );
-
-    std::string outputFile;
-    std::vector< std::string > fileDependencies;
 };
 
 class Converter
@@ -41,12 +31,17 @@ public:
     // returns 0 on success
     virtual ConverterStatus Convert() = 0;
 
-    AssetStatus GetStatus() const;
+    virtual bool WriteToFastFile( std::ofstream& out ) const;
 
-    std::string outputFile;
-    bool force   = false;
-    bool verbose = true;
+    AssetStatus GetStatus() const
+    {
+        return m_status;
+    }
 
 protected:
+    std::string m_outputContentFile;
+    std::string m_outputSettingsFile;
+    bool  m_contentNeedsConverting;
+    bool  m_settingsNeedsConverting;
     AssetStatus m_status = ASSET_OUT_OF_DATE;
 };

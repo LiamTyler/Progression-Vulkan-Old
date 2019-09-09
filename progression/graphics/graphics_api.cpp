@@ -275,6 +275,40 @@ namespace Gfx
         return m_nativeHandle != ~0u;
     }
 
+    int SizeOfPixelFromat( const PixelFormat& format )
+    {
+        int size[] =
+        {
+            1,  // R8_Uint
+            2,  // R16_Float
+            4,  // R32_Float
+
+            2,  // R8_G8_Uint
+            4,  // R16_G16_Float
+            8,  // R32_G32_Float
+
+            3,  // R8_G8_B8_Uint
+            6,  // R16_G16_B16_Float
+            12, // R32_G32_B32_Float
+
+            4,  // R8_G8_B8_A8_Uint
+            8,  // R16_G16_B16_A16_Float
+            16, // R32_G32_B32_A32_Float
+
+            4, // R8_G8_B8_Uint_sRGB
+            4, // R8_G8_B8_A8_Uint_sRGB
+
+            4, // R11_G11_B10_Float
+
+            4, // DEPTH32_Float
+        };
+
+        PG_ASSERT( static_cast< int >( format ) < static_cast< int >( PixelFormat::NUM_PIXEL_FORMATS ) );
+        static_assert( ARRAY_COUNT( size ) == static_cast< int >( PixelFormat::NUM_PIXEL_FORMATS ) );
+
+        return size[static_cast< int >( format )];
+    }
+
     Texture::~Texture()
     {
         if ( m_nativeHandle != (GLuint) -1 )
@@ -296,7 +330,7 @@ namespace Gfx
         return *this;
     }
 
-    Texture Texture::Create( const ImageDesc& desc, void* data )
+    Texture Texture::Create( const ImageDescriptor& desc, void* data )
     {
         PG_ASSERT( desc.type == ImageType::TYPE_2D, "Currently can't upload non-2d images, (will fix when switching to vulkan" );
         Texture tex;

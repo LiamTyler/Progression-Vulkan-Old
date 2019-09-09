@@ -1,8 +1,7 @@
+#include "resource/material.hpp"
 #include "core/assert.hpp"
 #include "core/core_defines.hpp"
-#include "resource/material.hpp"
 #include "resource/resource_manager.hpp"
-#include "resource/texture.hpp"
 #include "utils/fileIO.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
@@ -14,13 +13,13 @@ bool Material::Load( ResourceCreateInfo* createInfo )
 {
     PG_ASSERT( createInfo );
     MaterialCreateInfo* info = static_cast< MaterialCreateInfo* >( createInfo );
-    name = info->name;
-    Ka = info->Ka;
-    Kd = info->Kd;
-    Ks = info->Ks;
-    Ke = info->Ke;
-    Ns = info->Ns;
-    map_Kd = ResourceManager::GetOrCreateTexture( info->map_Kd_name );
+    name   = info->name;
+    Ka     = info->Ka;
+    Kd     = info->Kd;
+    Ks     = info->Ks;
+    Ke     = info->Ke;
+    Ns     = info->Ns;
+    map_Kd = ResourceManager::Get< Image >( info->map_Kd_name );
 
     return true;
 }
@@ -59,7 +58,7 @@ bool Material::Deserialize( char*& buffer )
     serialize::Read( buffer, map_Kd_name );
     if ( !map_Kd_name.empty() )
     {
-        map_Kd = ResourceManager::Get< Texture >( map_Kd_name );
+        map_Kd = ResourceManager::Get< Image >( map_Kd_name );
         PG_ASSERT( map_Kd );
     }
 
@@ -120,16 +119,10 @@ bool Material::LoadMtlFile( std::vector< Material >& materials, const std::strin
         {
             std::string texName;
             ss >> texName;
-            // mat->map_Kd = ResourceManager::GetOrCreateTexture( rootTexDir + texName );
-            // if ( !mat->map_Kd )
-            // {
-            //     LOG_ERR("Failed to load/create map_Kd texture '", texName, "' in mtl file '", fname, "'");
-            //     return false;
-            // }
-            mat->map_Kd = ResourceManager::Get< Texture >( texName );
+            mat->map_Kd = ResourceManager::Get< Image >( texName );
             if ( !mat->map_Kd )
             {
-                LOG_ERR("Failed to load map_Kd texture '", texName, "' in mtl file '", fname, "'");
+                LOG_ERR("Failed to load map_Kd image '", texName, "' in mtl file '", fname, "'");
                 return false;
             }
         }

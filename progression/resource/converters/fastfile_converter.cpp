@@ -3,9 +3,9 @@
 #include "lz4/lz4.h"
 #include "memory_map/MemoryMapped.h"
 #include "resource/converters/fastfile_converter.hpp"
-#include "resource/shader.hpp"
-#include "resource/texture.hpp"
+#include "resource/image.hpp"
 #include "resource/model.hpp"
+#include "resource/shader.hpp"
 #include "utils/fileIO.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
@@ -42,44 +42,55 @@ bool ParseShaderCreateInfoFromFile( std::istream& in, ShaderCreateInfo& info )
     return true;
 }
 
-static std::unordered_map< std::string, PixelFormat > internalFormatMap = {
-    { "R8_Uint", PixelFormat::R8_Uint },
-    { "R16_Float", PixelFormat::R16_Float },
-    { "R32_Float", PixelFormat::R32_Float },
-    { "R8_G8_Uint", PixelFormat::R8_G8_Uint },
-    { "R16_G16_Float", PixelFormat::R16_G16_Float },
-    { "R32_G32_Float", PixelFormat::R32_G32_Float },
-    { "R8_G8_B8_Uint", PixelFormat::R8_G8_B8_Uint },
-    { "R16_G16_B16_Float", PixelFormat::R16_G16_B16_Float },
-    { "R32_G32_B32_Float", PixelFormat::R32_G32_B32_Float },
-    { "R8_G8_B8_A8_Uint", PixelFormat::R8_G8_B8_A8_Uint },
-    { "R16_G16_B16_A16_Float", PixelFormat::R16_G16_B16_A16_Float },
-    { "R32_G32_B32_A32_Float", PixelFormat::R32_G32_B32_A32_Float },
-    { "R8_G8_B8_Uint_sRGB", PixelFormat::R8_G8_B8_Uint_sRGB },
-    { "R8_G8_B8_A8_Uint_sRGB", PixelFormat::R8_G8_B8_A8_Uint_sRGB },
-    { "R11_G11_B10_Float", PixelFormat::R11_G11_B10_Float },
-    { "DEPTH32_Float", PixelFormat::DEPTH32_Float },
+/*
+static std::unordered_map< std::string, Gfx::PixelFormat > internalFormatMap = {
+    { "R8_Uint",                Gfx::PixelFormat::R8_Uint },
+    { "R16_Float",              Gfx::PixelFormat::R16_Float },
+    { "R32_Float",              Gfx::PixelFormat::R32_Float },
+    { "R8_G8_Uint",             Gfx::PixelFormat::R8_G8_Uint },
+    { "R16_G16_Float",          Gfx::PixelFormat::R16_G16_Float },
+    { "R32_G32_Float",          Gfx::PixelFormat::R32_G32_Float },
+    { "R8_G8_B8_Uint",          Gfx::PixelFormat::R8_G8_B8_Uint },
+    { "R16_G16_B16_Float",      Gfx::PixelFormat::R16_G16_B16_Float },
+    { "R32_G32_B32_Float",      Gfx::PixelFormat::R32_G32_B32_Float },
+    { "R8_G8_B8_A8_Uint",       Gfx::PixelFormat::R8_G8_B8_A8_Uint },
+    { "R16_G16_B16_A16_Float",  Gfx::PixelFormat::R16_G16_B16_A16_Float },
+    { "R32_G32_B32_A32_Float",  Gfx::PixelFormat::R32_G32_B32_A32_Float },
+    { "R8_G8_B8_Uint_sRGB",     Gfx::PixelFormat::R8_G8_B8_Uint_sRGB },
+    { "R8_G8_B8_A8_Uint_sRGB",  Gfx::PixelFormat::R8_G8_B8_A8_Uint_sRGB },
+    { "R11_G11_B10_Float",      Gfx::PixelFormat::R11_G11_B10_Float },
+    { "DEPTH32_Float",          Gfx::PixelFormat::DEPTH32_Float },
 };
+*/
 
-bool ParseTextureCreateInfoFromFile( std::istream& in, TextureCreateInfo& info )
+bool ParseImageCreateInfoFromFile( std::istream& in, ImageCreateInfo& info )
 {
-    PG_UNUSED( in );
-    PG_UNUSED( info );
-    /*
-    info.texDesc.type = Gfx::TextureType::TEXTURE2D;
-
-    fileIO::ParseLineKeyVal( in, "name", info.name );
+    fileIO::ParseLineKeyVal( in, "name",     info.name );
     fileIO::ParseLineKeyVal( in, "filename", info.filename );
-    info.filename          = PG_RESOURCE_DIR + info.filename;
-    fileIO::ParseLineKeyVal( in, "mipmapped", info.texDesc.mipmapped );
-    if ( !info.texDesc.mipmapped && ( info.samplerDesc.minFilter != Gfx::FilterMode::NEAREST &&
-                                      info.samplerDesc.minFilter != Gfx::FilterMode::LINEAR ) )
+    info.filename = PG_RESOURCE_DIR + info.filename;
+    info.flags    = static_cast< ImageFlags >( 0 );
+
+    bool tmp;
+    fileIO::ParseLineKeyVal( in, "flipVertically", tmp );
+    if ( tmp )
     {
-        LOG_ERR( "Trying to use a mipmap min filter when there is no mip map on texture: ",
-                 info.filename );
-        return false;
+        info.flags |= IMAGE_FLIP_VERTICALLY;
     }
-    */
+    fileIO::ParseLineKeyVal( in, "generateMipmaps", tmp );
+    if ( tmp )
+    {
+        info.flags |= IMAGE_GENERATE_MIPMAPS_ON_CONVERT;
+    }
+    fileIO::ParseLineKeyVal( in, "createTexture", tmp );
+    if ( tmp )
+    {
+        info.flags |= IMAGE_CREATE_TEXTURE_ON_LOAD;
+    }
+    fileIO::ParseLineKeyVal( in, "freeCpuCopy", tmp );
+    if ( tmp )
+    {
+        info.flags |= IMAGE_FREE_CPU_COPY_ON_LOAD;
+    }
 
     return true;
 }
@@ -93,8 +104,11 @@ bool ParseMaterialFileFromFile( std::istream& in, std::string& mtlFileName )
 
 bool ParseModelFromFile( std::istream& in, ModelCreateInfo& createInfo )
 {
-    fileIO::ParseLineKeyVal( in, "name", createInfo.name );
-    fileIO::ParseLineKeyVal( in, "filename", createInfo.filename );
+    fileIO::ParseLineKeyVal( in, "name",          createInfo.name );
+    fileIO::ParseLineKeyVal( in, "filename",      createInfo.filename );
+    fileIO::ParseLineKeyVal( in, "optimize",      createInfo.optimize );
+    fileIO::ParseLineKeyVal( in, "freeCpuCopy",   createInfo.freeCpuCopy );
+    fileIO::ParseLineKeyVal( in, "createGpuCopy", createInfo.createGpuCopy );
     createInfo.filename = PG_RESOURCE_DIR + createInfo.filename;
     
     return true;
@@ -111,24 +125,24 @@ AssetStatus FastfileConverter::CheckDependencies()
 
     m_status = ASSET_UP_TO_DATE;
 
-    if ( outputFile.empty() )
+    m_outputContentFile = PG_RESOURCE_DIR "cache/fastfiles/" +
+                          std::filesystem::path( inputFile ).filename().string() + ".ff";
+    if ( !std::filesystem::exists( m_outputContentFile ) )
     {
-        outputFile = PG_RESOURCE_DIR "cache/fastfiles/" +
-                     std::filesystem::path( inputFile ).filename().string() + ".ff";
-    }
-    if ( !std::filesystem::exists( outputFile ) )
-    {
+        LOG( "OUT OF DATE: Fastfile file for '", inputFile, "' does not exist, convert required" );
         m_status = ASSET_OUT_OF_DATE;
     }
-
-    Timestamp outTimestamp( outputFile );
-    Timestamp newestFileTime( inputFile );
-
-    m_status = outTimestamp <= newestFileTime ? ASSET_OUT_OF_DATE : ASSET_UP_TO_DATE;
-
-    if ( m_status == ASSET_OUT_OF_DATE )
+    else
     {
-        LOG( "OUT OF DATE: Fastfile file'", inputFile, "' has newer timestamp than saved FF" );
+        Timestamp outTimestamp( m_outputContentFile );
+        Timestamp newestFileTime( inputFile );
+
+        m_status = outTimestamp <= newestFileTime ? ASSET_OUT_OF_DATE : ASSET_UP_TO_DATE;
+
+        if ( m_status == ASSET_OUT_OF_DATE )
+        {
+            LOG( "OUT OF DATE: Fastfile file '", inputFile, "' has newer timestamp than saved FF" );
+        }
     }
 
     auto UpdateStatus = [this]( AssetStatus status ) {
@@ -158,18 +172,17 @@ AssetStatus FastfileConverter::CheckDependencies()
             auto status = converter.CheckDependencies();
             if ( status == ASSET_CHECKING_ERROR )
             {
-                LOG_ERR( "Error while checking dependencies on resource: '",
-                         converter.createInfo.name, "'" );
+                LOG_ERR( "Error while checking dependencies on resource: '", converter.createInfo.name, "'" );
                 return ASSET_CHECKING_ERROR;
             }
             UpdateStatus( status );
 
             m_shaderConverters.emplace_back( std::move( converter ) );
         }
-        else if ( line == "Texture" )
+        else if ( line == "Image" )
         {
-            TextureConverter converter;
-            if ( !ParseTextureCreateInfoFromFile( in, converter.createInfo ) )
+            ImageConverter converter;
+            if ( !ParseImageCreateInfoFromFile( in, converter.createInfo ) )
             {
                 LOG_ERR( "Error while parsing ShaderCreateInfo" );
                 return ASSET_CHECKING_ERROR;
@@ -178,13 +191,12 @@ AssetStatus FastfileConverter::CheckDependencies()
             auto status = converter.CheckDependencies();
             if ( status == ASSET_CHECKING_ERROR )
             {
-                LOG_ERR( "Error while checking dependencies on resource: '",
-                         converter.createInfo.name, "'" );
+                LOG_ERR( "Error while checking dependencies on resource: '", converter.createInfo.name, "'" );
                 return ASSET_CHECKING_ERROR;
             }
             UpdateStatus( status );
 
-            m_textureConverters.emplace_back( std::move( converter ) );
+            m_imageConverters.emplace_back( std::move( converter ) );
         }
         else if ( line == "MTLFile")
         {
@@ -229,137 +241,49 @@ AssetStatus FastfileConverter::CheckDependencies()
 
 ConverterStatus FastfileConverter::Convert()
 {
-    if ( !force && m_status == ASSET_UP_TO_DATE )
+    if ( m_status == ASSET_UP_TO_DATE )
     {
         return CONVERT_SUCCESS;
     }
 
-    std::ofstream out( outputFile, std::ios::binary );
+    std::ofstream out( m_outputContentFile, std::ios::binary );
 
     if ( !out )
     {
-        LOG_ERR( "Failed to open fastfile '", outputFile, "' for write" );
+        LOG_ERR( "Failed to open fastfile '", m_outputContentFile, "' for write" );
         return CONVERT_ERROR;
     }
 
-    auto OnError = [&]( std::string ffiFile )
-    {
-        out.close();
-        std::filesystem::remove( outputFile );
-        std::filesystem::remove( ffiFile );
-        return CONVERT_ERROR;
-    };
-
-    uint32_t numShaders = static_cast< uint32_t >( m_shaderConverters.size() );
-    serialize::Write( out, numShaders );
     std::vector< char > buffer( 4 * 1024 * 1024 );
-    for ( auto& converter : m_shaderConverters )
-    {
-        if ( converter.Convert() != CONVERT_SUCCESS )
-        {
-            LOG_ERR( "Error while converting shader" );
-            return OnError( converter.outputFile );
-        }
 
-        // TODO: Dont write and then read back the same data, just write to both files
-        std::ifstream in( converter.outputFile, std::ios::binary );
-        if ( !in )
-        {
-            LOG_ERR( "Error opening intermediate file '", converter.outputFile, "'" );
-            return OnError( converter.outputFile );
-        }
-        in.seekg( 0, in.end );
-        size_t length = in.tellg();
-        in.seekg( 0, in.beg );
-        buffer.resize( length );
-        in.read( &buffer[0], length );
-
-        serialize::Write( out, buffer.data(), length );
+#define WRITE_RESOURCE( resource, converterList ) \
+    { \
+        uint32_t numResource = static_cast< uint32_t >( converterList.size() ); \
+        serialize::Write( out, numResource ); \
+        for ( auto& converter : converterList ) \
+        { \
+            if ( converter.Convert() != CONVERT_SUCCESS ) \
+            { \
+                LOG_ERR( "Error while converting " #resource ); \
+                return CONVERT_ERROR; \
+            } \
+            converter.WriteToFastFile( out ); \
+        } \
     }
 
-    uint32_t numTextures = static_cast< uint32_t >( m_textureConverters.size() );
-    serialize::Write( out, numTextures );
-    for ( auto& converter : m_textureConverters )
-    {
-        if ( converter.Convert() != CONVERT_SUCCESS )
-        {
-            LOG_ERR( "Error while converting texture" );
-            return OnError( converter.outputFile );
-        }
-
-        std::ifstream in( converter.outputFile, std::ios::binary );
-        if ( !in )
-        {
-            LOG_ERR( "Error opening intermediate file '", converter.outputFile, "'" );
-            return OnError( converter.outputFile );
-        }
-        in.seekg( 0, in.end );
-        size_t length = in.tellg();
-        in.seekg( 0, in.beg );
-        buffer.resize( length );
-        in.read( &buffer[0], length );
-
-        serialize::Write( out, buffer.data(), length );
-    }
-
-    uint32_t numMaterials = static_cast< uint32_t >( m_materialFileConverters.size() );
-    serialize::Write( out, numMaterials );
-    for ( auto& converter : m_materialFileConverters )
-    {
-        if ( converter.Convert() != CONVERT_SUCCESS )
-        {
-            LOG_ERR( "Error while converting material" );
-            return OnError( converter.outputFile );
-        }
-
-        std::ifstream in( converter.outputFile, std::ios::binary );
-        if ( !in )
-        {
-            LOG_ERR( "Error opening intermediate file '", converter.outputFile, "'" );
-            return OnError( converter.outputFile );
-        }
-        in.seekg( 0, in.end );
-        size_t length = in.tellg();
-        in.seekg( 0, in.beg );
-        buffer.resize( length );
-        in.read( &buffer[0], length );
-
-        serialize::Write( out, buffer.data(), length );
-    }
-
-    uint32_t numModels = static_cast< uint32_t >( m_modelConverters.size() );
-    serialize::Write( out, numModels );
-    for ( auto& converter : m_modelConverters )
-    {
-        if ( converter.Convert() != CONVERT_SUCCESS )
-        {
-            LOG_ERR( "Error while converting model" );
-            return OnError( converter.outputFile );
-        }
-
-        std::ifstream in( converter.outputFile, std::ios::binary );
-        if ( !in )
-        {
-            LOG_ERR( "Error opening intermediate file '", converter.outputFile, "'" );
-            return OnError( converter.outputFile );
-        }
-        in.seekg( 0, in.end );
-        size_t length = in.tellg();
-        in.seekg( 0, in.beg );
-        buffer.resize( length );
-        in.read( &buffer[0], length );
-
-        serialize::Write( out, buffer.data(), length );
-    }
+    WRITE_RESOURCE( Shader, m_shaderConverters )
+    WRITE_RESOURCE( Image, m_imageConverters )
+    WRITE_RESOURCE( MTLFile, m_materialFileConverters )
+    WRITE_RESOURCE( Model, m_modelConverters )
 
     out.close();
 
 #if USING( LZ4_COMPRESSED_FASTFILES )
     LOG( "Compressing with LZ4..." );
     MemoryMapped memMappedFile;
-    if ( !memMappedFile.open( outputFile, MemoryMapped::WholeFile, MemoryMapped::Normal ) )
+    if ( !memMappedFile.open( outputContentFile, MemoryMapped::WholeFile, MemoryMapped::Normal ) )
     {
-        LOG_ERR( "Could not open fastfile:", outputFile );
+        LOG_ERR( "Could not open fastfile:", outputContentFile );
         return CONVERT_ERROR;
     }
 
@@ -384,11 +308,11 @@ ConverterStatus FastfileConverter::Convert()
         LOG( "Compressed file size ratio: ", (float) compressedDataSize / srcSize );
     }
 
-    out.open( outputFile, std::ios::binary );
+    out.open( outputContentFile, std::ios::binary );
 
     if ( !out )
     {
-        LOG_ERR( "Failed to open fastfile '", outputFile, "' for writing compressed results" );
+        LOG_ERR( "Failed to open fastfile '", outputContentFile, "' for writing compressed results" );
         return CONVERT_ERROR;
     }
 

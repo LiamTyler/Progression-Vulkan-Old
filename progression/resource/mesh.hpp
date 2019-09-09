@@ -23,7 +23,7 @@ public:
     void Free( bool gpuCopy = true, bool cpuCopy = true );
     void Optimize();
     bool Serialize( std::ofstream& out ) const;
-    bool Deserialize( char*& buffer );
+    bool Deserialize( char*& buffer, bool createGpuCopy, bool freeCpuCopy );
 
     uint32_t GetNumVertices() const;
     uint32_t GetNumIndices() const;
@@ -31,7 +31,6 @@ public:
     uint32_t GetNormalOffset() const;
     uint32_t GetUVOffset() const;
     Gfx::IndexType GetIndexType() const;
-    // void SetKeepCPUCopyOnDeserialize( bool b );
 
     AABB aabb;
     std::vector< glm::vec3 > vertices;
@@ -48,7 +47,6 @@ private:
     uint32_t m_normalOffset    = ~0u;
     uint32_t m_uvOffset        = ~0u;
     bool m_gpuDataCreated      = false;
-    bool m_keepCPUCopy         = false;
 };
 
 } // namespace Progression

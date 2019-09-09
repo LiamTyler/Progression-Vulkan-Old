@@ -78,11 +78,9 @@ inline void Read( std::ifstream& in, char* buff, size_t len )
 }
 
 
-
 template < typename T >
 inline void Read( char*& buff, T& val )
 {
-    //PG_ASSERT( buff );
     memcpy( (void*) &val, buff, sizeof( T ) );
     buff += sizeof( T );
 }
@@ -90,7 +88,6 @@ inline void Read( char*& buff, T& val )
 template <>
 inline void Read( char*& buff, std::string& s )
 {
-    //PG_ASSERT( buff );
     uint32_t len = ( ( uint32_t* ) buff )[0];
     buff += sizeof( uint32_t );
     s.resize( len );
@@ -101,7 +98,6 @@ inline void Read( char*& buff, std::string& s )
 template <>
 inline void Read( char*& buff, glm::vec3& v )
 {
-    //PG_ASSERT( buff );
     memcpy( (void*) &v.x, buff, sizeof( glm::vec3 ) );
     buff += sizeof( glm::vec3 );
 }
@@ -109,7 +105,6 @@ inline void Read( char*& buff, glm::vec3& v )
 template < typename T >
 inline void Read( char*& buff, std::vector< T >& vec )
 {
-    //PG_ASSERT( buff );
     size_t len = ( ( size_t* ) buff )[0];
     buff += sizeof( size_t );
     vec.resize( len );
@@ -119,7 +114,6 @@ inline void Read( char*& buff, std::vector< T >& vec )
 
 inline void Read( char*& buff, char* dstBuff, size_t len )
 {
-    //PG_ASSERT( buff );
     memcpy( dstBuff, buff, len );
     buff += len;
 }

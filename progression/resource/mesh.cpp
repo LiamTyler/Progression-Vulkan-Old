@@ -209,42 +209,57 @@ bool Mesh::Serialize( std::ofstream& out ) const
     return !out.fail();
 }
 
-bool Mesh::Deserialize( char*& buffer )
+bool Mesh::Deserialize( char*& buffer, bool createGpuCopy, bool freeCpuCopy )
 {
+    PG_ASSERT( createGpuCopy || !freeCpuCopy );
     size_t buffSize;
     size_t totalVertexBytes;
     size_t totalIndexBytes;
     serialize::Read( buffer, totalVertexBytes );
     serialize::Read( buffer, totalIndexBytes );
-    m_gpuDataCreated = true;
 
-    vertexBuffer = Gfx::Buffer::Create( NULL, totalVertexBytes, Gfx::BufferType::VERTEX, Gfx::BufferUsage::STATIC );
+    if ( createGpuCopy || freeCpuCopy )
+    {
+        m_gpuDataCreated = true;
+        vertexBuffer = Gfx::Buffer::Create( NULL, totalVertexBytes, Gfx::BufferType::VERTEX, Gfx::BufferUsage::STATIC );
 
-    serialize::Read( buffer, buffSize );
-    m_numVertices = static_cast< uint32_t >( buffSize );
-    vertexBuffer.SetData( buffer, 0, m_numVertices * sizeof( glm::vec3 ) );
-    buffer += m_numVertices * sizeof( glm::vec3 );
+        serialize::Read( buffer, buffSize );
+        m_numVertices = static_cast< uint32_t >( buffSize );
+        vertexBuffer.SetData( buffer, 0, m_numVertices * sizeof( glm::vec3 ) );
+        buffer += m_numVertices * sizeof( glm::vec3 );
 
-    m_normalOffset = m_numVertices * sizeof( glm::vec3 );
-    serialize::Read( buffer, buffSize );
-    vertexBuffer.SetData( buffer, m_normalOffset, buffSize * sizeof( glm::vec3 ) );
-    buffer += buffSize * sizeof( glm::vec3 );
-    
-    m_uvOffset = m_normalOffset + static_cast< uint32_t >( buffSize ) * sizeof( glm::vec3 );
-    serialize::Read( buffer, buffSize );
-    vertexBuffer.SetData( buffer, m_uvOffset, buffSize * sizeof( glm::vec2 ) );
-    buffer += buffSize * sizeof( glm::vec2 );
+        m_normalOffset = m_numVertices * sizeof( glm::vec3 );
+        serialize::Read( buffer, buffSize );
+        vertexBuffer.SetData( buffer, m_normalOffset, buffSize * sizeof( glm::vec3 ) );
+        buffer += buffSize * sizeof( glm::vec3 );
+        
+        m_uvOffset = m_normalOffset + static_cast< uint32_t >( buffSize ) * sizeof( glm::vec3 );
+        serialize::Read( buffer, buffSize );
+        vertexBuffer.SetData( buffer, m_uvOffset, buffSize * sizeof( glm::vec2 ) );
+        buffer += buffSize * sizeof( glm::vec2 );
 
-    serialize::Read( buffer, m_indexType );
-    serialize::Read( buffer, buffSize );
-    m_numIndices = static_cast< uint32_t >( buffSize );
-    indexBuffer = Gfx::Buffer::Create( buffer, totalIndexBytes, Gfx::BufferType::INDEX, Gfx::BufferUsage::STATIC );
-    buffer += totalIndexBytes;
+        serialize::Read( buffer, m_indexType );
+        serialize::Read( buffer, buffSize );
+        m_numIndices = static_cast< uint32_t >( buffSize );
+        indexBuffer = Gfx::Buffer::Create( buffer, totalIndexBytes, Gfx::BufferType::INDEX, Gfx::BufferUsage::STATIC );
+        buffer += totalIndexBytes;
+    }
+    else if ( !createGpuCopy )
+    {
+        m_gpuDataCreated = false;
+
+        serialize::Read( buffer, vertices );
+        serialize::Read( buffer, normals );
+        serialize::Read( buffer, uvs );
+        serialize::Read( buffer, m_indexType );
+        serialize::Read( buffer, indices );
+        m_numVertices = static_cast< uint32_t >( vertices.size() );
+        m_numIndices = static_cast< uint32_t >( indices.size() );
+    }
+
     serialize::Read( buffer, aabb.min );
     serialize::Read( buffer, aabb.max );
     serialize::Read( buffer, aabb.extent );
-
-    // UploadToGpu( true );
 
     return true;
 }
@@ -278,10 +293,5 @@ Gfx::IndexType Mesh::GetIndexType() const
 {
     return m_indexType;
 }
-
-// void Mesh::SetKeepCPUCopyOnDeserialize( bool b )
-// {
-//     m_keepCPUCopy = b;
-// }
 
 } // namespace Progression

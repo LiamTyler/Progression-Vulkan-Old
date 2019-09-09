@@ -33,7 +33,7 @@ class Texture;
 enum ResourceTypes
 {
     SHADER = 0,
-    TEXTURE,
+    IMAGE,
     MATERIAL,
     MODEL,
     TOTAL_RESOURCE_TYPES
@@ -123,8 +123,6 @@ namespace ResourceManager
 
         f_resources.GetMap< T >()[resourcePtr->name] = resourcePtr;         
     }
-
-    std::shared_ptr< Texture > GetOrCreateTexture( const std::string& texname );
 
 } // namespace ResourceManager
 } // namespace Progression

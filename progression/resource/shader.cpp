@@ -179,7 +179,7 @@ void Shader::Move( std::shared_ptr< Resource > dst )
 
 bool Shader::Serialize( std::ofstream& out ) const
 {
-    serialize::Write( out, name );
+    // serialize::Write( out, name );
 
 #if USING( SERIALIZE_SHADER_TEXT )
     serialize::Write( out, m_createInfo.vertex );

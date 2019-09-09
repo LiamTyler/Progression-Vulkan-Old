@@ -1,4 +1,5 @@
 #include "resource/converters/material_converter.hpp"
+#include "memory_map/MemoryMapped.h"
 #include "resource/material.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
@@ -8,7 +9,7 @@
 
 using namespace Progression;
 
-static std::string GetMTLFileFastFileName( const std::string& mtlFileName )
+static std::string GetContentFastFileName( const std::string& mtlFileName )
 {
     namespace fs = std::filesystem;
 
@@ -21,17 +22,14 @@ static std::string GetMTLFileFastFileName( const std::string& mtlFileName )
 
 AssetStatus MaterialConverter::CheckDependencies()
 {
-    if ( outputFile.empty() )
-    {
-        outputFile = GetMTLFileFastFileName( inputFile );
-    }
-    if ( !std::filesystem::exists( outputFile ) )
+    m_outputContentFile = GetContentFastFileName( inputFile );
+    if ( !std::filesystem::exists( m_outputContentFile ) )
     {
         LOG( "OUT OF DATE: FFI File for MTLFile '", inputFile, "' does not exist, convert required" );
         return ASSET_OUT_OF_DATE;
     }
 
-    Timestamp outTimestamp( outputFile );
+    Timestamp outTimestamp( m_outputContentFile );
     Timestamp newestFileTime( inputFile );
 
     m_status = outTimestamp <= newestFileTime ? ASSET_OUT_OF_DATE : ASSET_UP_TO_DATE;
@@ -50,26 +48,26 @@ AssetStatus MaterialConverter::CheckDependencies()
 
 ConverterStatus MaterialConverter::Convert()
 {
-    if ( !force && m_status == ASSET_UP_TO_DATE )
+    if ( m_status == ASSET_UP_TO_DATE )
     {
         return CONVERT_SUCCESS;
     }
     
     std::vector< Progression::Material > materials;
 
-    if (! Progression::Material::LoadMtlFile( materials, inputFile ) )
+    if ( !Progression::Material::LoadMtlFile( materials, inputFile ) )
     {
         LOG_ERR( "Failed to load MTLFile '", inputFile, "'" );
         return CONVERT_ERROR;
     }
 
-    std::ofstream out( outputFile, std::ios::binary );
+    std::ofstream out( m_outputContentFile, std::ios::binary );
 
     for ( const auto& material : materials )
     {
         if (! material.Serialize( out ) )
         {
-            LOG_ERR( "Could not save materials to FFI file: '", outputFile, "'" );
+            LOG_ERR( "Could not save materials to FFI file: '", m_outputContentFile, "'" );
             return CONVERT_ERROR;
         }
     }
@@ -77,4 +75,18 @@ ConverterStatus MaterialConverter::Convert()
     out.close();
 
     return CONVERT_SUCCESS;
+}
+
+bool MaterialConverter::WriteToFastFile( std::ofstream& out ) const
+{
+    MemoryMapped memMappedFile;
+    if ( !memMappedFile.open( m_outputContentFile, MemoryMapped::WholeFile, MemoryMapped::SequentialScan ) )
+    {
+        LOG_ERR( "Error opening intermediate file '", m_outputContentFile, "'" );
+        return false;
+    }
+
+    serialize::Write( out, (char*) memMappedFile.getData(), memMappedFile.size() );
+
+    return true;
 }

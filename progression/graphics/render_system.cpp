@@ -9,7 +9,7 @@
 #include "graphics/lights.hpp"
 #include "resource/material.hpp"
 #include "resource/model.hpp"
-#include "resource/texture.hpp"
+// #include "resource/texture.hpp"
 //#include "graphics/shadow_map.hpp"
 #include <array>
 #include "graphics/pg_to_opengl_types.hpp"
@@ -269,7 +269,7 @@ namespace RenderSystem
         // gbuffer render pass
         RenderPassDescriptor gBufferRenderPassDesc;
 
-        ImageDesc texDesc;
+        ImageDescriptor texDesc;
         texDesc.width     = s_window->Width();
         texDesc.height    = s_window->Height();
         texDesc.type      = ImageType::TYPE_2D;
@@ -413,7 +413,7 @@ namespace RenderSystem
         s_gbufferPipeline = {};
         s_directionalLightPipeline = {};
         s_backgroundPipeline = {};
-        s_postProcessBuffer = {};
+        s_postProcessPipeline = {};
 
         s_quadVertexBuffer = {};
         s_cubeVertexBuffer = {};
@@ -428,6 +428,8 @@ namespace RenderSystem
 
         s_postProcessBuffer.renderPass = {};
         s_postProcessBuffer.hdrColorTex = {};
+
+        s_screenRenderPass = {};
 
         for ( int i = 0; i < TOTAL_SHADERS; ++i )
         {
@@ -587,8 +589,9 @@ namespace RenderSystem
                 if ( matPtr->map_Kd )
                 {
                     shader.SetUniform( "textured", true );
-                    matPtr->map_Kd->sampler->Bind( 0 );
-                    shader.BindTexture( matPtr->map_Kd->gfxTexture, "diffuseTex", 0 );
+                    // matPtr->map_Kd->sampler->Bind( 0 );
+                    s_samplers["nearest"].Bind( 0 );
+                    shader.BindTexture( *matPtr->map_Kd->GetTexture(), "diffuseTex", 0 );
                 }
                 else
                 {

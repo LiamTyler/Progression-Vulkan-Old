@@ -5,35 +5,28 @@ geometry
 fragment test.frag
 compute
 
-Texture
+Image
 name cockatoo
 filename textures/cockatoo.jpg
-mipmapped true
-internalFormat R8_G8_B8_Uint
-minFilter nearest
-magFilter nearest
-wrapModeS clamp_to_edge
-wrapModeT clamp_to_edge
-wrapModeR clamp_to_edge
-borderColor 0 0 0 0
-maxAnisotropy 4
+flipVertically true
+generateMipmaps true
+createTexture true
+freeCpuCopy true
 
 MTLFile
 filename materials/cockatoo.mtl
 
-Texture
+Image
 name chaletTex
 filename textures/chalet.jpg
-mipmapped true
-internalFormat R8_G8_B8_Uint
-minFilter linear 
-magFilter nearest
-wrapModeS clamp_to_edge
-wrapModeT clamp_to_edge
-wrapModeR clamp_to_edge
-borderColor 0 0 0 0
-maxAnisotropy 4
+flipVertically true
+generateMipmaps true
+createTexture true
+freeCpuCopy true
 
 Model
 name chalet2
 filename models/chalet2.obj
+optimize true
+freeCpuCopy true
+createGpuCopy true

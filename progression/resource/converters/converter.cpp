@@ -1,29 +1,27 @@
 #include "resource/converters/converter.hpp"
+#include "memory_map/MemoryMapped.h"
+#include "utils/logger.hpp"
 #include "utils/serialize.hpp"
 
-void ConvertHeader::serialize( std::ofstream& out )
+bool Converter::WriteToFastFile( std::ofstream& out ) const
 {
-    uint32_t numFiles = (uint32_t) fileDependencies.size();
-    serialize::Write( out, numFiles );
-    for ( const auto& file : fileDependencies )
+    MemoryMapped memMappedFile;
+    if ( !memMappedFile.open( m_outputSettingsFile, MemoryMapped::WholeFile, MemoryMapped::SequentialScan ) )
     {
-        serialize::Write( out, file );
+        LOG_ERR( "Error opening intermediate file '", m_outputSettingsFile, "'" );
+        return false;
     }
-}
+    serialize::Write( out, (char*) memMappedFile.getData(), memMappedFile.size() );
 
-void ConvertHeader::deserialize( std::ifstream& in )
-{
-    uint32_t numFiles;
-    serialize::Read( in, numFiles );
-    for ( uint32_t i = 0; i < numFiles; ++i )
+    memMappedFile.close();
+
+    if ( !memMappedFile.open( m_outputContentFile, MemoryMapped::WholeFile, MemoryMapped::SequentialScan ) )
     {
-        std::string tmp;
-        serialize::Read( in, tmp );
-        fileDependencies.push_back( tmp );
+        LOG_ERR( "Error opening intermediate file '", m_outputContentFile, "'" );
+        return false;
     }
-}
 
-AssetStatus Converter::GetStatus() const
-{
-    return m_status;
+    serialize::Write( out, (char*) memMappedFile.getData(), memMappedFile.size() );
+
+    return true;
 }

@@ -1,6 +1,5 @@
 #include "resource/model.hpp"
 #include "resource/material.hpp"
-#include "resource/texture.hpp"
 #include "resource/resource_manager.hpp"
 #include "tinyobjloader/tiny_obj_loader.h"
 #include "utils/fileIO.hpp"
@@ -82,7 +81,7 @@ bool Model::Load( ResourceCreateInfo* createInfo )
 
 bool Model::Serialize( std::ofstream& out ) const
 {
-    serialize::Write( out, name );
+    // serialize::Write( out, name );
     uint32_t numMeshes = static_cast< uint32_t >( meshes.size() );
     serialize::Write( out, numMeshes );
     for ( uint32_t i = 0; i < numMeshes; ++i )
@@ -113,6 +112,10 @@ bool Model::Serialize( std::ofstream& out ) const
 bool Model::Deserialize( char*& buffer )
 {
     serialize::Read( buffer, name );
+    bool freeCpuCopy;
+    bool createGpuCopy;
+    serialize::Read( buffer, freeCpuCopy );
+    serialize::Read( buffer, createGpuCopy );
     uint32_t numMeshes;
     serialize::Read( buffer, numMeshes );
     meshes.resize( numMeshes );
@@ -130,7 +133,7 @@ bool Model::Deserialize( char*& buffer )
 
     for ( uint32_t i = 0; i < numMeshes; ++i )
     {
-        if ( !meshes[i].Deserialize( buffer ) )
+        if ( !meshes[i].Deserialize( buffer, createGpuCopy, freeCpuCopy ) )
         {
             LOG( "Could not load mesh: ", i, ", of model: ", name, " from fastfile" );
             return false;
@@ -144,9 +147,9 @@ bool Model::Deserialize( char*& buffer )
     return true;
 }
 
-// fname is full path
-bool Model::LoadFromObj( ModelCreateInfo* createInfo, bool loadTexturesIfNotInResourceManager )
+bool Model::LoadFromObj( ModelCreateInfo* createInfo )
 {
+    PG_ASSERT( createInfo->createGpuCopy || !createInfo->freeCpuCopy );
     tinyobj::attrib_t attrib;
     std::vector< tinyobj::shape_t > shapes;
     std::vector< tinyobj::material_t > tiny_materials;
@@ -190,18 +193,11 @@ bool Model::LoadFromObj( ModelCreateInfo* createInfo, bool loadTexturesIfNotInRe
             currentMaterial->Ns      = mat.shininess;
             if ( !mat.diffuse_texname.empty() )
             {
-                currentMaterial->map_Kd  = ResourceManager::Get< Texture >( mat.diffuse_texname );
-                if ( !currentMaterial->map_Kd && loadTexturesIfNotInResourceManager )
-                {
-                    TextureCreateInfo info;
-                    info.name = mat.diffuse_texname;
-                    info.filename = PG_RESOURCE_DIR + mat.diffuse_texname;
-                    currentMaterial->map_Kd = ResourceManager::Load< Texture >( &info );
-                }
-                else if ( !currentMaterial->map_Kd )
+                currentMaterial->map_Kd  = ResourceManager::Get< Image >( mat.diffuse_texname );
+                if ( !currentMaterial->map_Kd )
                 {
                     LOG_ERR( "Could not load material '", mat.name, "' from OBJ '", createInfo->filename, "'" );
-                    LOG_ERR( "Texture '", mat.diffuse_texname, "' needs to be in resource manager, or set loadTexturesIfNotInResourceManager == true " );
+                    LOG_ERR( "Texture '", mat.diffuse_texname, "' needs to be already in resource manager" );
                     return false;
                 }
             }
@@ -312,7 +308,10 @@ bool Model::LoadFromObj( ModelCreateInfo* createInfo, bool loadTexturesIfNotInRe
                 currentMesh.Optimize();
             }
 
-            currentMesh.UploadToGpu( createInfo->freeCpuCopy );
+            if ( createInfo->createGpuCopy )
+            {
+                currentMesh.UploadToGpu( createInfo->freeCpuCopy );
+            }
 
             materials.push_back( currentMaterial );
             meshes.push_back( std::move( currentMesh ) );

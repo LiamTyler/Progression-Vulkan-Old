@@ -46,7 +46,7 @@ int main( int argc, char* argv[] )
     fs::create_directories( PG_RESOURCE_DIR "cache/shaders/" );
     fs::create_directories( PG_RESOURCE_DIR "cache/materials/" );
     fs::create_directories( PG_RESOURCE_DIR "cache/models/" );
-    fs::create_directories( PG_RESOURCE_DIR "cache/textures/" );
+    fs::create_directories( PG_RESOURCE_DIR "cache/images/" );
     fs::create_directories( PG_RESOURCE_DIR "cache/fastfiles/" );
 
 

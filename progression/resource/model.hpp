@@ -15,6 +15,7 @@ struct ModelCreateInfo : public ResourceCreateInfo
     std::string filename = "";
     bool optimize        = true;
     bool freeCpuCopy     = true;
+    bool createGpuCopy   = true;
 };
 
 class Model : public Resource
@@ -29,7 +30,7 @@ public:
     bool Serialize( std::ofstream& outFile ) const override;
     bool Deserialize( char*& buffer ) override;
     
-    bool LoadFromObj( ModelCreateInfo* createInfo, bool loadTexturesIfNotInResourceManager = false );
+    bool LoadFromObj( ModelCreateInfo* createInfo );
     void RecalculateBB( bool recursive = false );
     void Optimize();
 

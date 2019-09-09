@@ -8,7 +8,7 @@
 #include <unordered_set>
 #include <vector>
 
-#define SERIALIZE_SHADER_TEXT IN_USE
+#define SERIALIZE_SHADER_TEXT NOT_IN_USE
 
 namespace Progression
 {
@@ -63,7 +63,7 @@ protected:
     std::vector< char > GetShaderBinary( GLint& len, GLenum& format ) const;
 
     GLuint m_program;
-    std::unordered_map< std::string, GLuint > m_uniforms;
+    std::unordered_map< std::string, uint32_t > m_uniforms;
 
 #if USING( SERIALIZE_SHADER_TEXT )
     ShaderCreateInfo m_createInfo;

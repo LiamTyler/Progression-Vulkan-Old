@@ -8,14 +8,14 @@
 
 using namespace Progression;
 
-static std::string GetShaderFastFileName( struct ShaderCreateInfo& createInfo )
+static std::string GetContentFastFileName( struct ShaderCreateInfo& createInfo )
 {
     namespace fs = std::filesystem;
 
-    std::string vertPath = createInfo.vertex.empty() ? "" : fs::absolute( createInfo.vertex ).string();
+    std::string vertPath = createInfo.vertex.empty()   ? "" : fs::absolute( createInfo.vertex ).string();
     std::string geomPath = createInfo.geometry.empty() ? "" : fs::absolute( createInfo.geometry ).string();
     std::string fragPath = createInfo.fragment.empty() ? "" : fs::absolute( createInfo.fragment ).string();
-    std::string compPath = createInfo.compute.empty() ? "" : fs::absolute( createInfo.compute ).string();
+    std::string compPath = createInfo.compute.empty()  ? "" : fs::absolute( createInfo.compute ).string();
 
     size_t hash = std::hash< std::string >{}( vertPath + geomPath + fragPath + compPath );
     vertPath    = fs::path( createInfo.vertex ).filename().string();
@@ -26,19 +26,34 @@ static std::string GetShaderFastFileName( struct ShaderCreateInfo& createInfo )
            compPath + "_" + std::to_string( hash ) + ".ffi";
 }
 
+static std::string GetSettingsFastFileName( const ShaderCreateInfo& createInfo )
+{
+    return PG_RESOURCE_DIR "cache/shaders/settings_" + createInfo.name + ".ffi";
+}
+
 AssetStatus ShaderConverter::CheckDependencies()
 {
-    if ( outputFile.empty() )
+    m_outputContentFile  = GetContentFastFileName( createInfo );
+    m_outputSettingsFile = GetSettingsFastFileName( createInfo );
+
+    if ( !std::filesystem::exists( m_outputSettingsFile ) )
     {
-        outputFile = GetShaderFastFileName( createInfo );
+        LOG( "OUT OF DATE: FFI File for settings file '", m_outputSettingsFile, "' does not exist, needs to be generated" );
+        m_settingsNeedsConverting = true;
     }
-    if ( !std::filesystem::exists( outputFile ) )
+    else
     {
-        LOG( "OUT OF DATE: FFI File for Shader '", createInfo.name, "' does not exist, convert required" );
+        m_settingsNeedsConverting = false;
+    }
+
+    if ( !std::filesystem::exists( m_outputContentFile ) )
+    {
+        LOG( "OUT OF DATE: FFI File for shader '", createInfo.name, "' does not exist, convert required" );
+        m_contentNeedsConverting = true;
         return ASSET_OUT_OF_DATE;
     }
 
-    Timestamp outTimestamp( outputFile );
+    Timestamp outTimestamp( m_outputContentFile );
 
     Timestamp newestFileTime;
     if ( !createInfo.vertex.empty() )
@@ -62,15 +77,25 @@ AssetStatus ShaderConverter::CheckDependencies()
         newestFileTime = std::max( t, newestFileTime );
     }
 
-    m_status = outTimestamp <= newestFileTime ? ASSET_OUT_OF_DATE : ASSET_UP_TO_DATE;
-
-    if ( m_status == ASSET_OUT_OF_DATE )
+    m_contentNeedsConverting = outTimestamp <= newestFileTime;
+    if ( m_contentNeedsConverting )
     {
         LOG( "OUT OF DATE: Shader file'", createInfo.name, "' has newer timestamp than saved FFI" );
+        m_contentNeedsConverting = true;
     }
     else
     {
-        LOG( "UP TO DATE: Shader '", createInfo.name, "'" );
+        m_contentNeedsConverting = false;
+    }
+
+    if ( m_settingsNeedsConverting || m_contentNeedsConverting )
+    {
+        m_status = ASSET_OUT_OF_DATE;
+    }
+    else
+    {
+        m_status = ASSET_UP_TO_DATE;
+        LOG( "UP TO DATE: Shader with name '", createInfo.name, "'" );
     }
 
     return m_status;
@@ -78,28 +103,35 @@ AssetStatus ShaderConverter::CheckDependencies()
 
 ConverterStatus ShaderConverter::Convert()
 {
-    if ( !force && m_status == ASSET_UP_TO_DATE )
+    if ( m_status == ASSET_UP_TO_DATE )
     {
         return CONVERT_SUCCESS;
     }
 
-    Progression::Shader shader;
-
-    if ( !shader.Load( &createInfo ) )
+    if ( m_settingsNeedsConverting )
     {
-        LOG_ERR( "Could not load the shader" );
-        return CONVERT_ERROR;
+        std::ofstream out( m_outputSettingsFile, std::ios::binary );
+        serialize::Write( out, createInfo.name );
     }
 
-    std::ofstream out( outputFile, std::ios::binary );
-
-    if ( !shader.Serialize( out ) )
+    if ( m_contentNeedsConverting )
     {
-        LOG_ERR( "Could not save shader to fastfile" );
-        return CONVERT_ERROR;
-    }
+        Progression::Shader shader;
 
-    out.close();
+        if ( !shader.Load( &createInfo ) )
+        {
+            LOG_ERR( "Could not load the shader '", createInfo.name, "'" );
+            return CONVERT_ERROR;
+        }
+
+        std::ofstream out( m_outputContentFile, std::ios::binary );
+
+        if ( !shader.Serialize( out ) )
+        {
+            LOG_ERR( "Could not save shader to fastfile" );
+            return CONVERT_ERROR;
+        }
+    }
 
     return CONVERT_SUCCESS;
 }
