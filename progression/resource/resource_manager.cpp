@@ -78,7 +78,6 @@ namespace ResourceManager
         { \
             uint32_t numRes; \
             serialize::Read( data, numRes ); \
-            LOG( "Num res: ", numRes ); \
             ResourceMap& resources = f_resources[GetResourceTypeID< type >()]; \
             for ( uint32_t i = 0; i < numRes; ++i ) \
             { \

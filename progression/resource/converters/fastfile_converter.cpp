@@ -69,6 +69,7 @@ bool ParseImageCreateInfoFromFile( std::istream& in, ImageCreateInfo& info )
     fileIO::ParseLineKeyVal( in, "filename", info.filename );
     info.filename = PG_RESOURCE_DIR + info.filename;
     info.flags    = static_cast< ImageFlags >( 0 );
+    fileIO::ParseLineKeyValOptional( in, "sampler", info.sampler );
 
     bool tmp;
     fileIO::ParseLineKeyVal( in, "flipVertically", tmp );

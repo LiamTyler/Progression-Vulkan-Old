@@ -589,8 +589,7 @@ namespace RenderSystem
                 if ( matPtr->map_Kd )
                 {
                     shader.SetUniform( "textured", true );
-                    // matPtr->map_Kd->sampler->Bind( 0 );
-                    s_samplers["nearest"].Bind( 0 );
+                    matPtr->map_Kd->sampler->Bind( 0 );
                     shader.BindTexture( *matPtr->map_Kd->GetTexture(), "diffuseTex", 0 );
                 }
                 else

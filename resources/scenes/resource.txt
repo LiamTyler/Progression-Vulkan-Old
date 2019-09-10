@@ -8,6 +8,7 @@ compute
 Image
 name cockatoo
 filename textures/cockatoo.jpg
+sampler linear
 flipVertically true
 generateMipmaps true
 createTexture true
@@ -19,6 +20,7 @@ filename materials/cockatoo.mtl
 Image
 name chaletTex
 filename textures/chalet.jpg
+sampler linear
 flipVertically true
 generateMipmaps true
 createTexture true

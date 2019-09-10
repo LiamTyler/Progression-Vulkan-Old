@@ -1,5 +1,6 @@
 #include "resource/image.hpp"
 #include "core/assert.hpp"
+#include "graphics/render_system.hpp"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image/stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -169,6 +170,17 @@ bool Image::Deserialize( char*& buffer )
 {
     serialize::Read( buffer, name );
     serialize::Read( buffer, m_flags );
+    std::string samplerName;
+    serialize::Read( buffer, samplerName );
+    if ( !samplerName.empty() )
+    {
+        sampler = RenderSystem::GetSampler( samplerName );
+        PG_ASSERT( sampler != nullptr, ( "No sampler found with name '" + samplerName + "' found" ).c_str() );
+    }
+    else
+    {
+        sampler = nullptr;
+    }
     serialize::Read( buffer, m_texture.m_desc.type );
     serialize::Read( buffer, m_texture.m_desc.format );
     serialize::Read( buffer, m_texture.m_desc.mipLevels );

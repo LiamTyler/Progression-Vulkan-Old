@@ -29,6 +29,7 @@ inline ImageFlags& operator|=( ImageFlags& a, ImageFlags b )
 struct ImageCreateInfo : public ResourceCreateInfo
 {
     std::string filename          = "";
+    std::string sampler           = "";
     ImageFlags flags              = static_cast< ImageFlags >( 0 );
 };
 
@@ -60,6 +61,8 @@ public:
     unsigned char* GetPixels() const;
     size_t GetTotalImageBytes() const;
     ImageFlags GetImageFlags() const;
+
+    Gfx::Sampler* sampler = nullptr;
 
 protected:
     Gfx::Texture m_texture;

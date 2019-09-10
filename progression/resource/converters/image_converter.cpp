@@ -97,6 +97,7 @@ ConverterStatus ImageConverter::Convert()
         std::ofstream out( m_outputSettingsFile, std::ios::binary );
         serialize::Write( out, createInfo.name );
         serialize::Write( out, createInfo.flags );
+        serialize::Write( out, createInfo.sampler );
     }
 
     if ( m_contentNeedsConverting )
