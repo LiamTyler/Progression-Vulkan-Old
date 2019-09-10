@@ -31,20 +31,6 @@ public:
     glm::vec2 uv;
 };
 
-namespace std
-{
-template <>
-struct hash< Vertex >
-{
-    size_t operator()( Vertex const& vertex ) const
-    {
-        return ( ( hash< glm::vec3 >()( vertex.vertex ) ^ 
-                 ( hash< glm::vec3 >()( vertex.normal ) << 1 ) ) >> 1 ) ^ ( hash< glm::vec2 >()( vertex.uv ) << 1 );
-    }
-};
-} // namespace std
-
-
 namespace Progression
 {
 
@@ -58,32 +44,38 @@ void Mesh::Optimize()
         return;
     }
     // collect everything back into interleaved data
-    std::vector< Vertex > opt_vertices;
+    std::vector< Vertex > original_vertices;
+    original_vertices.reserve( vertices.size() );
     for ( size_t i = 0; i < vertices.size(); ++i )
     {
         Vertex v;
         v.vertex = vertices[i];
-        if ( normals.size() )
-            v.normal = normals[i];
+        v.normal = normals[i];
         if ( uvs.size() )
+        {
             v.uv = uvs[i];
+        }
 
-        opt_vertices.push_back( v );
+        original_vertices.push_back( v );
     }
 
     // const size_t kCacheSize = 16;
-    // meshopt_VertexCacheStatistics vcs = meshopt_analyzeVertexCache(&mesh.indices[0],
-    // mesh.indices.size(),
-    //         mesh.vertices.size(), kCacheSize, 0, 0);
+    // meshopt_VertexCacheStatistics vcs = meshopt_analyzeVertexCache( &mesh.indices[0],
+    // mesh.indices.size(), mesh.vertices.size(), kCacheSize, 0, 0);
     // meshopt_OverdrawStatistics os = meshopt_analyzeOverdraw(&mesh.indices[0],
-    // mesh.indices.size(),
-    //         &vertices[0].vertex.x, mesh.vertices.size(), sizeof(Vertex));
+    // mesh.indices.size(), &vertices[0].vertex.x, mesh.vertices.size(), sizeof(Vertex));
     // meshopt_VertexFetchStatistics vfs = meshopt_analyzeVertexFetch(&mesh.indices[0],
-    // mesh.indices.size(),
-    //         mesh.vertices.size(), sizeof(Vertex));
-    // LOG("Before:");
-    // LOG("ACMR: ", vcs.acmr, ", ATVR: ", vcs.atvr, ", avg overdraw: ", os.overdraw, " avg #
-    // fetched: ", vfs.overfetch);
+    // mesh.indices.size(), mesh.vertices.size(), sizeof(Vertex) );
+    // LOG( "Before:" );
+    // LOG( "ACMR: ", vcs.acmr, ", ATVR: ", vcs.atvr, ", avg overdraw: ", os.overdraw, " avg # fetched: ", vfs.overfetch);
+    
+    size_t index_count = indices.size();
+    std::vector< uint32_t > remap( index_count );
+    size_t vertex_count = meshopt_generateVertexRemap( &remap[0], NULL, index_count,
+            &original_vertices[0], index_count, sizeof( Vertex ) );
+    meshopt_remapIndexBuffer( &indices[0], NULL, index_count, &remap[0] );
+    std::vector< Vertex > opt_vertices( vertex_count );
+    meshopt_remapVertexBuffer( &opt_vertices[0], &original_vertices[0], index_count, sizeof( Vertex ), &remap[0] );
 
     // vertex cache optimization should go first as it provides starting order for overdraw
     meshopt_optimizeVertexCache( &indices[0], &indices[0], indices.size(), opt_vertices.size() );

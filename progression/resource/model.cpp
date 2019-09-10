@@ -7,46 +7,6 @@
 #include "utils/serialize.hpp"
 #include <limits>
 
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/hash.hpp>
-
-class Vertex
-{
-public:
-    Vertex() : vertex( glm::vec3( 0 ) ), normal( glm::vec3( 0 ) ), uv( glm::vec3( 0 ) )
-    {
-    }
-
-    Vertex( const glm::vec3& vert, const glm::vec3& norm, const glm::vec2& tex ) :
-      vertex( vert ), normal( norm ), uv( tex )
-    {
-    }
-
-    bool operator==( const Vertex& other ) const
-    {
-        return vertex == other.vertex && normal == other.normal && uv == other.uv;
-    }
-
-    glm::vec3 vertex;
-    glm::vec3 normal;
-    glm::vec2 uv;
-};
-
-namespace std
-{
-template <>
-struct hash< Vertex >
-{
-    size_t operator()( Vertex const& vertex ) const
-    {
-        return ( ( hash< glm::vec3 >()( vertex.vertex ) ^
-                   ( hash< glm::vec3 >()( vertex.normal ) << 1 ) ) >>
-                 1 ) ^
-               ( hash< glm::vec2 >()( vertex.uv ) << 1 );
-    }
-};
-} // namespace std
-
 namespace Progression
 {
 
@@ -206,7 +166,6 @@ bool Model::LoadFromObj( ModelCreateInfo* createInfo )
         Mesh currentMesh;
         glm::vec3 min = glm::vec3( std::numeric_limits< float >::max() );
         glm::vec3 max = glm::vec3( -std::numeric_limits< float >::max() );
-        std::unordered_map< Vertex, uint32_t > uniqueVertices = {};
         for ( const auto& shape : shapes )
         {
             // Loop over faces(polygon)
@@ -243,25 +202,19 @@ bool Model::LoadFromObj( ModelCreateInfo* createInfo )
                             ty = attrib.texcoords[2 * idx.texcoord_index + 1];
                         }
 
-                        Vertex vertex( vert, glm::vec3( nx, ny, nz ),
-                                       glm::vec2( ty, ty ) );
-                        if ( uniqueVertices.count( vertex ) == 0 )
+                        currentMesh.vertices.emplace_back( vert );
+                        
+                        if ( idx.normal_index != -1 )
                         {
-                            uniqueVertices[vertex] = static_cast< uint32_t >( currentMesh.vertices.size() );
-                            currentMesh.vertices.emplace_back( vert );
-
-                            if ( idx.normal_index != -1 )
-                            {
-                                currentMesh.normals.emplace_back( nx, ny, nz );
-                            }
-
-                            if ( idx.texcoord_index != -1 )
-                            {
-                                currentMesh.uvs.emplace_back( tx, ty );
-                            }
+                            currentMesh.normals.emplace_back( nx, ny, nz );
                         }
 
-                        currentMesh.indices.push_back( uniqueVertices[vertex] );
+                        if ( idx.texcoord_index != -1 )
+                        {
+                            currentMesh.uvs.emplace_back( tx, ty );
+                        }
+
+                        currentMesh.indices.push_back( static_cast< uint32_t >( currentMesh.vertices.size() ) );
                     }
                 }
             }
