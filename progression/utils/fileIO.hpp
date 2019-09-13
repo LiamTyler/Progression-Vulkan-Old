@@ -5,6 +5,7 @@
 #include <iostream>
 #include <sstream>
 #include <unordered_map>
+#include <vector>
 
 namespace fileIO {
 
@@ -45,6 +46,25 @@ namespace fileIO {
         ss >> s;
         PG_ASSERT( s == key, ( "Expecting key '" + std::string( key ) + "' while parsing file" ).c_str() );
         ss >> std::boolalpha >> val;
+        PG_ASSERT( !in.fail() && !ss.fail() );
+    }
+
+    template < typename T >
+    inline void ParseLineKeyVal( std::istream& in, const char* key, std::vector< T >& vec )
+    {
+        PG_MAYBE_UNUSED( key );
+        std::string line;
+        std::string s;
+        std::getline( in, line );
+        auto ss = std::istringstream( line );
+        ss >> s;
+        PG_ASSERT( s == key, ( "Expecting key '" + std::string( key ) + "' while parsing file" ).c_str() );
+        T tmp;
+        while ( ss >> tmp )
+        {
+            vec.push_back( tmp );
+        }
+
         PG_ASSERT( !in.fail() && !ss.fail() );
     }
 

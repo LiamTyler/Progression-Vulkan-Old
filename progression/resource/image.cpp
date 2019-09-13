@@ -88,53 +88,78 @@ bool Image::Load( ResourceCreateInfo* createInfo )
     ImageCreateInfo* info = static_cast< ImageCreateInfo* >( createInfo );
     name                  = info->name;
 
-    std::string ext = std::filesystem::path( info->filename ).extension();
-    if ( ext == ".jpg" || ext == ".png" || ext == ".tga" || ext == ".bmp" )
-    {
-        stbi_set_flip_vertically_on_load( info->flags & IMAGE_FLIP_VERTICALLY );
-        int width, height, numComponents;
-        unsigned char* pixels = stbi_load( info->filename.c_str(), &width, &height, &numComponents, 0 );
+    int numImages = static_cast< int >( info->filenames.size() );
+    PG_ASSERT( numImages == 1 || numImages == 6 );
+    std::vector< Gfx::ImageDescriptor > imageDescs( numImages );
+    std::vector< unsigned char* > imageData( numImages );
 
-        if ( !pixels )
+    for ( int i = 0; i < numImages; ++i )
+    {
+        std::string file = info->filenames[i];
+        std::string ext = std::filesystem::path( file ).extension();
+        if ( ext == ".jpg" || ext == ".png" || ext == ".tga" || ext == ".bmp" )
         {
-            LOG_ERR( "Failed to load image '", info->filename, "'" );
+            stbi_set_flip_vertically_on_load( info->flags & IMAGE_FLIP_VERTICALLY );
+            int width, height, numComponents;
+            unsigned char* pixels = stbi_load( file.c_str(), &width, &height, &numComponents, 0 );
+
+            if ( !pixels )
+            {
+                LOG_ERR( "Failed to load image '", file, "'" );
+                return false;
+            }
+
+            imageData[i]              = pixels;
+            imageDescs[i].width       = width;
+            imageDescs[i].height      = height;
+            imageDescs[i].depth       = 1;
+            imageDescs[i].arrayLayers = 1;
+            imageDescs[i].mipLevels   = 1;
+            imageDescs[i].type        = Gfx::ImageType::TYPE_2D;
+            
+            // TODO: how to detect sRGB?
+            Gfx::PixelFormat componentsToFormat[] =
+            {
+                Gfx::PixelFormat::R8_Uint,
+                Gfx::PixelFormat::R8_G8_Uint,
+                Gfx::PixelFormat::R8_G8_B8_Uint,
+                Gfx::PixelFormat::R8_G8_B8_A8_Uint,
+            };
+            imageDescs[i].format = componentsToFormat[numComponents - 1];
+        }
+        else
+        {
+            LOG_ERR( "Image filetype '", ext, "' is not supported" );
             return false;
         }
-
-        m_pixels                        = pixels;
-        m_texture.m_desc.width          = width;
-        m_texture.m_desc.height         = height;
-        m_texture.m_desc.depth          = 1;
-        m_texture.m_desc.arrayLayers    = 1;
-        m_texture.m_desc.mipLevels      = 1;
-        m_texture.m_desc.type           = Gfx::ImageType::TYPE_2D;
-        
-        // TODO: how to detect sRGB?
-        Gfx::PixelFormat componentsToFormat[] =
-        {
-            Gfx::PixelFormat::R8_Uint,
-            Gfx::PixelFormat::R8_G8_Uint,
-            Gfx::PixelFormat::R8_G8_B8_Uint,
-            Gfx::PixelFormat::R8_G8_B8_A8_Uint,
-        };
-        m_texture.m_desc.format = componentsToFormat[numComponents - 1];
-
-        if ( m_flags & IMAGE_CREATE_TEXTURE_ON_LOAD )
-        {
-            m_texture = Gfx::Texture::Create( m_texture.m_desc, m_pixels );
-        }
-
-        if ( m_flags & IMAGE_FREE_CPU_COPY_ON_LOAD )
-        {
-            free( m_pixels );
-            m_pixels = nullptr;
-        }
     }
-    else
+
+    for ( int i = 1; i < numImages; ++i )
     {
-        LOG_ERR( "Image filetype '", ext, "' is not supported" );
-        return false;
+        if ( imageDescs[0].width != imageDescs[i].width ||
+             imageDescs[0].height != imageDescs[i].height)
+        {
+            LOG_ERR( "Skybox images must have the same dimensions" );
+            return false;
+        }
     }
+
+    m_texture.m_desc =
+
+    m_pixels = (unsigned char*) malloc( imagesDescs[
+
+    /*
+    if ( m_flags & IMAGE_CREATE_TEXTURE_ON_LOAD )
+    {
+        m_texture = Gfx::Texture::Create( m_texture.m_desc, m_pixels );
+    }
+
+    if ( m_flags & IMAGE_FREE_CPU_COPY_ON_LOAD )
+    {
+        free( m_pixels );
+        m_pixels = nullptr;
+    }
+    */
 
     return true;
 }

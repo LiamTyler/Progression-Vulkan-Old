@@ -18,6 +18,19 @@ MTLFile
 filename materials/cockatoo.mtl
 
 Image
+name water 
+filename skybox/water/right.jpg
+skybox/water/left.jpg
+skybox/water/.jpg
+skybox/water/right.jpg
+skybox/water/right.jpg
+sampler linear
+flipVertically true
+generateMipmaps true
+createTexture true
+freeCpuCopy true
+
+Image
 name chaletTex
 filename textures/chalet.jpg
 sampler linear

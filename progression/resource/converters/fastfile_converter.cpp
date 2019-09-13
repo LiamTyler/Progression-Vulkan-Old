@@ -66,8 +66,11 @@ static std::unordered_map< std::string, Gfx::PixelFormat > internalFormatMap = {
 bool ParseImageCreateInfoFromFile( std::istream& in, ImageCreateInfo& info )
 {
     fileIO::ParseLineKeyVal( in, "name",     info.name );
-    fileIO::ParseLineKeyVal( in, "filename", info.filename );
-    info.filename = PG_RESOURCE_DIR + info.filename;
+    fileIO::ParseLineKeyVal( in, "filenames", info.filenames );
+    for ( auto& fname : info.filenames )
+    {
+        fname = PG_RESOURCE_DIR + fname;
+    }
     info.flags    = static_cast< ImageFlags >( 0 );
     fileIO::ParseLineKeyValOptional( in, "sampler", info.sampler );
 

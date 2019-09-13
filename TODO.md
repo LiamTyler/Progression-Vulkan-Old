@@ -20,7 +20,7 @@
 - [x] LZ4 compress / decompress resource file
 - [ ] Resource file loading from "my changes" workflow
 - [ ] skybox loading
-- [ ] Change the resource DB types so that you dont have to resize by hand / forget
+- [x] Change the resource DB types so that you dont have to resize by hand / forget
 - [ ] make sure all memory is properly released on failure cases in resource loadings
 
 ### Meshes:

@@ -3,6 +3,7 @@
 #include "resource/resource.hpp"
 #include <cstring>
 #include <string>
+#include <vector>
 
 namespace Progression
 {
@@ -28,9 +29,9 @@ inline ImageFlags& operator|=( ImageFlags& a, ImageFlags b )
 
 struct ImageCreateInfo : public ResourceCreateInfo
 {
-    std::string filename          = "";
-    std::string sampler           = "";
-    ImageFlags flags              = static_cast< ImageFlags >( 0 );
+    std::vector< std::string > filenames;
+    std::string sampler = "";
+    ImageFlags flags    = static_cast< ImageFlags >( 0 );
 };
 
 class Image : public Resource 
