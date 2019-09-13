@@ -65,7 +65,7 @@ namespace fileIO {
             vec.push_back( tmp );
         }
 
-        PG_ASSERT( !in.fail() && !ss.fail() );
+        PG_ASSERT( !in.fail() );
     }
 
     template <typename T>

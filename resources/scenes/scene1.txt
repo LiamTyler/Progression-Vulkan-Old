@@ -13,7 +13,7 @@ BackgroundColor
 color 0 0 0
 
 Skybox
-water
+name water
 
 Light
 name mainLight

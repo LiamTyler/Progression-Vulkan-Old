@@ -14,7 +14,6 @@
 namespace Progression
 {
 
-
 int NumComponentsInPixelFromat( const Gfx::PixelFormat& format )
 {
     int components[] =
@@ -96,7 +95,7 @@ bool Image::Load( ResourceCreateInfo* createInfo )
     for ( int i = 0; i < numImages; ++i )
     {
         std::string file = info->filenames[i];
-        std::string ext = std::filesystem::path( file ).extension();
+        std::string ext = std::filesystem::path( file ).extension().string();
         if ( ext == ".jpg" || ext == ".png" || ext == ".tga" || ext == ".bmp" )
         {
             stbi_set_flip_vertically_on_load( info->flags & IMAGE_FLIP_VERTICALLY );
@@ -136,19 +135,32 @@ bool Image::Load( ResourceCreateInfo* createInfo )
 
     for ( int i = 1; i < numImages; ++i )
     {
-        if ( imageDescs[0].width != imageDescs[i].width ||
-             imageDescs[0].height != imageDescs[i].height)
+        if ( imageDescs[0].width  != imageDescs[i].width ||
+             imageDescs[0].height != imageDescs[i].height ||
+             imageDescs[0].format != imageDescs[i].format )
         {
-            LOG_ERR( "Skybox images must have the same dimensions" );
+            LOG_ERR( "Skybox images must have the same dimensions and format" );
             return false;
         }
     }
 
-    m_texture.m_desc =
+    m_texture.m_desc = imageDescs[0];
+    if ( numImages == 1 )
+    {
+        m_pixels = imageData[0];
+    }
+    else
+    {
+        m_texture.m_desc.type        = Gfx::ImageType::TYPE_CUBEMAP;
+        m_texture.m_desc.arrayLayers = 6;
+        size_t imSize = imageDescs[0].width * imageDescs[0].height * Gfx::SizeOfPixelFromat( imageDescs[0].format );
+        m_pixels = static_cast< unsigned char* >( malloc( 6 * imSize ) );
+        for ( int i = 0; i < numImages; ++i )
+        {
+            memcpy( m_pixels + i * imSize, imageData[i], imSize );
+        }
+    }
 
-    m_pixels = (unsigned char*) malloc( imagesDescs[
-
-    /*
     if ( m_flags & IMAGE_CREATE_TEXTURE_ON_LOAD )
     {
         m_texture = Gfx::Texture::Create( m_texture.m_desc, m_pixels );
@@ -159,7 +171,6 @@ bool Image::Load( ResourceCreateInfo* createInfo )
         free( m_pixels );
         m_pixels = nullptr;
     }
-    */
 
     return true;
 }
@@ -240,7 +251,7 @@ bool Image::Deserialize( char*& buffer )
 
 bool Image::Save( const std::string& fname, bool flipVertically ) const
 {
-    std::string ext = std::filesystem::path( fname ).extension();
+    std::string ext = std::filesystem::path( fname ).extension().string();
     if ( ext == ".jpg" || ext == ".png" || ext == ".tga" || ext == ".bmp" )
     {
         if ( m_texture.m_desc.type != Gfx::ImageType::TYPE_2D )
@@ -347,17 +358,12 @@ unsigned char* Image::GetPixels() const
 
 size_t Image::GetTotalImageBytes() const
 {
-    PG_ASSERT( m_texture.m_desc.mipLevels > 0 );
+    PG_ASSERT( m_texture.m_desc.mipLevels == 1, "havent added mipmapping yet" );
     int pixelSize = SizeOfPixelFromat( m_texture.m_desc.format );
     uint32_t w    = m_texture.m_desc.width;
     uint32_t h    = m_texture.m_desc.width;
     size_t size   = 0;
-    for ( uint8_t i = 0; i < m_texture.m_desc.mipLevels; ++i )
-    {
-        size += m_texture.m_desc.arrayLayers * m_texture.m_desc.depth * w * h * pixelSize;
-        w >>= 1;
-        h >>= 1;
-    }
+    size = w * h * m_texture.m_desc.depth * m_texture.m_desc.arrayLayers;
 
     return size;
 }

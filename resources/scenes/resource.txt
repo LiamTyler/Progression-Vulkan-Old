@@ -7,7 +7,7 @@ compute
 
 Image
 name cockatoo
-filename textures/cockatoo.jpg
+filenames textures/cockatoo.jpg
 sampler linear
 flipVertically true
 generateMipmaps true
@@ -19,11 +19,7 @@ filename materials/cockatoo.mtl
 
 Image
 name water 
-filename skybox/water/right.jpg
-skybox/water/left.jpg
-skybox/water/.jpg
-skybox/water/right.jpg
-skybox/water/right.jpg
+filenames skybox/water/right.jpg skybox/water/left.jpg skybox/water/top.jpg skybox/water/bottom.jpg skybox/water/front.jpg skybox/water/back.jpg
 sampler linear
 flipVertically true
 generateMipmaps true
@@ -32,7 +28,7 @@ freeCpuCopy true
 
 Image
 name chaletTex
-filename textures/chalet.jpg
+filenames textures/chalet.jpg
 sampler linear
 flipVertically true
 generateMipmaps true

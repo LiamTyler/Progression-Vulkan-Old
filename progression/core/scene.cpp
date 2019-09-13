@@ -128,7 +128,7 @@ static bool ParseAmbientColor( Scene* scene, std::istream& in )
 static bool ParseSkybox( Scene* scene, std::istream& in )
 {
     std::string name;
-    fileIO::ParseLineKeyVal( in, "Skybox", name );
+    fileIO::ParseLineKeyVal( in, "name", name );
     scene->skybox = ResourceManager::Get< Image >( name );
     PG_ASSERT( scene->skybox, ( "No skybox found with name '" + name + "'" ).c_str() );
 

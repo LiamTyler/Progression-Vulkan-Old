@@ -218,19 +218,19 @@ namespace Gfx
     inline std::tuple< GLenum, GLenum > PGToOpenGLFormatAndType( PixelFormat format )
     {
         constexpr std::tuple< GLenum, GLenum > convert[] = {
-            { GL_RED, GL_UNSIGNED_BYTE },     // R8_Uint
-            { GL_RED, GL_HALF_FLOAT },        // R16_Float
-            { GL_RED, GL_FLOAT },             // R32_Float
-            { GL_RG, GL_UNSIGNED_BYTE },      // R8_G8_Uint
-            { GL_RG, GL_HALF_FLOAT },         // R16_G16_Float
-            { GL_RG, GL_FLOAT },              // R32_G32_Float
-            { GL_RGB, GL_UNSIGNED_BYTE },     // R8_G8_B8_Uint
-            { GL_RGB, GL_HALF_FLOAT },        // R16_G16_B16_Float
-            { GL_RGB, GL_FLOAT },             // R32_G32_B32_Float
+            { GL_RED,  GL_UNSIGNED_BYTE },    // R8_Uint
+            { GL_RED,  GL_HALF_FLOAT },       // R16_Float
+            { GL_RED,  GL_FLOAT },            // R32_Float
+            { GL_RG,   GL_UNSIGNED_BYTE },    // R8_G8_Uint
+            { GL_RG,   GL_HALF_FLOAT },       // R16_G16_Float
+            { GL_RG,   GL_FLOAT },            // R32_G32_Float
+            { GL_RGB,  GL_UNSIGNED_BYTE },    // R8_G8_B8_Uint
+            { GL_RGB,  GL_HALF_FLOAT },       // R16_G16_B16_Float
+            { GL_RGB,  GL_FLOAT },            // R32_G32_B32_Float
             { GL_RGBA, GL_UNSIGNED_BYTE },    // R8_G8_B8_A8_Uint
             { GL_RGBA, GL_HALF_FLOAT },       // R16_G16_B16_A16_Float
             { GL_RGBA, GL_FLOAT },            // R32_G32_B32_A32_Float
-            { GL_RGB, GL_UNSIGNED_BYTE },     // R8_G8_B8_Uint_sRGB
+            { GL_RGB,  GL_UNSIGNED_BYTE },    // R8_G8_B8_Uint_sRGB
             { GL_RGBA, GL_UNSIGNED_BYTE },    // R8_G8_B8_A8_Uint_sRGB
             { GL_RGBA, GL_UNSIGNED_BYTE },    // R11_G11_B10_Float ??
             { GL_DEPTH_COMPONENT, GL_FLOAT }, // DEPTH32_Float

@@ -332,17 +332,28 @@ namespace Gfx
 
     Texture Texture::Create( const ImageDescriptor& desc, void* data )
     {
-        PG_ASSERT( desc.type == ImageType::TYPE_2D, "Currently can't upload non-2d images, (will fix when switching to vulkan" );
+        PG_ASSERT( desc.type == ImageType::TYPE_2D || desc.type == ImageType::TYPE_CUBEMAP, "Currently only support 2D and CUBEMAP images" );
+        PG_ASSERT( desc.mipLevels == 1, "Mipmaps not supported yet" );
         Texture tex;
         tex.m_desc = desc;
         glGenTextures( 1, &tex.m_nativeHandle );
         
-        auto nativeTexType              = PGToOpenGLImageType( desc.type );
-        auto nativeDstFormat            = PGToOpenGLPixelFormat( desc.format );
-        auto [nativeFormat, nativeType] = PGToOpenGLFormatAndType( desc.format );
+        auto nativeTexType                        = PGToOpenGLImageType( desc.type );
+        auto [nativePixelFormat, nativePixelType] = PGToOpenGLFormatAndType( desc.format );
         glBindTexture( nativeTexType, tex.m_nativeHandle );
-        glTexImage2D( nativeTexType, 0, nativeDstFormat, desc.width, desc.height, 0, nativeFormat,
-                      nativeType, data );
+
+        if ( desc.type == ImageType::TYPE_2D )
+        {
+            glTexImage2D( nativeTexType, 0, nativePixelFormat, desc.width, desc.height, 0, nativePixelFormat, nativePixelType, data );
+        }
+        else if ( desc.type == ImageType::TYPE_CUBEMAP )
+        {
+            for ( int i = 0; i < 6; ++i )
+            {
+                unsigned char* faceData = &static_cast< unsigned char* >( data )[i * desc.width * desc.height * SizeOfPixelFromat( desc.format )];
+                glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, nativePixelFormat, desc.width, desc.height, 0, nativePixelFormat, nativePixelType, faceData );
+            }
+        }
 
         return tex;
     }
