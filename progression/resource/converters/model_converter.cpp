@@ -113,3 +113,8 @@ ConverterStatus ModelConverter::Convert()
 
     return CONVERT_SUCCESS;
 }
+
+std::string ModelConverter::GetName() const
+{
+    return createInfo.name;
+}

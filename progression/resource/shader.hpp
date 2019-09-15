@@ -8,7 +8,7 @@
 #include <unordered_set>
 #include <vector>
 
-#define SERIALIZE_SHADER_TEXT NOT_IN_USE
+#define SERIALIZE_SHADER_TEXT IN_USE
 
 namespace Progression
 {

@@ -17,14 +17,14 @@ freeCpuCopy true
 MTLFile
 filename materials/cockatoo.mtl
 
-Image
-name water 
-filenames skybox/water/right.jpg skybox/water/left.jpg skybox/water/top.jpg skybox/water/bottom.jpg skybox/water/front.jpg skybox/water/back.jpg
-sampler linear
-flipVertically true
-generateMipmaps true
-createTexture true
-freeCpuCopy true
+#Image
+#name water 
+#filenames skybox/water/right.jpg skybox/water/left.jpg skybox/water/top.jpg skybox/water/bottom.jpg skybox/water/front.jpg skybox/water/back.jpg
+#sampler linear
+#flipVertically true
+#generateMipmaps true
+#createTexture true
+#freeCpuCopy true
 
 Image
 name chaletTex

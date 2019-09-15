@@ -361,9 +361,9 @@ size_t Image::GetTotalImageBytes() const
     PG_ASSERT( m_texture.m_desc.mipLevels == 1, "havent added mipmapping yet" );
     int pixelSize = SizeOfPixelFromat( m_texture.m_desc.format );
     uint32_t w    = m_texture.m_desc.width;
-    uint32_t h    = m_texture.m_desc.width;
-    size_t size   = 0;
-    size = w * h * m_texture.m_desc.depth * m_texture.m_desc.arrayLayers;
+    uint32_t h    = m_texture.m_desc.height;
+    uint32_t d    = m_texture.m_desc.depth;
+    size_t size   = w * h * d * m_texture.m_desc.arrayLayers * pixelSize;
 
     return size;
 }

@@ -19,7 +19,7 @@ static std::string GetContentFastFileName( ImageCreateInfo& createInfo )
     size_t hash          = std::hash< std::string >{}( filePath.string() );
     std::string baseName = filePath.filename().string();
 
-    return PG_RESOURCE_DIR "cache/images/" + baseName + std::to_string( hash ) + ".ffi";
+    return PG_RESOURCE_DIR "cache/images/" + baseName + "_" + std::to_string( hash ) + ".ffi";
 }
 
 static std::string GetSettingsFastFileName( const ImageCreateInfo& createInfo )
@@ -41,7 +41,6 @@ AssetStatus ImageConverter::CheckDependencies()
     m_outputContentFile  = GetContentFastFileName( createInfo );
     m_outputSettingsFile = GetSettingsFastFileName( createInfo );
 
-    /*
     if ( !std::filesystem::exists( m_outputSettingsFile ) )
     {
         LOG( "OUT OF DATE: FFI File for image settings file '", m_outputSettingsFile, "' does not exist, needs to be generated" );
@@ -54,20 +53,23 @@ AssetStatus ImageConverter::CheckDependencies()
 
     if ( !std::filesystem::exists( m_outputContentFile ) )
     {
-        LOG( "OUT OF DATE: FFI File for image '", createInfo.filename, "' does not exist, convert required" );
+        LOG( "OUT OF DATE: FFI File for image '", createInfo.name, "' does not exist, convert required" );
         m_contentNeedsConverting = true;
     }
     else
     {
-        if ( Timestamp( m_outputContentFile ) < Timestamp( createInfo.filename ) )
+        auto timestamp = Timestamp( m_outputContentFile );
+        for ( const auto& fname : createInfo.filenames )
         {
-            LOG( "OUT OF DATE: Image '", createInfo.filename, "' has newer timestamp than saved FFI" );
-            m_contentNeedsConverting = true;
+            if ( timestamp < Timestamp( fname ) )
+            {
+                LOG( "OUT OF DATE: Image '", fname, "' has newer timestamp than saved FFI" );
+                m_contentNeedsConverting = true;
+                m_status = ASSET_OUT_OF_DATE;
+                return m_status;
+            }
         }
-        else
-        {
-            m_contentNeedsConverting = false;
-        }
+        m_contentNeedsConverting = false;
     }
 
     if ( m_settingsNeedsConverting || m_contentNeedsConverting )
@@ -77,9 +79,8 @@ AssetStatus ImageConverter::CheckDependencies()
     else
     {
         m_status = ASSET_UP_TO_DATE;
-        LOG( "UP TO DATE: Image with name '", createInfo.name, "' and filename '", createInfo.filename, "'" );
+        LOG( "UP TO DATE: Image with name '", createInfo.name, "'" );
     }
-    */
 
     return m_status;
 }
@@ -119,4 +120,9 @@ ConverterStatus ImageConverter::Convert()
     }
 
     return CONVERT_SUCCESS;
+}
+
+std::string ImageConverter::GetName() const
+{
+    return createInfo.name;
 }

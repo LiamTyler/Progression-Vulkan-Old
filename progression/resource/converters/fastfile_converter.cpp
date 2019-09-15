@@ -1,4 +1,5 @@
 #include "core/feature_defines.hpp"
+#include "core/time.hpp"
 #include "graphics/graphics_api.hpp"
 #include "lz4/lz4.h"
 #include "memory_map/MemoryMapped.h"
@@ -250,6 +251,8 @@ ConverterStatus FastfileConverter::Convert()
         return CONVERT_SUCCESS;
     }
 
+    auto fastFileStartTime = Time::GetTimePoint();
+
     std::ofstream out( m_outputContentFile, std::ios::binary );
 
     if ( !out )
@@ -266,12 +269,21 @@ ConverterStatus FastfileConverter::Convert()
         serialize::Write( out, numResource ); \
         for ( auto& converter : converterList ) \
         { \
-            if ( converter.Convert() != CONVERT_SUCCESS ) \
-            { \
-                LOG_ERR( "Error while converting " #resource ); \
-                return CONVERT_ERROR; \
+            if ( converter.GetStatus() == ASSET_UP_TO_DATE ) { \
+                converter.WriteToFastFile( out ); \
             } \
-            converter.WriteToFastFile( out ); \
+            else \
+            { \
+                auto time = Time::GetTimePoint(); \
+                LOG( "\nConverting ", #resource, " '", converter.GetName(), "'" ); \
+                if ( converter.Convert() != CONVERT_SUCCESS ) \
+                { \
+                    LOG_ERR( "Error while converting " #resource ); \
+                    return CONVERT_ERROR; \
+                } \
+                LOG( "Convert finished in: ", Time::GetDuration( time ) / 1000, " seconds" ); \
+                converter.WriteToFastFile( out ); \
+            } \
         } \
     }
 
@@ -325,6 +337,8 @@ ConverterStatus FastfileConverter::Convert()
 
     out.close();
 #endif // #if USING( LZ4_COMPRESSED_FASTFILES )
+
+    LOG( "\nFastfile built in: ", Time::GetDuration( fastFileStartTime ) / 1000, " seconds" );
 
     return CONVERT_SUCCESS;
 }

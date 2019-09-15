@@ -25,3 +25,13 @@ bool Converter::WriteToFastFile( std::ofstream& out ) const
 
     return true;
 }
+
+std::string Converter::GetName() const
+{
+    return m_outputContentFile;
+}
+
+AssetStatus Converter::GetStatus() const
+{
+    return m_status;
+}
