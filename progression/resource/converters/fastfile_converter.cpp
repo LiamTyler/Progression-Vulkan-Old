@@ -279,6 +279,7 @@ ConverterStatus FastfileConverter::Convert()
                     LOG_ERR( "Error while converting " #resource ); \
                     return CONVERT_ERROR; \
                 } \
+                PG_MAYBE_UNUSED( time ); \
                 LOG( "Convert finished in: ", Time::GetDuration( time ) / 1000, " seconds" ); \
                 converter.WriteToFastFile( out ); \
             } \
@@ -336,6 +337,7 @@ ConverterStatus FastfileConverter::Convert()
     out.close();
 #endif // #if USING( LZ4_COMPRESSED_FASTFILES )
 
+    PG_MAYBE_UNUSED( fastFileStartTime );
     LOG( "\nFastfile built in: ", Time::GetDuration( fastFileStartTime ) / 1000, " seconds" );
 
     return CONVERT_SUCCESS;
