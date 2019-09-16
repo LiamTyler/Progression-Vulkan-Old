@@ -43,8 +43,7 @@ bool ParseShaderCreateInfoFromFile( std::istream& in, ShaderCreateInfo& info )
     return true;
 }
 
-/*
-static std::unordered_map< std::string, Gfx::PixelFormat > internalFormatMap = {
+static std::unordered_map< std::string, Gfx::PixelFormat > pixelFormatMap = {
     { "R8_Uint",                Gfx::PixelFormat::R8_Uint },
     { "R16_Float",              Gfx::PixelFormat::R16_Float },
     { "R32_Float",              Gfx::PixelFormat::R32_Float },
@@ -62,7 +61,6 @@ static std::unordered_map< std::string, Gfx::PixelFormat > internalFormatMap = {
     { "R11_G11_B10_Float",      Gfx::PixelFormat::R11_G11_B10_Float },
     { "DEPTH32_Float",          Gfx::PixelFormat::DEPTH32_Float },
 };
-*/
 
 bool ParseImageCreateInfoFromFile( std::istream& in, ImageCreateInfo& info )
 {
@@ -72,7 +70,7 @@ bool ParseImageCreateInfoFromFile( std::istream& in, ImageCreateInfo& info )
     {
         fname = PG_RESOURCE_DIR + fname;
     }
-    info.flags    = static_cast< ImageFlags >( 0 );
+    PG_ASSERT( fileIO::ParseLineKeyMap( in, "dstFormat", pixelFormatMap, info.dstFormat ), "Check pixel format for spelling mistake" );
     fileIO::ParseLineKeyValOptional( in, "sampler", info.sampler );
 
     bool tmp;

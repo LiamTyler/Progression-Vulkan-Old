@@ -16,10 +16,13 @@ static std::string GetContentFastFileName( ImageCreateInfo& createInfo )
 {
     fs::path filePath = fs::absolute( createInfo.filenames[0] );
 
-    size_t hash          = std::hash< std::string >{}( filePath.string() );
-    std::string baseName = filePath.filename().string();
+    size_t hash                = std::hash< std::string >{}( filePath.string() );
+    std::string baseName       = filePath.filename().string();
+    std::string flipVertically = createInfo.flags & ImageFlags::IMAGE_FLIP_VERTICALLY ? "1" : "0";
+    std::string format         = std::to_string( (int) createInfo.dstFormat );
 
-    return PG_RESOURCE_DIR "cache/images/" + baseName + "_" + std::to_string( hash ) + ".ffi";
+    return PG_RESOURCE_DIR "cache/images/" + baseName + "_" + flipVertically + "_" +
+           format + "_" + std::to_string( hash ) + ".ffi";
 }
 
 static std::string GetSettingsFastFileName( const ImageCreateInfo& createInfo )
@@ -103,17 +106,20 @@ ConverterStatus ImageConverter::Convert()
     if ( m_contentNeedsConverting )
     {
         Image image;
-        // createInfo.flags 
+        createInfo.flags |= ImageFlags::IMAGE_FREE_CPU_COPY_ON_LOAD;
+        createInfo.flags |= ImageFlags::IMAGE_CREATE_TEXTURE_ON_LOAD;
         if ( !image.Load( &createInfo ) )
         {
             LOG_ERR( "Could not load image '", createInfo.name, "'" );
             return CONVERT_ERROR;
         }
+        image.ReadToCpu();
 
         std::ofstream out( m_outputContentFile, std::ios::binary );
         if ( !image.Serialize( out ) )
         {
             LOG_ERR( "Could not save image '", createInfo.name, "' to fastfile" );
+            out.close();
             std::filesystem::remove( m_outputContentFile );
             return CONVERT_ERROR;
         }

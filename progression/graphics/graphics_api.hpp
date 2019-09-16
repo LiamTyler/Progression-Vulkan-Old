@@ -329,13 +329,14 @@ namespace Gfx
     class ImageDescriptor
     {
     public:
-        ImageType type      = ImageType::NUM_IMAGE_TYPES;
-        PixelFormat format  = PixelFormat::NUM_PIXEL_FORMATS;
-        uint8_t mipLevels   = 1;
-        uint8_t arrayLayers = 1;
-        uint32_t width      = 0;
-        uint32_t height     = 0;
-        uint32_t depth      = 1;
+        ImageType type        = ImageType::NUM_IMAGE_TYPES;
+        PixelFormat srcFormat = PixelFormat::NUM_PIXEL_FORMATS;
+        PixelFormat dstFormat = PixelFormat::NUM_PIXEL_FORMATS;
+        uint8_t mipLevels     = 1;
+        uint8_t arrayLayers   = 1;
+        uint32_t width        = 0;
+        uint32_t height       = 0;
+        uint32_t depth        = 1;
     };
 
     class Texture : public NonCopyable
@@ -348,7 +349,8 @@ namespace Gfx
         Texture& operator=( Texture&& tex );
 
         static Texture Create( const ImageDescriptor& desc, void* data );
-        // void Bind( uint32_t ) const;
+        void Free();
+        unsigned char* GetPixelData() const;
         ImageType GetType() const;
         PixelFormat GetPixelFormat() const;
         uint8_t GetMipLevels() const;

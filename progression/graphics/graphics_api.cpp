@@ -295,7 +295,7 @@ namespace Gfx
             8,  // R16_G16_B16_A16_Float
             16, // R32_G32_B32_A32_Float
 
-            4, // R8_G8_B8_Uint_sRGB
+            3, // R8_G8_B8_Uint_sRGB
             4, // R8_G8_B8_A8_Uint_sRGB
 
             4, // R11_G11_B10_Float
@@ -311,10 +311,7 @@ namespace Gfx
 
     Texture::~Texture()
     {
-        if ( m_nativeHandle != (GLuint) -1 )
-        {
-            glDeleteTextures( 1, &m_nativeHandle );
-        }
+        Free();
     }
 
     Texture::Texture( Texture&& tex )
@@ -334,28 +331,78 @@ namespace Gfx
     {
         PG_ASSERT( desc.type == ImageType::TYPE_2D || desc.type == ImageType::TYPE_CUBEMAP, "Currently only support 2D and CUBEMAP images" );
         PG_ASSERT( desc.mipLevels == 1, "Mipmaps not supported yet" );
+        PG_ASSERT( desc.srcFormat != PixelFormat::NUM_PIXEL_FORMATS );
         Texture tex;
         tex.m_desc = desc;
         glGenTextures( 1, &tex.m_nativeHandle );
         
         auto nativeTexType                        = PGToOpenGLImageType( desc.type );
-        auto [nativePixelFormat, nativePixelType] = PGToOpenGLFormatAndType( desc.format );
+        auto [nativePixelFormat, nativePixelType] = PGToOpenGLFormatAndType( desc.srcFormat );
+        GLenum dstFormat;
+        if ( desc.dstFormat == PixelFormat::NUM_PIXEL_FORMATS )
+        {
+            dstFormat = PGToOpenGLPixelFormat( desc.srcFormat );
+        }
+        else
+        {
+            dstFormat = PGToOpenGLPixelFormat( desc.dstFormat );
+        }
         glBindTexture( nativeTexType, tex.m_nativeHandle );
 
         if ( desc.type == ImageType::TYPE_2D )
         {
-            glTexImage2D( nativeTexType, 0, nativePixelFormat, desc.width, desc.height, 0, nativePixelFormat, nativePixelType, data );
+            glTexImage2D( nativeTexType, 0, dstFormat, desc.width, desc.height, 0, nativePixelFormat, nativePixelType, data );
         }
         else if ( desc.type == ImageType::TYPE_CUBEMAP )
         {
             for ( int i = 0; i < 6; ++i )
             {
-                unsigned char* faceData = &static_cast< unsigned char* >( data )[i * desc.width * desc.height * SizeOfPixelFromat( desc.format )];
-                glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, nativePixelFormat, desc.width, desc.height, 0, nativePixelFormat, nativePixelType, faceData );
+                unsigned char* faceData = &static_cast< unsigned char* >( data )[i * desc.width * desc.height * SizeOfPixelFromat( desc.srcFormat )];
+                glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, dstFormat, desc.width, desc.height, 0, nativePixelFormat, nativePixelType, faceData );
             }
         }
 
         return tex;
+    }
+
+    void Texture::Free()
+    {
+        if ( m_nativeHandle != ~0u )
+        {
+            glDeleteTextures( 1, &m_nativeHandle );
+            m_nativeHandle = ~0u;
+        }
+    }
+
+    unsigned char* Texture::GetPixelData() const
+    {
+        PG_ASSERT( m_nativeHandle != ~0u );
+        int pixelSize   = SizeOfPixelFromat( m_desc.dstFormat );
+        uint32_t w      = m_desc.width;
+        uint32_t h      = m_desc.height;
+        uint32_t d      = m_desc.depth;
+        size_t faceSize = w * h * d * pixelSize;
+        size_t size     = m_desc.arrayLayers * faceSize;
+        unsigned char* cpuData = static_cast< unsigned char* >( malloc( size ) );
+        auto [nativePixelFormat, nativePixelType] = PGToOpenGLFormatAndType( m_desc.dstFormat );
+        auto nativeTexType = PGToOpenGLImageType( m_desc.type );
+        glBindTexture( nativeTexType, m_nativeHandle );
+
+        auto data = cpuData;
+        if ( m_desc.type == ImageType::TYPE_CUBEMAP )
+        {
+            for ( int i = 0; i < m_desc.arrayLayers; ++i )
+            {
+                glGetTexImage( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, nativePixelFormat, nativePixelType, data );
+                data += faceSize;
+            }
+        }
+        else
+        {
+            glGetTexImage( nativeTexType, 0, nativePixelFormat, nativePixelType, cpuData );
+        }
+        
+        return cpuData;
     }
 
     ImageType Texture::GetType() const
@@ -365,7 +412,7 @@ namespace Gfx
 
     PixelFormat Texture::GetPixelFormat() const
     {
-        return m_desc.format;
+        return m_desc.dstFormat;
     }
 
     uint8_t Texture::GetMipLevels() const
