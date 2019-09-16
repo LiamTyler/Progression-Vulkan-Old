@@ -104,6 +104,7 @@ namespace ResourceManager
         LOAD_RESOURCES( Material );
         LOAD_RESOURCES( Model );
 
+        PG_MAYBE_UNUSED( start );
         LOG( "Loaded fastfile '", fname, "' in: ", Time::GetDuration( start ), " ms." );
 
         return true;
