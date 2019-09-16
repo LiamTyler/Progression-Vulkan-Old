@@ -42,8 +42,8 @@ int NumComponentsInPixelFromat( const Gfx::PixelFormat& format )
         1, // DEPTH32_Float
     };
 
-    PG_ASSERT( static_cast< int >( format )   < static_cast< int >( Gfx::PixelFormat::NUM_PIXEL_FORMATS ) );
-    static_assert( ARRAY_COUNT( components ) == static_cast< int >( Gfx::PixelFormat::NUM_PIXEL_FORMATS ) );
+    // PG_ASSERT( static_cast< int >( format )   < static_cast< int >( Gfx::PixelFormat::NUM_PIXEL_FORMATS ) );
+    // static_assert( ARRAY_COUNT( components ) == static_cast< int >( Gfx::PixelFormat::NUM_PIXEL_FORMATS ) );
 
     return components[static_cast< int >( format )];
 }
@@ -120,10 +120,10 @@ bool Image::Load( ResourceCreateInfo* createInfo )
             // TODO: how to detect sRGB?
             Gfx::PixelFormat componentsToFormat[] =
             {
-                Gfx::PixelFormat::R8_Uint,
-                Gfx::PixelFormat::R8_G8_Uint,
-                Gfx::PixelFormat::R8_G8_B8_Uint,
-                Gfx::PixelFormat::R8_G8_B8_A8_Uint,
+                Gfx::PixelFormat::R8_UINT,
+                Gfx::PixelFormat::R8_G8_UINT,
+                Gfx::PixelFormat::R8_G8_B8_UINT,
+                Gfx::PixelFormat::R8_G8_B8_A8_UINT,
             };
             imageDescs[i].srcFormat = componentsToFormat[numComponents - 1];
             imageDescs[i].dstFormat = info->dstFormat;

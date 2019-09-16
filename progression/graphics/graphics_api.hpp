@@ -285,33 +285,51 @@ namespace Gfx
 
     enum class PixelFormat : uint8_t
     {
-        R8_Uint                 = 0,
-        R16_Float               = 1,
-        R32_Float               = 2,
+        R8_UINT                 = 0,
+        R16_FLOAT               = 1,
+        R32_FLOAT               = 2,
 
-        R8_G8_Uint              = 3,
-        R16_G16_Float           = 4,
-        R32_G32_Float           = 5,
+        R8_G8_UINT              = 3,
+        R16_G16_FLOAT           = 4,
+        R32_G32_FLOAT           = 5,
 
-        R8_G8_B8_Uint           = 6,
-        R16_G16_B16_Float       = 7,
-        R32_G32_B32_Float       = 8,
+        R8_G8_B8_UINT           = 6,
+        R16_G16_B16_FLOAT       = 7,
+        R32_G32_B32_FLOAT       = 8,
 
-        R8_G8_B8_A8_Uint        = 9,
-        R16_G16_B16_A16_Float   = 10,
-        R32_G32_B32_A32_Float   = 11,
+        R8_G8_B8_A8_UINT        = 9,
+        R16_G16_B16_A16_FLOAT   = 10,
+        R32_G32_B32_A32_FLOAT   = 11,
 
-        R8_G8_B8_Uint_sRGB      = 12,
-        R8_G8_B8_A8_Uint_sRGB   = 13,
+        R8_G8_B8_UINT_SRGB      = 12,
+        R8_G8_B8_A8_UINT_SRGB   = 13,
 
-        R11_G11_B10_Float       = 14,
+        R11_G11_B10_FLOAT       = 14,
 
-        DEPTH32_Float           = 15,
+        DEPTH32_FLOAT           = 15,
+
+        BC1_RGB_UNORM           = 16,
+        BC1_RGB_SRGB            = 17,
+        BC1_RGBA_UNORM          = 18,
+        BC1_RGBA_SRGB           = 19,
+        BC2_UNORM               = 20,
+        BC2_SRGB                = 21,
+        BC3_UNORM               = 22,
+        BC3_SRGB                = 23,
+        BC4_UNORM               = 24,
+        BC4_SNORM               = 25,
+        BC5_UNORM               = 26,
+        BC5_SNORM               = 27,
+        BC6H_UFLOAT             = 28,
+        BC6H_SFLOAT             = 29,
+        BC7_UNORM               = 30,
+        BC7_SRGB                = 31,
 
         NUM_PIXEL_FORMATS
     };
 
     int SizeOfPixelFromat( const PixelFormat& format );
+    bool PixelFormatIsCompressed( const PixelFormat& format );
 
     enum class ImageType : uint8_t
     {

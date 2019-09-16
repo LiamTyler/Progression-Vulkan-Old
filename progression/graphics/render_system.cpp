@@ -273,17 +273,17 @@ namespace RenderSystem
         texDesc.width     = s_window->Width();
         texDesc.height    = s_window->Height();
         texDesc.type      = ImageType::TYPE_2D;
-        texDesc.srcFormat = PixelFormat::R32_G32_B32_A32_Float;
+        texDesc.srcFormat = PixelFormat::R32_G32_B32_A32_FLOAT;
         
         s_gbuffer.positionTex = Gfx::Texture::Create( texDesc, nullptr );
         s_gbuffer.normalTex   = Gfx::Texture::Create( texDesc, nullptr );
-        texDesc.srcFormat     = PixelFormat::R8_G8_B8_Uint; // TODO: should this be sRGB?
+        texDesc.srcFormat     = PixelFormat::R8_G8_B8_UINT; // TODO: should this be sRGB?
         s_gbuffer.diffuseTex  = Gfx::Texture::Create( texDesc, nullptr );
-        texDesc.srcFormat     = PixelFormat::R16_G16_B16_A16_Float;
+        texDesc.srcFormat     = PixelFormat::R16_G16_B16_A16_FLOAT;
         s_gbuffer.specularTex = Gfx::Texture::Create( texDesc, nullptr );
-        texDesc.srcFormat     = PixelFormat::R16_G16_B16_Float;
+        texDesc.srcFormat     = PixelFormat::R16_G16_B16_FLOAT;
         s_gbuffer.emissiveTex = Gfx::Texture::Create( texDesc, nullptr );
-        texDesc.srcFormat     = PixelFormat::DEPTH32_Float;
+        texDesc.srcFormat     = PixelFormat::DEPTH32_FLOAT;
         s_gbuffer.depthRbo    = Gfx::Texture::Create( texDesc, nullptr );
 
         gBufferRenderPassDesc.colorAttachmentDescriptors[0].texture = &s_gbuffer.positionTex;
@@ -298,7 +298,7 @@ namespace RenderSystem
         // postprocess render pass
         RenderPassDescriptor postProcessRenderPassDesc;
 
-        texDesc.srcFormat = PixelFormat::R16_G16_B16_A16_Float;
+        texDesc.srcFormat = PixelFormat::R16_G16_B16_A16_FLOAT;
         s_postProcessBuffer.hdrColorTex = Gfx::Texture::Create( texDesc, nullptr );
         postProcessRenderPassDesc.colorAttachmentDescriptors[0].texture = &s_postProcessBuffer.hdrColorTex;
         postProcessRenderPassDesc.colorAttachmentDescriptors[0].loadAction = LoadAction::CLEAR;

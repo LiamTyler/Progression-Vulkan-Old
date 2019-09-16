@@ -44,22 +44,22 @@ bool ParseShaderCreateInfoFromFile( std::istream& in, ShaderCreateInfo& info )
 }
 
 static std::unordered_map< std::string, Gfx::PixelFormat > pixelFormatMap = {
-    { "R8_Uint",                Gfx::PixelFormat::R8_Uint },
-    { "R16_Float",              Gfx::PixelFormat::R16_Float },
-    { "R32_Float",              Gfx::PixelFormat::R32_Float },
-    { "R8_G8_Uint",             Gfx::PixelFormat::R8_G8_Uint },
-    { "R16_G16_Float",          Gfx::PixelFormat::R16_G16_Float },
-    { "R32_G32_Float",          Gfx::PixelFormat::R32_G32_Float },
-    { "R8_G8_B8_Uint",          Gfx::PixelFormat::R8_G8_B8_Uint },
-    { "R16_G16_B16_Float",      Gfx::PixelFormat::R16_G16_B16_Float },
-    { "R32_G32_B32_Float",      Gfx::PixelFormat::R32_G32_B32_Float },
-    { "R8_G8_B8_A8_Uint",       Gfx::PixelFormat::R8_G8_B8_A8_Uint },
-    { "R16_G16_B16_A16_Float",  Gfx::PixelFormat::R16_G16_B16_A16_Float },
-    { "R32_G32_B32_A32_Float",  Gfx::PixelFormat::R32_G32_B32_A32_Float },
-    { "R8_G8_B8_Uint_sRGB",     Gfx::PixelFormat::R8_G8_B8_Uint_sRGB },
-    { "R8_G8_B8_A8_Uint_sRGB",  Gfx::PixelFormat::R8_G8_B8_A8_Uint_sRGB },
-    { "R11_G11_B10_Float",      Gfx::PixelFormat::R11_G11_B10_Float },
-    { "DEPTH32_Float",          Gfx::PixelFormat::DEPTH32_Float },
+    { "R8_UINT",                Gfx::PixelFormat::R8_UINT },
+    { "R16_FLOAT",              Gfx::PixelFormat::R16_FLOAT },
+    { "R32_FLOAT",              Gfx::PixelFormat::R32_FLOAT },
+    { "R8_G8_UINT",             Gfx::PixelFormat::R8_G8_UINT },
+    { "R16_G16_FLOAT",          Gfx::PixelFormat::R16_G16_FLOAT },
+    { "R32_G32_FLOAT",          Gfx::PixelFormat::R32_G32_FLOAT },
+    { "R8_G8_B8_UINT",          Gfx::PixelFormat::R8_G8_B8_UINT },
+    { "R16_G16_B16_FLOAT",      Gfx::PixelFormat::R16_G16_B16_FLOAT },
+    { "R32_G32_B32_FLOAT",      Gfx::PixelFormat::R32_G32_B32_FLOAT },
+    { "R8_G8_B8_A8_UINT",       Gfx::PixelFormat::R8_G8_B8_A8_UINT },
+    { "R16_G16_B16_A16_FLOAT",  Gfx::PixelFormat::R16_G16_B16_A16_FLOAT },
+    { "R32_G32_B32_A32_FLOAT",  Gfx::PixelFormat::R32_G32_B32_A32_FLOAT },
+    { "R8_G8_B8_UINT_SRGB",     Gfx::PixelFormat::R8_G8_B8_UINT_SRGB },
+    { "R8_G8_B8_A8_UINT_SRGB",  Gfx::PixelFormat::R8_G8_B8_A8_UINT_SRGB },
+    { "R11_G11_B10_FLOAT",      Gfx::PixelFormat::R11_G11_B10_FLOAT },
+    { "DEPTH32_FLOAT",          Gfx::PixelFormat::DEPTH32_FLOAT },
 };
 
 bool ParseImageCreateInfoFromFile( std::istream& in, ImageCreateInfo& info )

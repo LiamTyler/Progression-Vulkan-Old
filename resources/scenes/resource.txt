@@ -8,7 +8,7 @@ compute
 Image
 name cockatoo
 filenames textures/cockatoo.jpg
-dstFormat R8_G8_B8_Uint_sRGB
+dstFormat R8_G8_B8_UINT_SRGB
 sampler linear
 flipVertically true
 generateMipmaps true
@@ -21,7 +21,7 @@ filename materials/cockatoo.mtl
 Image
 name water 
 filenames skybox/water/right.jpg skybox/water/left.jpg skybox/water/top.jpg skybox/water/bottom.jpg skybox/water/front.jpg skybox/water/back.jpg
-dstFormat R8_G8_B8_Uint_sRGB
+dstFormat R8_G8_B8_UINT_SRGB
 sampler linear
 flipVertically false
 generateMipmaps true
@@ -31,7 +31,7 @@ freeCpuCopy true
 Image
 name chaletTex
 filenames textures/chalet.jpg
-dstFormat R8_G8_B8_Uint_sRGB
+dstFormat R8_G8_B8_UINT_SRGB
 sampler linear
 flipVertically true
 generateMipmaps true
