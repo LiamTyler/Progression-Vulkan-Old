@@ -1,6 +1,5 @@
 #include "core/window.hpp"
 #include "core/time.hpp"
-#include "glad/glad.h"
 #include "utils/logger.hpp"
 #include <unordered_set>
 
@@ -96,20 +95,6 @@ void Window::Init( const WindowCreateInfo& createInfo )
 
     glfwSetErrorCallback( ErrorCallback );
 
-    if ( !gladLoadGLLoader( (GLADloadproc)glfwGetProcAddress ) )
-    {
-        LOG_ERR( "Failed to gladLoadGLLoader" );
-        glfwTerminate();
-        exit( EXIT_FAILURE );
-    }
-
-    if ( GetMainWindow() == this )
-    {
-        LOG( "Vendor: ", glGetString( GL_VENDOR ) );
-        LOG( "Renderer: ", glGetString( GL_RENDERER ) );
-        LOG( "Version: ", glGetString( GL_VERSION ) );
-    }
-
     if ( createInfo.vsync )
     {
         glfwSwapInterval( 1 );
@@ -132,12 +117,12 @@ void Window::Init( const WindowCreateInfo& createInfo )
 
 void Window::BindContext()
 {
-    glfwMakeContextCurrent( m_window );
+    // glfwMakeContextCurrent( m_window );
 }
 
 void Window::UnbindContext()
 {
-    glfwMakeContextCurrent( NULL );
+    // glfwMakeContextCurrent( NULL );
 }
 
 void Window::SwapWindow()

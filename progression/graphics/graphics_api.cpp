@@ -1,6 +1,6 @@
 #include "core/assert.hpp"
 #include "graphics/graphics_api.hpp"
-#include "graphics/pg_to_opengl_types.hpp"
+// #include "graphics/pg_to_opengl_types.hpp"
 #include "utils/logger.hpp"
 #include <vector>
 
@@ -135,7 +135,8 @@ namespace Gfx
     {
         //m_vao      = std::move( desc.m_vao );
         //desc.m_vao = static_cast< GLuint >( -1 );
-
+        PG_UNUSED( desc );
+        PG_ASSERT( false );
         return *this;
     }
 

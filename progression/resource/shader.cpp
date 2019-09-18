@@ -1,5 +1,4 @@
 #include "resource/shader.hpp"
-#include "graphics/pg_to_opengl_types.hpp"
 #include "resource/resource_manager.hpp"
 #include "utils/fileIO.hpp"
 #include "utils/logger.hpp"

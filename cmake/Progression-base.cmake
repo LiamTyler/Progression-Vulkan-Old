@@ -26,23 +26,32 @@ set(PROGRESSION_LIBS
     glfw
     meshoptimizer
     lz4
-    vulkan-1
     ${SYSTEM_LIBS}
 )
 
-if (PROGRESSION_AUDIO)
-    set(PROGRESSION_LIBS ${PROGRESSION_LIBS} openal sndfile)
-endif()
-
-if (NOT PROGRESSION_LIB_DIR)
+if (MSVC)
     set(PROGRESSION_LIB_DIR
         ${PROGRESSION_DIR}/build/lib
         C:/VulkanSDK/1.1.101.0/Lib
+    )
+    set(PROGRESSION_LIBS
+        ${PROGRESSION_LIBS}
+        Vulkan::Vulkan
+    )
+else()
+    find_package(Vulkan REQUIRED)
+    set(PROGRESSION_LIBS
+        ${PROGRESSION_LIBS}
+        Vulkan::Vulkan
     )
 endif()
 
 if (NOT PROGRESSION_BIN_DIR)
     set(PROGRESSION_BIN_DIR ${PROGRESSION_DIR}/build/bin)
+endif()
+
+if (PROGRESSION_AUDIO)
+    set(PROGRESSION_LIBS ${PROGRESSION_LIBS} openal sndfile)
 endif()
 
 set_property(

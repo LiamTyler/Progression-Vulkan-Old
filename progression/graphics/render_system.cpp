@@ -6,6 +6,7 @@
 #include "utils/logger.hpp"
 //#include "graphics/shadow_map.hpp"
 #include <array>
+#include <unordered_map>
 // #include "graphics/pg_to_opengl_types.hpp"
 
 using namespace Progression;
