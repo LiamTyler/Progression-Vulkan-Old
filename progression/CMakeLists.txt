@@ -13,7 +13,7 @@ set(
     graphics/render_system.cpp
 
     graphics/graphics_api.hpp
-    graphics/pg_to_opengl_types.hpp
+    #graphics/pg_to_opengl_types.hpp
     graphics/lights.hpp
     graphics/render_system.hpp
 )
@@ -87,14 +87,14 @@ set(
 set(
 	EXTERNALS
 	../ext/getopt/getopt.c
-    ../ext/glad/src/glad.c
+    #../ext/glad/src/glad.c
     ../ext/memory_map/MemoryMapped.cpp    
     ../ext/tinyobjloader/tiny_obj_loader.cc
 	
 	../ext/cpptoml.h
     ../ext/getopt/getopt.h
-    ../ext/glad/include/glad/glad.h
-    ../ext/glad/include/KHR/khrplatform.h
+    #../ext/glad/include/glad/glad.h
+    #../ext/glad/include/KHR/khrplatform.h
     ../ext/memory_map/MemoryMapped.h
     ../ext/stb_image/stb_image.h
     ../ext/stb_image/stb_image_write.h

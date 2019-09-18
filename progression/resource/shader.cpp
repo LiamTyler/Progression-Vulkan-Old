@@ -22,6 +22,7 @@ static bool LoadShaderTextFile( std::string& source, const std::string& filename
     return true;
 }
 
+/*
 static bool CompileShader( GLuint& shader, const char* source, GLenum shaderType )
 {
     shader = glCreateShader( shaderType );
@@ -75,11 +76,12 @@ static bool CreateAndLinkProgram( GLuint& program, const std::vector< GLuint >& 
 
     return true;
 }
+*/
 
 namespace Progression
 {
 
-Shader::Shader() : Resource( "" ), m_program( ~0u )
+Shader::Shader() : Resource( "" ) //, m_program( ~0u )
 {
 }
 
@@ -96,10 +98,10 @@ Shader::Shader( Shader&& shader )
 Shader& Shader::operator=( Shader&& shader )
 {
     name       = std::move( shader.name );
-    m_program  = std::move( shader.m_program );
+    // m_program  = std::move( shader.m_program );
     m_uniforms = std::move( shader.m_uniforms );
 
-    shader.m_program = (GLuint) -1;
+    // shader.m_program = (GLuint) -1;
 
     return *this;
 }
@@ -112,6 +114,9 @@ bool Shader::Load( ResourceCreateInfo* info )
 #endif // #if USING( SERIALIZE_SHADER_TEXT )
     Free();
 
+    return false;
+
+    /*
     std::string shaderSource;
     GLuint glShader;
     std::vector< GLuint > shaders;
@@ -168,6 +173,7 @@ bool Shader::Load( ResourceCreateInfo* info )
     {
         return false;
     }
+    */
 }
 
 void Shader::Move( std::shared_ptr< Resource > dst )
@@ -227,16 +233,17 @@ bool Shader::Deserialize( char*& buffer )
         return false;
     }
 #else // #if USING( SERIALIZE_SHADER_TEXT )
-    GLint len;
-    GLenum format;
-    serialize::Read( buffer, len );
-    serialize::Read( buffer, format );
-    std::vector< char > binary( len );
-    serialize::Read( buffer, binary.data(), len );
-    if ( !LoadFromBinary( binary.data(), len, format ) )
-    {
-        return false;
-    }
+    PG_ASSERT( false );
+    //GLint len;
+    //GLenum format;
+    //serialize::Read( buffer, len );
+    //serialize::Read( buffer, format );
+    //std::vector< char > binary( len );
+    //serialize::Read( buffer, binary.data(), len );
+    //if ( !LoadFromBinary( binary.data(), len, format ) )
+    //{
+    //    return false;
+    //}
 #endif // #else // #if USING( SERIALIZE_SHADER_TEXT )
 
     uint32_t numUniforms;
@@ -244,7 +251,7 @@ bool Shader::Deserialize( char*& buffer )
     for ( uint32_t i = 0; i < numUniforms; ++i )
     {
         std::string uName;
-        GLuint loc;
+        uint32_t loc;
         serialize::Read( buffer, uName );
         serialize::Read( buffer, loc );
         m_uniforms[uName] = loc;
@@ -253,6 +260,7 @@ bool Shader::Deserialize( char*& buffer )
     return true;
 }
 
+/*
 bool Shader::LoadFromBinary( const char* binarySource, GLint len, GLenum format )
 {
     Free();
@@ -286,18 +294,22 @@ std::vector< char > Shader::GetShaderBinary( GLint& len, GLenum& format ) const
 
     return binary;
 }
+*/
 
 void Shader::Free()
 {
+    /*
     if ( m_program != (GLuint) -1 )
     {
         glDeleteProgram( m_program );
         m_program = (GLuint) -1;
     }
+    */
 }
 
 void Shader::QueryUniforms()
 {
+    /*
     GLsizei uniformBufSize;
     GLint count;
     glGetProgramiv( m_program, GL_ACTIVE_UNIFORM_MAX_LENGTH, &uniformBufSize );
@@ -334,19 +346,20 @@ void Shader::QueryUniforms()
     LOG( "" );
 #endif
     delete[] uniformName;
+    */
 }
 
 void Shader::Enable() const
 {
-    glUseProgram( m_program );
+    // glUseProgram( m_program );
 }
 
 void Shader::Disable() const
 {
-    glUseProgram( 0 );
+    // glUseProgram( 0 );
 }
 
-GLuint Shader::GetUniform( const std::string& _name )
+uint32_t Shader::GetUniform( const std::string& _name )
 {
     auto it = m_uniforms.find( _name );
     if ( it == m_uniforms.end() )
@@ -356,13 +369,12 @@ GLuint Shader::GetUniform( const std::string& _name )
         auto hash = hasher( _name );
         if ( m_warnings.find( hash ) == m_warnings.end() )
         {
-            LOG_WARN( "Uniform: ", _name, " is not present in the shader: ", m_program,
-                      ", using -1 instead" );
+            // LOG_WARN( "Uniform: ", _name, " is not present in the shader: ", m_program, ", using -1 instead" );
             m_warnings.insert( hash );
         }
 #endif // #if USING( DEBUG_BUILD )
 
-        return (GLuint) -1;
+        return ~0u;
     }
     else
     {
@@ -370,8 +382,9 @@ GLuint Shader::GetUniform( const std::string& _name )
     }
 }
 
-GLuint Shader::GetAttribute( const std::string& _name )
+uint32_t Shader::GetAttribute( const std::string& _name )
 {
+    /*
     GLuint loc = glGetAttribLocation( m_program, _name.c_str() );
 #if USING( DEBUG_BUILD )
     if ( loc == (GLuint) -1 )
@@ -387,22 +400,30 @@ GLuint Shader::GetAttribute( const std::string& _name )
 #endif // #if USING( DEBUG_BUILD )
 
     return loc;
+    */
+    PG_UNUSED( _name );
+    return ~0u;
 }
 
 void Shader::BindTexture( const Gfx::Texture& tex, const std::string& texName, uint32_t index )
 {
-
+    PG_UNUSED( tex );
+    PG_UNUSED( texName );
+    PG_UNUSED( index );
+    /*
     glActiveTexture( GL_TEXTURE0 + index );
     auto nativeTexType = Gfx::PGToOpenGLImageType( tex.GetType() );
     glBindTexture( nativeTexType, tex.GetNativeHandle() );
     SetUniform( texName, (int) index );
+    */
 }
 
-GLuint Shader::GetNativeHandle() const
-{
-    return m_program;
-}
+//GLuint Shader::GetNativeHandle() const
+//{
+//    return m_program;
+//}
 
+/*
 void Shader::SetUniform( const std::string& _name, const bool data )
 {
     glUniform1i( GetUniform( _name ), data );
@@ -462,5 +483,6 @@ void Shader::SetUniform( const std::string& _name, const glm::vec4* data, int el
 {
     glUniform4fv( GetUniform( _name ), elements, glm::value_ptr( data[0] ) );
 }
+*/
 
 } // namespace Progression

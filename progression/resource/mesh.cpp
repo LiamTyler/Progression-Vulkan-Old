@@ -112,6 +112,9 @@ void Mesh::Optimize()
 // TODO: dynamic meshes + usage
 void Mesh::UploadToGpu( bool freeCPUCopy )
 {
+    PG_UNUSED( freeCPUCopy);
+    PG_ASSERT( false );
+    /*
     PG_ASSERT( vertices.size() == normals.size() );
     if ( !m_gpuDataCreated )
     {
@@ -137,6 +140,7 @@ void Mesh::UploadToGpu( bool freeCPUCopy )
     indexBuffer.SetData( indices.data(),   m_numIndices * sizeof( uint32_t ) );
 
     Free( false, freeCPUCopy );
+    */
 }
 
 void Mesh::RecalculateBB()
@@ -155,6 +159,7 @@ void Mesh::RecalculateBB()
 
 void Mesh::Free( bool gpuCopy, bool cpuCopy )
 {
+    PG_ASSERT( false );
     if ( cpuCopy )
     {
         m_numVertices = static_cast< uint32_t >( vertices.size() );
@@ -167,8 +172,10 @@ void Mesh::Free( bool gpuCopy, bool cpuCopy )
 
     if ( gpuCopy )
     {
+        /*
         vertexBuffer  = Gfx::Buffer{};
         indexBuffer   = Gfx::Buffer{};
+        */
         m_numVertices = m_numIndices = 0;
         m_normalOffset = m_uvOffset = ~0u;
     }
@@ -200,8 +207,9 @@ bool Mesh::Serialize( std::ofstream& out ) const
 
 bool Mesh::Deserialize( char*& buffer, bool createGpuCopy, bool freeCpuCopy )
 {
+    PG_ASSERT( false );
     PG_ASSERT( createGpuCopy || !freeCpuCopy );
-    size_t buffSize;
+    //size_t buffSize;
     size_t totalVertexBytes;
     size_t totalIndexBytes;
     serialize::Read( buffer, totalVertexBytes );
@@ -209,6 +217,7 @@ bool Mesh::Deserialize( char*& buffer, bool createGpuCopy, bool freeCpuCopy )
 
     if ( createGpuCopy || freeCpuCopy )
     {
+        /*
         m_gpuDataCreated = true;
         vertexBuffer = Gfx::Buffer::Create( NULL, totalVertexBytes, Gfx::BufferType::VERTEX, Gfx::BufferUsage::STATIC );
 
@@ -232,6 +241,7 @@ bool Mesh::Deserialize( char*& buffer, bool createGpuCopy, bool freeCpuCopy )
         m_numIndices = static_cast< uint32_t >( buffSize );
         indexBuffer = Gfx::Buffer::Create( buffer, totalIndexBytes, Gfx::BufferType::INDEX, Gfx::BufferUsage::STATIC );
         buffer += totalIndexBytes;
+        */
     }
     else if ( !createGpuCopy )
     {

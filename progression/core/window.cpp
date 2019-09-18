@@ -9,113 +9,6 @@ static std::unordered_set< size_t > s_debugMessages;
 static std::chrono::high_resolution_clock::time_point s_lastFPSUpdateTime;
 static unsigned int s_framesDrawnSinceLastFPSUpdate = 0;
 
-// static s_numFramesSince
-
-// debug context log function just copied from learnopengl.com
-static void APIENTRY GLDebugOutput( GLenum source,
-                                    GLenum type,
-                                    GLuint id,
-                                    GLenum severity,
-                                    GLsizei length,
-                                    const GLchar* message,
-                                    const void* userParam )
-{
-    PG_UNUSED( length );
-    PG_UNUSED( userParam );
-
-    // ignore non-significant error/warning codes
-    if ( id == 131169 || id == 131185 || id == 131218 || id == 131204 )
-    {
-        return;
-    }
-
-    std::hash< std::string > hasher;
-    auto hash = hasher( std::string( message ) );
-    if ( s_debugMessages.find( hash ) != s_debugMessages.end() )
-    {
-        return;
-    }
-    else
-    {
-        s_debugMessages.insert( hash );
-    }
-
-
-    LOG_WARN( "---------------" );
-    LOG_WARN( "Debug message (", id, "): ", message );
-
-    std::string msg = "";
-    switch ( source )
-    {
-        case GL_DEBUG_SOURCE_API:
-            LOG_WARN( "Source: API" );
-            break;
-        case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
-            LOG_WARN( "Source: Window System" );
-            break;
-        case GL_DEBUG_SOURCE_SHADER_COMPILER:
-            LOG_WARN( "Source: Shader Compiler" );
-            break;
-        case GL_DEBUG_SOURCE_THIRD_PARTY:
-            LOG_WARN( "Source: Third Party" );
-            break;
-        case GL_DEBUG_SOURCE_APPLICATION:
-            LOG_WARN( "Source: Application" );
-            break;
-        case GL_DEBUG_SOURCE_OTHER:
-            LOG_WARN( "Source: Other" );
-            break;
-    }
-
-    switch ( type )
-    {
-        case GL_DEBUG_TYPE_ERROR:
-            LOG_WARN( "Type: Error" );
-            break;
-        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-            LOG_WARN( "Type: Deprecated Behaviour" );
-            break;
-        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-            LOG_WARN( "Type: Undefined Behaviour" );
-            break;
-        case GL_DEBUG_TYPE_PORTABILITY:
-            LOG_WARN( "Type: Portability" );
-            break;
-        case GL_DEBUG_TYPE_PERFORMANCE:
-            LOG_WARN( "Type: Performance" );
-            break;
-        case GL_DEBUG_TYPE_MARKER:
-            LOG_WARN( "Type: Marker" );
-            break;
-        case GL_DEBUG_TYPE_PUSH_GROUP:
-            LOG_WARN( "Type: Push Group" );
-            break;
-        case GL_DEBUG_TYPE_POP_GROUP:
-            LOG_WARN( "Type: Pop Group" );
-            break;
-        case GL_DEBUG_TYPE_OTHER:
-            LOG_WARN( "Type: Other" );
-            break;
-    }
-
-    switch ( severity )
-    {
-        case GL_DEBUG_SEVERITY_HIGH:
-            LOG_WARN( "Severity: high" );
-            break;
-        case GL_DEBUG_SEVERITY_MEDIUM:
-            LOG_WARN( "Severity: medium" );
-            break;
-        case GL_DEBUG_SEVERITY_LOW:
-            LOG_WARN( "Severity: low" );
-            break;
-        case GL_DEBUG_SEVERITY_NOTIFICATION:
-            LOG_WARN( "Severity: notification" );
-            break;
-    }
-    LOG( "" );
-}
-
 static void ErrorCallback( int err, const char* description )
 {
     PG_MAYBE_UNUSED( err );
@@ -226,25 +119,10 @@ void Window::Init( const WindowCreateInfo& createInfo )
         glfwSwapInterval( 0 );
     }
 
-    int fbW, fbH, wW, wH;
-    glfwGetFramebufferSize( m_window, &fbW, &fbH );
-    glfwGetWindowSize( m_window, &wW, &wH );
-
-    glViewport( 0, 0, fbW, fbH );
-
 #if !USING( SHIP_BUILD )
     if ( createInfo.debugContext )
     {
-        GLint flags;
-        glGetIntegerv( GL_CONTEXT_FLAGS, &flags );
-        if ( flags & GL_CONTEXT_FLAG_DEBUG_BIT )
-        {
-            LOG( "enabling debug context" );
-            glEnable( GL_DEBUG_OUTPUT );
-            glEnable( GL_DEBUG_OUTPUT_SYNCHRONOUS );
-            glDebugMessageCallback( GLDebugOutput, nullptr );
-            glDebugMessageControl( GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE );
-        }
+        
     }
 #endif // #if !USING( SHIP_BUILD )
 

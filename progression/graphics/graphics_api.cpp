@@ -8,22 +8,13 @@ namespace Progression
 {
 namespace Gfx
 {
-    void SetViewport( const Viewport& v )
-    {
-        glViewport( v.x, v.y, v.width, v.height );
-    }
-
-    void SetScissor( const Scissor& s )
-    {
-        glScissor( s.x, s.y, s.width, s.height );
-    }
 
     Buffer::~Buffer()
     {
-        if ( m_nativeHandle != ~0u )
+        /*if ( m_nativeHandle != ~0u )
         {
             glDeleteBuffers( 1, &m_nativeHandle );
-        }
+        }*/
     }
 
     Buffer::Buffer( Buffer&& buff )
@@ -35,8 +26,8 @@ namespace Gfx
         m_length            = std::move( buff.m_length );
         m_type              = std::move( buff.m_type );
         m_usage             = std::move( buff.m_usage );
-        m_nativeHandle      = std::move( buff.m_nativeHandle );
-        buff.m_nativeHandle = ~0u;
+        //m_nativeHandle      = std::move( buff.m_nativeHandle );
+        //buff.m_nativeHandle = ~0u;
 
         return *this;
     }
@@ -44,7 +35,7 @@ namespace Gfx
     Buffer Buffer::Create( void* data, size_t length, BufferType type, BufferUsage usage )
     {
         Buffer buffer;
-        glGenBuffers( 1, &buffer.m_nativeHandle );
+        //glGenBuffers( 1, &buffer.m_nativeHandle );
         buffer.m_type  = type;
         buffer.m_usage = usage;
         buffer.SetData( data, length );
@@ -54,17 +45,26 @@ namespace Gfx
 
     void Buffer::SetData( void* src, size_t length )
     {
+        PG_UNUSED( src );
+        PG_UNUSED( length );
+        PG_ASSERT( false );
+        /*
         if ( !length )
         {
             return;
         }
         Bind();
         m_length = length;
-        glBufferData( PGToOpenGLBufferType( m_type ), m_length, src,
-                      PGToOpenGLBufferUsage( m_usage ) );
+        glBufferData( PGToOpenGLBufferType( m_type ), m_length, src, PGToOpenGLBufferUsage( m_usage ) );
+        */
     }
     void Buffer::SetData( void* src, size_t offset, size_t length )
     {
+        PG_UNUSED( src );
+        PG_UNUSED( offset );
+        PG_UNUSED( length );
+        PG_ASSERT( false );
+        /*
         if ( !length )
         {
             return;
@@ -72,6 +72,7 @@ namespace Gfx
         Bind();
         PG_ASSERT( offset + length <= m_length );
         glBufferSubData( PGToOpenGLBufferType( m_type ), offset, length, src );
+        */
     }
 
     size_t Buffer::GetLength() const
@@ -89,7 +90,7 @@ namespace Gfx
         return m_usage;
     }
 
-    GLuint Buffer::GetNativeHandle() const
+    /*GLuint Buffer::GetNativeHandle() const
     {
         return m_nativeHandle;
     }
@@ -97,15 +98,15 @@ namespace Gfx
     Buffer::operator bool() const
     {
         return m_nativeHandle != ~0u;
-    }
+    }*/
 
     void Buffer::Bind() const
     {
-        PG_ASSERT( m_nativeHandle != (GLuint) -1 );
-        glBindBuffer( PGToOpenGLBufferType( m_type ), m_nativeHandle );
+        //PG_ASSERT( m_nativeHandle != (GLuint) -1 );
+        //glBindBuffer( PGToOpenGLBufferType( m_type ), m_nativeHandle );
     }
 
-    void BindVertexBuffer( const Buffer& buffer, uint32_t index, int offset, uint32_t stride )
+    /*void BindVertexBuffer( const Buffer& buffer, uint32_t index, int offset, uint32_t stride )
     {
         PG_ASSERT( buffer.GetNativeHandle() != ~0u );
         glBindVertexBuffer( index, buffer.GetNativeHandle(), offset, stride );
@@ -115,14 +116,14 @@ namespace Gfx
     {
         PG_ASSERT( buffer.GetNativeHandle() != ~0u );
         glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, buffer.GetNativeHandle() );
-    }
+    }*/
 
     VertexInputDescriptor::~VertexInputDescriptor()
     {
-        if ( m_vao != static_cast< GLuint >( -1 ) )
+        /*if ( m_vao != static_cast< GLuint >( -1 ) )
         {
             glDeleteVertexArrays( 1, &m_vao );
-        }
+        }*/
     }
 
     VertexInputDescriptor::VertexInputDescriptor( VertexInputDescriptor&& desc )
@@ -132,21 +133,25 @@ namespace Gfx
 
     VertexInputDescriptor& VertexInputDescriptor::operator=( VertexInputDescriptor&& desc )
     {
-        m_vao      = std::move( desc.m_vao );
-        desc.m_vao = static_cast< GLuint >( -1 );
+        //m_vao      = std::move( desc.m_vao );
+        //desc.m_vao = static_cast< GLuint >( -1 );
 
         return *this;
     }
 
     void VertexInputDescriptor::Bind() const
     {
-        glBindVertexArray( m_vao );
+        PG_ASSERT( false );
+        //glBindVertexArray( m_vao );
     }
 
-    VertexInputDescriptor VertexInputDescriptor::Create(
-      uint8_t count, VertexAttributeDescriptor* attribDescriptors )
+    VertexInputDescriptor VertexInputDescriptor::Create( uint8_t count, VertexAttributeDescriptor* attribDescriptors )
     {
         VertexInputDescriptor desc;
+        PG_UNUSED( count );
+        PG_UNUSED( attribDescriptors );
+        PG_ASSERT( false );
+        /*
         glGenVertexArrays( 1, &desc.m_vao );
         glBindVertexArray( desc.m_vao );
 
@@ -159,16 +164,17 @@ namespace Gfx
             // which buffer binding point it is attached to
             glEnableVertexAttribArray( i );
         }
+        */
 
         return desc;
     }
 
-    VertexInputDescriptor::operator bool() const
+    /*VertexInputDescriptor::operator bool() const
     {
         return m_vao != ~0u;
-    }
+    }*/
 
-    void DrawIndexedPrimitives( PrimitiveType primType, IndexType indexType, uint32_t offset, uint32_t count )
+    /*void DrawIndexedPrimitives( PrimitiveType primType, IndexType indexType, uint32_t offset, uint32_t count )
     {
         auto glTopology  = PGToOpenGLPrimitiveType( primType );
         auto glIndexType = PGToOpenGLIndexType( indexType );
@@ -179,14 +185,14 @@ namespace Gfx
     {
         auto glTopology  = PGToOpenGLPrimitiveType( primType );
         glDrawArrays( glTopology, vertexStart, vertexCount );
-    }
+    }*/
 
     Sampler::~Sampler()
     {
-        if ( m_nativeHandle != ~0u )
+        /*if ( m_nativeHandle != ~0u )
         {
             glDeleteSamplers( 1, &m_nativeHandle );
-        }
+        }*/
     }
 
     Sampler::Sampler( Sampler&& s )
@@ -197,8 +203,8 @@ namespace Gfx
     Sampler& Sampler::operator=( Sampler&& s )
     {
         m_desc           = std::move( s.m_desc );
-        m_nativeHandle   = std::move( s.m_nativeHandle );
-        s.m_nativeHandle = ~0u;
+        //m_nativeHandle   = std::move( s.m_nativeHandle );
+        //s.m_nativeHandle = ~0u;
 
         return *this;
     }
@@ -206,6 +212,10 @@ namespace Gfx
     Sampler Sampler::Create( const SamplerDescriptor& desc )
     {
         Sampler sampler;
+
+        PG_UNUSED( desc );
+        PG_ASSERT( false );
+        /*
         sampler.m_desc = desc;
         glGenSamplers( 1, &sampler.m_nativeHandle );
 
@@ -222,16 +232,18 @@ namespace Gfx
         glSamplerParameteri( sampler.m_nativeHandle, GL_TEXTURE_MAG_FILTER, nativeMagFilter );
         glSamplerParameterfv( sampler.m_nativeHandle, GL_TEXTURE_BORDER_COLOR,
                               glm::value_ptr( desc.borderColor ) );
-        glSamplerParameterf( sampler.m_nativeHandle, GL_TEXTURE_MAX_ANISOTROPY,
-                             desc.maxAnisotropy );
+        glSamplerParameterf( sampler.m_nativeHandle, GL_TEXTURE_MAX_ANISOTROPY, desc.maxAnisotropy );
+        */
 
         return sampler;
     }
 
     void Sampler::Bind( uint32_t index ) const
     {
-        PG_ASSERT( m_nativeHandle != ~0u );
-        glBindSampler( index, m_nativeHandle );
+        PG_UNUSED( index );
+        PG_ASSERT( false );
+        //PG_ASSERT( m_nativeHandle != ~0u );
+        //glBindSampler( index, m_nativeHandle );
     }
 
 
@@ -270,10 +282,10 @@ namespace Gfx
         return m_desc.borderColor;
     }
 
-    Sampler::operator bool() const
+    /*Sampler::operator bool() const
     {
         return m_nativeHandle != ~0u;
-    }
+    }*/
 
     int SizeOfPixelFromat( const PixelFormat& format )
     {
@@ -345,14 +357,20 @@ namespace Gfx
     Texture& Texture::operator=( Texture&& tex )
     {
         m_desc              = std::move( tex.m_desc );
-        m_nativeHandle      = std::move( tex.m_nativeHandle );
-        tex.m_nativeHandle  = ~0u;
+        //m_nativeHandle      = std::move( tex.m_nativeHandle );
+        //tex.m_nativeHandle  = ~0u;
 
         return *this;
     }
 
     Texture Texture::Create( const ImageDescriptor& desc, void* data )
     {
+        PG_UNUSED( desc );
+        PG_UNUSED( data );
+        PG_ASSERT( false );
+        Texture tex;
+        return tex;
+        /*
         PG_ASSERT( desc.type == ImageType::TYPE_2D || desc.type == ImageType::TYPE_CUBEMAP, "Currently only support 2D and CUBEMAP images" );
         PG_ASSERT( desc.mipLevels == 1, "Mipmaps not supported yet" );
         PG_ASSERT( desc.srcFormat != PixelFormat::NUM_PIXEL_FORMATS );
@@ -387,19 +405,23 @@ namespace Gfx
         }
 
         return tex;
+        */
     }
 
     void Texture::Free()
     {
-        if ( m_nativeHandle != ~0u )
+        /*if ( m_nativeHandle != ~0u )
         {
             glDeleteTextures( 1, &m_nativeHandle );
             m_nativeHandle = ~0u;
-        }
+        }*/
     }
 
     unsigned char* Texture::GetPixelData() const
     {
+        PG_ASSERT( false );
+        return nullptr;
+        /*
         PG_ASSERT( m_nativeHandle != ~0u );
         int pixelSize   = SizeOfPixelFromat( m_desc.dstFormat );
         uint32_t w      = m_desc.width;
@@ -427,6 +449,7 @@ namespace Gfx
         }
         
         return cpuData;
+        */
     }
 
     ImageType Texture::GetType() const
@@ -464,7 +487,7 @@ namespace Gfx
         return m_desc.depth;
     }
 
-    GLuint Texture::GetNativeHandle() const
+    /*GLuint Texture::GetNativeHandle() const
     {
         return m_nativeHandle;
     }
@@ -472,16 +495,16 @@ namespace Gfx
     Texture::operator bool() const
     {
         return m_nativeHandle != ~0u;
-    }
+    }*/
 
 
     // ------------- RENDER PASS ----------------//
     RenderPass::~RenderPass()
     {
-        if ( m_nativeHandle != 0 && m_nativeHandle != ~0u )
+        /*if ( m_nativeHandle != 0 && m_nativeHandle != ~0u )
         {
             glDeleteFramebuffers( 1, &m_nativeHandle );
-        }
+        }*/
     }
 
     RenderPass::RenderPass( RenderPass&& r )
@@ -492,14 +515,16 @@ namespace Gfx
     RenderPass& RenderPass::operator=( RenderPass&& r )
     {
         m_desc = std::move( r.m_desc );
-        m_nativeHandle   = std::move( r.m_nativeHandle );
-        r.m_nativeHandle = ~0u;
+        //m_nativeHandle   = std::move( r.m_nativeHandle );
+        //r.m_nativeHandle = ~0u;
 
         return *this;
     }
 
     void RenderPass::Bind() const
     {
+        PG_ASSERT( false );
+        /*
         PG_ASSERT( m_nativeHandle != ~0u );
         glBindFramebuffer( GL_FRAMEBUFFER, m_nativeHandle );
         if ( m_desc.colorAttachmentDescriptors.size() )
@@ -518,6 +543,7 @@ namespace Gfx
             glClearDepthf( m_desc.depthAttachmentDescriptor.clearValue );
             glClear( GL_DEPTH_BUFFER_BIT );
         }
+        */
     }
 
     RenderPass RenderPass::Create( const RenderPassDescriptor& desc )
@@ -525,6 +551,8 @@ namespace Gfx
         RenderPass pass;
         pass.m_desc = desc;
 
+        return pass;
+        /*
         // Check if this is the screen/default framebuffer
         if ( desc.colorAttachmentDescriptors[0].texture == nullptr && desc.depthAttachmentDescriptor.texture == nullptr )
         {
@@ -575,12 +603,13 @@ namespace Gfx
         }
 
         return pass;
+        */
     }
 
-    GLuint RenderPass::GetNativeHandle() const
+   /* GLuint RenderPass::GetNativeHandle() const
     {
         return m_nativeHandle;
-    }
+    }*/
 
     Pipeline Pipeline::Create( const PipelineDescriptor& desc )
     {
@@ -593,6 +622,7 @@ namespace Gfx
 
     void Pipeline::Bind() const
     {
+        /*
         m_vertexDesc.Bind();
 
         if ( m_desc.depthInfo.depthTestEnabled )
@@ -644,9 +674,10 @@ namespace Gfx
                 glDisablei( GL_BLEND, i );
             }
         }
+        */
     }
 
-    void Blit( const RenderPass& src, const RenderPass& dst, int width, int height,
+    /*void Blit( const RenderPass& src, const RenderPass& dst, int width, int height,
                const RenderTargetBuffers& mask, FilterMode filter )
     {
         glBindFramebuffer( GL_READ_FRAMEBUFFER, src.GetNativeHandle() );
@@ -654,7 +685,7 @@ namespace Gfx
         auto nativeMask   = PGToOpenGLBitFieldMask( mask );
         auto nativeFilter = PGToOpenGLFilterMode( filter );
         glBlitFramebuffer( 0, 0, width, height, 0, 0, width, height, nativeMask, nativeFilter );
-    }
+    }*/
 
 } // namespace Gfx
 } // namespace Progression

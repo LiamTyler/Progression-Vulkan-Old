@@ -2,7 +2,7 @@
 
 #include "core/core_defines.hpp"
 #include "core/math.hpp"
-#include "glad/glad.h"
+// #include "glad/glad.h"
 #include "utils/noncopyable.hpp"
 #include <array>
 
@@ -67,8 +67,6 @@ namespace Gfx
         int height;
     };
 
-    void SetViewport( const Viewport& viewport );
-
     struct Scissor
     {
         int x;
@@ -76,8 +74,6 @@ namespace Gfx
         int width;
         int height;
     };
-
-    void SetScissor( const Scissor& viewport );
 
     enum class BufferType
     {
@@ -164,9 +160,8 @@ namespace Gfx
         size_t GetLength() const;
         BufferType GetType() const;
         BufferUsage GetUsage() const;
-        GLuint GetNativeHandle() const;
-
-        operator bool() const;
+        // GLuint GetNativeHandle() const;
+        // operator bool() const;
 
     protected:
         void Bind() const;
@@ -174,11 +169,11 @@ namespace Gfx
         BufferType m_type;
         BufferUsage m_usage;
         size_t m_length       = 0; // in bytes
-        GLuint m_nativeHandle = ~0u;
+        // GLuint m_nativeHandle = ~0u;
     };
 
-    void BindVertexBuffer( const Buffer& buffer, uint32_t index, int offset, uint32_t stride );
-    void BindIndexBuffer( const Buffer& buffer );
+    //void BindVertexBuffer( const Buffer& buffer, uint32_t index, int offset, uint32_t stride );
+    //void BindIndexBuffer( const Buffer& buffer );
 
     class VertexAttributeDescriptor
     {
@@ -199,12 +194,11 @@ namespace Gfx
         VertexInputDescriptor& operator=( VertexInputDescriptor&& desc );
 
         void Bind() const;
-        static VertexInputDescriptor Create( uint8_t count,
-                                             VertexAttributeDescriptor* attribDescriptors );
-        operator bool() const;
+        static VertexInputDescriptor Create( uint8_t count, VertexAttributeDescriptor* attribDescriptors );
+        // operator bool() const;
 
     private:
-        GLuint m_vao = ~0u;
+       //  GLuint m_vao = ~0u;
     };
 
     enum class PrimitiveType
@@ -221,8 +215,8 @@ namespace Gfx
         NUM_PRIMITIVE_TYPE
     };
 
-    void DrawIndexedPrimitives( PrimitiveType primType, IndexType indexType, uint32_t offset, uint32_t count );
-    void DrawNonIndexedPrimitives( PrimitiveType primType, uint32_t vertexStart, uint32_t vertexCount );
+    //void DrawIndexedPrimitives( PrimitiveType primType, IndexType indexType, uint32_t offset, uint32_t count );
+    //void DrawNonIndexedPrimitives( PrimitiveType primType, uint32_t vertexStart, uint32_t vertexCount );
 
     enum class FilterMode
     {
@@ -276,11 +270,11 @@ namespace Gfx
         WrapMode GetWrapModeR() const;
         float GetMaxAnisotropy() const;
         glm::vec4 GetBorderColor() const;
-        operator bool() const;
+        // operator bool() const;
 
     private:
         SamplerDescriptor m_desc;
-        GLuint m_nativeHandle = ~0u;
+        // GLuint m_nativeHandle = ~0u;
     };
 
     enum class PixelFormat : uint8_t
@@ -376,12 +370,12 @@ namespace Gfx
         uint32_t GetWidth() const;
         uint32_t GetHeight() const;
         uint32_t GetDepth() const;
-        GLuint GetNativeHandle() const;
-        operator bool() const;
+        // GLuint GetNativeHandle() const;
+        // operator bool() const;
 
     private:
         ImageDescriptor m_desc;
-        GLuint m_nativeHandle = ~0u;
+        // GLuint m_nativeHandle = ~0u;
     };
 
 
@@ -460,11 +454,11 @@ namespace Gfx
         void Bind() const;
 
         static RenderPass Create( const RenderPassDescriptor& desc );
-        GLuint GetNativeHandle() const;
+        // GLuint GetNativeHandle() const;
 
     private:
         RenderPassDescriptor m_desc;
-        GLuint m_nativeHandle = ~0u;
+        // GLuint m_nativeHandle = ~0u;
     };
 
     enum RenderTargetBuffers
@@ -524,8 +518,8 @@ namespace Gfx
         VertexInputDescriptor m_vertexDesc;
     };
 
-    void Blit( const RenderPass& src, const RenderPass& dst, int width, int height,
-               const RenderTargetBuffers& mask, FilterMode filter );
+    //void Blit( const RenderPass& src, const RenderPass& dst, int width, int height,
+     //          const RenderTargetBuffers& mask, FilterMode filter );
 
 } // namespace Gfx
 } // namespace Progression
