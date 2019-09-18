@@ -9,6 +9,7 @@ public:
 
     AssetStatus CheckDependencies() override;
     ConverterStatus Convert() override;
+    std::string GetName() const override;
 
     Progression::ImageCreateInfo createInfo;
 };

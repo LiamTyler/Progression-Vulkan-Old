@@ -3,6 +3,7 @@
 #include "resource/resource.hpp"
 #include <cstring>
 #include <string>
+#include <vector>
 
 namespace Progression
 {
@@ -25,12 +26,21 @@ inline ImageFlags& operator|=( ImageFlags& a, ImageFlags b )
 {
     return (ImageFlags&)( (int&) a |= (int) b );
 }
+inline ImageFlags operator&( ImageFlags a, ImageFlags b )
+{
+    return ImageFlags( int( a ) & int( b ) );
+}
+inline ImageFlags& operator&=( ImageFlags& a, ImageFlags b )
+{
+    return (ImageFlags&)( (int&) a &= (int) b );
+}
 
 struct ImageCreateInfo : public ResourceCreateInfo
 {
-    std::string filename          = "";
-    std::string sampler           = "";
-    ImageFlags flags              = static_cast< ImageFlags >( 0 );
+    std::vector< std::string > filenames;
+    Gfx::PixelFormat dstFormat;
+    std::string sampler = "";
+    ImageFlags flags    = static_cast< ImageFlags >( 0 );
 };
 
 class Image : public Resource 
@@ -47,12 +57,18 @@ public:
     bool Serialize( std::ofstream& outFile ) const override;
     bool Deserialize( char*& buffer ) override;
 
+    
     bool Save( const std::string& filename, bool flipVertically = false ) const;
+    void UploadToGpu();
+    void ReadToCpu();
+    void FreeGpuCopy();
+    void FreeCpuCopy();
 
     Gfx::Texture* GetTexture();
     Gfx::ImageDescriptor GetDescriptor() const;
     Gfx::ImageType GetType() const;
-    Gfx::PixelFormat GetPixelFormat() const;
+    Gfx::PixelFormat GetSrcPixelFormat() const;
+    Gfx::PixelFormat GetDstPixelFormat() const;
     uint8_t GetMipLevels() const;
     uint8_t GetArrayLayers() const;
     uint32_t GetWidth() const;

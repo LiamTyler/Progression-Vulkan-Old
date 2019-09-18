@@ -9,6 +9,7 @@ public:
 
     AssetStatus CheckDependencies();
     ConverterStatus Convert();
+    std::string GetName() const override;
 
     struct Progression::ModelCreateInfo createInfo;
 };

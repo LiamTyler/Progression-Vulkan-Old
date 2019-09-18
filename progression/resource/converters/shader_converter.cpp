@@ -135,3 +135,8 @@ ConverterStatus ShaderConverter::Convert()
 
     return CONVERT_SUCCESS;
 }
+
+std::string ShaderConverter::GetName() const
+{
+    return createInfo.name;
+}

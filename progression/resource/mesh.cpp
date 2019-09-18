@@ -6,9 +6,6 @@
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
 
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/hash.hpp>
-
 class Vertex
 {
 public:

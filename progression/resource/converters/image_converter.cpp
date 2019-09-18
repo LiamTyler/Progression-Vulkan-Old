@@ -14,26 +14,26 @@ namespace fs = std::filesystem;
 
 static std::string GetContentFastFileName( ImageCreateInfo& createInfo )
 {
-    PG_ASSERT( !createInfo.filename.empty() );
-    fs::path filePath = fs::absolute( createInfo.filename );
+    fs::path filePath = fs::absolute( createInfo.filenames[0] );
 
-    size_t hash          = std::hash< std::string >{}( filePath.string() );
-    std::string baseName = filePath.filename().string();
+    size_t hash                = std::hash< std::string >{}( filePath.string() );
+    std::string baseName       = filePath.filename().string();
+    std::string flipVertically = createInfo.flags & ImageFlags::IMAGE_FLIP_VERTICALLY ? "1" : "0";
+    std::string format         = std::to_string( (int) createInfo.dstFormat );
 
-    return PG_RESOURCE_DIR "cache/images/" + baseName + std::to_string( hash ) + ".ffi";
+    return PG_RESOURCE_DIR "cache/images/" + baseName + "_" + flipVertically + "_" +
+           format + "_" + std::to_string( hash ) + ".ffi";
 }
 
 static std::string GetSettingsFastFileName( const ImageCreateInfo& createInfo )
 {
-    PG_ASSERT( !createInfo.filename.empty() );
-
-    return PG_RESOURCE_DIR "cache/images/settings_" + createInfo.name +
+    return PG_RESOURCE_DIR "cache/images/settings_" + createInfo.name + "_" + createInfo.sampler + "_" +
            std::to_string( static_cast< int >( createInfo.flags ) ) + ".ffi";
 }
 
 AssetStatus ImageConverter::CheckDependencies()
 {
-    PG_ASSERT( !createInfo.filename.empty() );
+    PG_ASSERT( !createInfo.filenames.empty() );
 
     // Add an empty image to the manager to notify other resources that an image with this
     // name has already been loaded
@@ -56,20 +56,23 @@ AssetStatus ImageConverter::CheckDependencies()
 
     if ( !std::filesystem::exists( m_outputContentFile ) )
     {
-        LOG( "OUT OF DATE: FFI File for image '", createInfo.filename, "' does not exist, convert required" );
+        LOG( "OUT OF DATE: FFI File for image '", createInfo.name, "' does not exist, convert required" );
         m_contentNeedsConverting = true;
     }
     else
     {
-        if ( Timestamp( m_outputContentFile ) < Timestamp( createInfo.filename ) )
+        auto timestamp = Timestamp( m_outputContentFile );
+        for ( const auto& fname : createInfo.filenames )
         {
-            LOG( "OUT OF DATE: Image '", createInfo.filename, "' has newer timestamp than saved FFI" );
-            m_contentNeedsConverting = true;
+            if ( timestamp < Timestamp( fname ) )
+            {
+                LOG( "OUT OF DATE: Image '", fname, "' has newer timestamp than saved FFI" );
+                m_contentNeedsConverting = true;
+                m_status = ASSET_OUT_OF_DATE;
+                return m_status;
+            }
         }
-        else
-        {
-            m_contentNeedsConverting = false;
-        }
+        m_contentNeedsConverting = false;
     }
 
     if ( m_settingsNeedsConverting || m_contentNeedsConverting )
@@ -79,7 +82,7 @@ AssetStatus ImageConverter::CheckDependencies()
     else
     {
         m_status = ASSET_UP_TO_DATE;
-        LOG( "UP TO DATE: Image with name '", createInfo.name, "' and filename '", createInfo.filename, "'" );
+        LOG( "UP TO DATE: Image with name '", createInfo.name, "'" );
     }
 
     return m_status;
@@ -103,20 +106,29 @@ ConverterStatus ImageConverter::Convert()
     if ( m_contentNeedsConverting )
     {
         Image image;
+        createInfo.flags |= ImageFlags::IMAGE_FREE_CPU_COPY_ON_LOAD;
+        createInfo.flags |= ImageFlags::IMAGE_CREATE_TEXTURE_ON_LOAD;
         if ( !image.Load( &createInfo ) )
         {
-            LOG_ERR( "Could not load image '", createInfo.filename, "'" );
+            LOG_ERR( "Could not load image '", createInfo.name, "'" );
             return CONVERT_ERROR;
         }
+        image.ReadToCpu();
 
         std::ofstream out( m_outputContentFile, std::ios::binary );
         if ( !image.Serialize( out ) )
         {
-            LOG_ERR( "Could not save image '", createInfo.filename, "' to fastfile" );
+            LOG_ERR( "Could not save image '", createInfo.name, "' to fastfile" );
+            out.close();
             std::filesystem::remove( m_outputContentFile );
             return CONVERT_ERROR;
         }
     }
 
     return CONVERT_SUCCESS;
+}
+
+std::string ImageConverter::GetName() const
+{
+    return createInfo.name;
 }

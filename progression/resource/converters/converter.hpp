@@ -33,10 +33,8 @@ public:
 
     virtual bool WriteToFastFile( std::ofstream& out ) const;
 
-    AssetStatus GetStatus() const
-    {
-        return m_status;
-    }
+    virtual std::string GetName() const;
+    AssetStatus GetStatus() const;
 
 protected:
     std::string m_outputContentFile;

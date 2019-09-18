@@ -2,6 +2,7 @@
 #include "core/assert.hpp"
 #include "core/ecs.hpp"
 #include "graphics/lights.hpp"
+#include "resource/image.hpp"
 #include "resource/resource_manager.hpp"
 #include "utils/fileIO.hpp"
 #include "utils/logger.hpp"
@@ -124,6 +125,16 @@ static bool ParseAmbientColor( Scene* scene, std::istream& in )
     return !in.fail();
 }
 
+static bool ParseSkybox( Scene* scene, std::istream& in )
+{
+    std::string name;
+    fileIO::ParseLineKeyVal( in, "name", name );
+    scene->skybox = ResourceManager::Get< Image >( name );
+    PG_ASSERT( scene->skybox, ( "No skybox found with name '" + name + "'" ).c_str() );
+
+    return !in.fail();
+}
+
 namespace Progression
 {
 
@@ -198,6 +209,7 @@ Scene* Scene::Load( const std::string& filename )
         PARSE_SCENE_ELEMENT( "Entity", ParseEntity( in ) )
         PARSE_SCENE_ELEMENT( "BackgroundColor", ParseBackgroundColor( scene, in ) )
         PARSE_SCENE_ELEMENT( "AmbientColor", ParseAmbientColor( scene, in ) )
+        PARSE_SCENE_ELEMENT( "Skybox", ParseSkybox( scene, in ) )
         else
         {
             LOG_WARN( "Unrecognized scene file entry: ", line );

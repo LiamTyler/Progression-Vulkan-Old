@@ -90,3 +90,8 @@ bool MaterialConverter::WriteToFastFile( std::ofstream& out ) const
 
     return true;
 }
+
+std::string MaterialConverter::GetName() const
+{
+    return inputFile;
+}

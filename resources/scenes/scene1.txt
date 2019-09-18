@@ -12,6 +12,9 @@ filename resource.txt.ff
 BackgroundColor
 color 0 0 0
 
+Skybox
+name water
+
 Light
 name mainLight
 type directional

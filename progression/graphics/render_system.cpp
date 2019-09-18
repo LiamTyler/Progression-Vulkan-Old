@@ -273,18 +273,18 @@ namespace RenderSystem
         texDesc.width     = s_window->Width();
         texDesc.height    = s_window->Height();
         texDesc.type      = ImageType::TYPE_2D;
-        texDesc.format    = PixelFormat::R32_G32_B32_A32_Float;
+        texDesc.srcFormat = PixelFormat::R32_G32_B32_A32_FLOAT;
         
         s_gbuffer.positionTex = Gfx::Texture::Create( texDesc, nullptr );
         s_gbuffer.normalTex   = Gfx::Texture::Create( texDesc, nullptr );
-        texDesc.format = PixelFormat::R8_G8_B8_Uint; // TODO: should this be sRGB?
+        texDesc.srcFormat     = PixelFormat::R8_G8_B8_UINT; // TODO: should this be sRGB?
         s_gbuffer.diffuseTex  = Gfx::Texture::Create( texDesc, nullptr );
-        texDesc.format = PixelFormat::R16_G16_B16_A16_Float;
+        texDesc.srcFormat     = PixelFormat::R16_G16_B16_A16_FLOAT;
         s_gbuffer.specularTex = Gfx::Texture::Create( texDesc, nullptr );
-        texDesc.format = PixelFormat::R16_G16_B16_Float;
+        texDesc.srcFormat     = PixelFormat::R16_G16_B16_FLOAT;
         s_gbuffer.emissiveTex = Gfx::Texture::Create( texDesc, nullptr );
-        texDesc.format = PixelFormat::DEPTH32_Float;
-        s_gbuffer.depthRbo  = Gfx::Texture::Create( texDesc, nullptr );
+        texDesc.srcFormat     = PixelFormat::DEPTH32_FLOAT;
+        s_gbuffer.depthRbo    = Gfx::Texture::Create( texDesc, nullptr );
 
         gBufferRenderPassDesc.colorAttachmentDescriptors[0].texture = &s_gbuffer.positionTex;
         gBufferRenderPassDesc.colorAttachmentDescriptors[1].texture = &s_gbuffer.normalTex;
@@ -298,7 +298,7 @@ namespace RenderSystem
         // postprocess render pass
         RenderPassDescriptor postProcessRenderPassDesc;
 
-        texDesc.format = PixelFormat::R16_G16_B16_A16_Float;
+        texDesc.srcFormat = PixelFormat::R16_G16_B16_A16_FLOAT;
         s_postProcessBuffer.hdrColorTex = Gfx::Texture::Create( texDesc, nullptr );
         postProcessRenderPassDesc.colorAttachmentDescriptors[0].texture = &s_postProcessBuffer.hdrColorTex;
         postProcessRenderPassDesc.colorAttachmentDescriptors[0].loadAction = LoadAction::CLEAR;
@@ -379,7 +379,7 @@ namespace RenderSystem
         backgroundPipelineDesc.numVertexDescriptors = 1;
         backgroundPipelineDesc.vertexDescriptors    = &quadVertexDesc[0];
         backgroundPipelineDesc.windingOrder         = WindingOrder::COUNTER_CLOCKWISE;
-        backgroundPipelineDesc.cullFace             = CullFace::BACK;
+        backgroundPipelineDesc.cullFace             = CullFace::NONE;
 
         backgroundPipelineDesc.colorAttachmentInfos[0].blendingEnabled = false;
 
@@ -756,22 +756,26 @@ namespace RenderSystem
         s_backgroundPipeline.Bind();
         //graphicsApi::toggleDepthWrite( false );
 
-        // if (scene->skybox) {
-        //     glm::mat4 P = scene->getCamera()->GetP();
-        //     glm::mat4 RV = glm::mat4(glm::mat3(scene->getCamera()->GetV()));
-        //     shader.setUniform("MVP", P * RV);
-        //     shader.setUniform("skybox", true);
-        //     graphicsApi::bindVao(cubeVao);
-        //     graphicsApi::bindCubemap(scene->skybox->getGPUHandle(),
-        // shader.getUniform("cubeMap"),
-        //     0); glDrawArrays(GL_TRIANGLES, 0, 36);
-        // } else {
+        if ( scene->skybox )
+        {
+            glm::mat4 P = scene->camera.GetP();
+            glm::mat4 RV = glm::mat4( glm::mat3( scene->camera.GetV() ) );
+            shader.SetUniform( "MVP", P * RV );
+            shader.SetUniform( "skybox", true);
+            shader.BindTexture( *scene->skybox->GetTexture(), "cubeMap", 0 );
+            // graphicsApi::bindVao(cubeVao);
+            // graphicsApi::bindCubemap(scene->skybox->getGPUHandle(), shader.getUniform("cubeMap"), 0);
+            Gfx::BindVertexBuffer( s_cubeVertexBuffer, 0, 0, 12 );
+            DrawNonIndexedPrimitives( PrimitiveType::TRIANGLES, 0, 36 );
+        }
+        else
+        {
             shader.SetUniform( "MVP", glm::mat4( 1 ) );
             shader.SetUniform( "skybox", false );
             shader.SetUniform( "color", scene->backgroundColor );
             Gfx::BindVertexBuffer( s_quadVertexBuffer, 0, 0, 12 );
             DrawNonIndexedPrimitives( PrimitiveType::TRIANGLES, 0, 6 );
-        //}
+        }
 
         //graphicsApi::toggleDepthWrite( true );
     }

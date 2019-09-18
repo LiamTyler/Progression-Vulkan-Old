@@ -14,7 +14,6 @@
 namespace Progression
 {
 
-
 int NumComponentsInPixelFromat( const Gfx::PixelFormat& format )
 {
     int components[] =
@@ -43,8 +42,8 @@ int NumComponentsInPixelFromat( const Gfx::PixelFormat& format )
         1, // DEPTH32_Float
     };
 
-    PG_ASSERT( static_cast< int >( format )   < static_cast< int >( Gfx::PixelFormat::NUM_PIXEL_FORMATS ) );
-    static_assert( ARRAY_COUNT( components ) == static_cast< int >( Gfx::PixelFormat::NUM_PIXEL_FORMATS ) );
+    // PG_ASSERT( static_cast< int >( format )   < static_cast< int >( Gfx::PixelFormat::NUM_PIXEL_FORMATS ) );
+    // static_assert( ARRAY_COUNT( components ) == static_cast< int >( Gfx::PixelFormat::NUM_PIXEL_FORMATS ) );
 
     return components[static_cast< int >( format )];
 }
@@ -87,53 +86,93 @@ bool Image::Load( ResourceCreateInfo* createInfo )
     PG_ASSERT( createInfo );
     ImageCreateInfo* info = static_cast< ImageCreateInfo* >( createInfo );
     name                  = info->name;
+    m_flags               = info->flags;
 
-    std::string ext = std::filesystem::path( info->filename ).extension();
-    if ( ext == ".jpg" || ext == ".png" || ext == ".tga" || ext == ".bmp" )
+    int numImages = static_cast< int >( info->filenames.size() );
+    PG_ASSERT( numImages == 1 || numImages == 6 );
+    std::vector< Gfx::ImageDescriptor > imageDescs( numImages );
+    std::vector< unsigned char* > imageData( numImages );
+
+    for ( int i = 0; i < numImages; ++i )
     {
-        stbi_set_flip_vertically_on_load( info->flags & IMAGE_FLIP_VERTICALLY );
-        int width, height, numComponents;
-        unsigned char* pixels = stbi_load( info->filename.c_str(), &width, &height, &numComponents, 0 );
-
-        if ( !pixels )
+        std::string file = info->filenames[i];
+        std::string ext = std::filesystem::path( file ).extension().string();
+        if ( ext == ".jpg" || ext == ".png" || ext == ".tga" || ext == ".bmp" )
         {
-            LOG_ERR( "Failed to load image '", info->filename, "'" );
+            stbi_set_flip_vertically_on_load( info->flags & IMAGE_FLIP_VERTICALLY );
+            int width, height, numComponents;
+            unsigned char* pixels = stbi_load( file.c_str(), &width, &height, &numComponents, 0 );
+
+            if ( !pixels )
+            {
+                LOG_ERR( "Failed to load image '", file, "'" );
+                return false;
+            }
+
+            imageData[i]              = pixels;
+            imageDescs[i].width       = width;
+            imageDescs[i].height      = height;
+            imageDescs[i].depth       = 1;
+            imageDescs[i].arrayLayers = 1;
+            imageDescs[i].mipLevels   = 1;
+            imageDescs[i].type        = Gfx::ImageType::TYPE_2D;
+            
+            // TODO: how to detect sRGB?
+            Gfx::PixelFormat componentsToFormat[] =
+            {
+                Gfx::PixelFormat::R8_UINT,
+                Gfx::PixelFormat::R8_G8_UINT,
+                Gfx::PixelFormat::R8_G8_B8_UINT,
+                Gfx::PixelFormat::R8_G8_B8_A8_UINT,
+            };
+            imageDescs[i].srcFormat = componentsToFormat[numComponents - 1];
+            imageDescs[i].dstFormat = info->dstFormat;
+            LOG( "Image: ", name, ", numComponents: ", numComponents );
+        }
+        else
+        {
+            LOG_ERR( "Image filetype '", ext, "' is not supported" );
             return false;
         }
+    }
 
-        m_pixels                        = pixels;
-        m_texture.m_desc.width          = width;
-        m_texture.m_desc.height         = height;
-        m_texture.m_desc.depth          = 1;
-        m_texture.m_desc.arrayLayers    = 1;
-        m_texture.m_desc.mipLevels      = 1;
-        m_texture.m_desc.type           = Gfx::ImageType::TYPE_2D;
-        
-        // TODO: how to detect sRGB?
-        Gfx::PixelFormat componentsToFormat[] =
+    for ( int i = 1; i < numImages; ++i )
+    {
+        if ( imageDescs[0].width     != imageDescs[i].width ||
+             imageDescs[0].height    != imageDescs[i].height ||
+             imageDescs[0].srcFormat != imageDescs[i].srcFormat )
         {
-            Gfx::PixelFormat::R8_Uint,
-            Gfx::PixelFormat::R8_G8_Uint,
-            Gfx::PixelFormat::R8_G8_B8_Uint,
-            Gfx::PixelFormat::R8_G8_B8_A8_Uint,
-        };
-        m_texture.m_desc.format = componentsToFormat[numComponents - 1];
-
-        if ( m_flags & IMAGE_CREATE_TEXTURE_ON_LOAD )
-        {
-            m_texture = Gfx::Texture::Create( m_texture.m_desc, m_pixels );
+            LOG_ERR( "Skybox images must have the same dimensions and format" );
+            return false;
         }
+    }
 
-        if ( m_flags & IMAGE_FREE_CPU_COPY_ON_LOAD )
-        {
-            free( m_pixels );
-            m_pixels = nullptr;
-        }
+    m_texture.m_desc = imageDescs[0];
+    if ( numImages == 1 )
+    {
+        m_pixels = imageData[0];
     }
     else
     {
-        LOG_ERR( "Image filetype '", ext, "' is not supported" );
-        return false;
+        m_texture.m_desc.type        = Gfx::ImageType::TYPE_CUBEMAP;
+        m_texture.m_desc.arrayLayers = 6;
+        size_t imSize = imageDescs[0].width * imageDescs[0].height * Gfx::SizeOfPixelFromat( imageDescs[0].srcFormat );
+        m_pixels = static_cast< unsigned char* >( malloc( 6 * imSize ) );
+        for ( int i = 0; i < numImages; ++i )
+        {
+            memcpy( m_pixels + i * imSize, imageData[i], imSize );
+        }
+    }
+
+    if ( m_flags & IMAGE_CREATE_TEXTURE_ON_LOAD )
+    {
+        m_texture = Gfx::Texture::Create( m_texture.m_desc, m_pixels );
+    }
+
+    if ( m_flags & IMAGE_FREE_CPU_COPY_ON_LOAD )
+    {
+        free( m_pixels );
+        m_pixels = nullptr;
     }
 
     return true;
@@ -153,15 +192,16 @@ bool Image::Serialize( std::ofstream& out ) const
     // serialize::Write( out, name );
     // serialize::Write( out, m_flags );
     serialize::Write( out, m_texture.m_desc.type );
-    serialize::Write( out, m_texture.m_desc.format );
+    serialize::Write( out, m_texture.m_desc.srcFormat );
+    serialize::Write( out, m_texture.m_desc.dstFormat );
     serialize::Write( out, m_texture.m_desc.mipLevels );
     serialize::Write( out, m_texture.m_desc.arrayLayers  );
     serialize::Write( out, m_texture.m_desc.width );
     serialize::Write( out, m_texture.m_desc.height );
     serialize::Write( out, m_texture.m_desc.depth );
     size_t totalSize = GetTotalImageBytes();
-    serialize::Write( out, totalSize ); 
-    serialize::Write( out, (char*) m_pixels, GetTotalImageBytes() ); 
+    serialize::Write( out, totalSize );
+    serialize::Write( out, (char*) m_pixels, GetTotalImageBytes() );
 
     return !out.fail();
 }
@@ -182,7 +222,8 @@ bool Image::Deserialize( char*& buffer )
         sampler = nullptr;
     }
     serialize::Read( buffer, m_texture.m_desc.type );
-    serialize::Read( buffer, m_texture.m_desc.format );
+    serialize::Read( buffer, m_texture.m_desc.srcFormat );
+    serialize::Read( buffer, m_texture.m_desc.dstFormat );
     serialize::Read( buffer, m_texture.m_desc.mipLevels );
     serialize::Read( buffer, m_texture.m_desc.arrayLayers  );
     serialize::Read( buffer, m_texture.m_desc.width );
@@ -215,7 +256,7 @@ bool Image::Deserialize( char*& buffer )
 
 bool Image::Save( const std::string& fname, bool flipVertically ) const
 {
-    std::string ext = std::filesystem::path( fname ).extension();
+    std::string ext = std::filesystem::path( fname ).extension().string();
     if ( ext == ".jpg" || ext == ".png" || ext == ".tga" || ext == ".bmp" )
     {
         if ( m_texture.m_desc.type != Gfx::ImageType::TYPE_2D )
@@ -233,7 +274,7 @@ bool Image::Save( const std::string& fname, bool flipVertically ) const
             return false;
         }
 
-        int numComponents = NumComponentsInPixelFromat( m_texture.m_desc.format );
+        int numComponents = NumComponentsInPixelFromat( m_texture.m_desc.dstFormat );
 
         int ret;
         switch ( fname[i + 1] )
@@ -270,6 +311,31 @@ bool Image::Save( const std::string& fname, bool flipVertically ) const
     return true;
 }
 
+void Image::UploadToGpu()
+{
+    m_texture = Gfx::Texture::Create( m_texture.m_desc, m_pixels );
+}
+
+void Image::ReadToCpu()
+{
+    FreeCpuCopy();
+    m_pixels = m_texture.GetPixelData();
+    m_texture.m_desc.srcFormat = m_texture.m_desc.dstFormat;
+}
+
+void Image::FreeGpuCopy()
+{
+    m_texture.Free();
+}
+
+void Image::FreeCpuCopy()
+{
+    if ( m_pixels )
+    {
+        free( m_pixels );
+    }
+}
+
 Gfx::Texture* Image::GetTexture()
 {
     return &m_texture;
@@ -285,9 +351,14 @@ Gfx::ImageType Image::GetType() const
     return m_texture.m_desc.type;
 }
 
-Gfx::PixelFormat Image::GetPixelFormat() const
+Gfx::PixelFormat Image::GetSrcPixelFormat() const
 {
-    return m_texture.m_desc.format;
+    return m_texture.m_desc.srcFormat;
+}
+
+Gfx::PixelFormat Image::GetDstPixelFormat() const
+{
+    return m_texture.m_desc.dstFormat;
 }
 
 uint8_t Image::GetMipLevels() const
@@ -322,17 +393,12 @@ unsigned char* Image::GetPixels() const
 
 size_t Image::GetTotalImageBytes() const
 {
-    PG_ASSERT( m_texture.m_desc.mipLevels > 0 );
-    int pixelSize = SizeOfPixelFromat( m_texture.m_desc.format );
+    PG_ASSERT( m_texture.m_desc.mipLevels == 1, "havent added mipmapping yet" );
+    int pixelSize = SizeOfPixelFromat( m_texture.m_desc.dstFormat );
     uint32_t w    = m_texture.m_desc.width;
-    uint32_t h    = m_texture.m_desc.width;
-    size_t size   = 0;
-    for ( uint8_t i = 0; i < m_texture.m_desc.mipLevels; ++i )
-    {
-        size += m_texture.m_desc.arrayLayers * m_texture.m_desc.depth * w * h * pixelSize;
-        w >>= 1;
-        h >>= 1;
-    }
+    uint32_t h    = m_texture.m_desc.height;
+    uint32_t d    = m_texture.m_desc.depth;
+    size_t size   = w * h * d * m_texture.m_desc.arrayLayers * pixelSize;
 
     return size;
 }

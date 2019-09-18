@@ -1,4 +1,5 @@
 #include "core/feature_defines.hpp"
+#include "core/time.hpp"
 #include "graphics/graphics_api.hpp"
 #include "lz4/lz4.h"
 #include "memory_map/MemoryMapped.h"
@@ -42,33 +43,34 @@ bool ParseShaderCreateInfoFromFile( std::istream& in, ShaderCreateInfo& info )
     return true;
 }
 
-/*
-static std::unordered_map< std::string, Gfx::PixelFormat > internalFormatMap = {
-    { "R8_Uint",                Gfx::PixelFormat::R8_Uint },
-    { "R16_Float",              Gfx::PixelFormat::R16_Float },
-    { "R32_Float",              Gfx::PixelFormat::R32_Float },
-    { "R8_G8_Uint",             Gfx::PixelFormat::R8_G8_Uint },
-    { "R16_G16_Float",          Gfx::PixelFormat::R16_G16_Float },
-    { "R32_G32_Float",          Gfx::PixelFormat::R32_G32_Float },
-    { "R8_G8_B8_Uint",          Gfx::PixelFormat::R8_G8_B8_Uint },
-    { "R16_G16_B16_Float",      Gfx::PixelFormat::R16_G16_B16_Float },
-    { "R32_G32_B32_Float",      Gfx::PixelFormat::R32_G32_B32_Float },
-    { "R8_G8_B8_A8_Uint",       Gfx::PixelFormat::R8_G8_B8_A8_Uint },
-    { "R16_G16_B16_A16_Float",  Gfx::PixelFormat::R16_G16_B16_A16_Float },
-    { "R32_G32_B32_A32_Float",  Gfx::PixelFormat::R32_G32_B32_A32_Float },
-    { "R8_G8_B8_Uint_sRGB",     Gfx::PixelFormat::R8_G8_B8_Uint_sRGB },
-    { "R8_G8_B8_A8_Uint_sRGB",  Gfx::PixelFormat::R8_G8_B8_A8_Uint_sRGB },
-    { "R11_G11_B10_Float",      Gfx::PixelFormat::R11_G11_B10_Float },
-    { "DEPTH32_Float",          Gfx::PixelFormat::DEPTH32_Float },
+static std::unordered_map< std::string, Gfx::PixelFormat > pixelFormatMap = {
+    { "R8_UINT",                Gfx::PixelFormat::R8_UINT },
+    { "R16_FLOAT",              Gfx::PixelFormat::R16_FLOAT },
+    { "R32_FLOAT",              Gfx::PixelFormat::R32_FLOAT },
+    { "R8_G8_UINT",             Gfx::PixelFormat::R8_G8_UINT },
+    { "R16_G16_FLOAT",          Gfx::PixelFormat::R16_G16_FLOAT },
+    { "R32_G32_FLOAT",          Gfx::PixelFormat::R32_G32_FLOAT },
+    { "R8_G8_B8_UINT",          Gfx::PixelFormat::R8_G8_B8_UINT },
+    { "R16_G16_B16_FLOAT",      Gfx::PixelFormat::R16_G16_B16_FLOAT },
+    { "R32_G32_B32_FLOAT",      Gfx::PixelFormat::R32_G32_B32_FLOAT },
+    { "R8_G8_B8_A8_UINT",       Gfx::PixelFormat::R8_G8_B8_A8_UINT },
+    { "R16_G16_B16_A16_FLOAT",  Gfx::PixelFormat::R16_G16_B16_A16_FLOAT },
+    { "R32_G32_B32_A32_FLOAT",  Gfx::PixelFormat::R32_G32_B32_A32_FLOAT },
+    { "R8_G8_B8_UINT_SRGB",     Gfx::PixelFormat::R8_G8_B8_UINT_SRGB },
+    { "R8_G8_B8_A8_UINT_SRGB",  Gfx::PixelFormat::R8_G8_B8_A8_UINT_SRGB },
+    { "R11_G11_B10_FLOAT",      Gfx::PixelFormat::R11_G11_B10_FLOAT },
+    { "DEPTH32_FLOAT",          Gfx::PixelFormat::DEPTH32_FLOAT },
 };
-*/
 
 bool ParseImageCreateInfoFromFile( std::istream& in, ImageCreateInfo& info )
 {
     fileIO::ParseLineKeyVal( in, "name",     info.name );
-    fileIO::ParseLineKeyVal( in, "filename", info.filename );
-    info.filename = PG_RESOURCE_DIR + info.filename;
-    info.flags    = static_cast< ImageFlags >( 0 );
+    fileIO::ParseLineKeyVal( in, "filenames", info.filenames );
+    for ( auto& fname : info.filenames )
+    {
+        fname = PG_RESOURCE_DIR + fname;
+    }
+    PG_ASSERT( fileIO::ParseLineKeyMap( in, "dstFormat", pixelFormatMap, info.dstFormat ), "Check pixel format for spelling mistake" );
     fileIO::ParseLineKeyValOptional( in, "sampler", info.sampler );
 
     bool tmp;
@@ -247,6 +249,8 @@ ConverterStatus FastfileConverter::Convert()
         return CONVERT_SUCCESS;
     }
 
+    auto fastFileStartTime = Time::GetTimePoint();
+
     std::ofstream out( m_outputContentFile, std::ios::binary );
 
     if ( !out )
@@ -263,12 +267,22 @@ ConverterStatus FastfileConverter::Convert()
         serialize::Write( out, numResource ); \
         for ( auto& converter : converterList ) \
         { \
-            if ( converter.Convert() != CONVERT_SUCCESS ) \
-            { \
-                LOG_ERR( "Error while converting " #resource ); \
-                return CONVERT_ERROR; \
+            if ( converter.GetStatus() == ASSET_UP_TO_DATE ) { \
+                converter.WriteToFastFile( out ); \
             } \
-            converter.WriteToFastFile( out ); \
+            else \
+            { \
+                auto time = Time::GetTimePoint(); \
+                LOG( "\nConverting ", #resource, " '", converter.GetName(), "'" ); \
+                if ( converter.Convert() != CONVERT_SUCCESS ) \
+                { \
+                    LOG_ERR( "Error while converting " #resource ); \
+                    return CONVERT_ERROR; \
+                } \
+                PG_MAYBE_UNUSED( time ); \
+                LOG( "Convert finished in: ", Time::GetDuration( time ) / 1000, " seconds" ); \
+                converter.WriteToFastFile( out ); \
+            } \
         } \
     }
 
@@ -322,6 +336,9 @@ ConverterStatus FastfileConverter::Convert()
 
     out.close();
 #endif // #if USING( LZ4_COMPRESSED_FASTFILES )
+
+    PG_MAYBE_UNUSED( fastFileStartTime );
+    LOG( "\nFastfile built in: ", Time::GetDuration( fastFileStartTime ) / 1000, " seconds" );
 
     return CONVERT_SUCCESS;
 }
