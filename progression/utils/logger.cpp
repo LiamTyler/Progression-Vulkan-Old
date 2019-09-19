@@ -4,8 +4,8 @@
 Logger g_Logger;
 
 PrintModifier::PrintModifier( Color c, Emphasis e ) :
-    color(c),
-    emphasis(e)
+    color( c ),
+    emphasis( e )
 {
 }
 
@@ -22,8 +22,10 @@ void Logger::Init( const std::string& filename, bool useColors )
 #if !USING( SHIP_BUILD )
     m_useColors = useColors;
 
-    if (filename == "")
+    if ( filename == "" )
+    {
         return;
+    }
 
     m_outputFile.open( filename );
     if ( !m_outputFile )

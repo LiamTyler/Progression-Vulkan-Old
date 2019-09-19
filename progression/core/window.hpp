@@ -1,7 +1,7 @@
 #pragma once
 
 #include "utils/noncopyable.hpp"
-#define GLFW_INCLUDE_VULKAN
+#define GLFW_INCLUDE_NONE
 #include "GLFW/glfw3.h"
 #include <string>
 
@@ -26,7 +26,6 @@ public:
 
     void Init( const struct WindowCreateInfo& createInfo );
     void Shutdown();
-    void SwapWindow();
     void StartFrame();
     void EndFrame();
 
@@ -35,8 +34,6 @@ public:
     int Height() const { return m_height; }
     void SetRelativeMouse( bool b );
     void SetTitle( const std::string& title );
-    void BindContext();
-    void UnbindContext();
 
 protected:
     GLFWwindow* m_window = nullptr;

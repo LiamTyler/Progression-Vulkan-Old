@@ -8,6 +8,7 @@
 #include <array>
 #include <unordered_map>
 // #include "graphics/pg_to_opengl_types.hpp"
+#include "graphics/vulkan.hpp"
 
 using namespace Progression;
 using namespace Gfx;
@@ -16,6 +17,7 @@ static std::unordered_map< std::string, Gfx::Sampler > s_samplers;
 
 namespace Progression
 {
+
 namespace RenderSystem
 {
 
@@ -58,8 +60,15 @@ namespace RenderSystem
 
     bool Init()
     {
+        if ( !VulkanInit() )
+        {
+            LOG_ERR( "Could not initialize vulkan" );
+            return false;
+        }
+
         InitSamplers();
         s_window = GetMainWindow();
+
 
         return true;
     }
@@ -70,6 +79,8 @@ namespace RenderSystem
         {
             sampler = {};
         }
+
+        VulkanShutdown();
     }
 
     void Render( Scene* scene )

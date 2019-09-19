@@ -76,7 +76,7 @@ public:
     }
 
     template < typename... Args >
-    void Write( Severity sev, Args... args )
+    void Write( Severity sev, Args&&... args )
     {
         std::string severity;
         PrintModifier mod;
@@ -97,7 +97,7 @@ public:
         }
 
         m_lock.lock();
-        if ( m_outputFile )
+        if ( m_outputFile.is_open() )
         {
             PrintArgs( m_outputFile, severity, args... );
             m_outputFile << std::endl;
@@ -112,7 +112,7 @@ public:
             }
             else
             {
-                PrintArgs( std::cout, severity, args... );
+                PrintArgs( std::cout, severity, std::forward< Args >( args )... );
                 std::cout << std::endl;
             }
         }

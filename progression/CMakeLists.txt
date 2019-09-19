@@ -11,9 +11,10 @@ set(
     GRAPHICS
     graphics/graphics_api.cpp
     graphics/render_system.cpp
+    graphics/vulkan.cpp
 
     graphics/graphics_api.hpp
-    #graphics/pg_to_opengl_types.hpp
+    graphics/vulkan.hpp
     graphics/lights.hpp
     graphics/render_system.hpp
 )
