@@ -96,4 +96,9 @@ VkShaderModule Shader::GetNativeHandle() const
     return m_shaderModule;
 }
 
+Shader::operator bool() const
+{
+    return m_loaded;
+}
+
 } // namespace Progression

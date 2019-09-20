@@ -1,13 +1,17 @@
 #include "core/assert.hpp"
 #include "graphics/graphics_api.hpp"
 // #include "graphics/pg_to_opengl_types.hpp"
+#include "graphics/vulkan.hpp"
 #include "utils/logger.hpp"
+#include <set>
 #include <vector>
 
 namespace Progression
 {
 namespace Gfx
 {
+
+    Device g_device;
 
     Buffer::~Buffer()
     {
@@ -678,15 +682,88 @@ namespace Gfx
         */
     }
 
-    /*void Blit( const RenderPass& src, const RenderPass& dst, int width, int height,
-               const RenderTargetBuffers& mask, FilterMode filter )
+    Device::~Device()
     {
-        glBindFramebuffer( GL_READ_FRAMEBUFFER, src.GetNativeHandle() );
-        glBindFramebuffer( GL_DRAW_FRAMEBUFFER, dst.GetNativeHandle() );
-        auto nativeMask   = PGToOpenGLBitFieldMask( mask );
-        auto nativeFilter = PGToOpenGLFilterMode( filter );
-        glBlitFramebuffer( 0, 0, width, height, 0, 0, width, height, nativeMask, nativeFilter );
-    }*/
+        Free();
+    }
+
+    Device::Device( Device&& device )
+    {
+        *this = std::move( device );
+    }
+
+    Device& Device::operator=( Device&& device )
+    {
+        m_handle        = device.m_handle;
+        device.m_handle = VK_NULL_HANDLE;
+
+        return *this;
+    }
+
+    Device Device::CreateDefault()
+    {
+        Device device;
+        const auto& indices                     = GetPhysicalDeviceInfo()->indices;
+        VkPhysicalDeviceFeatures deviceFeatures = {};
+        std::set< uint32_t> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
+
+        float queuePriority = 1.0f;
+        std::vector< VkDeviceQueueCreateInfo > queueCreateInfos;
+        for ( uint32_t queueFamily : uniqueQueueFamilies )
+        {
+            VkDeviceQueueCreateInfo queueCreateInfo = {};
+            queueCreateInfo.sType                   = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            queueCreateInfo.queueFamilyIndex        = queueFamily;
+            queueCreateInfo.queueCount              = 1;
+            queueCreateInfo.pQueuePriorities        = &queuePriority;
+            queueCreateInfos.push_back( queueCreateInfo );
+        }
+
+        VkDeviceCreateInfo createInfo      = {};
+        createInfo.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        createInfo.queueCreateInfoCount    = static_cast< uint32_t >( queueCreateInfos.size() );
+        createInfo.pQueueCreateInfos       = queueCreateInfos.data();
+        createInfo.pEnabledFeatures        = &deviceFeatures;
+        createInfo.enabledExtensionCount   = static_cast< uint32_t >( VK_DEVICE_EXTENSIONS.size() );
+        createInfo.ppEnabledExtensionNames = VK_DEVICE_EXTENSIONS.data();
+
+        // Specify device specific validation layers (ignored after v1.1.123)
+    #if !USING( SHIP_BUILD )
+        createInfo.enabledLayerCount   = static_cast< uint32_t >( VK_VALIDATION_LAYERS.size() );
+        createInfo.ppEnabledLayerNames = VK_VALIDATION_LAYERS.data();
+    #else // #if !USING( SHIP_BUILD )
+        createInfo.enabledLayerCount   = 0;
+    #endif // #else // #if !USING( SHIP_BUILD )
+
+        if ( vkCreateDevice( GetPhysicalDeviceInfo()->device, &createInfo, nullptr, &device.m_handle ) != VK_SUCCESS )
+        {
+            return {};
+        }
+
+        vkGetDeviceQueue( device.m_handle, indices.graphicsFamily, 0, &device.m_graphicsQueue );
+        vkGetDeviceQueue( device.m_handle, indices.presentFamily,  0, &device.m_presentQueue );
+
+        return device;
+    }
+
+    void Device::Free()
+    {
+        if ( m_handle != VK_NULL_HANDLE )
+        {
+            vkDestroyDevice( m_handle, nullptr );
+            m_handle = VK_NULL_HANDLE;
+        }
+    }
+
+    VkDevice Device::GetNativeHandle() const
+    {
+        return m_handle;
+    }
+
+    Device::operator bool() const
+    {
+        return m_handle != VK_NULL_HANDLE;
+    }
 
 } // namespace Gfx
 } // namespace Progression

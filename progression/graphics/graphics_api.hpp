@@ -4,6 +4,7 @@
 #include "core/math.hpp"
 #include "utils/noncopyable.hpp"
 #include <array>
+#include <vulkan/vulkan.hpp>
 
 namespace Progression
 {
@@ -519,6 +520,29 @@ namespace Gfx
 
     //void Blit( const RenderPass& src, const RenderPass& dst, int width, int height,
      //          const RenderTargetBuffers& mask, FilterMode filter );
+
+    class Device : public NonCopyable
+    {
+    public:
+        Device() = default;
+        ~Device();
+        Device( Device&& device );
+        Device& operator=( Device&& device );
+
+        void Free();
+
+        static Device CreateDefault();
+
+        VkDevice GetNativeHandle() const;
+        operator bool() const;
+
+    private:
+        VkDevice m_handle        = VK_NULL_HANDLE;
+        VkQueue  m_graphicsQueue = VK_NULL_HANDLE;
+        VkQueue  m_presentQueue  = VK_NULL_HANDLE;
+    };
+
+    extern Device g_device;
 
 } // namespace Gfx
 } // namespace Progression

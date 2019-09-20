@@ -4,12 +4,11 @@ set(PROGRESSION_INCLUDE_DIRS
     ${PROGRESSION_DIR}/ext/getopt
     ${PROGRESSION_DIR}/ext/glfw/include
     ${PROGRESSION_DIR}/progression
-    ${PROGRESSION_DIR}/progression/src
 )
 
 if (MSVC)
     set(PROGRESSION_INCLUDE_DIRS
-        C:/VulkanSDK/1.1.101.0/Include
+        C:/VulkanSDK/1.1.121.0/Include
         ${PROGRESSION_INCLUDE_DIRS}
     )
 endif()
@@ -32,11 +31,11 @@ set(PROGRESSION_LIBS
 if (MSVC)
     set(PROGRESSION_LIB_DIR
         ${PROGRESSION_DIR}/build/lib
-        C:/VulkanSDK/1.1.101.0/Lib
+        C:/VulkanSDK/1.1.121.0/Lib
     )
     set(PROGRESSION_LIBS
         ${PROGRESSION_LIBS}
-        Vulkan::Vulkan
+        vulkan-1
     )
 else()
     find_package(Vulkan REQUIRED)

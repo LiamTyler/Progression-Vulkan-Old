@@ -2,6 +2,7 @@
 #include "core/platform_defines.hpp"
 #include <vulkan/vulkan.hpp>
 #include "core/window.hpp"
+#include "graphics/graphics_api.hpp"
 #include "utils/logger.hpp"
 #include <iostream>
 #include <set>
@@ -12,32 +13,6 @@ namespace Progression
 {
 namespace Gfx
 {
-
-// the standard layer enables a bunch of useful diagnostic layers
-const std::vector<const char*> VALIDATION_LAYERS = {
-    "VK_LAYER_LUNARG_standard_validation"
-};
-
-const std::vector<const char*> DEVICE_EXTENSIONS = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME
-};
-
-struct QueueFamilyIndices {
-    uint32_t graphicsFamily = ~0u;
-    uint32_t presentFamily  = ~0u;
-
-    bool IsComplete() const
-    {
-        return graphicsFamily != ~0u && presentFamily != ~0u;
-    }
-};
-
-struct PhysicalDeviceInfo {
-    VkPhysicalDevice device;
-    std::string name;
-    int score;
-    QueueFamilyIndices indices;
-};
 
 static VkInstance s_instance;
 static VkDebugUtilsMessengerEXT s_debugMessenger;
@@ -51,6 +26,10 @@ static VkExtent2D s_swapChainExtent;
 static std::vector< VkImage > s_swapChainImages;
 static std::vector< VkImageView > s_swapChainImageViews;
 
+PhysicalDeviceInfo* GetPhysicalDeviceInfo()
+{
+    return &s_physicalDeviceInfo;
+}
 
 static std::vector< std::string > FindMissingValidationLayers( const std::vector< const char* >& layers )
 {
@@ -209,7 +188,7 @@ static bool CheckPhysicalDeviceExtensionSupport( VkPhysicalDevice device )
     std::vector< VkExtensionProperties > availableExtensions( extensionCount );
     vkEnumerateDeviceExtensionProperties( device, nullptr, &extensionCount, availableExtensions.data() );
 
-    std::set< std::string > requiredExtensions( DEVICE_EXTENSIONS.begin(), DEVICE_EXTENSIONS.end() );
+    std::set< std::string > requiredExtensions( VK_DEVICE_EXTENSIONS.begin(), VK_DEVICE_EXTENSIONS.end() );
 
     for ( const auto& extension : availableExtensions )
     {
@@ -393,8 +372,8 @@ static bool CreateInstance()
 
     // Specify global validation layers
 #if !USING( SHIP_BUILD )
-    createInfo.enabledLayerCount   = static_cast< uint32_t >( VALIDATION_LAYERS.size() );
-    createInfo.ppEnabledLayerNames = VALIDATION_LAYERS.data();
+    createInfo.enabledLayerCount   = static_cast< uint32_t >( VK_VALIDATION_LAYERS.size() );
+    createInfo.ppEnabledLayerNames = VK_VALIDATION_LAYERS.data();
 #else // #if !USING( SHIP_BUILD )
     createInfo.enabledLayerCount   = 0;
 #endif // #else // #if !USING( SHIP_BUILD )
@@ -406,7 +385,7 @@ static bool CreateInstance()
     }
     else if ( ret == VK_ERROR_LAYER_NOT_PRESENT )
     {
-        auto missingLayers = FindMissingValidationLayers( VALIDATION_LAYERS );
+        auto missingLayers = FindMissingValidationLayers( VK_VALIDATION_LAYERS );
         LOG_ERR( "Could not find the following validation layers: " );
         for ( const auto& layer : missingLayers )
         {
@@ -506,13 +485,13 @@ static bool CreateLogicalDevice()
     createInfo.queueCreateInfoCount     = static_cast< uint32_t >( queueCreateInfos.size() );
     createInfo.pQueueCreateInfos        = queueCreateInfos.data();
     createInfo.pEnabledFeatures         = &deviceFeatures;
-    createInfo.enabledExtensionCount    = static_cast< uint32_t >( DEVICE_EXTENSIONS.size() );
-    createInfo.ppEnabledExtensionNames  = DEVICE_EXTENSIONS.data();
+    createInfo.enabledExtensionCount    = static_cast< uint32_t >( VK_DEVICE_EXTENSIONS.size() );
+    createInfo.ppEnabledExtensionNames  = VK_DEVICE_EXTENSIONS.data();
 
     // Specify device specific validation layers (ignored after v1.1.123)
 #if !USING( SHIP_BUILD )
-    createInfo.enabledLayerCount   = static_cast< uint32_t >( VALIDATION_LAYERS.size() );
-    createInfo.ppEnabledLayerNames = VALIDATION_LAYERS.data();
+    createInfo.enabledLayerCount   = static_cast< uint32_t >( VK_VALIDATION_LAYERS.size() );
+    createInfo.ppEnabledLayerNames = VK_VALIDATION_LAYERS.data();
 #else // #if !USING( SHIP_BUILD )
     createInfo.enabledLayerCount   = 0;
 #endif // #else // #if !USING( SHIP_BUILD )
@@ -576,14 +555,14 @@ static bool CreateSwapChain()
     // only applies if you have to create a new swap chain (like on window resizing)
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if ( vkCreateSwapchainKHR( s_device, &createInfo, nullptr, &s_swapChain ) != VK_SUCCESS )
+    if ( vkCreateSwapchainKHR( g_device.GetNativeHandle(), &createInfo, nullptr, &s_swapChain ) != VK_SUCCESS )
     {
         return false;
     }
 
-    vkGetSwapchainImagesKHR( s_device, s_swapChain, &imageCount, nullptr );
+    vkGetSwapchainImagesKHR( g_device.GetNativeHandle(), s_swapChain, &imageCount, nullptr );
     s_swapChainImages.resize( imageCount );
-    vkGetSwapchainImagesKHR( s_device, s_swapChain, &imageCount, s_swapChainImages.data() );
+    vkGetSwapchainImagesKHR( g_device.GetNativeHandle(), s_swapChain, &imageCount, s_swapChainImages.data() );
 
     s_swapChainImageFormat = surfaceFormat.format;
     s_swapChainExtent      = extent;
@@ -614,7 +593,7 @@ static bool CreateImageViews()
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount     = 1;
 
-        if ( vkCreateImageView( s_device, &createInfo, nullptr, &s_swapChainImageViews[i] ) != VK_SUCCESS )
+        if ( vkCreateImageView( g_device.GetNativeHandle(), &createInfo, nullptr, &s_swapChainImageViews[i] ) != VK_SUCCESS )
         {
             return false;
         }
@@ -661,7 +640,8 @@ bool VulkanInit()
         LOG( "Using Vulkan Version: ", major, ".", minor, ".", patch );
     }
 
-    if ( !CreateLogicalDevice() )
+    g_device = Device::CreateDefault();
+    if ( !g_device )
     {
         LOG_ERR( "Could not create logical device" );
         return false;
@@ -686,10 +666,10 @@ void VulkanShutdown()
 {
     for ( size_t i = 0; i < s_swapChainImageViews.size(); ++i )
     {
-        vkDestroyImageView( s_device, s_swapChainImageViews[i], nullptr );
+        vkDestroyImageView( g_device.GetNativeHandle(), s_swapChainImageViews[i], nullptr );
     }
-    vkDestroySwapchainKHR( s_device, s_swapChain, nullptr);
-    vkDestroyDevice( s_device, nullptr );
+    vkDestroySwapchainKHR( g_device.GetNativeHandle(), s_swapChain, nullptr);
+    g_device.Free();
     DestroyDebugUtilsMessengerEXT();
     vkDestroySurfaceKHR( s_instance, s_surface, nullptr );
     vkDestroyInstance( s_instance, nullptr );

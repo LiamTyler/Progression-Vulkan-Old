@@ -24,9 +24,9 @@ set(CMAKE_CONFIGURATION_TYPES "Debug;Release;Ship")
 
 if (UNIX AND NOT APPLE)
     set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Werror -Wextra -Wno-implicit-fallthrough -Wshadow -Wno-unused-variable -Wno-unused-function")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CPP_VERSION} -g")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CPP_VERSION} -O2")
-    set(CMAKE_CXX_FLAGS_SHIP "${CMAKE_CXX_FLAGS_SHIP} ${CPP_VERSION} -O3")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+    set(CMAKE_CXX_FLAGS_SHIP "${CMAKE_CXX_FLAGS_SHIP} -O3") # look up Ofast
 elseif(MSVC)
     set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} /WX")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Od")
@@ -80,6 +80,10 @@ set(GLFW_BUILD_TESTS     OFF CACHE BOOL " " FORCE)
 set(GLFW_BUILD_DOCS      OFF CACHE BOOL " " FORCE)
 
 add_subdirectory(ext/glfw)
+
+#set(SHADERC_ENABLE_TESTS      OFF CACHE BOOL " " FORCE)
+#set(SHADERC_SKIP_INSTALL      OFF CACHE BOOL " " FORCE)
+#add_subdirectory(ext/shaderc)
 add_subdirectory(ext/meshoptimizer)
 add_subdirectory(ext/lz4)
 
