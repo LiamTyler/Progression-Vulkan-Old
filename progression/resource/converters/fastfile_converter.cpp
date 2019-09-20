@@ -19,26 +19,26 @@ using namespace Progression;
 bool ParseShaderCreateInfoFromFile( std::istream& in, ShaderCreateInfo& info )
 {
     fileIO::ParseLineKeyVal( in, "name", info.name );
-    fileIO::ParseLineKeyValOptional( in, "vertex", info.vertex );
-    fileIO::ParseLineKeyValOptional( in, "geometry", info.geometry );
-    fileIO::ParseLineKeyValOptional( in, "fragment", info.fragment );
-    fileIO::ParseLineKeyValOptional( in, "compute", info.compute );
-    if ( !info.vertex.empty() )
-    {
-        info.vertex = PG_RESOURCE_DIR + info.vertex;
-    }
-    if ( !info.geometry.empty() )
-    {
-        info.geometry = PG_RESOURCE_DIR + info.geometry;
-    }
-    if ( !info.fragment.empty() )
-    {
-        info.fragment = PG_RESOURCE_DIR + info.fragment;
-    }
-    if ( !info.compute.empty() )
-    {
-        info.compute = PG_RESOURCE_DIR + info.compute;
-    }
+    // fileIO::ParseLineKeyValOptional( in, "vertex", info.vertex );
+    // fileIO::ParseLineKeyValOptional( in, "geometry", info.geometry );
+    // fileIO::ParseLineKeyValOptional( in, "fragment", info.fragment );
+    // fileIO::ParseLineKeyValOptional( in, "compute", info.compute );
+    // if ( !info.vertex.empty() )
+    // {
+    //     info.vertex = PG_RESOURCE_DIR + info.vertex;
+    // }
+    // if ( !info.geometry.empty() )
+    // {
+    //     info.geometry = PG_RESOURCE_DIR + info.geometry;
+    // }
+    // if ( !info.fragment.empty() )
+    // {
+    //     info.fragment = PG_RESOURCE_DIR + info.fragment;
+    // }
+    // if ( !info.compute.empty() )
+    // {
+    //     info.compute = PG_RESOURCE_DIR + info.compute;
+    // }
 
     return true;
 }

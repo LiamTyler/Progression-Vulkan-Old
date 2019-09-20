@@ -11,19 +11,21 @@ using namespace Progression;
 static std::string GetContentFastFileName( struct ShaderCreateInfo& createInfo )
 {
     namespace fs = std::filesystem;
+    PG_UNUSED( createInfo );
 
-    std::string vertPath = createInfo.vertex.empty()   ? "" : fs::absolute( createInfo.vertex ).string();
-    std::string geomPath = createInfo.geometry.empty() ? "" : fs::absolute( createInfo.geometry ).string();
-    std::string fragPath = createInfo.fragment.empty() ? "" : fs::absolute( createInfo.fragment ).string();
-    std::string compPath = createInfo.compute.empty()  ? "" : fs::absolute( createInfo.compute ).string();
+    // std::string vertPath = createInfo.vertex.empty()   ? "" : fs::absolute( createInfo.vertex ).string();
+    // std::string geomPath = createInfo.geometry.empty() ? "" : fs::absolute( createInfo.geometry ).string();
+    // std::string fragPath = createInfo.fragment.empty() ? "" : fs::absolute( createInfo.fragment ).string();
+    // std::string compPath = createInfo.compute.empty()  ? "" : fs::absolute( createInfo.compute ).string();
 
-    size_t hash = std::hash< std::string >{}( vertPath + geomPath + fragPath + compPath );
-    vertPath    = fs::path( createInfo.vertex ).filename().string();
-    geomPath    = fs::path( createInfo.geometry ).filename().string();
-    fragPath    = fs::path( createInfo.fragment ).filename().string();
-    compPath    = fs::path( createInfo.compute ).filename().string();
-    return PG_RESOURCE_DIR "cache/shaders/" + vertPath + "_" + geomPath + "_" + fragPath + "_" +
-           compPath + "_" + std::to_string( hash ) + ".ffi";
+    // size_t hash = std::hash< std::string >{}( vertPath + geomPath + fragPath + compPath );
+    // vertPath    = fs::path( createInfo.vertex ).filename().string();
+    // geomPath    = fs::path( createInfo.geometry ).filename().string();
+    // fragPath    = fs::path( createInfo.fragment ).filename().string();
+    // compPath    = fs::path( createInfo.compute ).filename().string();
+    // return PG_RESOURCE_DIR "cache/shaders/" + vertPath + "_" + geomPath + "_" + fragPath + "_" +
+    //        compPath + "_" + std::to_string( hash ) + ".ffi";
+    return "";
 }
 
 static std::string GetSettingsFastFileName( const ShaderCreateInfo& createInfo )
@@ -56,26 +58,26 @@ AssetStatus ShaderConverter::CheckDependencies()
     Timestamp outTimestamp( m_outputContentFile );
 
     Timestamp newestFileTime;
-    if ( !createInfo.vertex.empty() )
-    {
-        Timestamp t( createInfo.vertex );
-        newestFileTime = std::max( t, newestFileTime );
-    }
-    if ( !createInfo.geometry.empty() )
-    {
-        Timestamp t( createInfo.geometry );
-        newestFileTime = std::max( t, newestFileTime );
-    }
-    if ( !createInfo.fragment.empty() )
-    {
-        Timestamp t( createInfo.fragment );
-        newestFileTime = std::max( t, newestFileTime );
-    }
-    if ( !createInfo.compute.empty() )
-    {
-        Timestamp t( createInfo.compute );
-        newestFileTime = std::max( t, newestFileTime );
-    }
+    // if ( !createInfo.vertex.empty() )
+    // {
+    //     Timestamp t( createInfo.vertex );
+    //     newestFileTime = std::max( t, newestFileTime );
+    // }
+    // if ( !createInfo.geometry.empty() )
+    // {
+    //     Timestamp t( createInfo.geometry );
+    //     newestFileTime = std::max( t, newestFileTime );
+    // }
+    // if ( !createInfo.fragment.empty() )
+    // {
+    //     Timestamp t( createInfo.fragment );
+    //     newestFileTime = std::max( t, newestFileTime );
+    // }
+    // if ( !createInfo.compute.empty() )
+    // {
+    //     Timestamp t( createInfo.compute );
+    //     newestFileTime = std::max( t, newestFileTime );
+    // }
 
     m_contentNeedsConverting = outTimestamp <= newestFileTime;
     if ( m_contentNeedsConverting )
