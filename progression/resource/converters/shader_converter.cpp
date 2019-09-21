@@ -11,21 +11,11 @@ using namespace Progression;
 static std::string GetContentFastFileName( struct ShaderCreateInfo& createInfo )
 {
     namespace fs = std::filesystem;
-    PG_UNUSED( createInfo );
 
-    // std::string vertPath = createInfo.vertex.empty()   ? "" : fs::absolute( createInfo.vertex ).string();
-    // std::string geomPath = createInfo.geometry.empty() ? "" : fs::absolute( createInfo.geometry ).string();
-    // std::string fragPath = createInfo.fragment.empty() ? "" : fs::absolute( createInfo.fragment ).string();
-    // std::string compPath = createInfo.compute.empty()  ? "" : fs::absolute( createInfo.compute ).string();
+    std::string fname = fs::path( createInfo.filename ).filename();
 
-    // size_t hash = std::hash< std::string >{}( vertPath + geomPath + fragPath + compPath );
-    // vertPath    = fs::path( createInfo.vertex ).filename().string();
-    // geomPath    = fs::path( createInfo.geometry ).filename().string();
-    // fragPath    = fs::path( createInfo.fragment ).filename().string();
-    // compPath    = fs::path( createInfo.compute ).filename().string();
-    // return PG_RESOURCE_DIR "cache/shaders/" + vertPath + "_" + geomPath + "_" + fragPath + "_" +
-    //        compPath + "_" + std::to_string( hash ) + ".ffi";
-    return "";
+    size_t hash = std::hash< std::string >{}( createInfo.filename );
+    return PG_RESOURCE_DIR "cache/shaders/" + fname + "_" + std::to_string( hash ) + ".ffi";
 }
 
 static std::string GetSettingsFastFileName( const ShaderCreateInfo& createInfo )
@@ -56,38 +46,13 @@ AssetStatus ShaderConverter::CheckDependencies()
     }
 
     Timestamp outTimestamp( m_outputContentFile );
+    Timestamp inputTimestamp( createInfo.filename );
+    m_contentNeedsConverting = outTimestamp <= inputTimestamp;
 
-    Timestamp newestFileTime;
-    // if ( !createInfo.vertex.empty() )
-    // {
-    //     Timestamp t( createInfo.vertex );
-    //     newestFileTime = std::max( t, newestFileTime );
-    // }
-    // if ( !createInfo.geometry.empty() )
-    // {
-    //     Timestamp t( createInfo.geometry );
-    //     newestFileTime = std::max( t, newestFileTime );
-    // }
-    // if ( !createInfo.fragment.empty() )
-    // {
-    //     Timestamp t( createInfo.fragment );
-    //     newestFileTime = std::max( t, newestFileTime );
-    // }
-    // if ( !createInfo.compute.empty() )
-    // {
-    //     Timestamp t( createInfo.compute );
-    //     newestFileTime = std::max( t, newestFileTime );
-    // }
-
-    m_contentNeedsConverting = outTimestamp <= newestFileTime;
     if ( m_contentNeedsConverting )
     {
         LOG( "OUT OF DATE: Shader file'", createInfo.name, "' has newer timestamp than saved FFI" );
         m_contentNeedsConverting = true;
-    }
-    else
-    {
-        m_contentNeedsConverting = false;
     }
 
     if ( m_settingsNeedsConverting || m_contentNeedsConverting )
@@ -118,21 +83,18 @@ ConverterStatus ShaderConverter::Convert()
 
     if ( m_contentNeedsConverting )
     {
-        Progression::Shader shader;
-
-        if ( !shader.Load( &createInfo ) )
+#if USING( LINUX_PROGRAM )
+        // std::string outputFile = createInfo.filename + ".spv";
+        std::string command = "glslc " + createInfo.filename + " -o " + m_outputContentFile;
+        LOG( "Compiling shader '", createInfo.name );
+        LOG( command );
+        int ret = system( command.c_str() );
+        if ( ret != 0 )
         {
-            LOG_ERR( "Could not load the shader '", createInfo.name, "'" );
+            LOG_ERR( "Error while compiling shader: ", createInfo.name );
             return CONVERT_ERROR;
         }
-
-        std::ofstream out( m_outputContentFile, std::ios::binary );
-
-        if ( !shader.Serialize( out ) )
-        {
-            LOG_ERR( "Could not save shader to fastfile" );
-            return CONVERT_ERROR;
-        }
+#endif // #if USING( LINUX_PROGRAM )
     }
 
     return CONVERT_SUCCESS;

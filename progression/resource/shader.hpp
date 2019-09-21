@@ -35,7 +35,6 @@ public:
 
 protected:
     VkShaderModule m_shaderModule;
-    bool m_loaded;
 };
 
 } // namespace Progression

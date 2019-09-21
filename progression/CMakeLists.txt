@@ -100,6 +100,9 @@ set(
     ../ext/stb_image/stb_image.h
     ../ext/stb_image/stb_image_write.h
     ../ext/tinyobjloader/tiny_obj_loader.h
+
+    ../ext/SPIRV-Reflect/spirv_reflect.h
+    ../ext/SPIRV-Reflect/spirv_reflect.c
 )
 
 set(

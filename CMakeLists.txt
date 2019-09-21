@@ -81,9 +81,6 @@ set(GLFW_BUILD_DOCS      OFF CACHE BOOL " " FORCE)
 
 add_subdirectory(ext/glfw)
 
-#set(SHADERC_ENABLE_TESTS      OFF CACHE BOOL " " FORCE)
-#set(SHADERC_SKIP_INSTALL      OFF CACHE BOOL " " FORCE)
-#add_subdirectory(ext/shaderc)
 add_subdirectory(ext/meshoptimizer)
 add_subdirectory(ext/lz4)
 

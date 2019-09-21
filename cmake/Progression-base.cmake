@@ -39,9 +39,14 @@ if (MSVC)
     )
 else()
     find_package(Vulkan REQUIRED)
+    #message("Vulkan_LIBRARY: ${Vulkan_LIBRARY}")
     set(PROGRESSION_LIBS
         ${PROGRESSION_LIBS}
         Vulkan::Vulkan
+        shaderc_combined
+    )
+    set(PROGRESSION_LIB_DIR
+        /home/liam/vulkan/x86_64/lib
     )
 endif()
 
