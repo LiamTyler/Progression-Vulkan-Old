@@ -1,19 +1,4 @@
-set(PROGRESSION_INCLUDE_DIRS
-    ${PROGRESSION_DIR}
-    ${PROGRESSION_DIR}/ext
-    ${PROGRESSION_DIR}/ext/getopt
-    ${PROGRESSION_DIR}/ext/glfw/include
-    ${PROGRESSION_DIR}/progression
-)
-
-if (MSVC)
-    set(PROGRESSION_INCLUDE_DIRS
-        C:/VulkanSDK/1.1.121.0/Include
-        ${PROGRESSION_INCLUDE_DIRS}
-    )
-endif()
-
-set(SYSTEM_LIBS "")
+    set(SYSTEM_LIBS "")
 if (UNIX AND NOT APPLE)
     set(SYSTEM_LIBS
         dl
@@ -21,34 +6,30 @@ if (UNIX AND NOT APPLE)
     )
 endif()
 
+find_package(Vulkan REQUIRED)
+
 set(PROGRESSION_LIBS
     glfw
     meshoptimizer
     lz4
+    Vulkan::Vulkan
+    shaderc_combined.lib
     ${SYSTEM_LIBS}
 )
 
-if (MSVC)
-    set(PROGRESSION_LIB_DIR
-        ${PROGRESSION_DIR}/build/lib
-        C:/VulkanSDK/1.1.121.0/Lib
-    )
-    set(PROGRESSION_LIBS
-        ${PROGRESSION_LIBS}
-        vulkan-1
-    )
-else()
-    find_package(Vulkan REQUIRED)
-    #message("Vulkan_LIBRARY: ${Vulkan_LIBRARY}")
-    set(PROGRESSION_LIBS
-        ${PROGRESSION_LIBS}
-        Vulkan::Vulkan
-        shaderc_combined
-    )
-    set(PROGRESSION_LIB_DIR
-        /home/liam/vulkan/x86_64/lib
-    )
-endif()
+set(PROGRESSION_INCLUDE_DIRS
+    ${PROGRESSION_DIR}
+    ${PROGRESSION_DIR}/ext
+    ${PROGRESSION_DIR}/ext/getopt
+    ${PROGRESSION_DIR}/ext/glfw/include
+    ${PROGRESSION_DIR}/progression
+    ${Vulkan_INCLUDE_DIRS}
+)
+
+get_filename_component(VULKAN_LIB_DIR ${Vulkan_LIBRARY} DIRECTORY)
+set(PROGRESSION_LIB_DIR
+    ${VULKAN_LIB_DIR}
+)
 
 if (NOT PROGRESSION_BIN_DIR)
     set(PROGRESSION_BIN_DIR ${PROGRESSION_DIR}/build/bin)
@@ -65,7 +46,15 @@ set_property(
     $<$<CONFIG:Debug>:CMAKE_DEFINE_DEBUG_BUILD>
     $<$<CONFIG:Release>:CMAKE_DEFINE_RELEASE_BUILD>
     $<$<CONFIG:Ship>:CMAKE_DEFINE_SHIP_BUILD>
+    #_ITERATOR_DEBUG_LEVEL=0
 )
+
+#if(MSVC)
+#    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} /WX /MT")
+#    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Od /MT")
+#    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Ox /MT")
+#    set(CMAKE_CXX_FLAGS_SHIP "${CMAKE_CXX_FLAGS_SHIP} /O2 /MT")
+#endif()
 
 link_directories(${PROGRESSION_LIB_DIR})
 include_directories(${PROGRESSION_INCLUDE_DIRS})

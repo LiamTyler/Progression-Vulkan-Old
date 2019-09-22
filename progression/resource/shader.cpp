@@ -62,7 +62,7 @@ namespace Progression
         MemoryMapped memMappedFile;
         if ( !memMappedFile.open( createInfo->filename, MemoryMapped::WholeFile, MemoryMapped::SequentialScan ) )
         {
-            LOG_ERR( "Could not open fastfile:", createInfo->filename );
+            LOG_ERR( "Could not open shader file: '", createInfo->filename, "'" );
             return false;
         }
 
@@ -80,31 +80,7 @@ namespace Progression
             return false;
         }
 
-        SpvReflectShaderModule module;
-        SpvReflectResult result = spvReflectCreateShaderModule( spirvSize, spirvData, &module);
-        assert(result == SPV_REFLECT_RESULT_SUCCESS);
-
-        // Enumerate and extract shader's input variables
-        uint32_t var_count = 0;
-        result = spvReflectEnumerateInputVariables(&module, &var_count, NULL);
-        assert(result == SPV_REFLECT_RESULT_SUCCESS);
-        SpvReflectInterfaceVariable* input_vars =
-        (SpvReflectInterfaceVariable*)malloc(var_count * sizeof(SpvReflectInterfaceVariable));
-        result = spvReflectEnumerateInputVariables(&module, &var_count, &input_vars);
-        assert(result == SPV_REFLECT_RESULT_SUCCESS);
-        PG_UNUSED( result );
-
-        // Output variables, descriptor bindings, descriptor sets, and push constants
-        // can be enumerated and extracted using a similar mechanism.
-        LOG( "inputs = ", var_count );
-        for ( uint32_t i = 0; i < var_count; ++i )
-        {
-            LOG( "input_var[", i, "]= ", input_vars[i].name );
-        }
-
-        // Destroy the reflection data when no longer required.
-        spvReflectDestroyShaderModule(&module);
-
+        reflectInfo = Reflect( spirvData, spirvSize );
 
         return true;
     }
@@ -126,8 +102,71 @@ namespace Progression
     bool Shader::Deserialize( char*& buffer )
     {
         serialize::Read( buffer, name );
+        serialize::Read( buffer, reflectInfo.entryPoint );
+        serialize::Read( buffer, reflectInfo.stage );
+        size_t spirvSize;
+        serialize::Read( buffer, spirvSize );
 
-        return false;
+        VkShaderModuleCreateInfo vkShaderInfo = {};
+        vkShaderInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        vkShaderInfo.codeSize = spirvSize;
+        vkShaderInfo.pCode    = reinterpret_cast< const uint32_t* >( buffer );
+        VkResult ret = vkCreateShaderModule( Gfx::g_device.GetNativeHandle(), &vkShaderInfo, nullptr, &m_shaderModule );
+        if ( ret != VK_SUCCESS )
+        {
+            return false;
+        }
+        buffer += spirvSize;
+
+        return true;
+    }
+
+    ShaderReflectInfo Shader::Reflect( const uint32_t* spirv, size_t spirvSizeInBytes )
+    {
+        ShaderReflectInfo info;
+
+        SpvReflectShaderModule module;
+        SpvReflectResult result = spvReflectCreateShaderModule( spirvSizeInBytes, spirv, &module );
+        PG_MAYBE_UNUSED( result );
+        PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
+
+        uint32_t var_count = 0;
+        result = spvReflectEnumerateInputVariables( &module, &var_count, NULL );
+        PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
+        SpvReflectInterfaceVariable* input_vars = static_cast< SpvReflectInterfaceVariable* >( malloc( var_count * sizeof( SpvReflectInterfaceVariable ) ) );
+        result = spvReflectEnumerateInputVariables( &module, &var_count, &input_vars );
+        PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
+
+        /*
+        LOG( "inputs = ", var_count );
+        for ( uint32_t i = 0; i < var_count; ++i )
+        {
+            LOG( "input_var[", i, "] = ", input_vars[i].name, ", loc = ", input_vars[i].location );
+        }
+
+        LOG( "Entry point = ", module.entry_point_name );
+        LOG( "Entry point count = ", module.entry_point_count );
+        LOG( "Stage = ", module.shader_stage );
+        */
+        PG_ASSERT( module.entry_point_count == 1);
+
+        info.entryPoint = module.entry_point_name;
+        info.stage      = static_cast< Gfx::ShaderStage >( module.shader_stage );
+
+        spvReflectDestroyShaderModule( &module );
+
+        return info;
+    }
+
+    VkPipelineShaderStageCreateInfo Shader::GetVkPipelineShaderStageCreateInfo() const
+    {
+        VkPipelineShaderStageCreateInfo info = {};
+        info.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        info.stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
+        info.module = m_shaderModule;
+        info.pName  = reflectInfo.entryPoint.c_str();
+
+        return info;
     }
 
     void Shader::Free()

@@ -10,8 +10,19 @@ namespace Progression
 {
 
 class Image;
+
 namespace Gfx
 {
+
+    enum class ShaderStage
+    {
+        VERTEX                  = 0x00000001,
+        TESSELLATION_CONTROL    = 0x00000002,
+        TESSELLATION_EVALUATION = 0x00000004,
+        GEOMETRY                = 0x00000008,
+        FRAGMENT                = 0x00000010,
+        COMPUTE                 = 0x00000020,
+    };
 
     enum class BlendFactor
     {
@@ -59,12 +70,30 @@ namespace Gfx
         NUM_CULL_FACE
     };
 
+    enum class PolygonMode
+    {
+        FILL  = 0,
+        LINES = 1,
+
+        NUM_POLYGON_MODES
+    };
+
+    class RasterizerInfo
+    {
+    public:
+        WindingOrder winding    = WindingOrder::COUNTER_CLOCKWISE;
+        CullFace cullFace       = CullFace::BACK;
+        PolygonMode polygonMode = PolygonMode::FILL;
+    };
+
     struct Viewport
     {
-        int x;
-        int y;
-        int width;
-        int height;
+        float x;
+        float y;
+        float width;
+        float height;
+        float minDepth;
+        float maxDepth;
     };
 
     struct Scissor
@@ -94,36 +123,70 @@ namespace Gfx
 
     enum class BufferDataType
     {
-        FLOAT16         = 0,
-        FLOAT32         = 1,
-        BYTE            = 2,
-        UNSIGNED_BYTE   = 3,
-        SHORT           = 4,
-        UNSIGNED_SHORT  = 5,
-        INT             = 6,
-        UNSIGNED_INT    = 7,
+        INVALID = 0,
+
+        UCHAR  = 1,
+        UCHAR2 = 2,
+        UCHAR3 = 3,
+        UCHAR4 = 4,
+
+        CHAR  = 5,
+        CHAR2 = 6,
+        CHAR3 = 7,
+        CHAR4 = 8,
+
+        UCHAR_NORM  = 9,
+        UCHAR2_NORM = 10,
+        UCHAR3_NORM = 11,
+        UCHAR4_NORM = 12,
+
+        CHAR_NORM  = 13,
+        CHAR2_NORM = 14,
+        CHAR3_NORM = 15,
+        CHAR4_NORM = 16,
+
+        USHORT  = 17,
+        USHORT2 = 18,
+        USHORT3 = 19,
+        USHORT4 = 20,
+
+        SHORT  = 21,
+        SHORT2 = 22,
+        SHORT3 = 23,
+        SHORT4 = 24,
+
+        USHORT_NORM  = 25,
+        USHORT2_NORM = 26,
+        USHORT3_NORM = 27,
+        USHORT4_NORM = 28,
+
+        SHORT_NORM  = 29,
+        SHORT2_NORM = 30,
+        SHORT3_NORM = 31,
+        SHORT4_NORM = 32,
+
+        HALF  = 33,
+        HALF2 = 34,
+        HALF3 = 35,
+        HALF4 = 36,
+
+        FLOAT  = 37,
+        FLOAT2 = 38,
+        FLOAT3 = 39,
+        FLOAT4 = 40,
+
+        UINT  = 41,
+        UINT2 = 42,
+        UINT3 = 43,
+        UINT4 = 44,
+
+        INT  = 45,
+        INT2 = 46,
+        INT3 = 47,
+        INT4 = 48,
 
         NUM_BUFFER_DATA_TYPE
     };
-
-    constexpr int SizeOfBufferDataType( BufferDataType type )
-    {
-        int size[] =
-        {
-            2, // FLOAT16
-            4, // FLOAT32
-            1, // BYTE
-            1, // UNSIGNED_BYTE
-            2, // SHORT
-            2, // UNSIGNED_SHORT
-            4, // INT
-            4, // UNSIGNED_INT
-        };
-
-        static_assert( ARRAY_COUNT( size ) == static_cast< int >( BufferDataType::NUM_BUFFER_DATA_TYPE ) );
-
-        return size[static_cast< int >( type )];
-    }
 
     enum class IndexType
     {
@@ -175,12 +238,25 @@ namespace Gfx
     //void BindVertexBuffer( const Buffer& buffer, uint32_t index, int offset, uint32_t stride );
     //void BindIndexBuffer( const Buffer& buffer );
 
+    enum class VertexInputRate
+    {
+        PER_VERTEX   = 0,
+        PER_INSTANCE = 1
+    };
+
+    class VertexBindingDescriptor
+    {
+    public:
+        uint32_t binding;
+        uint32_t stride;
+        VertexInputRate inputRate;
+    };
+
     class VertexAttributeDescriptor
     {
     public:
-        uint8_t binding;
-        uint8_t location;
-        uint8_t count;
+        uint32_t location;
+        uint32_t binding;
         BufferDataType format;
         uint32_t offset;
     };
@@ -189,16 +265,17 @@ namespace Gfx
     {
     public:
         VertexInputDescriptor() = default;
-        ~VertexInputDescriptor();
-        VertexInputDescriptor( VertexInputDescriptor&& desc );
-        VertexInputDescriptor& operator=( VertexInputDescriptor&& desc );
+        // ~VertexInputDescriptor();
+        //VertexInputDescriptor( VertexInputDescriptor&& desc );
+        //VertexInputDescriptor& operator=( VertexInputDescriptor&& desc );
 
-        void Bind() const;
-        static VertexInputDescriptor Create( uint8_t count, VertexAttributeDescriptor* attribDescriptors );
-        // operator bool() const;
+        static VertexInputDescriptor Create( uint8_t numBinding, VertexBindingDescriptor* bindingDesc,
+                                             uint8_t numAttrib, VertexAttributeDescriptor* attribDesc );
 
     private:
-       //  GLuint m_vao = ~0u;
+        VkPipelineVertexInputStateCreateInfo m_createInfo;
+        std::vector< VkVertexInputBindingDescription > m_vkBindingDescs;
+        std::vector< VkVertexInputAttributeDescription > m_vkAttribDescs;
     };
 
     enum class PrimitiveType
@@ -493,13 +570,14 @@ namespace Gfx
     class PipelineDescriptor
     {
     public:
-        VertexAttributeDescriptor* vertexDescriptors;
-        uint32_t numVertexDescriptors   = 0;
+        VertexInputDescriptor* vertexDescriptors;
+        Viewport viewport               = { -1 };
+        Scissor scissor                 = { -1 };
         std::array< PipelineColorAttachmentInfo, 8 > colorAttachmentInfos;
         uint8_t numColorAttachments     = 0;
         PipelineDepthInfo depthInfo     = {};
-        WindingOrder windingOrder       = WindingOrder::COUNTER_CLOCKWISE;
-        CullFace cullFace               = CullFace::BACK;
+        RasterizerInfo rasterizerInfo   = {};
+        PrimitiveType primitiveType     = PrimitiveType::TRIANGLES;
     };
 
     class Pipeline : public NonCopyable

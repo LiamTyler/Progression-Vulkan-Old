@@ -1,6 +1,6 @@
 #include "core/assert.hpp"
 #include "graphics/graphics_api.hpp"
-// #include "graphics/pg_to_opengl_types.hpp"
+#include "graphics/pg_to_vulkan_types.hpp"
 #include "graphics/vulkan.hpp"
 #include "utils/logger.hpp"
 #include <set>
@@ -122,62 +122,36 @@ namespace Gfx
         glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, buffer.GetNativeHandle() );
     }*/
 
-    VertexInputDescriptor::~VertexInputDescriptor()
-    {
-        /*if ( m_vao != static_cast< GLuint >( -1 ) )
-        {
-            glDeleteVertexArrays( 1, &m_vao );
-        }*/
-    }
-
-    VertexInputDescriptor::VertexInputDescriptor( VertexInputDescriptor&& desc )
-    {
-        *this = std::move( desc );
-    }
-
-    VertexInputDescriptor& VertexInputDescriptor::operator=( VertexInputDescriptor&& desc )
-    {
-        //m_vao      = std::move( desc.m_vao );
-        //desc.m_vao = static_cast< GLuint >( -1 );
-        PG_UNUSED( desc );
-        PG_ASSERT( false );
-        return *this;
-    }
-
-    void VertexInputDescriptor::Bind() const
-    {
-        PG_ASSERT( false );
-        //glBindVertexArray( m_vao );
-    }
-
-    VertexInputDescriptor VertexInputDescriptor::Create( uint8_t count, VertexAttributeDescriptor* attribDescriptors )
+    VertexInputDescriptor VertexInputDescriptor::Create( uint8_t numBinding, VertexBindingDescriptor* bindingDesc,
+                                                         uint8_t numAttrib, VertexAttributeDescriptor* attribDesc )
     {
         VertexInputDescriptor desc;
-        PG_UNUSED( count );
-        PG_UNUSED( attribDescriptors );
-        PG_ASSERT( false );
-        /*
-        glGenVertexArrays( 1, &desc.m_vao );
-        glBindVertexArray( desc.m_vao );
-
-        for ( uint8_t i = 0; i < count; ++i )
+        desc.m_vkBindingDescs.resize( numBinding );
+        desc.m_vkAttribDescs.resize( numAttrib );
+        for ( uint8_t i = 0; i < numBinding; ++i )
         {
-            glVertexAttribFormat( attribDescriptors[i].location, attribDescriptors[i].count,
-                                  PGToOpenGLBufferDataType( attribDescriptors[i].format ), false,
-                                  attribDescriptors[i].offset );
-            glVertexAttribBinding( attribDescriptors[i].location, attribDescriptors[i].binding );
-            // which buffer binding point it is attached to
-            glEnableVertexAttribArray( i );
+            desc.m_vkBindingDescs[i].binding   = bindingDesc[i].binding;
+            desc.m_vkBindingDescs[i].stride    = bindingDesc[i].stride;
+            desc.m_vkBindingDescs[i].inputRate = PGToVulkanVertexInputRate( bindingDesc[i].inputRate );
         }
-        */
+
+        for ( uint8_t i = 0; i < numAttrib; ++i )
+        {
+            desc.m_vkAttribDescs[i].location = attribDesc[i].location;
+            desc.m_vkAttribDescs[i].binding  = attribDesc[i].binding;
+            desc.m_vkAttribDescs[i].format   = PGToVulkanBufferDataType( attribDesc[i].format );
+            desc.m_vkAttribDescs[i].offset   = attribDesc[i].offset;
+        }
+
+        desc.m_createInfo = {};
+        desc.m_createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        desc.m_createInfo.vertexBindingDescriptionCount   = numBinding;
+        desc.m_createInfo.pVertexBindingDescriptions      = numBinding ? desc.m_vkBindingDescs.data() : nullptr;
+        desc.m_createInfo.vertexAttributeDescriptionCount = numAttrib;
+        desc.m_createInfo.pVertexAttributeDescriptions    = numAttrib ? desc.m_vkAttribDescs.data() : nullptr;
 
         return desc;
     }
-
-    /*VertexInputDescriptor::operator bool() const
-    {
-        return m_vao != ~0u;
-    }*/
 
     /*void DrawIndexedPrimitives( PrimitiveType primType, IndexType indexType, uint32_t offset, uint32_t count )
     {
@@ -620,7 +594,6 @@ namespace Gfx
     {
         Pipeline p;
         p.m_desc = desc;
-        p.m_vertexDesc = VertexInputDescriptor::Create( desc.numVertexDescriptors, desc.vertexDescriptors );
 
         return p;
     }

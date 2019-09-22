@@ -67,9 +67,9 @@ void EngineInitialize( std::string config_name )
 
 void EngineQuit()
 {
+    ResourceManager::Shutdown(); // need to delete the gpu data before destroying the vulkan instance
     RenderSystem::Shutdown();
     ECS::shutdown();
-    ResourceManager::Shutdown();
     Input::Free();
     ShutdownWindowSystem();
     g_Logger.Shutdown();

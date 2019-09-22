@@ -14,9 +14,10 @@ set(
     graphics/vulkan.cpp
 
     graphics/graphics_api.hpp
-    graphics/vulkan.hpp
     graphics/lights.hpp
+    graphics/pg_to_vulkan_types.hpp
     graphics/render_system.hpp
+    graphics/vulkan.hpp
 )
 
 set(

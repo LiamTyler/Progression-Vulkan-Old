@@ -14,6 +14,15 @@ struct ShaderCreateInfo : public ResourceCreateInfo
     std::string filename;
 };
 
+class ShaderReflectInfo
+{
+public:
+    ShaderReflectInfo() = default;
+
+    std::string entryPoint;
+    Gfx::ShaderStage stage;
+};
+
 class Shader : public Resource
 {
 public:
@@ -28,11 +37,14 @@ public:
     bool Serialize( std::ofstream& out ) const override;
     bool Deserialize( char*& buffer ) override;
 
+    static ShaderReflectInfo Reflect( const uint32_t* spirv, size_t spirvSizeInBytes );
+    VkPipelineShaderStageCreateInfo GetVkPipelineShaderStageCreateInfo() const;
+
     void Free();
     VkShaderModule GetNativeHandle() const;
     operator bool() const;
 
-
+    ShaderReflectInfo reflectInfo;
 protected:
     VkShaderModule m_shaderModule;
 };

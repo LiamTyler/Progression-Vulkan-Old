@@ -19,18 +19,6 @@ int main( int argc, char* argv[] )
 
     PG::EngineInitialize();
 
-    Shader shader;
-    ShaderCreateInfo info;
-    info.filename = PG_RESOURCE_DIR "shaders/simple.frag.spv";
-    if ( !shader.Load( &info ) )
-    {
-        LOG_ERR( "Could not load shader" );
-        PG::EngineQuit();
-        return 1;
-    }
-
-    shader.Free();
-
     {
         Window* window = GetMainWindow();
         // window->setRelativeMouse(true);

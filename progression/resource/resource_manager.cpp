@@ -40,7 +40,7 @@ namespace ResourceManager
         MemoryMapped memMappedFile;
         if ( !memMappedFile.open( fname, MemoryMapped::WholeFile, MemoryMapped::SequentialScan ) )
         {
-            LOG_ERR( "Could not open fastfile:", fname );
+            LOG_ERR( "Could not open fastfile: '", fname, "'" );
             return false;
         }
 

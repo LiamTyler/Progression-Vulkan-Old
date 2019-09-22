@@ -20,7 +20,7 @@ bool ParseShaderCreateInfoFromFile( std::istream& in, ShaderCreateInfo& info )
 {
     fileIO::ParseLineKeyVal( in, "name", info.name );
     fileIO::ParseLineKeyValOptional( in, "filename", info.filename);
-    info.filename = PG_RESOURCE_DIR + info.filename;
+    info.filename = PG_RESOURCE_DIR "shaders/" + info.filename;
 
     return true;
 }

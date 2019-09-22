@@ -12,7 +12,7 @@ static std::string GetContentFastFileName( struct ShaderCreateInfo& createInfo )
 {
     namespace fs = std::filesystem;
 
-    std::string fname = fs::path( createInfo.filename ).filename();
+    std::string fname = fs::path( createInfo.filename ).filename().string();
 
     size_t hash = std::hash< std::string >{}( createInfo.filename );
     return PG_RESOURCE_DIR "cache/shaders/" + fname + "_" + std::to_string( hash ) + ".ffi";
@@ -83,7 +83,7 @@ ConverterStatus ShaderConverter::Convert()
 
     if ( m_contentNeedsConverting )
     {
-#if USING( LINUX_PROGRAM )
+//#if USING( LINUX_PROGRAM )
         // std::string outputFile = createInfo.filename + ".spv";
         std::string command = "glslc " + createInfo.filename + " -o " + m_outputContentFile;
         LOG( "Compiling shader '", createInfo.name );
@@ -94,7 +94,20 @@ ConverterStatus ShaderConverter::Convert()
             LOG_ERR( "Error while compiling shader: ", createInfo.name );
             return CONVERT_ERROR;
         }
-#endif // #if USING( LINUX_PROGRAM )
+//#endif // #if USING( LINUX_PROGRAM )
+
+        std::ifstream file( m_outputContentFile, std::ios::ate | std::ios::binary);
+        size_t fileSize = static_cast< size_t >( file.tellg() );
+        std::vector< char > buffer( fileSize );
+        file.seekg( 0 );
+        file.read( buffer.data(), fileSize );
+        file.close();
+
+        ShaderReflectInfo reflectInfo = Shader::Reflect( (const uint32_t* ) buffer.data(), fileSize );
+        std::ofstream out( m_outputContentFile, std::ios::binary );
+        serialize::Write( out, reflectInfo.entryPoint );
+        serialize::Write( out, reflectInfo.stage );
+        serialize::Write( out, buffer );
     }
 
     return CONVERT_SUCCESS;

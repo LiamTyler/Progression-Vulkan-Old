@@ -1,46 +1,7 @@
 Shader
-name test
-vertex test.vert
-geometry
-fragment test.frag
-compute
+name simpleVert
+filename simple.vert
 
-Image
-name cockatoo
-filenames textures/cockatoo.jpg
-dstFormat R8_G8_B8_UINT_SRGB
-sampler linear
-flipVertically true
-generateMipmaps true
-createTexture true
-freeCpuCopy true
-
-MTLFile
-filename materials/cockatoo.mtl
-
-Image
-name water 
-filenames skybox/water/right.jpg skybox/water/left.jpg skybox/water/top.jpg skybox/water/bottom.jpg skybox/water/front.jpg skybox/water/back.jpg
-dstFormat R8_G8_B8_UINT_SRGB
-sampler linear
-flipVertically false
-generateMipmaps true
-createTexture true
-freeCpuCopy true
-
-Image
-name chaletTex
-filenames textures/chalet.jpg
-dstFormat R8_G8_B8_UINT_SRGB
-sampler linear
-flipVertically true
-generateMipmaps true
-createTexture true
-freeCpuCopy true
-
-Model
-name chalet2
-filename models/chalet2.obj
-optimize true
-freeCpuCopy true
-createGpuCopy true
+Shader
+name simpleFrag
+filename simple.frag
