@@ -2,6 +2,7 @@
 #include "graphics/graphics_api.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
 #include "graphics/vulkan.hpp"
+#include "resource/shader.hpp"
 #include "utils/logger.hpp"
 #include <set>
 #include <vector>
@@ -151,6 +152,11 @@ namespace Gfx
         desc.m_createInfo.pVertexAttributeDescriptions    = numAttrib ? desc.m_vkAttribDescs.data() : nullptr;
 
         return desc;
+    }
+
+    const VkPipelineVertexInputStateCreateInfo& VertexInputDescriptor::GetNativeHandle()
+    {
+        return m_createInfo;
     }
 
     /*void DrawIndexedPrimitives( PrimitiveType primType, IndexType indexType, uint32_t offset, uint32_t count )
@@ -590,69 +596,164 @@ namespace Gfx
         return m_nativeHandle;
     }*/
 
+    /*
+        VertexInputDescriptor* vertexDescriptors;
+        Viewport viewport;
+        Scissor scissor;
+        PipelineDepthInfo depthInfo;
+        RasterizerInfo rasterizerInfo;
+        PrimitiveType primitiveType = PrimitiveType::TRIANGLES;
+        uint8_t numColorAttachments = 0;
+        std::array< PipelineColorAttachmentInfo, 8 > colorAttachmentInfos;
+    */
+
+    Pipeline::~Pipeline()
+    {
+        if ( m_pipeline != VK_NULL_HANDLE )
+        {
+            vkDestroyPipeline( g_device.GetNativeHandle(), m_pipeline, nullptr );
+            vkDestroyPipelineLayout( g_device.GetNativeHandle(), m_pipelineLayout, nullptr );
+        }
+    }
+
+    Pipeline::Pipeline( Pipeline&& pipeline )
+    {
+        *this = std::move ( pipeline );
+    }
+
+    Pipeline& Pipeline::operator=( Pipeline&& pipeline )
+    {
+        m_desc           = std::move( pipeline.m_desc );
+        m_pipeline       = std::move( pipeline.m_pipeline );
+        m_pipelineLayout = std::move( pipeline.m_pipelineLayout );
+
+        pipeline.m_pipeline       = VK_NULL_HANDLE;
+        pipeline.m_pipelineLayout = VK_NULL_HANDLE;
+
+        return *this;
+    }
+
     Pipeline Pipeline::Create( const PipelineDescriptor& desc )
     {
         Pipeline p;
         p.m_desc = desc;
+
+        std::vector< VkPipelineShaderStageCreateInfo > shaderStages( desc.numShaders );
+        for ( int i = 0; i < desc.numShaders; ++i )
+        {
+            PG_ASSERT( desc.shaders[i] );
+            shaderStages[i] = desc.shaders[i]->GetVkPipelineShaderStageCreateInfo();
+        }
+
+        VkViewport viewport;
+        viewport.x        = desc.viewport.x;
+        viewport.y        = desc.viewport.y;
+        viewport.width    = desc.viewport.width;
+        viewport.height   = desc.viewport.height;
+        viewport.minDepth = desc.viewport.minDepth;
+        viewport.maxDepth = desc.viewport.maxDepth;
+
+        VkRect2D scissor;
+        scissor.offset = { desc.scissor.x, desc.scissor.y };
+        scissor.extent = { (uint32_t) desc.scissor.width, (uint32_t) desc.scissor.height };
+
+        VkPipelineViewportStateCreateInfo viewportState = {};
+        viewportState.sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        viewportState.viewportCount = 1;
+        viewportState.pViewports    = &viewport;
+        viewportState.scissorCount  = 1;
+        viewportState.pScissors     = &scissor;
+
+        // specify topology and if primitive restart is on
+        VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
+        inputAssembly.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        inputAssembly.topology               = PGToVulkanPrimitiveType( desc.primitiveType );
+        inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+        // rasterizer does rasterization, depth testing, face culling, and scissor test 
+        VkPipelineRasterizationStateCreateInfo rasterizer = {};
+        rasterizer.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        rasterizer.depthClampEnable        = VK_FALSE;
+        rasterizer.rasterizerDiscardEnable = VK_FALSE;
+        rasterizer.polygonMode             = PGToVulkanPolygonMode( desc.rasterizerInfo.polygonMode );
+        rasterizer.lineWidth               = 1.0f; // > 1 needs the wideLines GPU feature
+        rasterizer.cullMode                = PGToVulkanCullFace( desc.rasterizerInfo.cullFace );
+        rasterizer.frontFace               = PGToVulkanWindingOrder( desc.rasterizerInfo.winding );
+        rasterizer.depthBiasEnable         = VK_FALSE;
+
+        VkPipelineMultisampleStateCreateInfo multisampling = {};
+        multisampling.sType                 = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        multisampling.sampleShadingEnable   = VK_FALSE;
+        multisampling.rasterizationSamples  = VK_SAMPLE_COUNT_1_BIT;
+
+        // no depth or stencil buffer currently
+
+        // blending for single attachment
+        VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+        colorBlendAttachment.colorWriteMask =
+            VK_COLOR_COMPONENT_R_BIT |
+            VK_COLOR_COMPONENT_G_BIT |
+            VK_COLOR_COMPONENT_B_BIT |
+            VK_COLOR_COMPONENT_A_BIT;
+        colorBlendAttachment.blendEnable = VK_FALSE;
+
+        // blending for all attachments / global settings
+        VkPipelineColorBlendStateCreateInfo colorBlending = {};
+        colorBlending.sType             = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+        colorBlending.logicOpEnable     = VK_FALSE;
+        colorBlending.logicOp           = VK_LOGIC_OP_COPY;
+        colorBlending.attachmentCount   = 1;
+        colorBlending.pAttachments      = &colorBlendAttachment;
+
+        // no dynamic state currently
+
+        // pipeline layout where you specify uniforms (none currently)
+        VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+        pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount         = 0;
+        pipelineLayoutInfo.pSetLayouts            = nullptr;
+        pipelineLayoutInfo.pushConstantRangeCount = 0;
+        pipelineLayoutInfo.pPushConstantRanges    = nullptr;
+
+        if ( vkCreatePipelineLayout( g_device.GetNativeHandle(), &pipelineLayoutInfo, nullptr, &p.m_pipelineLayout ) != VK_SUCCESS )
+        {
+            return p;
+        }
+
+        VkGraphicsPipelineCreateInfo pipelineInfo = {};
+        pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        pipelineInfo.stageCount          = shaderStages.size();
+        pipelineInfo.pStages             = shaderStages.data();
+        pipelineInfo.pVertexInputState   = &p.m_desc.vertexDescriptor.GetNativeHandle();
+        pipelineInfo.pInputAssemblyState = &inputAssembly;
+        pipelineInfo.pViewportState      = &viewportState;
+        pipelineInfo.pRasterizationState = &rasterizer;
+        pipelineInfo.pMultisampleState   = &multisampling;
+        pipelineInfo.pDepthStencilState  = nullptr;
+        pipelineInfo.pColorBlendState    = &colorBlending;
+        pipelineInfo.pDynamicState       = nullptr;
+        pipelineInfo.layout              = p.m_pipelineLayout;
+        pipelineInfo.renderPass          = renderPass;
+        pipelineInfo.subpass             = 0;
+        pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
+
+        if ( vkCreateGraphicsPipelines( g_device.GetNativeHandle(), VK_NULL_HANDLE, 1,
+                                        &pipelineInfo, nullptr, &p.m_pipeline ) != VK_SUCCESS )
+        {
+            vkDestroyPipelineLayout( g_device.GetNativeHandle(), p.m_pipelineLayout, nullptr );
+            p.m_pipeline = VK_NULL_HANDLE;
+        }
 
         return p;
     }
 
     void Pipeline::Bind() const
     {
-        /*
-        m_vertexDesc.Bind();
+    }
 
-        if ( m_desc.depthInfo.depthTestEnabled )
-        {
-            glEnable( GL_DEPTH_TEST );
-        }
-        else
-        {
-            glDisable( GL_DEPTH_TEST );
-        }
-
-        glDepthMask( m_desc.depthInfo.depthWriteEnabled );
-
-        auto nativeDepthCompareFunc = PGToOpenGLDepthCompareFunction( m_desc.depthInfo.compareFunc );
-        glDepthFunc( nativeDepthCompareFunc );
-
-        auto nativeWindingOrder = PGToOpenGLWindingOrder( m_desc.windingOrder );
-        glFrontFace( nativeWindingOrder );
-
-        if ( m_desc.cullFace == CullFace::NONE )
-        {
-            glDisable( GL_CULL_FACE );
-        }
-        else
-        {
-            glEnable( GL_CULL_FACE );
-            auto nativeFrontFace = PGToOpenGLCullFace( m_desc.cullFace );
-            glCullFace( nativeFrontFace );
-        }
-
-        for ( int i = 0; i < m_desc.numColorAttachments; ++i )
-        {
-            auto& c = m_desc.colorAttachmentInfos[i];
-            if ( c.blendingEnabled )
-            {
-                glEnablei( GL_BLEND, i );
-                auto nativeColorEq = PGToOpenGLBlendEquation( c.colorBlendEquation );
-                auto nativeAlphaEq = PGToOpenGLBlendEquation( c.alphaBlendEquation );
-                glBlendEquationSeparatei( i, nativeColorEq, nativeAlphaEq );
-
-                auto nativeSrcColor = PGToOpenGLBlendFactor( c.srcColorBlendFactor );
-                auto nativeDstColor = PGToOpenGLBlendFactor( c.dstColorBlendFactor );
-                auto nativeSrcAlpha = PGToOpenGLBlendFactor( c.srcAlphaBlendFactor );
-                auto nativeDstAlpha = PGToOpenGLBlendFactor( c.dstAlphaBlendFactor );
-                glBlendFuncSeparatei( i, nativeSrcColor, nativeDstColor, nativeSrcAlpha, nativeDstAlpha );
-            }
-            else
-            {
-                glDisablei( GL_BLEND, i );
-            }
-        }
-        */
+    Pipeline::operator bool() const
+    {
+        return m_pipeline != VK_NULL_HANDLE;
     }
 
     Device::~Device()

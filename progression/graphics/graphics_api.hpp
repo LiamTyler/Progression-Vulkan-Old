@@ -10,6 +10,7 @@ namespace Progression
 {
 
 class Image;
+class Shader;
 
 namespace Gfx
 {
@@ -54,8 +55,8 @@ namespace Gfx
 
     enum class WindingOrder
     {
-        CLOCKWISE         = 0,
-        COUNTER_CLOCKWISE = 1,
+        COUNTER_CLOCKWISE = 0,
+        CLOCKWISE         = 1,
 
         NUM_WINDING_ORDER
     };
@@ -73,7 +74,8 @@ namespace Gfx
     enum class PolygonMode
     {
         FILL  = 0,
-        LINES = 1,
+        LINE  = 1,
+        POINT = 2,
 
         NUM_POLYGON_MODES
     };
@@ -88,18 +90,18 @@ namespace Gfx
 
     struct Viewport
     {
-        float x;
-        float y;
+        float x = -1;
+        float y = -1;
         float width;
         float height;
-        float minDepth;
-        float maxDepth;
+        float minDepth = 0.0f;
+        float maxDepth = 1.0f;
     };
 
     struct Scissor
     {
-        int x;
-        int y;
+        int x = -1;
+        int y = -1;
         int width;
         int height;
     };
@@ -261,16 +263,15 @@ namespace Gfx
         uint32_t offset;
     };
 
-    class VertexInputDescriptor : public NonCopyable
+    class VertexInputDescriptor
     {
     public:
         VertexInputDescriptor() = default;
-        // ~VertexInputDescriptor();
-        //VertexInputDescriptor( VertexInputDescriptor&& desc );
-        //VertexInputDescriptor& operator=( VertexInputDescriptor&& desc );
 
         static VertexInputDescriptor Create( uint8_t numBinding, VertexBindingDescriptor* bindingDesc,
                                              uint8_t numAttrib, VertexAttributeDescriptor* attribDesc );
+
+        const VkPipelineVertexInputStateCreateInfo& GetNativeHandle();
 
     private:
         VkPipelineVertexInputStateCreateInfo m_createInfo;
@@ -570,30 +571,34 @@ namespace Gfx
     class PipelineDescriptor
     {
     public:
-        VertexInputDescriptor* vertexDescriptors;
-        Viewport viewport               = { -1 };
-        Scissor scissor                 = { -1 };
+        uint8_t numShaders = 0;
+        std::array< Shader*, 3 > shaders;
+        VertexInputDescriptor vertexDescriptor;
+        Viewport viewport;
+        Scissor scissor;
+        RasterizerInfo rasterizerInfo;
+        PrimitiveType primitiveType = PrimitiveType::TRIANGLES;
+        PipelineDepthInfo depthInfo;
+        uint8_t numColorAttachments = 0;
         std::array< PipelineColorAttachmentInfo, 8 > colorAttachmentInfos;
-        uint8_t numColorAttachments     = 0;
-        PipelineDepthInfo depthInfo     = {};
-        RasterizerInfo rasterizerInfo   = {};
-        PrimitiveType primitiveType     = PrimitiveType::TRIANGLES;
     };
 
     class Pipeline : public NonCopyable
     {
     public:
         Pipeline() = default;
-        Pipeline( Pipeline&& pipeline ) = default;
-        Pipeline& operator=( Pipeline&& pipeline ) = default;
+        ~Pipeline();
+        Pipeline( Pipeline&& pipeline );
+        Pipeline& operator=( Pipeline&& pipeline );
 
         static Pipeline Create( const PipelineDescriptor& desc );
-
         void Bind() const;
+        operator bool() const;
 
     private:
         PipelineDescriptor m_desc;
-        VertexInputDescriptor m_vertexDesc;
+        VkPipeline m_pipeline             = VK_NULL_HANDLE;
+        VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
     };
 
     //void Blit( const RenderPass& src, const RenderPass& dst, int width, int height,

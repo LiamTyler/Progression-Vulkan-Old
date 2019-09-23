@@ -20,15 +20,16 @@ static VkSurfaceKHR s_surface;
 static PhysicalDeviceInfo s_physicalDeviceInfo;
 static VkDevice s_device;
 static VkQueue s_graphicsQueue, s_presentQueue;
-static VkSwapchainKHR s_swapChain;
-static VkFormat s_swapChainImageFormat;
-static VkExtent2D s_swapChainExtent;
-static std::vector< VkImage > s_swapChainImages;
-static std::vector< VkImageView > s_swapChainImageViews;
+static SwapChain s_swapChain;
 
 PhysicalDeviceInfo* GetPhysicalDeviceInfo()
 {
     return &s_physicalDeviceInfo;
+}
+
+SwapChain* GetSwapChain()
+{
+    return &s_swapChain;
 }
 
 static std::vector< std::string > FindMissingValidationLayers( const std::vector< const char* >& layers )
@@ -313,7 +314,7 @@ static int RatePhysicalDevice( const PhysicalDeviceInfo& deviceInfo )
     bool swapChainAdequate = false;
     if ( extensionsSupported )
     {
-        SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(deviceInfo.device, s_surface );
+        SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport( deviceInfo.device, s_surface );
         swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
     }
 
@@ -555,32 +556,32 @@ static bool CreateSwapChain()
     // only applies if you have to create a new swap chain (like on window resizing)
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if ( vkCreateSwapchainKHR( g_device.GetNativeHandle(), &createInfo, nullptr, &s_swapChain ) != VK_SUCCESS )
+    if ( vkCreateSwapchainKHR( g_device.GetNativeHandle(), &createInfo, nullptr, &s_swapChain.swapChain ) != VK_SUCCESS )
     {
         return false;
     }
 
-    vkGetSwapchainImagesKHR( g_device.GetNativeHandle(), s_swapChain, &imageCount, nullptr );
-    s_swapChainImages.resize( imageCount );
-    vkGetSwapchainImagesKHR( g_device.GetNativeHandle(), s_swapChain, &imageCount, s_swapChainImages.data() );
+    vkGetSwapchainImagesKHR( g_device.GetNativeHandle(), s_swapChain.swapChain, &imageCount, nullptr );
+    s_swapChain.images.resize( imageCount );
+    vkGetSwapchainImagesKHR( g_device.GetNativeHandle(), s_swapChain.swapChain, &imageCount, s_swapChain.images.data() );
 
-    s_swapChainImageFormat = surfaceFormat.format;
-    s_swapChainExtent      = extent;
+    s_swapChain.imageFormat = surfaceFormat.format;
+    s_swapChain.extent      = extent;
     return true;
 }
 
 static bool CreateImageViews()
 {
-    s_swapChainImageViews.resize( s_swapChainImages.size() );
+    s_swapChain.imageViews.resize( s_swapChain.images.size() );
 
-    for ( size_t i = 0; i < s_swapChainImages.size(); ++i )
+    for ( size_t i = 0; i < s_swapChain.images.size(); ++i )
     {
         VkImageViewCreateInfo createInfo = {};
 
         createInfo.sType        = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        createInfo.image        = s_swapChainImages[i];
+        createInfo.image        = s_swapChain.images[i];
         createInfo.viewType     = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format       = s_swapChainImageFormat;
+        createInfo.format       = s_swapChain.imageFormat;
         createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -593,7 +594,7 @@ static bool CreateImageViews()
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount     = 1;
 
-        if ( vkCreateImageView( g_device.GetNativeHandle(), &createInfo, nullptr, &s_swapChainImageViews[i] ) != VK_SUCCESS )
+        if ( vkCreateImageView( g_device.GetNativeHandle(), &createInfo, nullptr, &s_swapChain.imageViews[i] ) != VK_SUCCESS )
         {
             return false;
         }
@@ -664,11 +665,11 @@ bool VulkanInit()
 
 void VulkanShutdown()
 {
-    for ( size_t i = 0; i < s_swapChainImageViews.size(); ++i )
+    for ( size_t i = 0; i < s_swapChain.imageViews.size(); ++i )
     {
-        vkDestroyImageView( g_device.GetNativeHandle(), s_swapChainImageViews[i], nullptr );
+        vkDestroyImageView( g_device.GetNativeHandle(), s_swapChain.imageViews[i], nullptr );
     }
-    vkDestroySwapchainKHR( g_device.GetNativeHandle(), s_swapChain, nullptr);
+    vkDestroySwapchainKHR( g_device.GetNativeHandle(), s_swapChain.swapChain, nullptr);
     g_device.Free();
     DestroyDebugUtilsMessengerEXT();
     vkDestroySurfaceKHR( s_instance, s_surface, nullptr );

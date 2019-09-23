@@ -13,7 +13,7 @@ set(PROGRESSION_LIBS
     meshoptimizer
     lz4
     Vulkan::Vulkan
-    shaderc_combined.lib
+    #shaderc_combined
     ${SYSTEM_LIBS}
 )
 

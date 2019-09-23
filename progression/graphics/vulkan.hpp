@@ -37,7 +37,17 @@ namespace Gfx
         QueueFamilyIndices indices;
     };
 
+    struct SwapChain
+    {
+        VkSwapchainKHR swapChain;
+        VkFormat imageFormat;
+        VkExtent2D extent;
+        std::vector< VkImage > images;
+        std::vector< VkImageView > imageViews;
+    };
+
     PhysicalDeviceInfo* GetPhysicalDeviceInfo();
+    SwapChain* GetSwapChain();
 
     bool VulkanInit();
 

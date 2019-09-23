@@ -6,6 +6,7 @@ a.out
 progression/core/platform_defines.hpp
 resources/sponza
 resources/cache
+*.spv
 .vscode/
 
 # Prerequisites

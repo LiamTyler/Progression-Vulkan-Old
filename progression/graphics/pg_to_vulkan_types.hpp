@@ -52,33 +52,20 @@ namespace Gfx
         return convert[static_cast< int >( eq )];
     }
 
-    /*constexpr GLenum PGToOpenGLWindingOrder( WindingOrder order )
+    constexpr VkFrontFace PGToVulkanWindingOrder( WindingOrder order )
     {
-        GLenum convert[] =
-        {
-            GL_CW,
-            GL_CCW
-        };
+        return static_cast< VkFrontFace >( order );
+    }
 
-        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( WindingOrder::NUM_WINDING_ORDER ) );
+    constexpr VkCullModeFlagBits PGToVulkanCullFace( CullFace face )
+    {
+        return static_cast< VkCullModeFlagBits >( face );
+    }
 
-        return convert[static_cast< int >( order )];
-    }*/
-
-    //constexpr GLenum PGToOpenGLCullFace( CullFace face )
-    //{
-    //    GLenum convert[] =
-    //    {
-    //        ~0u,                // NONE
-    //        GL_FRONT,           // FRONT
-    //        GL_BACK,            // BACK
-    //        GL_FRONT_AND_BACK,  // FRONT_AND_BACK
-    //    };
-
-    //    static_assert( ARRAY_COUNT( convert ) == static_cast< int >( CullFace::NUM_CULL_FACE ) );
-
-    //    return convert[static_cast< int >( face )];
-    //}
+    constexpr VkPolygonMode PGToVulkanPolygonMode( PolygonMode mode )
+    {
+        return static_cast< VkPolygonMode >( mode );
+    }
 
     
     //constexpr GLenum PGToOpenGLBufferType( BufferType type )
@@ -185,7 +172,7 @@ namespace Gfx
         return static_cast< VkVertexInputRate >( inputRate );
     }
 
-    constexpr VkPrimitiveTopology PGToOpenGLPrimitiveType( PrimitiveType topology )
+    constexpr VkPrimitiveTopology PGToVulkanPrimitiveType( PrimitiveType topology )
     {
         VkPrimitiveTopology convert[] =
         {
