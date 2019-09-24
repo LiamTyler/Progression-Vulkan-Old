@@ -355,47 +355,98 @@ namespace Gfx
         // GLuint m_nativeHandle = ~0u;
     };
 
-    enum class PixelFormat : uint8_t
+    enum class PixelFormat
     {
-        R8_UINT                 = 0,
-        R16_FLOAT               = 1,
-        R32_FLOAT               = 2,
+        INVALID                 = 0,
 
-        R8_G8_UINT              = 3,
-        R16_G16_FLOAT           = 4,
-        R32_G32_FLOAT           = 5,
+        R8_UNORM                = 1,
+        R8_SNORM                = 2,
+        R8_UINT                 = 3,
+        R8_SINT                 = 4,
+        R8_SRGB                 = 5,
 
-        R8_G8_B8_UINT           = 6,
-        R16_G16_B16_FLOAT       = 7,
-        R32_G32_B32_FLOAT       = 8,
+        R8_G8_UNORM             = 6,
+        R8_G8_SNORM             = 7,
+        R8_G8_UINT              = 8,
+        R8_G8_SINT              = 9,
+        R8_G8_SRGB              = 10,
 
-        R8_G8_B8_A8_UINT        = 9,
-        R16_G16_B16_A16_FLOAT   = 10,
-        R32_G32_B32_A32_FLOAT   = 11,
+        R8_G8_B8_UNORM          = 11,
+        R8_G8_B8_SNORM          = 12,
+        R8_G8_B8_UINT           = 13,
+        R8_G8_B8_SINT           = 14,
+        R8_G8_B8_SRGB           = 15,
 
-        R8_G8_B8_UINT_SRGB      = 12,
-        R8_G8_B8_A8_UINT_SRGB   = 13,
+        R8_G8_B8_A8_UNORM       = 16,
+        R8_G8_B8_A8_SNORM       = 17,
+        R8_G8_B8_A8_UINT        = 18,
+        R8_G8_B8_A8_SINT        = 19,
+        R8_G8_B8_A8_SRGB        = 20,
 
-        R11_G11_B10_FLOAT       = 14,
+        R16_UNORM               = 21,
+        R16_SNORM               = 22,
+        R16_UINT                = 23,
+        R16_SINT                = 24,
+        R16_FLOAT               = 25,
 
-        DEPTH32_FLOAT           = 15,
+        R16_G16_UNORM           = 26,
+        R16_G16_SNORM           = 28,
+        R16_G16_UINT            = 28,
+        R16_G16_SINT            = 29,
+        R16_G16_FLOAT           = 30,
 
-        BC1_RGB_UNORM           = 16,
-        BC1_RGB_SRGB            = 17,
-        BC1_RGBA_UNORM          = 18,
-        BC1_RGBA_SRGB           = 19,
-        BC2_UNORM               = 20,
-        BC2_SRGB                = 21,
-        BC3_UNORM               = 22,
-        BC3_SRGB                = 23,
-        BC4_UNORM               = 24,
-        BC4_SNORM               = 25,
-        BC5_UNORM               = 26,
-        BC5_SNORM               = 27,
-        BC6H_UFLOAT             = 28,
-        BC6H_SFLOAT             = 29,
-        BC7_UNORM               = 30,
-        BC7_SRGB                = 31,
+        R16_G16_B16_UNORM       = 31,
+        R16_G16_B16_SNORM       = 32,
+        R16_G16_B16_UINT        = 33,
+        R16_G16_B16_SINT        = 34,
+        R16_G16_B16_FLOAT       = 35,
+
+        R16_G16_B16_A16_UNORM   = 36,
+        R16_G16_B16_A16_SNORM   = 37,
+        R16_G16_B16_A16_UINT    = 38,
+        R16_G16_B16_A16_SINT    = 39,
+        R16_G16_B16_A16_FLOAT   = 40,
+
+        R32_UINT                = 41,
+        R32_SINT                = 42,
+        R32_FLOAT               = 43,
+
+        R32_G32_UINT            = 44,
+        R32_G32_SINT            = 45,
+        R32_G32_FLOAT           = 46,
+
+        R32_G32_B32_UINT        = 47,
+        R32_G32_B32_SINT        = 48,
+        R32_G32_B32_FLOAT       = 49,
+
+        R32_G32_B32_A32_UINT    = 50,
+        R32_G32_B32_A32_SINT    = 51,
+        R32_G32_B32_A32_FLOAT   = 52,
+
+        DEPTH_16_UNORM                  = 53,
+        DEPTH_32_FLOAT                  = 54,
+        DEPTH_16_UNORM_STENCIL_8_UINT   = 55,
+        DEPTH_24_UNORM_STENCIL_8_UINT   = 56,
+        DEPTH_32_FLOAT_STENCIL_8_UINT   = 57,
+
+        STENCIL_8_UINT          = 58,
+
+        BC1_RGB_UNORM           = 59,
+        BC1_RGB_SRGB            = 60,
+        BC1_RGBA_UNORM          = 61,
+        BC1_RGBA_SRGB           = 62,
+        BC2_UNORM               = 63,
+        BC2_SRGB                = 64,
+        BC3_UNORM               = 65,
+        BC3_SRGB                = 66,
+        BC4_UNORM               = 67,
+        BC4_SNORM               = 68,
+        BC5_UNORM               = 69,
+        BC5_SNORM               = 70,
+        BC6H_UFLOAT             = 71,
+        BC6H_SFLOAT             = 72,
+        BC7_UNORM               = 73,
+        BC7_SRGB                = 74,
 
         NUM_PIXEL_FORMATS
     };
@@ -440,6 +491,7 @@ namespace Gfx
 
         static Texture Create( const ImageDescriptor& desc, void* data );
         void Free();
+
         unsigned char* GetPixelData() const;
         ImageType GetType() const;
         PixelFormat GetPixelFormat() const;
@@ -448,12 +500,16 @@ namespace Gfx
         uint32_t GetWidth() const;
         uint32_t GetHeight() const;
         uint32_t GetDepth() const;
-        // GLuint GetNativeHandle() const;
-        // operator bool() const;
+
+        VkImage GetNativeHandle() const;
+        VkImageView GetView() const;
+
+        operator bool() const;
 
     private:
         ImageDescriptor m_desc;
-        // GLuint m_nativeHandle = ~0u;
+        VkImage m_image         = VK_NULL_HANDLE;
+        VkImageView m_imageView = VK_NULL_HANDLE;
     };
 
 
@@ -529,14 +585,14 @@ namespace Gfx
         RenderPass( RenderPass&& r );
         RenderPass& operator=( RenderPass&& r );
 
-        void Bind() const;
-
         static RenderPass Create( const RenderPassDescriptor& desc );
-        // GLuint GetNativeHandle() const;
+        void Free();
+        VkRenderPass GetNativeHandle() const;
+        operator bool() const;
 
     private:
         RenderPassDescriptor m_desc;
-        // GLuint m_nativeHandle = ~0u;
+        VkRenderPass m_handle = VK_NULL_HANDLE;
     };
 
     enum RenderTargetBuffers
@@ -576,6 +632,7 @@ namespace Gfx
         VertexInputDescriptor vertexDescriptor;
         Viewport viewport;
         Scissor scissor;
+        RenderPass* renderPass;
         RasterizerInfo rasterizerInfo;
         PrimitiveType primitiveType = PrimitiveType::TRIANGLES;
         PipelineDepthInfo depthInfo;
@@ -592,7 +649,7 @@ namespace Gfx
         Pipeline& operator=( Pipeline&& pipeline );
 
         static Pipeline Create( const PipelineDescriptor& desc );
-        void Bind() const;
+        VkPipeline GetNativeHandle() const;
         operator bool() const;
 
     private:
@@ -617,6 +674,8 @@ namespace Gfx
         static Device CreateDefault();
 
         VkDevice GetNativeHandle() const;
+        VkQueue GraphicsQueue() const;
+        VkQueue PresentQueue() const;
         operator bool() const;
 
     private:
@@ -624,8 +683,6 @@ namespace Gfx
         VkQueue  m_graphicsQueue = VK_NULL_HANDLE;
         VkQueue  m_presentQueue  = VK_NULL_HANDLE;
     };
-
-    extern Device g_device;
 
 } // namespace Gfx
 } // namespace Progression

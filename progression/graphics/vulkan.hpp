@@ -1,5 +1,6 @@
 #pragma once
 
+#include "graphics/graphics_api.hpp"
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
@@ -32,6 +33,8 @@ namespace Gfx
     struct PhysicalDeviceInfo
     {
         VkPhysicalDevice device;
+        VkPhysicalDeviceProperties deviceProperties;
+        VkPhysicalDeviceFeatures deviceFeatures;
         std::string name;
         int score;
         QueueFamilyIndices indices;
@@ -46,8 +49,23 @@ namespace Gfx
         std::vector< VkImageView > imageViews;
     };
 
-    PhysicalDeviceInfo* GetPhysicalDeviceInfo();
-    SwapChain* GetSwapChain();
+    struct RenderState
+    {
+        VkInstance instance;
+        VkDebugUtilsMessengerEXT debugMessenger;
+        VkSurfaceKHR surface;
+        PhysicalDeviceInfo physicalDeviceInfo;
+        SwapChain swapChain;
+        std::vector< VkFramebuffer > swapChainFramebuffers;
+        VkCommandPool commandPool;
+        std::vector< VkCommandBuffer > commandBuffers;
+        VkSemaphore presentComplete, renderComplete;
+
+        Device device;
+        RenderPass renderPass;
+    };
+
+    extern RenderState g_renderState;
 
     bool VulkanInit();
 

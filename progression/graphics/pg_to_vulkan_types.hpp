@@ -191,7 +191,8 @@ namespace Gfx
 
     //constexpr GLenum PGToOpenGLIndexType( IndexType indexType )
     //{
-    //    GLenum convert[] = {
+    //    GLenum convert[] =
+    //    {
     //        GL_UNSIGNED_SHORT, // UNSIGNED_SHORT
     //        GL_UNSIGNED_INT,   // UNSIGNED_INT
     //    };
@@ -203,7 +204,8 @@ namespace Gfx
 
     //constexpr GLenum PGToOpenGLFilterMode( FilterMode mode )
     //{
-    //    GLenum convert[] = {
+    //    GLenum convert[] =
+    //    {
     //        GL_NEAREST,                // NEAREST
     //        GL_LINEAR,                 // LINEAR
     //        GL_NEAREST_MIPMAP_NEAREST, // NEAREST_MIPMAP_NEAREST
@@ -219,7 +221,8 @@ namespace Gfx
 
     //constexpr GLenum PGToOpenGLWrapMode( WrapMode mode )
     //{
-    //    GLenum convert[] = {
+    //    GLenum convert[] =
+    //    {
     //        GL_REPEAT,          // REPEAT
     //        GL_MIRRORED_REPEAT, // MIRRORED_REPEAT
     //        GL_CLAMP_TO_EDGE,   // CLAMP_TO_EDGE
@@ -233,7 +236,8 @@ namespace Gfx
 
     //constexpr GLenum PGToOpenGLImageType( ImageType type )
     //{
-    //    GLenum convert[] = {
+    //    GLenum convert[] =
+    //    {
     //        GL_TEXTURE_1D,              // TYPE_1D
     //        GL_TEXTURE_1D_ARRAY,        // TYPE_1D_ARRAY
     //        GL_TEXTURE_2D,              // TYPE_2D 
@@ -248,35 +252,111 @@ namespace Gfx
     //    return convert[static_cast< int >( type )];
     //}
 
-    //constexpr GLenum PGToOpenGLPixelFormat( PixelFormat format )
-    //{
-    //    GLenum convert[] = {
-    //        GL_R8,                // R8_UINT
-    //        GL_R16F,              // R16_FLOAT
-    //        GL_R32F,              // R32_FLOAT
-    //        GL_RG8,               // R8_G8_UINT
-    //        GL_RG16F,             // R16_G16_FLOAT
-    //        GL_RG32F,             // R32_G32_FLOAT
-    //        GL_RGB8,              // R8_G8_B8_UINT
-    //        GL_RGB16F,            // R16_G16_B16_FLOAT
-    //        GL_RGB32F,            // R32_G32_B32_FLOAT
-    //        GL_RGBA8,             // R8_G8_B8_A8_UINT
-    //        GL_RGBA16F,           // R16_G16_B16_A16_FLOAT
-    //        GL_RGBA32F,           // R32_G32_B32_A32_FLOAT
-    //        GL_SRGB8,             // R8_G8_B8_UINT_SRGB
-    //        GL_SRGB8_ALPHA8,      // R8_G8_B8_A8_UINT_SRGB
-    //        GL_R11F_G11F_B10F,    // R11_G11_B10_FLOAT
-    //        GL_DEPTH_COMPONENT32, // DEPTH32_FLOAT
-    //    };
+    constexpr VkFormat PGToVulanPixelFormat( PixelFormat format )
+    {
+        VkFormat convert[] =
+        {
+            VK_FORMAT_UNDEFINED,
 
-    //    // static_assert( ARRAY_COUNT( convert ) == static_cast< int >( PixelFormat::NUM_PIXEL_FORMATS ) );
+            VK_FORMAT_R8_UNORM, // R8_UNORM
+            VK_FORMAT_R8_SNORM, // R8_SNORM
+            VK_FORMAT_R8_UINT,  // R8_UINT
+            VK_FORMAT_R8_SINT,  // R8_SINT
+            VK_FORMAT_R8_SRGB,  // R8_SRGB
 
-    //    return convert[static_cast< int >( format )];
-    //}
+            VK_FORMAT_R8G8_UNORM, // R8_G8_UNORM
+            VK_FORMAT_R8G8_SNORM, // R8_G8_SNORM
+            VK_FORMAT_R8G8_UINT,  // R8_G8_UINT
+            VK_FORMAT_R8G8_SINT,  // R8_G8_SINT
+            VK_FORMAT_R8G8_SRGB,  // R8_G8_SRGB
+
+            VK_FORMAT_R8G8B8_UNORM, // R8_G8_B8_UNORM
+            VK_FORMAT_R8G8B8_SNORM, // R8_G8_B8_SNORM
+            VK_FORMAT_R8G8B8_UINT,  // R8_G8_B8_UINT
+            VK_FORMAT_R8G8B8_SINT,  // R8_G8_B8_SINT
+            VK_FORMAT_R8G8B8_SRGB,  // R8_G8_B8_SRGB
+
+            VK_FORMAT_R8G8B8A8_UNORM, // R8_G8_B8_A8_UNORM
+            VK_FORMAT_R8G8B8A8_SNORM, // R8_G8_B8_A8_SNORM
+            VK_FORMAT_R8G8B8A8_UINT,  // R8_G8_B8_A8_UINT
+            VK_FORMAT_R8G8B8A8_SINT,  // R8_G8_B8_A8_SINT
+            VK_FORMAT_R8G8B8A8_SRGB,  // R8_G8_B8_A8_SRGB
+
+            VK_FORMAT_R16_UNORM,  // R16_UNORM
+            VK_FORMAT_R16_SNORM,  // R16_SNORM
+            VK_FORMAT_R16_UINT,   // R16_UINT
+            VK_FORMAT_R16_SINT,   // R16_SINT
+            VK_FORMAT_R16_SFLOAT, // R16_FLOAT
+
+            VK_FORMAT_R16G16_UNORM,  // R16_G16_UNORM
+            VK_FORMAT_R16G16_SNORM,  // R16_G16_SNORM
+            VK_FORMAT_R16G16_UINT,   // R16_G16_UINT
+            VK_FORMAT_R16G16_SINT,   // R16_G16_SINT
+            VK_FORMAT_R16G16_SFLOAT, // R16_G16_FLOAT
+
+            VK_FORMAT_R16G16B16_UNORM,  // R16_G16_B16_UNORM
+            VK_FORMAT_R16G16B16_SNORM,  // R16_G16_B16_SNORM
+            VK_FORMAT_R16G16B16_UINT,   // R16_G16_B16_UINT
+            VK_FORMAT_R16G16B16_SINT,   // R16_G16_B16_SINT
+            VK_FORMAT_R16G16B16_SFLOAT, // R16_G16_B16_FLOAT
+
+            VK_FORMAT_R16G16B16A16_UNORM,  // R16_G16_B16_A16_UNORM
+            VK_FORMAT_R16G16B16A16_SNORM,  // R16_G16_B16_A16_SNORM
+            VK_FORMAT_R16G16B16A16_UINT,   // R16_G16_B16_A16_UINT
+            VK_FORMAT_R16G16B16A16_SINT,   // R16_G16_B16_A16_SINT
+            VK_FORMAT_R16G16B16A16_SFLOAT, // R16_G16_B16_A16_FLOAT
+
+            VK_FORMAT_R32_UINT,   // R32_UINT
+            VK_FORMAT_R32_SINT,   // R32_SINT
+            VK_FORMAT_R32_SFLOAT, // R32_FLOAT
+
+            VK_FORMAT_R32G32_UINT,   // R32_G32_UINT
+            VK_FORMAT_R32G32_SINT,   // R32_G32_SINT
+            VK_FORMAT_R32G32_SFLOAT, // R32_G32_FLOAT
+
+            VK_FORMAT_R32G32B32_UINT,   // R32_G32_B32_UINT
+            VK_FORMAT_R32G32B32_SINT,   // R32_G32_B32_SINT
+            VK_FORMAT_R32G32B32_SFLOAT, // R32_G32_B32_FLOAT
+
+            VK_FORMAT_R32G32B32A32_UINT,   // R32_G32_B32_A32_UINT
+            VK_FORMAT_R32G32B32A32_SINT,   // R32_G32_B32_A32_SINT
+            VK_FORMAT_R32G32B32A32_SFLOAT, // R32_G32_B32_A32_FLOAT
+
+            VK_FORMAT_D16_UNORM,          // DEPTH_16_UNORM
+            VK_FORMAT_D32_SFLOAT,         // DEPTH_32_FLOAT
+            VK_FORMAT_D16_UNORM_S8_UINT,  // DEPTH_16_UNORM_STENCIL_8_UINT
+            VK_FORMAT_D24_UNORM_S8_UINT,  // DEPTH_24_UNORM_STENCIL_8_UINT
+            VK_FORMAT_D32_SFLOAT_S8_UINT, // DEPTH_32_FLOAT_STENCIL_8_UINT
+
+            VK_FORMAT_S8_UINT, // STENCIL_8_UINT
+
+            VK_FORMAT_BC1_RGB_UNORM_BLOCK,  // BC1_RGB_UNORM
+            VK_FORMAT_BC1_RGB_SRGB_BLOCK,   // BC1_RGB_SRGB
+            VK_FORMAT_BC1_RGBA_UNORM_BLOCK, // BC1_RGBA_UNORM
+            VK_FORMAT_BC1_RGBA_SRGB_BLOCK,  // BC1_RGBA_SRGB
+            VK_FORMAT_BC2_UNORM_BLOCK,      // BC2_UNORM
+            VK_FORMAT_BC2_SRGB_BLOCK,       // BC2_SRGB
+            VK_FORMAT_BC3_UNORM_BLOCK,      // BC3_UNORM
+            VK_FORMAT_BC3_SRGB_BLOCK,       // BC3_SRGB
+            VK_FORMAT_BC4_UNORM_BLOCK,      // BC4_UNORM
+            VK_FORMAT_BC4_SNORM_BLOCK,      // BC4_SNORM
+            VK_FORMAT_BC5_UNORM_BLOCK,      // BC5_UNORM
+            VK_FORMAT_BC5_SNORM_BLOCK,      // BC5_SNORM
+            VK_FORMAT_BC6H_UFLOAT_BLOCK,    // BC6H_UFLOAT
+            VK_FORMAT_BC6H_SFLOAT_BLOCK,    // BC6H_SFLOAT
+            VK_FORMAT_BC7_UNORM_BLOCK,      // BC7_UNORM
+            VK_FORMAT_BC7_SRGB_BLOCK,       // BC7_SRGB
+        };
+
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( PixelFormat::NUM_PIXEL_FORMATS ) );
+
+        return convert[static_cast< int >( format )];
+    }
 
     //inline std::tuple< GLenum, GLenum > PGToOpenGLFormatAndType( PixelFormat format )
     //{
-    //    constexpr std::tuple< GLenum, GLenum > convert[] = {
+    //    constexpr std::tuple< GLenum, GLenum > convert[] =
+    //    {
     //        { GL_RED,  GL_UNSIGNED_BYTE },    // R8_UINT
     //        { GL_RED,  GL_HALF_FLOAT },       // R16_FLOAT
     //        { GL_RED,  GL_FLOAT },            // R32_FLOAT
@@ -302,7 +382,8 @@ namespace Gfx
 
     //constexpr GLenum PGToOpenGLDepthCompareFunction( CompareFunction func )
     //{
-    //    GLenum convert[] = {
+    //    GLenum convert[] =
+    //    {
     //        GL_NEVER,    // NEVER
     //        GL_LESS,     // LESS
     //        GL_LEQUAL,   // LEQUAL
@@ -336,6 +417,16 @@ namespace Gfx
 
         return glMask;
     }*/
+
+    constexpr VkAttachmentLoadOp PGToVulkanLoadAction( LoadAction op )
+    {
+        return static_cast< VkAttachmentLoadOp >( op );
+    }
+
+    constexpr VkAttachmentStoreOp PGToVulkanStoreAction( StoreAction op )
+    {
+        return static_cast< VkAttachmentStoreOp >( op );
+    }
 
 } // namespace Gfx
 } // namespace Progression

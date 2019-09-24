@@ -14,23 +14,7 @@ namespace Progression
 namespace Gfx
 {
 
-static VkInstance s_instance;
-static VkDebugUtilsMessengerEXT s_debugMessenger;
-static VkSurfaceKHR s_surface;
-static PhysicalDeviceInfo s_physicalDeviceInfo;
-static VkDevice s_device;
-static VkQueue s_graphicsQueue, s_presentQueue;
-static SwapChain s_swapChain;
-
-PhysicalDeviceInfo* GetPhysicalDeviceInfo()
-{
-    return &s_physicalDeviceInfo;
-}
-
-SwapChain* GetSwapChain()
-{
-    return &s_swapChain;
-}
+RenderState g_renderState;
 
 static std::vector< std::string > FindMissingValidationLayers( const std::vector< const char* >& layers )
 {
@@ -114,10 +98,10 @@ static bool CreateDebugUtilsMessengerEXT(
         const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
         const VkAllocationCallbacks* pAllocator )
 {
-    auto func = ( PFN_vkCreateDebugUtilsMessengerEXT ) vkGetInstanceProcAddr( s_instance, "vkCreateDebugUtilsMessengerEXT" );
+    auto func = ( PFN_vkCreateDebugUtilsMessengerEXT ) vkGetInstanceProcAddr( g_renderState.instance, "vkCreateDebugUtilsMessengerEXT" );
     if ( func != nullptr )
     {
-        return func( s_instance, pCreateInfo, pAllocator, &s_debugMessenger ) == VK_SUCCESS;
+        return func( g_renderState.instance, pCreateInfo, pAllocator, &g_renderState.debugMessenger ) == VK_SUCCESS;
     }
     else
     {
@@ -129,10 +113,10 @@ static bool CreateDebugUtilsMessengerEXT(
  */
 static void DestroyDebugUtilsMessengerEXT( const VkAllocationCallbacks* pAllocator = nullptr )
 {
-    auto func = ( PFN_vkDestroyDebugUtilsMessengerEXT ) vkGetInstanceProcAddr( s_instance, "vkDestroyDebugUtilsMessengerEXT" );
+    auto func = ( PFN_vkDestroyDebugUtilsMessengerEXT ) vkGetInstanceProcAddr( g_renderState.instance, "vkDestroyDebugUtilsMessengerEXT" );
     if ( func != nullptr )
     {
-        func( s_instance, s_debugMessenger, pAllocator );
+        func( g_renderState.instance, g_renderState.debugMessenger, pAllocator );
     }
 }
 
@@ -314,7 +298,7 @@ static int RatePhysicalDevice( const PhysicalDeviceInfo& deviceInfo )
     bool swapChainAdequate = false;
     if ( extensionsSupported )
     {
-        SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport( deviceInfo.device, s_surface );
+        SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport( deviceInfo.device, g_renderState.surface );
         swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
     }
 
@@ -324,11 +308,7 @@ static int RatePhysicalDevice( const PhysicalDeviceInfo& deviceInfo )
     }
 
     int score = 10;
-    VkPhysicalDeviceProperties deviceProperties;
-    VkPhysicalDeviceFeatures deviceFeatures;
-    vkGetPhysicalDeviceProperties( deviceInfo.device, &deviceProperties );
-    vkGetPhysicalDeviceFeatures( deviceInfo.device, &deviceFeatures );
-    if ( deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU )
+    if ( deviceInfo.deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU )
     {
         score += 1000;
     }
@@ -379,7 +359,7 @@ static bool CreateInstance()
     createInfo.enabledLayerCount   = 0;
 #endif // #else // #if !USING( SHIP_BUILD )
 
-    auto ret = vkCreateInstance( &createInfo, nullptr, &s_instance );
+    auto ret = vkCreateInstance( &createInfo, nullptr, &g_renderState.instance );
     if ( ret == VK_ERROR_EXTENSION_NOT_PRESENT )
     {
         LOG_ERR( "Could not find all of the instance extensions" );
@@ -424,12 +404,12 @@ static bool SetupDebugCallback()
 
 static bool CreateSurface()
 {
-    return glfwCreateWindowSurface( s_instance, GetMainWindow()->GetGLFWHandle(), nullptr, &s_surface ) == VK_SUCCESS;
+    return glfwCreateWindowSurface( g_renderState.instance, GetMainWindow()->GetGLFWHandle(), nullptr, &g_renderState.surface ) == VK_SUCCESS;
 }
 
 static bool PickPhysicalDevice() {
     uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices( s_instance, &deviceCount, nullptr );
+    vkEnumeratePhysicalDevices( g_renderState.instance, &deviceCount, nullptr );
 
     if ( deviceCount == 0 )
     {
@@ -437,80 +417,35 @@ static bool PickPhysicalDevice() {
     }
 
     std::vector< VkPhysicalDevice > devices( deviceCount );
-    vkEnumeratePhysicalDevices( s_instance, &deviceCount, devices.data() );
+    vkEnumeratePhysicalDevices( g_renderState.instance, &deviceCount, devices.data() );
 
-    VkPhysicalDeviceProperties deviceProperties;
     std::vector< PhysicalDeviceInfo > deviceInfos( deviceCount );
     for ( uint32_t i = 0; i < deviceCount; ++i )
     {
-        vkGetPhysicalDeviceProperties( devices[i], &deviceProperties );
         deviceInfos[i].device  = devices[i];
-        deviceInfos[i].name    = deviceProperties.deviceName;
-        deviceInfos[i].indices = FindQueueFamilies( devices[i], s_surface );
+        vkGetPhysicalDeviceProperties( devices[i], &deviceInfos[i].deviceProperties );
+        vkGetPhysicalDeviceFeatures( devices[i], &deviceInfos[i].deviceFeatures );
+        deviceInfos[i].name    = deviceInfos[i].deviceProperties.deviceName;
+        deviceInfos[i].indices = FindQueueFamilies( devices[i], g_renderState.surface );
         deviceInfos[i].score   = RatePhysicalDevice( deviceInfos[i] );
     }
 
     // sort and select the best GPU available
     std::sort( deviceInfos.begin(), deviceInfos.end(), []( const auto& lhs, const auto& rhs ) { return lhs.score > rhs.score; } );
-    s_physicalDeviceInfo = deviceInfos[0];
+    g_renderState.physicalDeviceInfo = deviceInfos[0];
 
-    if ( s_physicalDeviceInfo.score <= 0 )
+    if ( g_renderState.physicalDeviceInfo.score <= 0 )
     {
-        s_physicalDeviceInfo.device = VK_NULL_HANDLE;
+        g_renderState.physicalDeviceInfo.device = VK_NULL_HANDLE;
         return false;
     }
     
     return true;
 }
 
-static bool CreateLogicalDevice()
-{
-    const auto& indices                     = s_physicalDeviceInfo.indices;
-    VkPhysicalDeviceFeatures deviceFeatures = {};
-    std::set< uint32_t> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
-
-    float queuePriority = 1.0f;
-    std::vector< VkDeviceQueueCreateInfo > queueCreateInfos;
-    for ( uint32_t queueFamily : uniqueQueueFamilies )
-    {
-        VkDeviceQueueCreateInfo queueCreateInfo = {};
-        queueCreateInfo.sType                   = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueCreateInfo.queueFamilyIndex        = queueFamily;
-        queueCreateInfo.queueCount              = 1;
-        queueCreateInfo.pQueuePriorities        = &queuePriority;
-        queueCreateInfos.push_back( queueCreateInfo );
-    }
-
-    VkDeviceCreateInfo createInfo       = {};
-    createInfo.sType                    = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    createInfo.queueCreateInfoCount     = static_cast< uint32_t >( queueCreateInfos.size() );
-    createInfo.pQueueCreateInfos        = queueCreateInfos.data();
-    createInfo.pEnabledFeatures         = &deviceFeatures;
-    createInfo.enabledExtensionCount    = static_cast< uint32_t >( VK_DEVICE_EXTENSIONS.size() );
-    createInfo.ppEnabledExtensionNames  = VK_DEVICE_EXTENSIONS.data();
-
-    // Specify device specific validation layers (ignored after v1.1.123)
-#if !USING( SHIP_BUILD )
-    createInfo.enabledLayerCount   = static_cast< uint32_t >( VK_VALIDATION_LAYERS.size() );
-    createInfo.ppEnabledLayerNames = VK_VALIDATION_LAYERS.data();
-#else // #if !USING( SHIP_BUILD )
-    createInfo.enabledLayerCount   = 0;
-#endif // #else // #if !USING( SHIP_BUILD )
-
-    if ( vkCreateDevice( s_physicalDeviceInfo.device, &createInfo, nullptr, &s_device ) != VK_SUCCESS )
-    {
-        return false;
-    }
-
-    vkGetDeviceQueue( s_device, indices.graphicsFamily, 0, &s_graphicsQueue );
-    vkGetDeviceQueue( s_device, indices.presentFamily,  0, &s_presentQueue );
-
-    return true;
-}
-
 static bool CreateSwapChain()
 {
-    SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport( s_physicalDeviceInfo.device, s_surface );
+    SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport( g_renderState.physicalDeviceInfo.device, g_renderState.surface );
 
     VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat( swapChainSupport.formats );
     VkPresentModeKHR   presentMode   = ChooseSwapPresentMode( swapChainSupport.presentModes );
@@ -524,7 +459,7 @@ static bool CreateSwapChain()
 
     VkSwapchainCreateInfoKHR createInfo = {};
     createInfo.sType                    = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface                  = s_surface;
+    createInfo.surface                  = g_renderState.surface;
     createInfo.minImageCount            = imageCount;
     createInfo.imageFormat              = surfaceFormat.format;
     createInfo.imageColorSpace          = surfaceFormat.colorSpace;
@@ -532,7 +467,7 @@ static bool CreateSwapChain()
     createInfo.imageArrayLayers         = 1; // always 1 unless doing VR
     createInfo.imageUsage               = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    const auto& indices = s_physicalDeviceInfo.indices;
+    const auto& indices = g_renderState.physicalDeviceInfo.indices;
     uint32_t queueFamilyIndices[] = { indices.graphicsFamily, indices.presentFamily };
 
     if ( indices.graphicsFamily != indices.presentFamily )
@@ -556,32 +491,33 @@ static bool CreateSwapChain()
     // only applies if you have to create a new swap chain (like on window resizing)
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if ( vkCreateSwapchainKHR( g_device.GetNativeHandle(), &createInfo, nullptr, &s_swapChain.swapChain ) != VK_SUCCESS )
+    if ( vkCreateSwapchainKHR( g_renderState.device.GetNativeHandle(), &createInfo, nullptr, &g_renderState.swapChain.swapChain ) != VK_SUCCESS )
     {
         return false;
     }
 
-    vkGetSwapchainImagesKHR( g_device.GetNativeHandle(), s_swapChain.swapChain, &imageCount, nullptr );
-    s_swapChain.images.resize( imageCount );
-    vkGetSwapchainImagesKHR( g_device.GetNativeHandle(), s_swapChain.swapChain, &imageCount, s_swapChain.images.data() );
+    vkGetSwapchainImagesKHR( g_renderState.device.GetNativeHandle(), g_renderState.swapChain.swapChain, &imageCount, nullptr );
+    g_renderState.swapChain.images.resize( imageCount );
+    vkGetSwapchainImagesKHR( g_renderState.device.GetNativeHandle(), g_renderState.swapChain.swapChain,
+                             &imageCount, g_renderState.swapChain.images.data() );
 
-    s_swapChain.imageFormat = surfaceFormat.format;
-    s_swapChain.extent      = extent;
+    g_renderState.swapChain.imageFormat = surfaceFormat.format;
+    g_renderState.swapChain.extent      = extent;
     return true;
 }
 
-static bool CreateImageViews()
+static bool CreateSwapChainImageViews()
 {
-    s_swapChain.imageViews.resize( s_swapChain.images.size() );
+    g_renderState.swapChain.imageViews.resize( g_renderState.swapChain.images.size() );
 
-    for ( size_t i = 0; i < s_swapChain.images.size(); ++i )
+    for ( size_t i = 0; i < g_renderState.swapChain.images.size(); ++i )
     {
         VkImageViewCreateInfo createInfo = {};
 
         createInfo.sType        = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        createInfo.image        = s_swapChain.images[i];
+        createInfo.image        = g_renderState.swapChain.images[i];
         createInfo.viewType     = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format       = s_swapChain.imageFormat;
+        createInfo.format       = g_renderState.swapChain.imageFormat;
         createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -594,12 +530,89 @@ static bool CreateImageViews()
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount     = 1;
 
-        if ( vkCreateImageView( g_device.GetNativeHandle(), &createInfo, nullptr, &s_swapChain.imageViews[i] ) != VK_SUCCESS )
+        if ( vkCreateImageView( g_renderState.device.GetNativeHandle(), &createInfo, nullptr, &g_renderState.swapChain.imageViews[i] ) != VK_SUCCESS )
         {
             return false;
         }
     }
     
+    return true;
+}
+
+static bool CreateRenderPass()
+{
+    RenderPassDescriptor renderPassDesc;
+    g_renderState.renderPass = RenderPass::Create( renderPassDesc );
+    return g_renderState.renderPass;
+}
+
+static bool CreateSwapChainFrameBuffers()
+{
+    VkImageView attachments[1];
+
+    VkFramebufferCreateInfo framebufferInfo = {};
+    framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.renderPass      = g_renderState.renderPass.GetNativeHandle();
+    framebufferInfo.attachmentCount = 1;
+    framebufferInfo.pAttachments    = attachments;
+    framebufferInfo.width           = g_renderState.swapChain.extent.width;
+    framebufferInfo.height          = g_renderState.swapChain.extent.height;
+    framebufferInfo.layers          = 1;
+
+    g_renderState.swapChainFramebuffers.resize( g_renderState.swapChain.images.size() );
+    for ( size_t i = 0; i < g_renderState.swapChain.images.size(); ++i )
+    {
+        attachments[0] = g_renderState.swapChain.imageViews[i];
+        if ( vkCreateFramebuffer( g_renderState.device.GetNativeHandle(), &framebufferInfo, nullptr, &g_renderState.swapChainFramebuffers[i] ) != VK_SUCCESS )
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static bool CreateCommandPoolAndBuffers()
+{
+    VkDevice dev = g_renderState.device.GetNativeHandle();
+    VkCommandPoolCreateInfo poolInfo = {};
+    poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.queueFamilyIndex = g_renderState.physicalDeviceInfo.indices.graphicsFamily;
+    poolInfo.flags            = 0;
+
+    if ( vkCreateCommandPool( dev, &poolInfo, nullptr, &g_renderState.commandPool ) != VK_SUCCESS )
+    {
+        return false;
+    }
+
+    g_renderState.commandBuffers.resize( g_renderState.swapChain.images.size() );
+
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool        = g_renderState.commandPool;
+    allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = static_cast< uint32_t >( g_renderState.commandBuffers.size() );
+
+    if ( vkAllocateCommandBuffers( dev, &allocInfo, g_renderState.commandBuffers.data() ) != VK_SUCCESS )
+    {
+        return false;
+    }
+
+    return true;
+}
+
+static bool CreateSemaphores()
+{
+    VkSemaphoreCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkDevice dev = g_renderState.device.GetNativeHandle();
+    if ( vkCreateSemaphore( dev, &info, nullptr, &g_renderState.presentComplete ) != VK_SUCCESS ||
+         vkCreateSemaphore( dev, &info, nullptr, &g_renderState.renderComplete ) != VK_SUCCESS )
+    {
+        return false;
+    }
+
     return true;
 }
 
@@ -632,17 +645,15 @@ bool VulkanInit()
     }
     else
     {
-        VkPhysicalDeviceProperties deviceProperties;
-        vkGetPhysicalDeviceProperties( s_physicalDeviceInfo.device, &deviceProperties );
-        LOG( "Using device: ", s_physicalDeviceInfo.name );
-        uint32_t major = VK_VERSION_MAJOR( deviceProperties.apiVersion );
-        uint32_t minor = VK_VERSION_MINOR( deviceProperties.apiVersion );
-        uint32_t patch = VK_VERSION_PATCH( deviceProperties.apiVersion );
-        LOG( "Using Vulkan Version: ", major, ".", minor, ".", patch );
+        LOG( "Using device: ", g_renderState.physicalDeviceInfo.name );
+        // uint32_t major = VK_VERSION_MAJOR( deviceProperties.apiVersion );
+        // uint32_t minor = VK_VERSION_MINOR( deviceProperties.apiVersion );
+        // uint32_t patch = VK_VERSION_PATCH( deviceProperties.apiVersion );
+        // LOG( "Using Vulkan Version: ", major, ".", minor, ".", patch );
     }
 
-    g_device = Device::CreateDefault();
-    if ( !g_device )
+    g_renderState.device = Device::CreateDefault();
+    if ( !g_renderState.device )
     {
         LOG_ERR( "Could not create logical device" );
         return false;
@@ -654,9 +665,33 @@ bool VulkanInit()
         return false;
     }
 
-    if ( !CreateImageViews() )
+    if ( !CreateSwapChainImageViews() )
     {
         LOG_ERR( "Could not create image views for the swap chain images" );
+        return false;
+    }
+
+    if ( !CreateRenderPass() )
+    {
+        LOG_ERR( "Could not create render pass" );
+        return false;
+    }
+
+    if ( !CreateSwapChainFrameBuffers() )
+    {
+        LOG_ERR( "Could not create swap chain framebuffers" );
+        return false;
+    }
+
+    if ( !CreateCommandPoolAndBuffers() )
+    {
+        LOG_ERR( "Could not create commandPool / buffers" );
+        return false;
+    }
+
+    if ( !CreateSemaphores() )
+    {
+        LOG_ERR( "Could not create semaphores" );
         return false;
     }
 
@@ -665,15 +700,29 @@ bool VulkanInit()
 
 void VulkanShutdown()
 {
-    for ( size_t i = 0; i < s_swapChain.imageViews.size(); ++i )
+    VkDevice dev = g_renderState.device.GetNativeHandle();
+
+    vkDestroySemaphore( dev, g_renderState.presentComplete, nullptr );
+    vkDestroySemaphore( dev, g_renderState.renderComplete, nullptr );
+
+    vkDestroyCommandPool( dev, g_renderState.commandPool, nullptr );
+    for ( auto framebuffer : g_renderState.swapChainFramebuffers )
     {
-        vkDestroyImageView( g_device.GetNativeHandle(), s_swapChain.imageViews[i], nullptr );
+        vkDestroyFramebuffer( dev, framebuffer, nullptr );
     }
-    vkDestroySwapchainKHR( g_device.GetNativeHandle(), s_swapChain.swapChain, nullptr);
-    g_device.Free();
+
+    g_renderState.renderPass.Free();
+
+    for ( size_t i = 0; i < g_renderState.swapChain.imageViews.size(); ++i )
+    {
+        vkDestroyImageView( dev, g_renderState.swapChain.imageViews[i], nullptr );
+    }
+
+    vkDestroySwapchainKHR( dev, g_renderState.swapChain.swapChain, nullptr);
+    g_renderState.device.Free();
     DestroyDebugUtilsMessengerEXT();
-    vkDestroySurfaceKHR( s_instance, s_surface, nullptr );
-    vkDestroyInstance( s_instance, nullptr );
+    vkDestroySurfaceKHR( g_renderState.instance, g_renderState.surface, nullptr );
+    vkDestroyInstance( g_renderState.instance, nullptr );
 }
 
 } // namespace Gfx

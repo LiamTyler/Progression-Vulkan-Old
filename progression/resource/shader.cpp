@@ -1,5 +1,6 @@
 #include "resource/shader.hpp"
-// #include "graphics/graphics_api.hpp"
+#include "graphics/pg_to_vulkan_types.hpp"
+#include "graphics/vulkan.hpp"
 #include "memory_map/MemoryMapped.h"
 #include "resource/resource_manager.hpp"
 #include "utils/fileIO.hpp"
@@ -74,7 +75,7 @@ namespace Progression
         vkShaderInfo.codeSize = spirvSize;
         vkShaderInfo.pCode    = spirvData;
 
-        VkResult ret = vkCreateShaderModule( Gfx::g_device.GetNativeHandle(), &vkShaderInfo, nullptr, &m_shaderModule );
+        VkResult ret = vkCreateShaderModule( Gfx::g_renderState.device.GetNativeHandle(), &vkShaderInfo, nullptr, &m_shaderModule );
         if ( ret != VK_SUCCESS )
         {
             return false;
@@ -111,7 +112,7 @@ namespace Progression
         vkShaderInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         vkShaderInfo.codeSize = spirvSize;
         vkShaderInfo.pCode    = reinterpret_cast< const uint32_t* >( buffer );
-        VkResult ret = vkCreateShaderModule( Gfx::g_device.GetNativeHandle(), &vkShaderInfo, nullptr, &m_shaderModule );
+        VkResult ret = vkCreateShaderModule( Gfx::g_renderState.device.GetNativeHandle(), &vkShaderInfo, nullptr, &m_shaderModule );
         if ( ret != VK_SUCCESS )
         {
             return false;
@@ -137,17 +138,16 @@ namespace Progression
         result = spvReflectEnumerateInputVariables( &module, &var_count, &input_vars );
         PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
 
-        /*
-        LOG( "inputs = ", var_count );
-        for ( uint32_t i = 0; i < var_count; ++i )
-        {
-            LOG( "input_var[", i, "] = ", input_vars[i].name, ", loc = ", input_vars[i].location );
-        }
+        // LOG( "inputs = ", var_count );
+        // for ( uint32_t i = 0; i < var_count; ++i )
+        // {
+        //     LOG( "input_var[", i, "] = ", input_vars[i].name, ", loc = ", input_vars[i].location );
+        // }
 
-        LOG( "Entry point = ", module.entry_point_name );
-        LOG( "Entry point count = ", module.entry_point_count );
-        LOG( "Stage = ", module.shader_stage );
-        */
+        // LOG( "Entry point = ", module.entry_point_name );
+        // LOG( "Entry point count = ", module.entry_point_count );
+        // LOG( "Stage = ", module.shader_stage );
+        // LOG( "spirv size = ", spirvSizeInBytes );
         PG_ASSERT( module.entry_point_count == 1);
 
         info.entryPoint = module.entry_point_name;
@@ -162,7 +162,7 @@ namespace Progression
     {
         VkPipelineShaderStageCreateInfo info = {};
         info.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        info.stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
+        info.stage  = PGToVulkanShaderStage( reflectInfo.stage );
         info.module = m_shaderModule;
         info.pName  = reflectInfo.entryPoint.c_str();
 
@@ -173,7 +173,7 @@ namespace Progression
     {
         if ( m_shaderModule != VK_NULL_HANDLE )
         {
-            vkDestroyShaderModule( Gfx::g_device.GetNativeHandle(), m_shaderModule, nullptr );
+            vkDestroyShaderModule( Gfx::g_renderState.device.GetNativeHandle(), m_shaderModule, nullptr );
             m_shaderModule = VK_NULL_HANDLE;
         }
     }

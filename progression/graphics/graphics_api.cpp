@@ -12,8 +12,6 @@ namespace Progression
 namespace Gfx
 {
 
-    Device g_device;
-
     Buffer::~Buffer()
     {
         /*if ( m_nativeHandle != ~0u )
@@ -276,28 +274,79 @@ namespace Gfx
     {
         int size[] =
         {
+            0,  // INVALID
+
+            1,  // R8_UNORM
+            1,  // R8_SNORM
             1,  // R8_UINT
+            1,  // R8_SINT
+            1,  // R8_SRGB
+
+            2,  // R8_G8_UNORM
+            2,  // R8_G8_SNORM
+            2,  // R8_G8_UINT
+            2,  // R8_G8_SINT
+            2,  // R8_G8_SRGB
+
+            3,  // R8_G8_B8_UNORM
+            3,  // R8_G8_B8_SNORM
+            3,  // R8_G8_B8_UINT
+            3,  // R8_G8_B8_SINT
+            3,  // R8_G8_B8_SRGB
+
+            4,  // R8_G8_B8_A8_UNORM
+            4,  // R8_G8_B8_A8_SNORM
+            4,  // R8_G8_B8_A8_UINT
+            4,  // R8_G8_B8_A8_SINT
+            4,  // R8_G8_B8_A8_SRGB
+
+            2,  // R16_UNORM
+            2,  // R16_SNORM
+            2,  // R16_UINT
+            2,  // R16_SINT
             2,  // R16_FLOAT
+
+            4,  // R16_G16_UNORM
+            4,  // R16_G16_SNORM
+            4,  // R16_G16_UINT
+            4,  // R16_G16_SINT
+            4,  // R16_G16_FLOAT
+
+            6,  // R16_G16_B16_UNORM
+            6,  // R16_G16_B16_SNORM
+            6,  // R16_G16_B16_UINT
+            6,  // R16_G16_B16_SINT
+            6,  // R16_G16_B16_FLOAT
+
+            8,  // R16_G16_B16_A16_UNORM
+            8,  // R16_G16_B16_A16_SNORM
+            8,  // R16_G16_B16_A16_UINT
+            8,  // R16_G16_B16_A16_SINT
+            8,  // R16_G16_B16_A16_FLOAT
+
+            4,  // R32_UINT
+            4,  // R32_SINT
             4,  // R32_FLOAT
 
-            2,  // R8_G8_UINT
-            4,  // R16_G16_FLOAT
+            8,  // R32_G32_UINT
+            8,  // R32_G32_SINT
             8,  // R32_G32_FLOAT
 
-            3,  // R8_G8_B8_UINT
-            6,  // R16_G16_B16_FLOAT
+            12, // R32_G32_B32_UINT
+            12, // R32_G32_B32_SINT
             12, // R32_G32_B32_FLOAT
 
-            4,  // R8_G8_B8_A8_UINT
-            8,  // R16_G16_B16_A16_FLOAT
+            16, // R32_G32_B32_A32_UINT
+            16, // R32_G32_B32_A32_SINT
             16, // R32_G32_B32_A32_FLOAT
 
-            3,  // R8_G8_B8_UINT_SRGB
-            4,  // R8_G8_B8_A8_UINT_SRGB
+            2,  // DEPTH_16_UNORM
+            4,  // DEPTH_32_FLOAT
+            3,  // DEPTH_16_UNORM_STENCIL_8_UINT
+            4,  // DEPTH_24_UNORM_STENCIL_8_UINT
+            5,  // DEPTH_32_FLOAT_STENCIL_8_UINT
 
-            4,  // R11_G11_B10_FLOAT
-
-            4,  // DEPTH32_FLOAT
+            1,  // STENCIL_8_UINT
 
             // Pixel size for the BC formats is the size of the 4x4 block, not per pixel
             8,  // BC1_RGB_UNORM
@@ -327,7 +376,7 @@ namespace Gfx
     bool PixelFormatIsCompressed( const PixelFormat& format )
     {
         int f = static_cast< int >( format );
-        return static_cast< int >( PixelFormat::DEPTH32_FLOAT ) < f && f < static_cast< int >( PixelFormat::NUM_PIXEL_FORMATS );
+        return static_cast< int >( PixelFormat::BC1_RGB_UNORM ) <= f && f < static_cast< int >( PixelFormat::NUM_PIXEL_FORMATS );
     }
 
     Texture::~Texture()
@@ -355,86 +404,27 @@ namespace Gfx
         PG_ASSERT( false );
         Texture tex;
         return tex;
-        /*
-        PG_ASSERT( desc.type == ImageType::TYPE_2D || desc.type == ImageType::TYPE_CUBEMAP, "Currently only support 2D and CUBEMAP images" );
-        PG_ASSERT( desc.mipLevels == 1, "Mipmaps not supported yet" );
-        PG_ASSERT( desc.srcFormat != PixelFormat::NUM_PIXEL_FORMATS );
-        Texture tex;
-        tex.m_desc = desc;
-        glGenTextures( 1, &tex.m_nativeHandle );
-        
-        auto nativeTexType                        = PGToOpenGLImageType( desc.type );
-        auto [nativePixelFormat, nativePixelType] = PGToOpenGLFormatAndType( desc.srcFormat );
-        GLenum dstFormat;
-        if ( desc.dstFormat == PixelFormat::NUM_PIXEL_FORMATS )
-        {
-            dstFormat = PGToOpenGLPixelFormat( desc.srcFormat );
-        }
-        else
-        {
-            dstFormat = PGToOpenGLPixelFormat( desc.dstFormat );
-        }
-        glBindTexture( nativeTexType, tex.m_nativeHandle );
-
-        if ( desc.type == ImageType::TYPE_2D )
-        {
-            glTexImage2D( nativeTexType, 0, dstFormat, desc.width, desc.height, 0, nativePixelFormat, nativePixelType, data );
-        }
-        else if ( desc.type == ImageType::TYPE_CUBEMAP )
-        {
-            for ( int i = 0; i < 6; ++i )
-            {
-                unsigned char* faceData = &static_cast< unsigned char* >( data )[i * desc.width * desc.height * SizeOfPixelFromat( desc.srcFormat )];
-                glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, dstFormat, desc.width, desc.height, 0, nativePixelFormat, nativePixelType, faceData );
-            }
-        }
-
-        return tex;
-        */
     }
 
     void Texture::Free()
     {
-        /*if ( m_nativeHandle != ~0u )
+        if ( m_image != VK_NULL_HANDLE )
         {
-            glDeleteTextures( 1, &m_nativeHandle );
-            m_nativeHandle = ~0u;
-        }*/
+            vkDestroyImage( g_renderState.device.GetNativeHandle(), m_image, nullptr );
+            m_image = VK_NULL_HANDLE;
+        }
+
+        if ( m_imageView != VK_NULL_HANDLE )
+        {
+            vkDestroyImageView( g_renderState.device.GetNativeHandle(), m_imageView, nullptr );
+            m_imageView = VK_NULL_HANDLE;
+        }
     }
 
     unsigned char* Texture::GetPixelData() const
     {
         PG_ASSERT( false );
         return nullptr;
-        /*
-        PG_ASSERT( m_nativeHandle != ~0u );
-        int pixelSize   = SizeOfPixelFromat( m_desc.dstFormat );
-        uint32_t w      = m_desc.width;
-        uint32_t h      = m_desc.height;
-        uint32_t d      = m_desc.depth;
-        size_t faceSize = w * h * d * pixelSize;
-        size_t size     = m_desc.arrayLayers * faceSize;
-        unsigned char* cpuData = static_cast< unsigned char* >( malloc( size ) );
-        auto [nativePixelFormat, nativePixelType] = PGToOpenGLFormatAndType( m_desc.dstFormat );
-        auto nativeTexType = PGToOpenGLImageType( m_desc.type );
-        glBindTexture( nativeTexType, m_nativeHandle );
-
-        auto data = cpuData;
-        if ( m_desc.type == ImageType::TYPE_CUBEMAP )
-        {
-            for ( int i = 0; i < m_desc.arrayLayers; ++i )
-            {
-                glGetTexImage( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, nativePixelFormat, nativePixelType, data );
-                data += faceSize;
-            }
-        }
-        else
-        {
-            glGetTexImage( nativeTexType, 0, nativePixelFormat, nativePixelType, cpuData );
-        }
-        
-        return cpuData;
-        */
     }
 
     ImageType Texture::GetType() const
@@ -472,24 +462,21 @@ namespace Gfx
         return m_desc.depth;
     }
 
-    /*GLuint Texture::GetNativeHandle() const
+    VkImage Texture::GetNativeHandle() const
     {
-        return m_nativeHandle;
+        return m_image;
     }
 
     Texture::operator bool() const
     {
-        return m_nativeHandle != ~0u;
-    }*/
+        return m_image != VK_NULL_HANDLE || m_imageView != VK_NULL_HANDLE;
+    }
 
 
     // ------------- RENDER PASS ----------------//
     RenderPass::~RenderPass()
     {
-        /*if ( m_nativeHandle != 0 && m_nativeHandle != ~0u )
-        {
-            glDeleteFramebuffers( 1, &m_nativeHandle );
-        }*/
+        Free();
     }
 
     RenderPass::RenderPass( RenderPass&& r )
@@ -499,36 +486,11 @@ namespace Gfx
 
     RenderPass& RenderPass::operator=( RenderPass&& r )
     {
-        m_desc = std::move( r.m_desc );
-        //m_nativeHandle   = std::move( r.m_nativeHandle );
-        //r.m_nativeHandle = ~0u;
+        m_desc     = std::move( r.m_desc );
+        m_handle   = std::move( r.m_handle );
+        r.m_handle = VK_NULL_HANDLE;
 
         return *this;
-    }
-
-    void RenderPass::Bind() const
-    {
-        PG_ASSERT( false );
-        /*
-        PG_ASSERT( m_nativeHandle != ~0u );
-        glBindFramebuffer( GL_FRAMEBUFFER, m_nativeHandle );
-        if ( m_desc.colorAttachmentDescriptors.size() )
-        {
-            if ( m_desc.colorAttachmentDescriptors[0].loadAction == LoadAction::CLEAR )
-            {
-                auto& c = m_desc.colorAttachmentDescriptors[0].clearColor;
-                glClearColor( c.r, c.g, c.b, c.a );
-                glClear( GL_COLOR_BUFFER_BIT );
-            }
-        }
-
-        if ( m_desc.depthAttachmentDescriptor.loadAction == LoadAction::CLEAR )
-        {
-            glDepthMask( true );
-            glClearDepthf( m_desc.depthAttachmentDescriptor.clearValue );
-            glClear( GL_DEPTH_BUFFER_BIT );
-        }
-        */
     }
 
     RenderPass RenderPass::Create( const RenderPassDescriptor& desc )
@@ -536,83 +498,105 @@ namespace Gfx
         RenderPass pass;
         pass.m_desc = desc;
 
-        return pass;
+        int numColorAttach = static_cast< int >( desc.colorAttachmentDescriptors.size() );
+        std::vector< VkAttachmentDescription > colorAttachments;
+        std::vector< VkAttachmentReference > colorAttachmentRefs;
         /*
-        // Check if this is the screen/default framebuffer
-        if ( desc.colorAttachmentDescriptors[0].texture == nullptr && desc.depthAttachmentDescriptor.texture == nullptr )
+        int i = 0;
+        for ( ; i < numColorAttach; ++i )
         {
-            pass.m_nativeHandle = 0;
-            return pass;
-        }
-
-        glGenFramebuffers( 1, &pass.m_nativeHandle );
-        glBindFramebuffer( GL_FRAMEBUFFER, pass.m_nativeHandle );
-
-        LoadAction loadAction = desc.colorAttachmentDescriptors[0].loadAction;
-        glm::vec4 clearColor  = desc.colorAttachmentDescriptors[0].clearColor;
-
-        // Currently am not supporting color attachments to have different clear values
-        for ( size_t i = 1; i < desc.colorAttachmentDescriptors.size() && 
-              desc.colorAttachmentDescriptors[i].texture != nullptr; ++i )
-        {
-            if ( desc.colorAttachmentDescriptors[0].loadAction != loadAction ||
-                 desc.colorAttachmentDescriptors[0].clearColor != clearColor )
+            const auto& attach = desc.colorAttachmentDescriptors[i];
+            if ( !attach.texture )
             {
-                LOG_ERR( "Currently need all color attachments to have the same clear color and load action" );
-                PG_ASSERT( desc.colorAttachmentDescriptors[0].loadAction == loadAction &&
-                           desc.colorAttachmentDescriptors[0].clearColor == clearColor );
+                break;
             }
-        }
 
-        if ( desc.depthAttachmentDescriptor.texture )
-        {
-            auto nativeHandle = desc.depthAttachmentDescriptor.texture->GetNativeHandle();
-            glFramebufferTexture( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, nativeHandle, 0 );
-        }
+            colorAttachments.push_back( {} );
+            // colorAttachments[i].format         = swapChainImageFormat;
+            colorAttachments[i].format         = g_renderState.swapChain.imageFormat;
+            colorAttachments[i].samples        = VK_SAMPLE_COUNT_1_BIT;
+            colorAttachments[i].loadOp         = PGToVulkanLoadAction( attach.loadAction );
+            colorAttachments[i].storeOp        = PGToVulkanStoreAction( attach.storeAction );
+            colorAttachments[i].stencilLoadOp  = PGToVulkanLoadAction( LoadAction::DONT_CARE );
+            colorAttachments[i].stencilStoreOp = PGToVulkanStoreAction( StoreAction::DONT_CARE );
+            colorAttachments[i].initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+            colorAttachments[i].finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-        std::vector< GLenum > attachments;
-        for ( unsigned int i = 0; i < (unsigned int) desc.colorAttachmentDescriptors.size() && 
-              desc.colorAttachmentDescriptors[i].texture != nullptr; ++i )
-        {
-            GLuint slot = GL_COLOR_ATTACHMENT0 + i ;
-            glFramebufferTexture2D( GL_FRAMEBUFFER, slot, GL_TEXTURE_2D,
-                                    desc.colorAttachmentDescriptors[i].texture->GetNativeHandle(), 0 );
-            attachments.push_back( slot );
+            colorAttachmentRefs.push_back( {} );
+            colorAttachmentRefs[i].attachment = i;
+            colorAttachmentRefs[i].layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         }
-        glDrawBuffers( static_cast< int >( attachments.size() ), &attachments[0] );
+        numColorAttach = i;
+        */
+        colorAttachments.push_back( {} );
+        colorAttachments[0].format         = g_renderState.swapChain.imageFormat;
+        colorAttachments[0].samples        = VK_SAMPLE_COUNT_1_BIT;
+        colorAttachments[0].loadOp         = PGToVulkanLoadAction( LoadAction::CLEAR );
+        colorAttachments[0].storeOp        = PGToVulkanStoreAction( StoreAction::STORE );
+        colorAttachments[0].stencilLoadOp  = PGToVulkanLoadAction( LoadAction::DONT_CARE );
+        colorAttachments[0].stencilStoreOp = PGToVulkanStoreAction( StoreAction::DONT_CARE );
+        colorAttachments[0].initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+        colorAttachments[0].finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-        if ( glCheckFramebufferStatus( GL_FRAMEBUFFER ) != GL_FRAMEBUFFER_COMPLETE )
+        colorAttachmentRefs.push_back( {} );
+        colorAttachmentRefs[0].attachment = 0;
+        colorAttachmentRefs[0].layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkSubpassDescription subpass = {};
+        subpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount = static_cast< uint32_t >( colorAttachmentRefs.size() );
+        subpass.pColorAttachments    = colorAttachmentRefs.data();
+
+        VkSubpassDependency dependency = {};
+        dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
+        dependency.dstSubpass    = 0;
+        dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcAccessMask = 0;
+        dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        VkRenderPassCreateInfo renderPassInfo = {};
+        renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        renderPassInfo.attachmentCount = static_cast< uint32_t >( colorAttachments.size() );
+        renderPassInfo.pAttachments    = colorAttachments.data();
+        renderPassInfo.subpassCount    = 1;
+        renderPassInfo.pSubpasses      = &subpass;
+        renderPassInfo.dependencyCount = 1;
+        renderPassInfo.pDependencies   = &dependency;
+
+        if ( vkCreateRenderPass( g_renderState.device.GetNativeHandle(), &renderPassInfo, nullptr, &pass.m_handle ) != VK_SUCCESS )
         {
-            LOG_ERR( "Unable to complete the creation of the render pass" );
-            return {};
+            pass.m_handle = VK_NULL_HANDLE;
         }
 
         return pass;
-        */
     }
 
-   /* GLuint RenderPass::GetNativeHandle() const
+    void RenderPass::Free()
     {
-        return m_nativeHandle;
-    }*/
-
-    /*
-        VertexInputDescriptor* vertexDescriptors;
-        Viewport viewport;
-        Scissor scissor;
-        PipelineDepthInfo depthInfo;
-        RasterizerInfo rasterizerInfo;
-        PrimitiveType primitiveType = PrimitiveType::TRIANGLES;
-        uint8_t numColorAttachments = 0;
-        std::array< PipelineColorAttachmentInfo, 8 > colorAttachmentInfos;
-    */
+        if ( m_handle != VK_NULL_HANDLE )
+        {
+            vkDestroyRenderPass( g_renderState.device.GetNativeHandle(), m_handle, nullptr );
+            m_handle = VK_NULL_HANDLE;
+        }
+    }
+        
+    VkRenderPass RenderPass::GetNativeHandle() const
+    {
+        return m_handle;
+    }
+    
+    RenderPass::operator bool() const
+    {
+        return m_handle != VK_NULL_HANDLE;
+    }
 
     Pipeline::~Pipeline()
     {
         if ( m_pipeline != VK_NULL_HANDLE )
         {
-            vkDestroyPipeline( g_device.GetNativeHandle(), m_pipeline, nullptr );
-            vkDestroyPipelineLayout( g_device.GetNativeHandle(), m_pipelineLayout, nullptr );
+            vkDestroyPipeline( g_renderState.device.GetNativeHandle(), m_pipeline, nullptr );
+            vkDestroyPipelineLayout( g_renderState.device.GetNativeHandle(), m_pipelineLayout, nullptr );
         }
     }
 
@@ -715,14 +699,14 @@ namespace Gfx
         pipelineLayoutInfo.pushConstantRangeCount = 0;
         pipelineLayoutInfo.pPushConstantRanges    = nullptr;
 
-        if ( vkCreatePipelineLayout( g_device.GetNativeHandle(), &pipelineLayoutInfo, nullptr, &p.m_pipelineLayout ) != VK_SUCCESS )
+        if ( vkCreatePipelineLayout( g_renderState.device.GetNativeHandle(), &pipelineLayoutInfo, nullptr, &p.m_pipelineLayout ) != VK_SUCCESS )
         {
             return p;
         }
 
         VkGraphicsPipelineCreateInfo pipelineInfo = {};
         pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        pipelineInfo.stageCount          = shaderStages.size();
+        pipelineInfo.stageCount          = static_cast< uint32_t >( shaderStages.size() );
         pipelineInfo.pStages             = shaderStages.data();
         pipelineInfo.pVertexInputState   = &p.m_desc.vertexDescriptor.GetNativeHandle();
         pipelineInfo.pInputAssemblyState = &inputAssembly;
@@ -733,22 +717,23 @@ namespace Gfx
         pipelineInfo.pColorBlendState    = &colorBlending;
         pipelineInfo.pDynamicState       = nullptr;
         pipelineInfo.layout              = p.m_pipelineLayout;
-        pipelineInfo.renderPass          = renderPass;
+        pipelineInfo.renderPass          = desc.renderPass->GetNativeHandle();
         pipelineInfo.subpass             = 0;
         pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
 
-        if ( vkCreateGraphicsPipelines( g_device.GetNativeHandle(), VK_NULL_HANDLE, 1,
+        if ( vkCreateGraphicsPipelines( g_renderState.device.GetNativeHandle(), VK_NULL_HANDLE, 1,
                                         &pipelineInfo, nullptr, &p.m_pipeline ) != VK_SUCCESS )
         {
-            vkDestroyPipelineLayout( g_device.GetNativeHandle(), p.m_pipelineLayout, nullptr );
+            vkDestroyPipelineLayout( g_renderState.device.GetNativeHandle(), p.m_pipelineLayout, nullptr );
             p.m_pipeline = VK_NULL_HANDLE;
         }
 
         return p;
     }
 
-    void Pipeline::Bind() const
+    VkPipeline Pipeline::GetNativeHandle() const
     {
+        return m_pipeline;
     }
 
     Pipeline::operator bool() const
@@ -769,6 +754,9 @@ namespace Gfx
     Device& Device::operator=( Device&& device )
     {
         m_handle        = device.m_handle;
+        m_graphicsQueue = device.m_graphicsQueue;
+        m_presentQueue  = device.m_presentQueue;
+
         device.m_handle = VK_NULL_HANDLE;
 
         return *this;
@@ -777,7 +765,7 @@ namespace Gfx
     Device Device::CreateDefault()
     {
         Device device;
-        const auto& indices                     = GetPhysicalDeviceInfo()->indices;
+        const auto& indices                     = g_renderState.physicalDeviceInfo.indices;
         VkPhysicalDeviceFeatures deviceFeatures = {};
         std::set< uint32_t> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
 
@@ -809,7 +797,7 @@ namespace Gfx
         createInfo.enabledLayerCount   = 0;
     #endif // #else // #if !USING( SHIP_BUILD )
 
-        if ( vkCreateDevice( GetPhysicalDeviceInfo()->device, &createInfo, nullptr, &device.m_handle ) != VK_SUCCESS )
+        if ( vkCreateDevice( g_renderState.physicalDeviceInfo.device, &createInfo, nullptr, &device.m_handle ) != VK_SUCCESS )
         {
             return {};
         }
@@ -832,6 +820,16 @@ namespace Gfx
     VkDevice Device::GetNativeHandle() const
     {
         return m_handle;
+    }
+
+    VkQueue Device::GraphicsQueue() const
+    {
+        return m_graphicsQueue;
+    }
+
+    VkQueue Device::PresentQueue() const
+    {
+        return m_presentQueue;
     }
 
     Device::operator bool() const

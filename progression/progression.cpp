@@ -8,7 +8,7 @@ namespace Progression
 
 bool EngineShutdown = false;
 
-void EngineInitialize( std::string config_name )
+bool EngineInitialize( std::string config_name )
 {
     if ( config_name == "" )
     {
@@ -62,7 +62,13 @@ void EngineInitialize( std::string config_name )
     Input::Init();
     ResourceManager::Init();
     ECS::init();
-    RenderSystem::Init();
+    if ( !RenderSystem::Init() )
+    {
+        LOG_ERR( "Could not initialize the rendering system" );
+        return false;
+    }
+
+    return true;
 }
 
 void EngineQuit()

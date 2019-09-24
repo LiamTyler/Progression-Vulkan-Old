@@ -17,7 +17,11 @@ int main( int argc, char* argv[] )
     PG_UNUSED( argc );
     PG_UNUSED( argv );
 
-    PG::EngineInitialize();
+    if ( !PG::EngineInitialize() )
+    {
+        std::cout << "Failed to initialize the engine" << std::endl;
+        return 1;
+    }
 
     {
         Window* window = GetMainWindow();

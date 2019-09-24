@@ -35,7 +35,7 @@ namespace Progression
 
 extern bool EngineShutdown;
 
-void EngineInitialize( std::string config_name = "" );
+bool EngineInitialize( std::string config_name = "" );
 
 void EngineQuit();
 
