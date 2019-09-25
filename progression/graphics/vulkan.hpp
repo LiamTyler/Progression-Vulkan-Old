@@ -8,6 +8,7 @@ namespace Progression
 {
 namespace Gfx
 {
+    const int MAX_FRAMES_IN_FLIGHT = 2;
 
     const std::vector< const char* > VK_VALIDATION_LAYERS =
     {
@@ -57,12 +58,18 @@ namespace Gfx
         PhysicalDeviceInfo physicalDeviceInfo;
         SwapChain swapChain;
         std::vector< VkFramebuffer > swapChainFramebuffers;
-        VkCommandPool commandPool;
-        std::vector< VkCommandBuffer > commandBuffers;
-        VkSemaphore presentComplete, renderComplete;
+        // VkCommandPool commandPool;
+        // std::vector< VkCommandBuffer > commandBuffers;
+        CommandPool commandPool;
+        std::vector< CommandBuffer > commandBuffers;
+        
+        std::vector< VkSemaphore > presentCompleteSemaphores;
+        std::vector< VkSemaphore > renderCompleteSemaphores;
+        std::vector< VkFence > inFlightFences;
 
         Device device;
         RenderPass renderPass;
+        size_t currentFrame = 0;
     };
 
     extern RenderState g_renderState;

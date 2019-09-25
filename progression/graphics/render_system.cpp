@@ -51,6 +51,8 @@ namespace RenderSystem
 
 static Window* s_window;
 static Pipeline s_pipeline;
+static VkRenderPass renderPass;
+static VkPipeline graphicsPipeline;
 
 namespace Progression
 {
@@ -73,6 +75,7 @@ namespace RenderSystem
         PipelineDescriptor pipelineDesc;
         pipelineDesc.renderPass       = &g_renderState.renderPass;
         pipelineDesc.vertexDescriptor = VertexInputDescriptor::Create( 0, nullptr, 0, nullptr );
+        pipelineDesc.rasterizerInfo.winding = WindingOrder::CLOCKWISE;
 
         pipelineDesc.viewport.x        = 0.0f;
         pipelineDesc.viewport.y        = 0.0f;
@@ -100,18 +103,13 @@ namespace RenderSystem
             return false;
         }
 
+        simpleVert->Free();
+        simpleFrag->Free();
+
         for ( size_t i = 0; i < g_renderState.commandBuffers.size(); ++i )
         {
-            const VkCommandBuffer& cmdBuf = g_renderState.commandBuffers[i];
-            VkCommandBufferBeginInfo beginInfo = {};
-            beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            beginInfo.flags            = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-            beginInfo.pInheritanceInfo = nullptr;
-
-            if ( vkBeginCommandBuffer( cmdBuf, &beginInfo ) != VK_SUCCESS )
-            {
-                return false;
-            }
+            CommandBuffer& cmdBuf      = g_renderState.commandBuffers[i];
+            cmdBuf.BeginRecording();
 
             // specify which render pass, which framebuffer, where shader loads start, and size
             VkRenderPassBeginInfo renderPassInfo = {};
@@ -125,15 +123,11 @@ namespace RenderSystem
             renderPassInfo.clearValueCount = 1;
             renderPassInfo.pClearValues    = &clearColor;
 
-            vkCmdBeginRenderPass( cmdBuf, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
-            vkCmdBindPipeline( cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, s_pipeline.GetNativeHandle() );
-            vkCmdDraw( cmdBuf, 3, 1, 0, 0 );
-            vkCmdEndRenderPass( cmdBuf );
-
-            if ( vkEndCommandBuffer( cmdBuf ) != VK_SUCCESS )
-            {
-                return false;
-            }
+            vkCmdBeginRenderPass( cmdBuf.GetNativeHandle(), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
+            cmdBuf.BindRenderPipeline( s_pipeline );
+            cmdBuf.DrawNonIndexed( 3 );
+            cmdBuf.EndRenderPass();
+            cmdBuf.EndRecording();
         }
 
         return true;
@@ -141,12 +135,13 @@ namespace RenderSystem
 
     void Shutdown()
     {
+        vkDeviceWaitIdle( g_renderState.device.GetNativeHandle() );
         for ( auto& [name, sampler] : s_samplers )
         {
-            sampler = {};
+            sampler.Free();
         }
 
-        s_pipeline = {};
+        s_pipeline.Free();
 
         VulkanShutdown();
     }
@@ -154,28 +149,34 @@ namespace RenderSystem
     void Render( Scene* scene )
     {
         PG_UNUSED( scene );
-
+        
+        size_t currentFrame = g_renderState.currentFrame;
         VkDevice dev = g_renderState.device.GetNativeHandle();
+        vkWaitForFences( dev, 1, &g_renderState.inFlightFences[currentFrame], VK_TRUE, UINT64_MAX );
+        vkResetFences( dev, 1, &g_renderState.inFlightFences[currentFrame] );
+
         uint32_t imageIndex;
         vkAcquireNextImageKHR( dev, g_renderState.swapChain.swapChain, UINT64_MAX,
-                               g_renderState.presentComplete, VK_NULL_HANDLE, &imageIndex );
+                               g_renderState.presentCompleteSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex );
 
         VkSubmitInfo submitInfo = {};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        VkSemaphore waitSemaphores[]      = { g_renderState.presentComplete };
+        VkSemaphore waitSemaphores[]      = { g_renderState.presentCompleteSemaphores[currentFrame] };
         VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
         submitInfo.waitSemaphoreCount     = 1;
         submitInfo.pWaitSemaphores        = waitSemaphores;
         submitInfo.pWaitDstStageMask      = waitStages;
         submitInfo.commandBufferCount     = 1;
-        submitInfo.pCommandBuffers        = &g_renderState.commandBuffers[imageIndex];
+        VkCommandBuffer cmdBufs[]         = { g_renderState.commandBuffers[imageIndex].GetNativeHandle() };
+        submitInfo.pCommandBuffers        = cmdBufs;
 
-        VkSemaphore signalSemaphores[]    = { g_renderState.renderComplete };
+        VkSemaphore signalSemaphores[]    = { g_renderState.renderCompleteSemaphores[currentFrame] };
         submitInfo.signalSemaphoreCount   = 1;
         submitInfo.pSignalSemaphores      = signalSemaphores;
 
-        PG_ASSERT( vkQueueSubmit( g_renderState.device.GraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE ) == VK_SUCCESS );
+        PG_ASSERT( vkQueueSubmit( g_renderState.device.GraphicsQueue(), 1, &submitInfo,
+                                  g_renderState.inFlightFences[currentFrame] ) == VK_SUCCESS );
 
         VkPresentInfoKHR presentInfo   = {};
         presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -187,19 +188,11 @@ namespace RenderSystem
         presentInfo.pSwapchains     = swapChains;
         presentInfo.pImageIndices   = &imageIndex;
 
-        vkQueuePresentKHR( g_renderState.device.PresentQueue(), &presentInfo);
-        // if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
-        //     framebufferResized = false;
-        //     recreateSwapChain();
-        // } else if (result != VK_SUCCESS) {
-        //     return false;
-        // }
+        vkQueuePresentKHR( g_renderState.device.PresentQueue(), &presentInfo );
 
-        // currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+        g_renderState.currentFrame = ( g_renderState.currentFrame + 1 ) % MAX_FRAMES_IN_FLIGHT;
 
-        // // only needed if validation layers are on
-        // vkDeviceWaitIdle(logicalDevice);
-
+        // vkDeviceWaitIdle( g_renderState.device.GetNativeHandle() );
     }
 
     void InitSamplers()

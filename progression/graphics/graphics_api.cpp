@@ -229,6 +229,9 @@ namespace Gfx
         //glBindSampler( index, m_nativeHandle );
     }
 
+    void Sampler::Free()
+    {
+    }
 
     FilterMode Sampler::GetMinFilter() const
     {
@@ -593,11 +596,7 @@ namespace Gfx
 
     Pipeline::~Pipeline()
     {
-        if ( m_pipeline != VK_NULL_HANDLE )
-        {
-            vkDestroyPipeline( g_renderState.device.GetNativeHandle(), m_pipeline, nullptr );
-            vkDestroyPipelineLayout( g_renderState.device.GetNativeHandle(), m_pipelineLayout, nullptr );
-        }
+        Free();
     }
 
     Pipeline::Pipeline( Pipeline&& pipeline )
@@ -718,6 +717,7 @@ namespace Gfx
         pipelineInfo.pDynamicState       = nullptr;
         pipelineInfo.layout              = p.m_pipelineLayout;
         pipelineInfo.renderPass          = desc.renderPass->GetNativeHandle();
+        pipelineInfo.renderPass          = desc.renderPass->GetNativeHandle();
         pipelineInfo.subpass             = 0;
         pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
 
@@ -729,6 +729,17 @@ namespace Gfx
         }
 
         return p;
+    }
+
+    void Pipeline::Free()
+    {
+        if ( m_pipeline != VK_NULL_HANDLE )
+        {
+            vkDestroyPipeline( g_renderState.device.GetNativeHandle(), m_pipeline, nullptr );
+            vkDestroyPipelineLayout( g_renderState.device.GetNativeHandle(), m_pipelineLayout, nullptr );
+            m_pipeline       = VK_NULL_HANDLE;
+            m_pipelineLayout = VK_NULL_HANDLE;
+        }
     }
 
     VkPipeline Pipeline::GetNativeHandle() const
@@ -817,6 +828,23 @@ namespace Gfx
         }
     }
 
+    CommandPool Device::NewCommandPool() const
+    {
+        VkCommandPoolCreateInfo poolInfo = {};
+        poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.queueFamilyIndex = g_renderState.physicalDeviceInfo.indices.graphicsFamily;
+        poolInfo.flags            = 0;
+
+        CommandPool cmdPool;
+        cmdPool.m_device = m_handle;
+        if ( vkCreateCommandPool( m_handle, &poolInfo, nullptr, &cmdPool.m_handle ) != VK_SUCCESS )
+        {
+            cmdPool.m_handle = VK_NULL_HANDLE;
+        }
+
+        return cmdPool;
+    }
+
     VkDevice Device::GetNativeHandle() const
     {
         return m_handle;
@@ -835,6 +863,135 @@ namespace Gfx
     Device::operator bool() const
     {
         return m_handle != VK_NULL_HANDLE;
+    }
+
+    CommandBuffer::CommandBuffer( CommandBuffer&& cmdbuf )
+    {
+        *this = std::move( cmdbuf );
+    }
+
+    CommandBuffer& CommandBuffer::operator=( CommandBuffer&& cmdbuf )
+    {
+        m_handle    = cmdbuf.m_handle;
+        m_beginInfo = cmdbuf.m_beginInfo;
+
+        cmdbuf.m_handle = VK_NULL_HANDLE;
+
+        return *this;
+    }
+    
+    CommandBuffer::operator bool() const
+    {
+        return m_handle != VK_NULL_HANDLE;
+    }
+    
+    VkCommandBuffer CommandBuffer::GetNativeHandle() const
+    {
+        return m_handle;
+    }
+
+    bool CommandBuffer::BeginRecording()
+    {
+        PG_ASSERT( m_handle != VK_NULL_HANDLE );
+        m_beginInfo = {};
+        m_beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        m_beginInfo.flags            = 0;
+        m_beginInfo.pInheritanceInfo = nullptr;
+        return vkBeginCommandBuffer( m_handle, &m_beginInfo ) == VK_SUCCESS;
+    }
+
+    bool CommandBuffer::EndRecording()
+    {
+        return vkEndCommandBuffer( m_handle ) == VK_SUCCESS;
+    }
+
+    void CommandBuffer::BeginRenderPass( const RenderPass& renderPass )
+    {
+        PG_UNUSED( renderPass );
+        // VkRenderPassBeginInfo renderPassInfo = {};
+        // renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        // renderPassInfo.renderPass        = renderPass.GetNativeHandle();
+        // renderPassInfo.framebuffer       = g_renderState.swapChainFramebuffers[i];
+        // renderPassInfo.renderArea.offset = { 0, 0 };
+        // renderPassInfo.renderArea.extent = g_renderState.swapChain.extent;
+
+        // VkClearValue clearColor        = { 0.0f, 0.0f, 0.0f, 1.0f };
+        // renderPassInfo.clearValueCount = 1;
+        // renderPassInfo.pClearValues    = &clearColor;
+        // vkCmdBeginRenderPass( m_handle, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
+    }
+
+    void CommandBuffer::EndRenderPass()
+    {
+        vkCmdEndRenderPass( m_handle );
+    }
+
+    void CommandBuffer::BindRenderPipeline( const Pipeline& pipeline )
+    {
+        vkCmdBindPipeline( m_handle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.GetNativeHandle() );
+    }
+    
+    void CommandBuffer::DrawNonIndexed( uint32_t vertCount, uint32_t instanceCount,
+                                        uint32_t firstVert, uint32_t firstInstance )
+    {
+        vkCmdDraw( m_handle, vertCount, instanceCount, firstVert, firstInstance );
+    }
+
+
+    CommandPool::~CommandPool()
+    {
+        Free();
+    }
+
+    CommandPool::CommandPool( CommandPool&& pool )
+    {
+        *this = std::move( pool );
+    }
+
+    CommandPool& CommandPool::operator=( CommandPool&& pool )
+    {
+        if ( m_handle != VK_NULL_HANDLE )
+        {
+            vkDestroyCommandPool( m_device, m_handle, nullptr );
+        }
+        
+        m_handle = pool.m_handle;
+        m_device = pool.m_device;
+        pool.m_handle = VK_NULL_HANDLE;
+
+        return *this;
+    }
+
+    void CommandPool::Free()
+    {
+        if ( m_handle != VK_NULL_HANDLE )
+        {
+            vkDestroyCommandPool( m_device, m_handle, nullptr );
+            m_handle = VK_NULL_HANDLE;
+        }
+    }
+
+    CommandPool::operator bool() const
+    {
+        return m_handle != VK_NULL_HANDLE;
+    }
+
+    CommandBuffer CommandPool::NewCommandBuffer()
+    {
+        PG_ASSERT( m_handle != VK_NULL_HANDLE );
+        VkCommandBufferAllocateInfo allocInfo = {};
+        allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.commandPool        = m_handle;
+        allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandBufferCount = 1;
+    
+        CommandBuffer buf;
+        if ( vkAllocateCommandBuffers( m_device, &allocInfo, &buf.m_handle ) != VK_SUCCESS )
+        {
+            buf.m_handle = VK_NULL_HANDLE;
+        }
+
+        return buf;
     }
 
 } // namespace Gfx

@@ -340,6 +340,7 @@ namespace Gfx
 
         static Sampler Create( const SamplerDescriptor& desc );
         void Bind( uint32_t index ) const;
+        void Free();
 
         FilterMode GetMinFilter() const;
         FilterMode GetMagFilter() const;
@@ -649,6 +650,7 @@ namespace Gfx
         Pipeline& operator=( Pipeline&& pipeline );
 
         static Pipeline Create( const PipelineDescriptor& desc );
+        void Free();
         VkPipeline GetNativeHandle() const;
         operator bool() const;
 
@@ -658,8 +660,48 @@ namespace Gfx
         VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
     };
 
-    //void Blit( const RenderPass& src, const RenderPass& dst, int width, int height,
-     //          const RenderTargetBuffers& mask, FilterMode filter );
+
+    class CommandBuffer : public NonCopyable
+    {
+        friend class CommandPool;
+    public:
+        CommandBuffer() = default;
+        CommandBuffer( CommandBuffer&& cmdbuf );
+        CommandBuffer& operator=( CommandBuffer&& cmdbuf );
+        operator bool() const;
+        VkCommandBuffer GetNativeHandle() const;
+
+        bool BeginRecording();
+        bool EndRecording();
+        void BeginRenderPass( const RenderPass& renderPass );
+        void EndRenderPass();
+        void BindRenderPipeline( const Pipeline& pipeline );
+
+        void DrawNonIndexed( uint32_t vertCount, uint32_t instanceCount = 1, uint32_t firstVert = 0, uint32_t firstInstance = 0);
+    private:
+        VkCommandBuffer m_handle = VK_NULL_HANDLE;
+        VkCommandBufferBeginInfo m_beginInfo;
+    };
+
+
+    class CommandPool : public NonCopyable
+    {
+        friend class Device;
+    public:
+        CommandPool() = default;
+        ~CommandPool();
+        CommandPool( CommandPool&& pool );
+        CommandPool& operator=( CommandPool&& pool );
+        void Free();
+        operator bool() const;
+
+        CommandBuffer NewCommandBuffer();
+
+    private:
+        VkCommandPool m_handle = VK_NULL_HANDLE;
+        VkDevice m_device      = VK_NULL_HANDLE;
+    };
+
 
     class Device : public NonCopyable
     {
@@ -668,21 +710,23 @@ namespace Gfx
         ~Device();
         Device( Device&& device );
         Device& operator=( Device&& device );
-
         void Free();
+        operator bool() const;
 
         static Device CreateDefault();
+        CommandPool NewCommandPool() const;
 
         VkDevice GetNativeHandle() const;
         VkQueue GraphicsQueue() const;
         VkQueue PresentQueue() const;
-        operator bool() const;
 
     private:
         VkDevice m_handle        = VK_NULL_HANDLE;
         VkQueue  m_graphicsQueue = VK_NULL_HANDLE;
         VkQueue  m_presentQueue  = VK_NULL_HANDLE;
     };
+
+
 
 } // namespace Gfx
 } // namespace Progression

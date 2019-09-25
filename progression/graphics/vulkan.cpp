@@ -574,28 +574,21 @@ static bool CreateSwapChainFrameBuffers()
 
 static bool CreateCommandPoolAndBuffers()
 {
-    VkDevice dev = g_renderState.device.GetNativeHandle();
-    VkCommandPoolCreateInfo poolInfo = {};
-    poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.queueFamilyIndex = g_renderState.physicalDeviceInfo.indices.graphicsFamily;
-    poolInfo.flags            = 0;
-
-    if ( vkCreateCommandPool( dev, &poolInfo, nullptr, &g_renderState.commandPool ) != VK_SUCCESS )
+    g_renderState.commandPool = g_renderState.device.NewCommandPool();
+    if ( !g_renderState.commandPool )
     {
         return false;
     }
 
     g_renderState.commandBuffers.resize( g_renderState.swapChain.images.size() );
 
-    VkCommandBufferAllocateInfo allocInfo = {};
-    allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool        = g_renderState.commandPool;
-    allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = static_cast< uint32_t >( g_renderState.commandBuffers.size() );
-
-    if ( vkAllocateCommandBuffers( dev, &allocInfo, g_renderState.commandBuffers.data() ) != VK_SUCCESS )
+    for ( auto& cmdbuf : g_renderState.commandBuffers )
     {
-        return false;
+        cmdbuf = g_renderState.commandPool.NewCommandBuffer();
+        if ( !cmdbuf )
+        {
+            return false;
+        }
     }
 
     return true;
@@ -603,14 +596,27 @@ static bool CreateCommandPoolAndBuffers()
 
 static bool CreateSemaphores()
 {
-    VkSemaphoreCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    g_renderState.renderCompleteSemaphores.resize( MAX_FRAMES_IN_FLIGHT );
+    g_renderState.presentCompleteSemaphores.resize( MAX_FRAMES_IN_FLIGHT );
+    g_renderState.inFlightFences.resize( MAX_FRAMES_IN_FLIGHT );
+
+    VkSemaphoreCreateInfo semInfo = {};
+    semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fenceInfo = {};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     VkDevice dev = g_renderState.device.GetNativeHandle();
-    if ( vkCreateSemaphore( dev, &info, nullptr, &g_renderState.presentComplete ) != VK_SUCCESS ||
-         vkCreateSemaphore( dev, &info, nullptr, &g_renderState.renderComplete ) != VK_SUCCESS )
+
+    for ( size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
     {
-        return false;
+        if ( vkCreateSemaphore( dev, &semInfo, nullptr, &g_renderState.presentCompleteSemaphores[i] ) != VK_SUCCESS ||
+             vkCreateSemaphore( dev, &semInfo, nullptr, &g_renderState.renderCompleteSemaphores[i] ) != VK_SUCCESS ||
+             vkCreateFence( dev, &fenceInfo, nullptr, &g_renderState.inFlightFences[i] ) != VK_SUCCESS )
+        {
+            return false;
+        }
     }
 
     return true;
@@ -702,10 +708,14 @@ void VulkanShutdown()
 {
     VkDevice dev = g_renderState.device.GetNativeHandle();
 
-    vkDestroySemaphore( dev, g_renderState.presentComplete, nullptr );
-    vkDestroySemaphore( dev, g_renderState.renderComplete, nullptr );
+    for ( size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
+    {
+        vkDestroySemaphore( dev, g_renderState.presentCompleteSemaphores[i], nullptr );
+        vkDestroySemaphore( dev, g_renderState.renderCompleteSemaphores[i], nullptr );
+        vkDestroyFence( dev, g_renderState.inFlightFences[i], nullptr );
+    }
 
-    vkDestroyCommandPool( dev, g_renderState.commandPool, nullptr );
+    g_renderState.commandPool.Free();
     for ( auto framebuffer : g_renderState.swapChainFramebuffers )
     {
         vkDestroyFramebuffer( dev, framebuffer, nullptr );
