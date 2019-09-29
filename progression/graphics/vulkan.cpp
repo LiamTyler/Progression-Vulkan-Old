@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.hpp>
 #include "core/window.hpp"
 #include "graphics/graphics_api.hpp"
+#include "graphics/pg_to_vulkan_types.hpp"
 #include "utils/logger.hpp"
 #include <iostream>
 #include <set>
@@ -443,105 +444,10 @@ static bool PickPhysicalDevice() {
     return true;
 }
 
-static bool CreateSwapChain()
-{
-    SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport( g_renderState.physicalDeviceInfo.device, g_renderState.surface );
-
-    VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat( swapChainSupport.formats );
-    VkPresentModeKHR   presentMode   = ChooseSwapPresentMode( swapChainSupport.presentModes );
-    VkExtent2D         extent        = ChooseSwapExtent( swapChainSupport.capabilities );
-
-    uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-    if ( swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount )
-    {
-        imageCount = swapChainSupport.capabilities.maxImageCount;
-    }
-
-    VkSwapchainCreateInfoKHR createInfo = {};
-    createInfo.sType                    = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface                  = g_renderState.surface;
-    createInfo.minImageCount            = imageCount;
-    createInfo.imageFormat              = surfaceFormat.format;
-    createInfo.imageColorSpace          = surfaceFormat.colorSpace;
-    createInfo.imageExtent              = extent;
-    createInfo.imageArrayLayers         = 1; // always 1 unless doing VR
-    createInfo.imageUsage               = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-    const auto& indices = g_renderState.physicalDeviceInfo.indices;
-    uint32_t queueFamilyIndices[] = { indices.graphicsFamily, indices.presentFamily };
-
-    if ( indices.graphicsFamily != indices.presentFamily )
-    {
-        LOG_WARN( "Graphics queue is not the same as the presentation queue! Possible performance drop" );
-        createInfo.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
-        createInfo.queueFamilyIndexCount = 2;
-        createInfo.pQueueFamilyIndices   = queueFamilyIndices;
-    }
-    else
-    {
-        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    }
-
-    // can specify transforms to happen (90 rotation, horizontal flip, etc). None used for now
-    createInfo.preTransform   = swapChainSupport.capabilities.currentTransform;
-    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    createInfo.presentMode    = presentMode;
-    createInfo.clipped        = VK_TRUE;
-
-    // only applies if you have to create a new swap chain (like on window resizing)
-    createInfo.oldSwapchain = VK_NULL_HANDLE;
-
-    if ( vkCreateSwapchainKHR( g_renderState.device.GetNativeHandle(), &createInfo, nullptr, &g_renderState.swapChain.swapChain ) != VK_SUCCESS )
-    {
-        return false;
-    }
-
-    vkGetSwapchainImagesKHR( g_renderState.device.GetNativeHandle(), g_renderState.swapChain.swapChain, &imageCount, nullptr );
-    g_renderState.swapChain.images.resize( imageCount );
-    vkGetSwapchainImagesKHR( g_renderState.device.GetNativeHandle(), g_renderState.swapChain.swapChain,
-                             &imageCount, g_renderState.swapChain.images.data() );
-
-    g_renderState.swapChain.imageFormat = surfaceFormat.format;
-    g_renderState.swapChain.extent      = extent;
-    return true;
-}
-
-static bool CreateSwapChainImageViews()
-{
-    g_renderState.swapChain.imageViews.resize( g_renderState.swapChain.images.size() );
-
-    for ( size_t i = 0; i < g_renderState.swapChain.images.size(); ++i )
-    {
-        VkImageViewCreateInfo createInfo = {};
-
-        createInfo.sType        = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        createInfo.image        = g_renderState.swapChain.images[i];
-        createInfo.viewType     = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format       = g_renderState.swapChain.imageFormat;
-        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-        // specify image purpose and which part to access
-        createInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-        createInfo.subresourceRange.baseMipLevel   = 0;
-        createInfo.subresourceRange.levelCount     = 1;
-        createInfo.subresourceRange.baseArrayLayer = 0;
-        createInfo.subresourceRange.layerCount     = 1;
-
-        if ( vkCreateImageView( g_renderState.device.GetNativeHandle(), &createInfo, nullptr, &g_renderState.swapChain.imageViews[i] ) != VK_SUCCESS )
-        {
-            return false;
-        }
-    }
-    
-    return true;
-}
-
 static bool CreateRenderPass()
 {
     RenderPassDescriptor renderPassDesc;
+    renderPassDesc.colorAttachmentDescriptors[0].format = VulkanToPGPixelFormat( g_renderState.swapChain.imageFormat );
     g_renderState.renderPass = RenderPass::Create( renderPassDesc );
     return g_renderState.renderPass;
 }
@@ -622,6 +528,105 @@ static bool CreateSemaphores()
     return true;
 }
 
+bool SwapChain::Create( VkDevice dev )
+{
+    device = dev;
+    SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport( g_renderState.physicalDeviceInfo.device, g_renderState.surface );
+
+    VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat( swapChainSupport.formats );
+    VkPresentModeKHR   presentMode   = ChooseSwapPresentMode( swapChainSupport.presentModes );
+
+    imageFormat   = surfaceFormat.format;
+    extent        = ChooseSwapExtent( swapChainSupport.capabilities );
+
+    uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+    if ( swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount )
+    {
+        imageCount = swapChainSupport.capabilities.maxImageCount;
+    }
+
+    VkSwapchainCreateInfoKHR createInfo = {};
+    createInfo.sType                    = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    createInfo.surface                  = g_renderState.surface;
+    createInfo.minImageCount            = imageCount;
+    createInfo.imageFormat              = surfaceFormat.format;
+    createInfo.imageColorSpace          = surfaceFormat.colorSpace;
+    createInfo.imageExtent              = extent;
+    createInfo.imageArrayLayers         = 1; // always 1 unless doing VR
+    createInfo.imageUsage               = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    const auto& indices = g_renderState.physicalDeviceInfo.indices;
+    uint32_t queueFamilyIndices[] = { indices.graphicsFamily, indices.presentFamily };
+
+    if ( indices.graphicsFamily != indices.presentFamily )
+    {
+        LOG_WARN( "Graphics queue is not the same as the presentation queue! Possible performance drop" );
+        createInfo.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
+        createInfo.queueFamilyIndexCount = 2;
+        createInfo.pQueueFamilyIndices   = queueFamilyIndices;
+    }
+    else
+    {
+        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    }
+
+    // can specify transforms to happen (90 rotation, horizontal flip, etc). None used for now
+    createInfo.preTransform   = swapChainSupport.capabilities.currentTransform;
+    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    createInfo.presentMode    = presentMode;
+    createInfo.clipped        = VK_TRUE;
+
+    // only applies if you have to create a new swap chain (like on window resizing)
+    createInfo.oldSwapchain = VK_NULL_HANDLE;
+
+    if ( vkCreateSwapchainKHR( device, &createInfo, nullptr, &swapChain ) != VK_SUCCESS )
+    {
+        return false;
+    }
+
+    vkGetSwapchainImagesKHR( device, swapChain, &imageCount, nullptr );
+    images.resize( imageCount );
+    vkGetSwapchainImagesKHR( device, swapChain, &imageCount, images.data() );
+
+    // image views
+    imageViews.resize( images.size() );
+
+    for ( size_t i = 0; i < images.size(); ++i )
+    {
+        VkImageViewCreateInfo viewCreateInfo = {};
+
+        viewCreateInfo.sType        = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        viewCreateInfo.image        = images[i];
+        viewCreateInfo.viewType     = VK_IMAGE_VIEW_TYPE_2D;
+        viewCreateInfo.format       = imageFormat;
+        viewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        viewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        viewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        viewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+        // specify image purpose and which part to access
+        viewCreateInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        viewCreateInfo.subresourceRange.baseMipLevel   = 0;
+        viewCreateInfo.subresourceRange.levelCount     = 1;
+        viewCreateInfo.subresourceRange.baseArrayLayer = 0;
+        viewCreateInfo.subresourceRange.layerCount     = 1;
+
+        if ( vkCreateImageView( device, &viewCreateInfo, nullptr, &imageViews[i] ) != VK_SUCCESS )
+        {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+uint32_t SwapChain::AcquireNextImage( VkSemaphore presentCompleteSemaphore )
+{
+    vkAcquireNextImageKHR( device, swapChain, UINT64_MAX, presentCompleteSemaphore, VK_NULL_HANDLE, &currentImage );
+
+    return currentImage;
+}
+
 bool VulkanInit()
 {
     if ( !CreateInstance() )
@@ -665,15 +670,9 @@ bool VulkanInit()
         return false;
     }
 
-    if ( !CreateSwapChain() )
+    if ( !g_renderState.swapChain.Create( g_renderState.device.GetNativeHandle() ) )
     {
         LOG_ERR( "Could not create swap chain" );
-        return false;
-    }
-
-    if ( !CreateSwapChainImageViews() )
-    {
-        LOG_ERR( "Could not create image views for the swap chain images" );
         return false;
     }
 

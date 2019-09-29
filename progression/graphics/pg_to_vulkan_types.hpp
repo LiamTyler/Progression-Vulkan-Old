@@ -1,8 +1,8 @@
 #pragma once
 
 #include "graphics/graphics_api.hpp"
+#include "core/assert.hpp"
 #include <tuple>
-#include <assert.h>
 
 namespace Progression
 {
@@ -256,7 +256,7 @@ namespace Gfx
     {
         VkFormat convert[] =
         {
-            VK_FORMAT_UNDEFINED,
+            VK_FORMAT_UNDEFINED, // INVALID
 
             VK_FORMAT_R8_UNORM, // R8_UNORM
             VK_FORMAT_R8_SNORM, // R8_SNORM
@@ -276,11 +276,23 @@ namespace Gfx
             VK_FORMAT_R8G8B8_SINT,  // R8_G8_B8_SINT
             VK_FORMAT_R8G8B8_SRGB,  // R8_G8_B8_SRGB
 
+            VK_FORMAT_B8G8R8_UNORM, // B8_G8_R8_UNORM
+            VK_FORMAT_B8G8R8_SNORM, // B8_G8_R8_SNORM
+            VK_FORMAT_B8G8R8_UINT,  // B8_G8_R8_UINT
+            VK_FORMAT_B8G8R8_SINT,  // B8_G8_R8_SINT
+            VK_FORMAT_B8G8R8_SRGB,  // B8_G8_R8_SRGB
+
             VK_FORMAT_R8G8B8A8_UNORM, // R8_G8_B8_A8_UNORM
             VK_FORMAT_R8G8B8A8_SNORM, // R8_G8_B8_A8_SNORM
             VK_FORMAT_R8G8B8A8_UINT,  // R8_G8_B8_A8_UINT
             VK_FORMAT_R8G8B8A8_SINT,  // R8_G8_B8_A8_SINT
             VK_FORMAT_R8G8B8A8_SRGB,  // R8_G8_B8_A8_SRGB
+
+            VK_FORMAT_B8G8R8A8_UNORM, // B8_G8_R8_A8_UNORM
+            VK_FORMAT_B8G8R8A8_SNORM, // B8_G8_R8_A8_SNORM
+            VK_FORMAT_B8G8R8A8_UINT,  // B8_G8_R8_A8_UINT
+            VK_FORMAT_B8G8R8A8_SINT,  // B8_G8_R8_A8_SINT
+            VK_FORMAT_B8G8R8A8_SRGB,  // B8_G8_R8_A8_SRGB
 
             VK_FORMAT_R16_UNORM,  // R16_UNORM
             VK_FORMAT_R16_SNORM,  // R16_SNORM
@@ -314,21 +326,20 @@ namespace Gfx
             VK_FORMAT_R32G32_SINT,   // R32_G32_SINT
             VK_FORMAT_R32G32_SFLOAT, // R32_G32_FLOAT
 
-            VK_FORMAT_R32G32B32_UINT,   // R32_G32_B32_UINT
-            VK_FORMAT_R32G32B32_SINT,   // R32_G32_B32_SINT
-            VK_FORMAT_R32G32B32_SFLOAT, // R32_G32_B32_FLOAT
+            VK_FORMAT_R32G32B32_UINT,       // R32_G32_B32_UINT
+            VK_FORMAT_R32G32B32_SINT,       // R32_G32_B32_SINT
+            VK_FORMAT_R32G32B32_SFLOAT,     // R32_G32_B32_FLOAT
 
-            VK_FORMAT_R32G32B32A32_UINT,   // R32_G32_B32_A32_UINT
-            VK_FORMAT_R32G32B32A32_SINT,   // R32_G32_B32_A32_SINT
-            VK_FORMAT_R32G32B32A32_SFLOAT, // R32_G32_B32_A32_FLOAT
+            VK_FORMAT_R32G32B32A32_UINT,    // R32_G32_B32_A32_UINT
+            VK_FORMAT_R32G32B32A32_SINT,    // R32_G32_B32_A32_SINT
+            VK_FORMAT_R32G32B32A32_SFLOAT,  // R32_G32_B32_A32_FLOAT
 
-            VK_FORMAT_D16_UNORM,          // DEPTH_16_UNORM
-            VK_FORMAT_D32_SFLOAT,         // DEPTH_32_FLOAT
-            VK_FORMAT_D16_UNORM_S8_UINT,  // DEPTH_16_UNORM_STENCIL_8_UINT
-            VK_FORMAT_D24_UNORM_S8_UINT,  // DEPTH_24_UNORM_STENCIL_8_UINT
-            VK_FORMAT_D32_SFLOAT_S8_UINT, // DEPTH_32_FLOAT_STENCIL_8_UINT
-
-            VK_FORMAT_S8_UINT, // STENCIL_8_UINT
+            VK_FORMAT_D16_UNORM,            // DEPTH_16_UNORM
+            VK_FORMAT_D32_SFLOAT,           // DEPTH_32_FLOAT
+            VK_FORMAT_D16_UNORM_S8_UINT,    // DEPTH_16_UNORM_STENCIL_8_UINT
+            VK_FORMAT_D24_UNORM_S8_UINT,    // DEPTH_24_UNORM_STENCIL_8_UINT
+            VK_FORMAT_D32_SFLOAT_S8_UINT,   // DEPTH_32_FLOAT_STENCIL_8_UINT
+            VK_FORMAT_S8_UINT,              // STENCIL_8_UINT
 
             VK_FORMAT_BC1_RGB_UNORM_BLOCK,  // BC1_RGB_UNORM
             VK_FORMAT_BC1_RGB_SRGB_BLOCK,   // BC1_RGB_SRGB
@@ -353,70 +364,101 @@ namespace Gfx
         return convert[static_cast< int >( format )];
     }
 
-    //inline std::tuple< GLenum, GLenum > PGToOpenGLFormatAndType( PixelFormat format )
-    //{
-    //    constexpr std::tuple< GLenum, GLenum > convert[] =
-    //    {
-    //        { GL_RED,  GL_UNSIGNED_BYTE },    // R8_UINT
-    //        { GL_RED,  GL_HALF_FLOAT },       // R16_FLOAT
-    //        { GL_RED,  GL_FLOAT },            // R32_FLOAT
-    //        { GL_RG,   GL_UNSIGNED_BYTE },    // R8_G8_UINT
-    //        { GL_RG,   GL_HALF_FLOAT },       // R16_G16_FLOAT
-    //        { GL_RG,   GL_FLOAT },            // R32_G32_FLOAT
-    //        { GL_RGB,  GL_UNSIGNED_BYTE },    // R8_G8_B8_UINT
-    //        { GL_RGB,  GL_HALF_FLOAT },       // R16_G16_B16_FLOAT
-    //        { GL_RGB,  GL_FLOAT },            // R32_G32_B32_FLOAT
-    //        { GL_RGBA, GL_UNSIGNED_BYTE },    // R8_G8_B8_A8_UINT
-    //        { GL_RGBA, GL_HALF_FLOAT },       // R16_G16_B16_A16_FLOAT
-    //        { GL_RGBA, GL_FLOAT },            // R32_G32_B32_A32_FLOAT
-    //        { GL_RGB,  GL_UNSIGNED_BYTE },    // R8_G8_B8_UINT_SRGB
-    //        { GL_RGBA, GL_UNSIGNED_BYTE },    // R8_G8_B8_A8_UINT_SRGB
-    //        { GL_RGBA, GL_UNSIGNED_BYTE },    // R11_G11_B10_FLOAT ??
-    //        { GL_DEPTH_COMPONENT, GL_FLOAT }, // DEPTH32_FLOAT
-    //    };
-
-    //    // static_assert( ARRAY_COUNT( convert ) == static_cast< int >( PixelFormat::NUM_PIXEL_FORMATS ) );
-
-    //    return convert[static_cast< int >( format )];
-    //}
-
-    //constexpr GLenum PGToOpenGLDepthCompareFunction( CompareFunction func )
-    //{
-    //    GLenum convert[] =
-    //    {
-    //        GL_NEVER,    // NEVER
-    //        GL_LESS,     // LESS
-    //        GL_LEQUAL,   // LEQUAL
-    //        GL_EQUAL,    // EQUAL
-    //        GL_GEQUAL,   // GEQUAL
-    //        GL_GREATER,  // GREATER
-    //        GL_NOTEQUAL, // NEQUAL
-    //        GL_ALWAYS,   // ALWAYS
-    //    };
-
-    //    static_assert( ARRAY_COUNT( convert ) == static_cast< int >( CompareFunction::NUM_COMPARE_FUNCTION ) );
-
-    //    return convert[static_cast< int >( func )];
-    //}
-
-    /*constexpr GLenum PGToOpenGLBitFieldMask( RenderTargetBuffers mask )
+    inline PixelFormat VulkanToPGPixelFormat( VkFormat format )
     {
-        GLenum glMask = 0;
-        if ( mask & RenderTargetBuffers::RENDER_TARGET_COLOR )
+        std::unordered_map< VkFormat, PixelFormat > convert =
         {
-            glMask |= GL_COLOR_BUFFER_BIT;
-        }
-        if ( mask & RenderTargetBuffers::RENDER_TARGET_DEPTH )
-        {
-            glMask |= GL_DEPTH_BUFFER_BIT;
-        }
-        if ( mask & RenderTargetBuffers::RENDER_TARGET_STENCIL )
-        {
-            glMask |= GL_STENCIL_BUFFER_BIT;
-        }
+            { VK_FORMAT_UNDEFINED,              PixelFormat::INVALID },
+            { VK_FORMAT_R8_UNORM,               PixelFormat::R8_UNORM },
+            { VK_FORMAT_R8_SNORM,               PixelFormat::R8_SNORM },
+            { VK_FORMAT_R8_UINT,                PixelFormat::R8_UINT },
+            { VK_FORMAT_R8_SINT,                PixelFormat::R8_SINT },
+            { VK_FORMAT_R8_SRGB,                PixelFormat::R8_SRGB },
+            { VK_FORMAT_R8G8_UNORM,             PixelFormat::R8_G8_UNORM },
+            { VK_FORMAT_R8G8_SNORM,             PixelFormat::R8_G8_SNORM },
+            { VK_FORMAT_R8G8_UINT,              PixelFormat::R8_G8_UINT },
+            { VK_FORMAT_R8G8_SINT,              PixelFormat::R8_G8_SINT },
+            { VK_FORMAT_R8G8_SRGB,              PixelFormat::R8_G8_SRGB },
+            { VK_FORMAT_R8G8B8_UNORM,           PixelFormat::R8_G8_B8_UNORM },
+            { VK_FORMAT_R8G8B8_SNORM,           PixelFormat::R8_G8_B8_SNORM },
+            { VK_FORMAT_R8G8B8_UINT,            PixelFormat::R8_G8_B8_UINT },
+            { VK_FORMAT_R8G8B8_SINT,            PixelFormat::R8_G8_B8_SINT },
+            { VK_FORMAT_R8G8B8_SRGB,            PixelFormat::R8_G8_B8_SRGB },
+            { VK_FORMAT_B8G8R8_UNORM,           PixelFormat::B8_G8_R8_UNORM },
+            { VK_FORMAT_B8G8R8_SNORM,           PixelFormat::B8_G8_R8_SNORM },
+            { VK_FORMAT_B8G8R8_UINT,            PixelFormat::B8_G8_R8_UINT },
+            { VK_FORMAT_B8G8R8_SINT,            PixelFormat::B8_G8_R8_SINT },
+            { VK_FORMAT_B8G8R8_SRGB,            PixelFormat::B8_G8_R8_SRGB },
+            { VK_FORMAT_R8G8B8A8_UNORM,         PixelFormat::R8_G8_B8_A8_UNORM },
+            { VK_FORMAT_R8G8B8A8_SNORM,         PixelFormat::R8_G8_B8_A8_SNORM },
+            { VK_FORMAT_R8G8B8A8_UINT,          PixelFormat::R8_G8_B8_A8_UINT },
+            { VK_FORMAT_R8G8B8A8_SINT,          PixelFormat::R8_G8_B8_A8_SINT },
+            { VK_FORMAT_R8G8B8A8_SRGB,          PixelFormat::R8_G8_B8_A8_SRGB },
+            { VK_FORMAT_B8G8R8A8_UNORM,         PixelFormat::B8_G8_R8_A8_UNORM },
+            { VK_FORMAT_B8G8R8A8_SNORM,         PixelFormat::B8_G8_R8_A8_SNORM },
+            { VK_FORMAT_B8G8R8A8_UINT,          PixelFormat::B8_G8_R8_A8_UINT },
+            { VK_FORMAT_B8G8R8A8_SINT,          PixelFormat::B8_G8_R8_A8_SINT },
+            { VK_FORMAT_B8G8R8A8_SRGB,          PixelFormat::B8_G8_R8_A8_SRGB },
+            { VK_FORMAT_R16_UNORM,              PixelFormat::R16_UNORM },
+            { VK_FORMAT_R16_SNORM,              PixelFormat::R16_SNORM },
+            { VK_FORMAT_R16_UINT,               PixelFormat::R16_UINT },
+            { VK_FORMAT_R16_SINT,               PixelFormat::R16_SINT },
+            { VK_FORMAT_R16_SFLOAT,             PixelFormat::R16_FLOAT },
+            { VK_FORMAT_R16G16_UNORM,           PixelFormat::R16_G16_UNORM },
+            { VK_FORMAT_R16G16_SNORM,           PixelFormat::R16_G16_SNORM },
+            { VK_FORMAT_R16G16_UINT,            PixelFormat::R16_G16_UINT },
+            { VK_FORMAT_R16G16_SINT,            PixelFormat::R16_G16_SINT },
+            { VK_FORMAT_R16G16_SFLOAT,          PixelFormat::R16_G16_FLOAT },
+            { VK_FORMAT_R16G16B16_UNORM,        PixelFormat::R16_G16_B16_UNORM },
+            { VK_FORMAT_R16G16B16_SNORM,        PixelFormat::R16_G16_B16_SNORM },
+            { VK_FORMAT_R16G16B16_UINT,         PixelFormat::R16_G16_B16_UINT },
+            { VK_FORMAT_R16G16B16_SINT,         PixelFormat::R16_G16_B16_SINT },
+            { VK_FORMAT_R16G16B16_SFLOAT,       PixelFormat::R16_G16_B16_FLOAT },
+            { VK_FORMAT_R16G16B16A16_UNORM,     PixelFormat::R16_G16_B16_A16_UNORM },
+            { VK_FORMAT_R16G16B16A16_SNORM,     PixelFormat::R16_G16_B16_A16_SNORM },
+            { VK_FORMAT_R16G16B16A16_UINT,      PixelFormat::R16_G16_B16_A16_UINT },
+            { VK_FORMAT_R16G16B16A16_SINT,      PixelFormat::R16_G16_B16_A16_SINT },
+            { VK_FORMAT_R16G16B16A16_SFLOAT,    PixelFormat::R16_G16_B16_A16_FLOAT },
+            { VK_FORMAT_R32_UINT,               PixelFormat::R32_UINT },
+            { VK_FORMAT_R32_SINT,               PixelFormat::R32_SINT },
+            { VK_FORMAT_R32_SFLOAT,             PixelFormat::R32_FLOAT },
+            { VK_FORMAT_R32G32_UINT,            PixelFormat::R32_G32_UINT },
+            { VK_FORMAT_R32G32_SINT,            PixelFormat::R32_G32_SINT },
+            { VK_FORMAT_R32G32_SFLOAT,          PixelFormat::R32_G32_FLOAT },
+            { VK_FORMAT_R32G32B32_UINT,         PixelFormat::R32_G32_B32_UINT },
+            { VK_FORMAT_R32G32B32_SINT,         PixelFormat::R32_G32_B32_SINT },
+            { VK_FORMAT_R32G32B32_SFLOAT,       PixelFormat::R32_G32_B32_FLOAT },
+            { VK_FORMAT_R32G32B32A32_UINT,      PixelFormat::R32_G32_B32_A32_UINT },
+            { VK_FORMAT_R32G32B32A32_SINT,      PixelFormat::R32_G32_B32_A32_SINT },
+            { VK_FORMAT_R32G32B32A32_SFLOAT,    PixelFormat::R32_G32_B32_A32_FLOAT },
+            { VK_FORMAT_D16_UNORM,              PixelFormat::DEPTH_16_UNORM },
+            { VK_FORMAT_D32_SFLOAT,             PixelFormat::DEPTH_32_FLOAT },
+            { VK_FORMAT_D16_UNORM_S8_UINT,      PixelFormat::DEPTH_16_UNORM_STENCIL_8_UINT },
+            { VK_FORMAT_D24_UNORM_S8_UINT,      PixelFormat::DEPTH_24_UNORM_STENCIL_8_UINT },
+            { VK_FORMAT_D32_SFLOAT_S8_UINT,     PixelFormat::DEPTH_32_FLOAT_STENCIL_8_UINT },
+            { VK_FORMAT_S8_UINT,                PixelFormat::STENCIL_8_UINT },
+            { VK_FORMAT_BC1_RGB_UNORM_BLOCK,    PixelFormat::BC1_RGB_UNORM },
+            { VK_FORMAT_BC1_RGB_SRGB_BLOCK,     PixelFormat::BC1_RGB_SRGB },
+            { VK_FORMAT_BC1_RGBA_UNORM_BLOCK,   PixelFormat::BC1_RGBA_UNORM },
+            { VK_FORMAT_BC1_RGBA_SRGB_BLOCK,    PixelFormat::BC1_RGBA_SRGB },
+            { VK_FORMAT_BC2_UNORM_BLOCK,        PixelFormat::BC2_UNORM },
+            { VK_FORMAT_BC2_SRGB_BLOCK,         PixelFormat::BC2_SRGB },
+            { VK_FORMAT_BC3_UNORM_BLOCK,        PixelFormat::BC3_UNORM },
+            { VK_FORMAT_BC3_SRGB_BLOCK,         PixelFormat::BC3_SRGB },
+            { VK_FORMAT_BC4_UNORM_BLOCK,        PixelFormat::BC4_UNORM },
+            { VK_FORMAT_BC4_SNORM_BLOCK,        PixelFormat::BC4_SNORM },
+            { VK_FORMAT_BC5_UNORM_BLOCK,        PixelFormat::BC5_UNORM },
+            { VK_FORMAT_BC5_SNORM_BLOCK,        PixelFormat::BC5_SNORM },
+            { VK_FORMAT_BC6H_UFLOAT_BLOCK,      PixelFormat::BC6H_UFLOAT },
+            { VK_FORMAT_BC6H_SFLOAT_BLOCK,      PixelFormat::BC6H_SFLOAT },
+            { VK_FORMAT_BC7_UNORM_BLOCK,        PixelFormat::BC7_UNORM },
+            { VK_FORMAT_BC7_SRGB_BLOCK,         PixelFormat::BC7_SRGB },
+        };
 
-        return glMask;
-    }*/
+        PG_ASSERT( convert.find( format ) != convert.end() );
+
+        return convert[format];
+    }
 
     constexpr VkAttachmentLoadOp PGToVulkanLoadAction( LoadAction op )
     {

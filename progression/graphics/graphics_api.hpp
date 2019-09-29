@@ -378,76 +378,88 @@ namespace Gfx
         R8_G8_B8_SINT           = 14,
         R8_G8_B8_SRGB           = 15,
 
-        R8_G8_B8_A8_UNORM       = 16,
-        R8_G8_B8_A8_SNORM       = 17,
-        R8_G8_B8_A8_UINT        = 18,
-        R8_G8_B8_A8_SINT        = 19,
-        R8_G8_B8_A8_SRGB        = 20,
+        B8_G8_R8_UNORM          = 16,
+        B8_G8_R8_SNORM          = 17,
+        B8_G8_R8_UINT           = 18,
+        B8_G8_R8_SINT           = 19,
+        B8_G8_R8_SRGB           = 20,
 
-        R16_UNORM               = 21,
-        R16_SNORM               = 22,
-        R16_UINT                = 23,
-        R16_SINT                = 24,
-        R16_FLOAT               = 25,
+        R8_G8_B8_A8_UNORM       = 21,
+        R8_G8_B8_A8_SNORM       = 22,
+        R8_G8_B8_A8_UINT        = 23,
+        R8_G8_B8_A8_SINT        = 24,
+        R8_G8_B8_A8_SRGB        = 25,
 
-        R16_G16_UNORM           = 26,
-        R16_G16_SNORM           = 28,
-        R16_G16_UINT            = 28,
-        R16_G16_SINT            = 29,
-        R16_G16_FLOAT           = 30,
+        B8_G8_R8_A8_UNORM       = 26,
+        B8_G8_R8_A8_SNORM       = 27,
+        B8_G8_R8_A8_UINT        = 28,
+        B8_G8_R8_A8_SINT        = 29,
+        B8_G8_R8_A8_SRGB        = 30,
 
-        R16_G16_B16_UNORM       = 31,
-        R16_G16_B16_SNORM       = 32,
-        R16_G16_B16_UINT        = 33,
-        R16_G16_B16_SINT        = 34,
-        R16_G16_B16_FLOAT       = 35,
+        R16_UNORM               = 31,
+        R16_SNORM               = 32,
+        R16_UINT                = 33,
+        R16_SINT                = 34,
+        R16_FLOAT               = 35,
 
-        R16_G16_B16_A16_UNORM   = 36,
-        R16_G16_B16_A16_SNORM   = 37,
-        R16_G16_B16_A16_UINT    = 38,
-        R16_G16_B16_A16_SINT    = 39,
-        R16_G16_B16_A16_FLOAT   = 40,
+        R16_G16_UNORM           = 36,
+        R16_G16_SNORM           = 37,
+        R16_G16_UINT            = 38,
+        R16_G16_SINT            = 39,
+        R16_G16_FLOAT           = 40,
 
-        R32_UINT                = 41,
-        R32_SINT                = 42,
-        R32_FLOAT               = 43,
+        R16_G16_B16_UNORM       = 41,
+        R16_G16_B16_SNORM       = 42,
+        R16_G16_B16_UINT        = 43,
+        R16_G16_B16_SINT        = 44,
+        R16_G16_B16_FLOAT       = 45,
 
-        R32_G32_UINT            = 44,
-        R32_G32_SINT            = 45,
-        R32_G32_FLOAT           = 46,
+        R16_G16_B16_A16_UNORM   = 46,
+        R16_G16_B16_A16_SNORM   = 47,
+        R16_G16_B16_A16_UINT    = 48,
+        R16_G16_B16_A16_SINT    = 49,
+        R16_G16_B16_A16_FLOAT   = 50,
 
-        R32_G32_B32_UINT        = 47,
-        R32_G32_B32_SINT        = 48,
-        R32_G32_B32_FLOAT       = 49,
+        R32_UINT                = 51,
+        R32_SINT                = 52,
+        R32_FLOAT               = 53,
 
-        R32_G32_B32_A32_UINT    = 50,
-        R32_G32_B32_A32_SINT    = 51,
-        R32_G32_B32_A32_FLOAT   = 52,
+        R32_G32_UINT            = 54,
+        R32_G32_SINT            = 55,
+        R32_G32_FLOAT           = 56,
 
-        DEPTH_16_UNORM                  = 53,
-        DEPTH_32_FLOAT                  = 54,
-        DEPTH_16_UNORM_STENCIL_8_UINT   = 55,
-        DEPTH_24_UNORM_STENCIL_8_UINT   = 56,
-        DEPTH_32_FLOAT_STENCIL_8_UINT   = 57,
+        R32_G32_B32_UINT        = 57,
+        R32_G32_B32_SINT        = 58,
+        R32_G32_B32_FLOAT       = 59,
 
-        STENCIL_8_UINT          = 58,
+        R32_G32_B32_A32_UINT    = 60,
+        R32_G32_B32_A32_SINT    = 61,
+        R32_G32_B32_A32_FLOAT   = 62,
 
-        BC1_RGB_UNORM           = 59,
-        BC1_RGB_SRGB            = 60,
-        BC1_RGBA_UNORM          = 61,
-        BC1_RGBA_SRGB           = 62,
-        BC2_UNORM               = 63,
-        BC2_SRGB                = 64,
-        BC3_UNORM               = 65,
-        BC3_SRGB                = 66,
-        BC4_UNORM               = 67,
-        BC4_SNORM               = 68,
-        BC5_UNORM               = 69,
-        BC5_SNORM               = 70,
-        BC6H_UFLOAT             = 71,
-        BC6H_SFLOAT             = 72,
-        BC7_UNORM               = 73,
-        BC7_SRGB                = 74,
+        DEPTH_16_UNORM                  = 63,
+        DEPTH_32_FLOAT                  = 64,
+        DEPTH_16_UNORM_STENCIL_8_UINT   = 65,
+        DEPTH_24_UNORM_STENCIL_8_UINT   = 66,
+        DEPTH_32_FLOAT_STENCIL_8_UINT   = 67,
+
+        STENCIL_8_UINT          = 68,
+
+        BC1_RGB_UNORM           = 69,
+        BC1_RGB_SRGB            = 70,
+        BC1_RGBA_UNORM          = 71,
+        BC1_RGBA_SRGB           = 72,
+        BC2_UNORM               = 73,
+        BC2_SRGB                = 74,
+        BC3_UNORM               = 75,
+        BC3_SRGB                = 76,
+        BC4_UNORM               = 77,
+        BC4_SNORM               = 78,
+        BC5_UNORM               = 79,
+        BC5_SNORM               = 80,
+        BC6H_UFLOAT             = 81,
+        BC6H_SFLOAT             = 82,
+        BC7_UNORM               = 83,
+        BC7_SRGB                = 84,
 
         NUM_PIXEL_FORMATS
     };
@@ -540,7 +552,7 @@ namespace Gfx
         glm::vec4 clearColor    = glm::vec4( 0 );
         LoadAction loadAction   = LoadAction::CLEAR;
         StoreAction storeAction = StoreAction::STORE;
-        Texture* texture        = nullptr;
+        PixelFormat format      = PixelFormat::INVALID;
     };
 
     enum class CompareFunction
@@ -565,7 +577,6 @@ namespace Gfx
         float clearValue        = 1.0f;
         LoadAction loadAction   = LoadAction::CLEAR;
         StoreAction storeAction = StoreAction::STORE;
-        Texture* texture        = nullptr;
     };
 
     class RenderPassDescriptor
@@ -591,8 +602,9 @@ namespace Gfx
         VkRenderPass GetNativeHandle() const;
         operator bool() const;
 
+        RenderPassDescriptor desc;
+
     private:
-        RenderPassDescriptor m_desc;
         VkRenderPass m_handle = VK_NULL_HANDLE;
     };
 
@@ -660,6 +672,20 @@ namespace Gfx
         VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
     };
 
+    class Fence
+    {
+        friend class Device;
+    public:
+        Fence() = default;
+
+        void Free();
+        void WaitFor();
+        void Reset();
+
+    private:
+        VkFence m_handle  = VK_NULL_HANDLE;
+        VkDevice m_device;
+    };
 
     class CommandBuffer : public NonCopyable
     {
@@ -673,11 +699,11 @@ namespace Gfx
 
         bool BeginRecording();
         bool EndRecording();
-        void BeginRenderPass( const RenderPass& renderPass );
+        void BeginRenderPass( const RenderPass& renderPass, VkFramebuffer framebuffer );
         void EndRenderPass();
         void BindRenderPipeline( const Pipeline& pipeline );
 
-        void DrawNonIndexed( uint32_t vertCount, uint32_t instanceCount = 1, uint32_t firstVert = 0, uint32_t firstInstance = 0);
+        void Draw( uint32_t firstVert, uint32_t vertCount, uint32_t instanceCount = 1, uint32_t firstInstance = 0 );
     private:
         VkCommandBuffer m_handle = VK_NULL_HANDLE;
         VkCommandBufferBeginInfo m_beginInfo;
@@ -715,6 +741,9 @@ namespace Gfx
 
         static Device CreateDefault();
         CommandPool NewCommandPool() const;
+        Fence NewFence() const;
+        void SubmitRenderCommands( int numBuffers, CommandBuffer* cmdBufs ) const;
+        void SubmitFrame( uint32_t imageIndex ) const;
 
         VkDevice GetNativeHandle() const;
         VkQueue GraphicsQueue() const;

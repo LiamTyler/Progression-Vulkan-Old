@@ -108,24 +108,11 @@ namespace RenderSystem
 
         for ( size_t i = 0; i < g_renderState.commandBuffers.size(); ++i )
         {
-            CommandBuffer& cmdBuf      = g_renderState.commandBuffers[i];
+            CommandBuffer& cmdBuf = g_renderState.commandBuffers[i];
             cmdBuf.BeginRecording();
-
-            // specify which render pass, which framebuffer, where shader loads start, and size
-            VkRenderPassBeginInfo renderPassInfo = {};
-            renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            renderPassInfo.renderPass        = g_renderState.renderPass.GetNativeHandle();
-            renderPassInfo.framebuffer       = g_renderState.swapChainFramebuffers[i];
-            renderPassInfo.renderArea.offset = { 0, 0 };
-            renderPassInfo.renderArea.extent = g_renderState.swapChain.extent;
-
-            VkClearValue clearColor        = { 0.0f, 0.0f, 0.0f, 1.0f };
-            renderPassInfo.clearValueCount = 1;
-            renderPassInfo.pClearValues    = &clearColor;
-
-            vkCmdBeginRenderPass( cmdBuf.GetNativeHandle(), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
+            cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[i] );
             cmdBuf.BindRenderPipeline( s_pipeline );
-            cmdBuf.DrawNonIndexed( 3 );
+            cmdBuf.Draw( 0, 3 );
             cmdBuf.EndRenderPass();
             cmdBuf.EndRecording();
         }
@@ -155,44 +142,10 @@ namespace RenderSystem
         vkWaitForFences( dev, 1, &g_renderState.inFlightFences[currentFrame], VK_TRUE, UINT64_MAX );
         vkResetFences( dev, 1, &g_renderState.inFlightFences[currentFrame] );
 
-        uint32_t imageIndex;
-        vkAcquireNextImageKHR( dev, g_renderState.swapChain.swapChain, UINT64_MAX,
-                               g_renderState.presentCompleteSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex );
+        auto imageIndex = g_renderState.swapChain.AcquireNextImage( g_renderState.presentCompleteSemaphores[currentFrame] );
+        g_renderState.device.SubmitRenderCommands( 1, &g_renderState.commandBuffers[imageIndex] );
 
-        VkSubmitInfo submitInfo = {};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-        VkSemaphore waitSemaphores[]      = { g_renderState.presentCompleteSemaphores[currentFrame] };
-        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-        submitInfo.waitSemaphoreCount     = 1;
-        submitInfo.pWaitSemaphores        = waitSemaphores;
-        submitInfo.pWaitDstStageMask      = waitStages;
-        submitInfo.commandBufferCount     = 1;
-        VkCommandBuffer cmdBufs[]         = { g_renderState.commandBuffers[imageIndex].GetNativeHandle() };
-        submitInfo.pCommandBuffers        = cmdBufs;
-
-        VkSemaphore signalSemaphores[]    = { g_renderState.renderCompleteSemaphores[currentFrame] };
-        submitInfo.signalSemaphoreCount   = 1;
-        submitInfo.pSignalSemaphores      = signalSemaphores;
-
-        PG_ASSERT( vkQueueSubmit( g_renderState.device.GraphicsQueue(), 1, &submitInfo,
-                                  g_renderState.inFlightFences[currentFrame] ) == VK_SUCCESS );
-
-        VkPresentInfoKHR presentInfo   = {};
-        presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores    = signalSemaphores;
-
-        VkSwapchainKHR swapChains[] = { g_renderState.swapChain.swapChain };
-        presentInfo.swapchainCount  = 1;
-        presentInfo.pSwapchains     = swapChains;
-        presentInfo.pImageIndices   = &imageIndex;
-
-        vkQueuePresentKHR( g_renderState.device.PresentQueue(), &presentInfo );
-
-        g_renderState.currentFrame = ( g_renderState.currentFrame + 1 ) % MAX_FRAMES_IN_FLIGHT;
-
-        // vkDeviceWaitIdle( g_renderState.device.GetNativeHandle() );
+        g_renderState.device.SubmitFrame( imageIndex );
     }
 
     void InitSamplers()

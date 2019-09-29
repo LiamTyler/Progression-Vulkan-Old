@@ -297,11 +297,23 @@ namespace Gfx
             3,  // R8_G8_B8_SINT
             3,  // R8_G8_B8_SRGB
 
+            3,  // B8_G8_R8_UNORM
+            3,  // B8_G8_R8_SNORM
+            3,  // B8_G8_R8_UINT
+            3,  // B8_G8_R8_SINT
+            3,  // B8_G8_R8_SRGB
+
             4,  // R8_G8_B8_A8_UNORM
             4,  // R8_G8_B8_A8_SNORM
             4,  // R8_G8_B8_A8_UINT
             4,  // R8_G8_B8_A8_SINT
             4,  // R8_G8_B8_A8_SRGB
+
+            4,  // B8_G8_R8_A8_UNORM
+            4,  // B8_G8_R8_A8_SNORM
+            4,  // B8_G8_R8_A8_UINT
+            4,  // B8_G8_R8_A8_SINT
+            4,  // B8_G8_R8_A8_SRGB
 
             2,  // R16_UNORM
             2,  // R16_SNORM
@@ -489,7 +501,7 @@ namespace Gfx
 
     RenderPass& RenderPass::operator=( RenderPass&& r )
     {
-        m_desc     = std::move( r.m_desc );
+        desc       = std::move( r.desc );
         m_handle   = std::move( r.m_handle );
         r.m_handle = VK_NULL_HANDLE;
 
@@ -499,24 +511,21 @@ namespace Gfx
     RenderPass RenderPass::Create( const RenderPassDescriptor& desc )
     {
         RenderPass pass;
-        pass.m_desc = desc;
+        pass.desc = desc;
 
-        int numColorAttach = static_cast< int >( desc.colorAttachmentDescriptors.size() );
         std::vector< VkAttachmentDescription > colorAttachments;
         std::vector< VkAttachmentReference > colorAttachmentRefs;
-        /*
-        int i = 0;
-        for ( ; i < numColorAttach; ++i )
+
+        for ( size_t i = 0; i < desc.colorAttachmentDescriptors.size(); ++i )
         {
             const auto& attach = desc.colorAttachmentDescriptors[i];
-            if ( !attach.texture )
+            if ( attach.format == PixelFormat::INVALID )
             {
                 break;
             }
 
             colorAttachments.push_back( {} );
-            // colorAttachments[i].format         = swapChainImageFormat;
-            colorAttachments[i].format         = g_renderState.swapChain.imageFormat;
+            colorAttachments[i].format         = PGToVulanPixelFormat( attach.format );
             colorAttachments[i].samples        = VK_SAMPLE_COUNT_1_BIT;
             colorAttachments[i].loadOp         = PGToVulkanLoadAction( attach.loadAction );
             colorAttachments[i].storeOp        = PGToVulkanStoreAction( attach.storeAction );
@@ -529,21 +538,6 @@ namespace Gfx
             colorAttachmentRefs[i].attachment = i;
             colorAttachmentRefs[i].layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         }
-        numColorAttach = i;
-        */
-        colorAttachments.push_back( {} );
-        colorAttachments[0].format         = g_renderState.swapChain.imageFormat;
-        colorAttachments[0].samples        = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachments[0].loadOp         = PGToVulkanLoadAction( LoadAction::CLEAR );
-        colorAttachments[0].storeOp        = PGToVulkanStoreAction( StoreAction::STORE );
-        colorAttachments[0].stencilLoadOp  = PGToVulkanLoadAction( LoadAction::DONT_CARE );
-        colorAttachments[0].stencilStoreOp = PGToVulkanStoreAction( StoreAction::DONT_CARE );
-        colorAttachments[0].initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachments[0].finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-        colorAttachmentRefs.push_back( {} );
-        colorAttachmentRefs[0].attachment = 0;
-        colorAttachmentRefs[0].layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         VkSubpassDescription subpass = {};
         subpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -752,6 +746,23 @@ namespace Gfx
         return m_pipeline != VK_NULL_HANDLE;
     }
 
+    void Fence::Free()
+    {
+        vkDestroyFence( m_device, m_handle, nullptr );
+    }
+
+    void Fence::WaitFor()
+    {
+        PG_ASSERT( m_device != VK_NULL_HANDLE && m_handle != VK_NULL_HANDLE );
+        vkWaitForFences( m_device, 1, &m_handle, VK_TRUE, UINT64_MAX );
+    }
+
+    void Fence::Reset()
+    {
+        PG_ASSERT( m_device != VK_NULL_HANDLE && m_handle != VK_NULL_HANDLE );
+        vkResetFences( m_device, 1, &m_handle );
+    }
+
     Device::~Device()
     {
         Free();
@@ -845,6 +856,20 @@ namespace Gfx
         return cmdPool;
     }
 
+    Fence Device::NewFence() const
+    {
+        Fence fence;
+        VkFenceCreateInfo fenceInfo = {};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+        fence.m_device  = m_handle;
+        VkResult ret    = vkCreateFence( m_handle, &fenceInfo, nullptr, &fence.m_handle );
+        PG_ASSERT( ret == VK_SUCCESS );
+
+        return fence;
+    }
+
+
     VkDevice Device::GetNativeHandle() const
     {
         return m_handle;
@@ -863,6 +888,53 @@ namespace Gfx
     Device::operator bool() const
     {
         return m_handle != VK_NULL_HANDLE;
+    }
+
+    void Device::SubmitRenderCommands( int numBuffers, CommandBuffer* cmdBufs ) const
+    {
+        PG_ASSERT( 0 <= numBuffers && numBuffers <= 5 );
+        VkCommandBuffer vkCmdBufs[5];
+        for ( int i = 0; i < numBuffers; ++i )
+        {
+            vkCmdBufs[i] = cmdBufs[i].GetNativeHandle();
+        }
+
+        VkSubmitInfo submitInfo = {};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+        VkSemaphore waitSemaphores[]      = { g_renderState.presentCompleteSemaphores[g_renderState.currentFrame] };
+        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+        submitInfo.waitSemaphoreCount     = 1;
+        submitInfo.pWaitSemaphores        = waitSemaphores;
+        submitInfo.pWaitDstStageMask      = waitStages;
+        submitInfo.commandBufferCount     = numBuffers;
+        submitInfo.pCommandBuffers        = vkCmdBufs;
+
+        VkSemaphore signalSemaphores[]    = { g_renderState.renderCompleteSemaphores[g_renderState.currentFrame] };
+        submitInfo.signalSemaphoreCount   = 1;
+        submitInfo.pSignalSemaphores      = signalSemaphores;
+
+        VkResult ret = vkQueueSubmit( m_graphicsQueue, 1, &submitInfo, g_renderState.inFlightFences[g_renderState.currentFrame] );
+        PG_ASSERT( ret == VK_SUCCESS );
+    }
+
+    void Device::SubmitFrame( uint32_t imageIndex ) const
+    {
+        VkSemaphore signalSemaphores[] = { g_renderState.renderCompleteSemaphores[g_renderState.currentFrame] };
+        VkPresentInfoKHR presentInfo   = {};
+        presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores    = signalSemaphores;
+
+        VkSwapchainKHR swapChains[] = { g_renderState.swapChain.swapChain };
+        presentInfo.swapchainCount  = 1;
+        presentInfo.pSwapchains     = swapChains;
+        presentInfo.pImageIndices   = &imageIndex;
+
+        vkQueuePresentKHR( m_presentQueue, &presentInfo );
+        
+        g_renderState.currentFrame = ( g_renderState.currentFrame + 1 ) % MAX_FRAMES_IN_FLIGHT;
+        // vkDeviceWaitIdle( g_renderState.device.GetNativeHandle() );
     }
 
     CommandBuffer::CommandBuffer( CommandBuffer&& cmdbuf )
@@ -905,20 +977,21 @@ namespace Gfx
         return vkEndCommandBuffer( m_handle ) == VK_SUCCESS;
     }
 
-    void CommandBuffer::BeginRenderPass( const RenderPass& renderPass )
+    void CommandBuffer::BeginRenderPass( const RenderPass& renderPass, VkFramebuffer framebuffer )
     {
-        PG_UNUSED( renderPass );
-        // VkRenderPassBeginInfo renderPassInfo = {};
-        // renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        // renderPassInfo.renderPass        = renderPass.GetNativeHandle();
-        // renderPassInfo.framebuffer       = g_renderState.swapChainFramebuffers[i];
-        // renderPassInfo.renderArea.offset = { 0, 0 };
-        // renderPassInfo.renderArea.extent = g_renderState.swapChain.extent;
+        VkRenderPassBeginInfo renderPassInfo = {};
+        renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass        = renderPass.GetNativeHandle();
+        renderPassInfo.framebuffer       = framebuffer;
+        renderPassInfo.renderArea.offset = { 0, 0 };
+        renderPassInfo.renderArea.extent = g_renderState.swapChain.extent;
 
-        // VkClearValue clearColor        = { 0.0f, 0.0f, 0.0f, 1.0f };
-        // renderPassInfo.clearValueCount = 1;
-        // renderPassInfo.pClearValues    = &clearColor;
-        // vkCmdBeginRenderPass( m_handle, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
+        const auto& col = renderPass.desc.colorAttachmentDescriptors[0].clearColor;
+        VkClearValue clearColor        = { col.r, col.g, col.b, col.a };
+        renderPassInfo.clearValueCount = 1;
+        renderPassInfo.pClearValues    = &clearColor;
+
+        vkCmdBeginRenderPass( m_handle, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
     }
 
     void CommandBuffer::EndRenderPass()
@@ -931,8 +1004,7 @@ namespace Gfx
         vkCmdBindPipeline( m_handle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.GetNativeHandle() );
     }
     
-    void CommandBuffer::DrawNonIndexed( uint32_t vertCount, uint32_t instanceCount,
-                                        uint32_t firstVert, uint32_t firstInstance )
+    void CommandBuffer::Draw( uint32_t firstVert, uint32_t vertCount, uint32_t instanceCount, uint32_t firstInstance )
     {
         vkCmdDraw( m_handle, vertCount, instanceCount, firstVert, firstInstance );
     }

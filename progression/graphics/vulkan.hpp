@@ -41,11 +41,17 @@ namespace Gfx
         QueueFamilyIndices indices;
     };
 
-    struct SwapChain
+    class SwapChain
     {
+    public:
+        bool Create( VkDevice device );
+        uint32_t AcquireNextImage( VkSemaphore presentCompleteSemaphore );
+
+        VkDevice device;
         VkSwapchainKHR swapChain;
         VkFormat imageFormat;
         VkExtent2D extent;
+        uint32_t currentImage;
         std::vector< VkImage > images;
         std::vector< VkImageView > imageViews;
     };
