@@ -105,6 +105,26 @@ namespace Progression
         serialize::Read( buffer, name );
         serialize::Read( buffer, reflectInfo.entryPoint );
         serialize::Read( buffer, reflectInfo.stage );
+        size_t mapSize;
+        serialize::Read( buffer, mapSize );
+        for ( size_t i = 0; i < mapSize; ++i )
+        {
+            std::string varName;
+            uint32_t location;
+            serialize::Read( buffer, varName );
+            serialize::Read( buffer, location );
+            reflectInfo.inputLocations[varName] = location;
+        }
+        serialize::Read( buffer, mapSize );
+        for ( size_t i = 0; i < mapSize; ++i )
+        {
+            std::string varName;
+            uint32_t location;
+            serialize::Read( buffer, varName );
+            serialize::Read( buffer, location );
+            reflectInfo.outputLocations[varName] = location;
+        }
+
         size_t spirvSize;
         serialize::Read( buffer, spirvSize );
 
@@ -131,23 +151,40 @@ namespace Progression
         PG_MAYBE_UNUSED( result );
         PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
 
-        uint32_t var_count = 0;
-        result = spvReflectEnumerateInputVariables( &module, &var_count, NULL );
-        PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
-        SpvReflectInterfaceVariable* input_vars = static_cast< SpvReflectInterfaceVariable* >( malloc( var_count * sizeof( SpvReflectInterfaceVariable ) ) );
-        result = spvReflectEnumerateInputVariables( &module, &var_count, &input_vars );
+        uint32_t count = 0;
+        result = spvReflectEnumerateInputVariables( &module, &count, NULL );
         PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
 
-        // LOG( "inputs = ", var_count );
-        // for ( uint32_t i = 0; i < var_count; ++i )
-        // {
-        //     LOG( "input_var[", i, "] = ", input_vars[i].name, ", loc = ", input_vars[i].location );
-        // }
+        std::vector< SpvReflectInterfaceVariable* > inputVars( count );
+        result = spvReflectEnumerateInputVariables( &module, &count, inputVars.data() );
+        PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
 
-        // LOG( "Entry point = ", module.entry_point_name );
-        // LOG( "Entry point count = ", module.entry_point_count );
-        // LOG( "Stage = ", module.shader_stage );
-        // LOG( "spirv size = ", spirvSizeInBytes );
+        count = 0;
+        result = spvReflectEnumerateOutputVariables( &module, &count, NULL );
+        PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
+
+        std::vector< SpvReflectInterfaceVariable* > outputVars( count );
+        result = spvReflectEnumerateOutputVariables( &module, &count, outputVars.data() );
+        PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
+
+        LOG( "inputs = ", inputVars.size() );
+        for ( size_t i = 0; i < inputVars.size(); ++i )
+        {
+            LOG( "inputVars[", i, "] = ", inputVars[i]->name, ", loc = ", inputVars[i]->location );
+            info.inputLocations[inputVars[i]->name] = inputVars[i]->location;
+        }
+
+        LOG( "outputs = ", outputVars.size() );
+        for ( size_t i = 0; i < outputVars.size(); ++i )
+        {
+            LOG( "outputVars[", i, "] = ", outputVars[i]->name, ", loc = ", outputVars[i]->location );
+            info.outputLocations[outputVars[i]->name] = outputVars[i]->location;
+        }
+
+        LOG( "Entry point = ", module.entry_point_name );
+        LOG( "Entry point count = ", module.entry_point_count );
+        LOG( "Stage = ", module.shader_stage );
+        LOG( "spirv size = ", spirvSizeInBytes );
         PG_ASSERT( module.entry_point_count == 1);
 
         info.entryPoint = module.entry_point_name;

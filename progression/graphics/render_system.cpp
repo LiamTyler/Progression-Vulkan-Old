@@ -3,6 +3,7 @@
 #include "core/scene.hpp"
 #include "core/window.hpp"
 #include "graphics/graphics_api.hpp"
+#include "graphics/pg_to_vulkan_types.hpp"
 #include "resource/resource_manager.hpp"
 #include "resource/shader.hpp"
 #include "utils/logger.hpp"
@@ -51,13 +52,18 @@ namespace RenderSystem
 
 static Window* s_window;
 static Pipeline s_pipeline;
-static VkRenderPass renderPass;
-static VkPipeline graphicsPipeline;
+static Buffer s_buffer;
 
 namespace Progression
 {
 namespace RenderSystem
 {
+
+    struct Vertex
+    {
+        glm::vec3 pos;
+        glm::vec3 color;
+    };
 
     void InitSamplers();
 
@@ -72,10 +78,38 @@ namespace RenderSystem
         InitSamplers();
         s_window = GetMainWindow();
 
+        VertexBindingDescriptor bindingDesc;
+        bindingDesc.binding   = 0;
+        bindingDesc.stride    = sizeof( Vertex );
+        bindingDesc.inputRate = VertexInputRate::PER_VERTEX;
+
+        std::array< VertexAttributeDescriptor, 2 > attribDescs;
+        attribDescs[0].binding  = 0;
+        attribDescs[0].location = 0;
+        attribDescs[0].format   = BufferDataType::FLOAT3;
+        attribDescs[0].offset   = 0;
+
+        attribDescs[1].binding  = 0;
+        attribDescs[1].location = 1;
+        attribDescs[1].format   = BufferDataType::FLOAT3;
+        attribDescs[1].offset   = sizeof( glm::vec3 );
+
+        glm::vec3 vertices[] =
+        {
+            glm::vec3(    0, -0.5, 0 ), glm::vec3( 1, 0, 0 ),
+            glm::vec3( -0.5,  0.5, 0 ), glm::vec3( 0, 0, 1 ),
+            glm::vec3(  0.5,  0.5, 0 ), glm::vec3( 0, 1, 0 ),
+        };
+
+        s_buffer = g_renderState.device.NewBuffer( sizeof( vertices ), BufferType::VERTEX );
+        void* data = s_buffer.Map();
+        memcpy( data, vertices, s_buffer.GetLength() );
+        s_buffer.UnMap();
+
         PipelineDescriptor pipelineDesc;
-        pipelineDesc.renderPass       = &g_renderState.renderPass;
-        pipelineDesc.vertexDescriptor = VertexInputDescriptor::Create( 0, nullptr, 0, nullptr );
-        pipelineDesc.rasterizerInfo.winding = WindingOrder::CLOCKWISE;
+        pipelineDesc.renderPass             = &g_renderState.renderPass;
+        pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 1, &bindingDesc, 2, attribDescs.data() );
+        pipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
 
         pipelineDesc.viewport.x        = 0.0f;
         pipelineDesc.viewport.y        = 0.0f;
@@ -112,6 +146,9 @@ namespace RenderSystem
             cmdBuf.BeginRecording();
             cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[i] );
             cmdBuf.BindRenderPipeline( s_pipeline );
+            VkBuffer vertexBuffers[] = { s_buffer.GetNativeHandle() };
+            VkDeviceSize offsets[] = { 0 };
+            vkCmdBindVertexBuffers( cmdBuf.GetNativeHandle(), 0, 1, vertexBuffers, offsets );
             cmdBuf.Draw( 0, 3 );
             cmdBuf.EndRenderPass();
             cmdBuf.EndRecording();

@@ -36,6 +36,7 @@ namespace Gfx
         VkPhysicalDevice device;
         VkPhysicalDeviceProperties deviceProperties;
         VkPhysicalDeviceFeatures deviceFeatures;
+        VkPhysicalDeviceMemoryProperties memProperties;
         std::string name;
         int score;
         QueueFamilyIndices indices;
@@ -83,6 +84,8 @@ namespace Gfx
     bool VulkanInit();
 
     void VulkanShutdown();
+
+    uint32_t FindMemoryType( uint32_t typeFilter, VkMemoryPropertyFlags properties );
 
 } // namepspace Gfx
 } // namepspace Progression

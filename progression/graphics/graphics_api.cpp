@@ -14,10 +14,7 @@ namespace Gfx
 
     Buffer::~Buffer()
     {
-        /*if ( m_nativeHandle != ~0u )
-        {
-            glDeleteBuffers( 1, &m_nativeHandle );
-        }*/
+        Free();
     }
 
     Buffer::Buffer( Buffer&& buff )
@@ -26,56 +23,44 @@ namespace Gfx
     }
     Buffer& Buffer::operator=( Buffer&& buff )
     {
-        m_length            = std::move( buff.m_length );
-        m_type              = std::move( buff.m_type );
-        m_usage             = std::move( buff.m_usage );
-        //m_nativeHandle      = std::move( buff.m_nativeHandle );
-        //buff.m_nativeHandle = ~0u;
+        Free();
+        m_length       = std::move( buff.m_length );
+        m_type         = std::move( buff.m_type );
+        m_handle       = std::move( buff.m_handle );
+        m_memory       = std::move( buff.m_memory );
+        m_device       = std::move( buff.m_device );
+        buff.m_handle  = VK_NULL_HANDLE;
 
         return *this;
     }
 
-    Buffer Buffer::Create( void* data, size_t length, BufferType type, BufferUsage usage )
+    // void Buffer::SetData( void* src, size_t length )
+    // {
+    // }
+    // void Buffer::SetData( void* src, size_t offset, size_t length )
+    // {
+    // }
+    
+    void* Buffer::Map()
     {
-        Buffer buffer;
-        //glGenBuffers( 1, &buffer.m_nativeHandle );
-        buffer.m_type  = type;
-        buffer.m_usage = usage;
-        buffer.SetData( data, length );
-
-        return buffer;
+        void* data;
+        vkMapMemory( m_device, m_memory, 0, m_length, 0, &data );
+        return data;
     }
 
-    void Buffer::SetData( void* src, size_t length )
+    void Buffer::UnMap()
     {
-        PG_UNUSED( src );
-        PG_UNUSED( length );
-        PG_ASSERT( false );
-        /*
-        if ( !length )
-        {
-            return;
-        }
-        Bind();
-        m_length = length;
-        glBufferData( PGToOpenGLBufferType( m_type ), m_length, src, PGToOpenGLBufferUsage( m_usage ) );
-        */
+        vkUnmapMemory( m_device, m_memory );
     }
-    void Buffer::SetData( void* src, size_t offset, size_t length )
+
+    void Buffer::Free()
     {
-        PG_UNUSED( src );
-        PG_UNUSED( offset );
-        PG_UNUSED( length );
-        PG_ASSERT( false );
-        /*
-        if ( !length )
+        if ( m_handle != VK_NULL_HANDLE )
         {
-            return;
+            vkDestroyBuffer( m_device, m_handle, nullptr );
+            vkFreeMemory( m_device, m_memory, nullptr );
+            m_handle = VK_NULL_HANDLE;
         }
-        Bind();
-        PG_ASSERT( offset + length <= m_length );
-        glBufferSubData( PGToOpenGLBufferType( m_type ), offset, length, src );
-        */
     }
 
     size_t Buffer::GetLength() const
@@ -88,38 +73,20 @@ namespace Gfx
         return m_type;
     }
 
-    BufferUsage Buffer::GetUsage() const
+    VkBuffer Buffer::GetNativeHandle() const
     {
-        return m_usage;
-    }
-
-    /*GLuint Buffer::GetNativeHandle() const
-    {
-        return m_nativeHandle;
+        return m_handle;
     }
 
     Buffer::operator bool() const
     {
-        return m_nativeHandle != ~0u;
-    }*/
-
-    void Buffer::Bind() const
-    {
-        //PG_ASSERT( m_nativeHandle != (GLuint) -1 );
-        //glBindBuffer( PGToOpenGLBufferType( m_type ), m_nativeHandle );
+        return m_handle != VK_NULL_HANDLE;
     }
 
-    /*void BindVertexBuffer( const Buffer& buffer, uint32_t index, int offset, uint32_t stride )
+    void Buffer::Bind( size_t offset ) const
     {
-        PG_ASSERT( buffer.GetNativeHandle() != ~0u );
-        glBindVertexBuffer( index, buffer.GetNativeHandle(), offset, stride );
+        vkBindBufferMemory( m_device, m_handle, m_memory, offset );
     }
-
-    void BindIndexBuffer( const Buffer& buffer )
-    {
-        PG_ASSERT( buffer.GetNativeHandle() != ~0u );
-        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, buffer.GetNativeHandle() );
-    }*/
 
     VertexInputDescriptor VertexInputDescriptor::Create( uint8_t numBinding, VertexBindingDescriptor* bindingDesc,
                                                          uint8_t numAttrib, VertexAttributeDescriptor* attribDesc )
@@ -156,19 +123,6 @@ namespace Gfx
     {
         return m_createInfo;
     }
-
-    /*void DrawIndexedPrimitives( PrimitiveType primType, IndexType indexType, uint32_t offset, uint32_t count )
-    {
-        auto glTopology  = PGToOpenGLPrimitiveType( primType );
-        auto glIndexType = PGToOpenGLIndexType( indexType );
-        glDrawElements( glTopology, count, glIndexType, (void*) (uint64_t) ( offset * SizeOfIndexType( indexType ) ) );
-    }
-
-    void DrawNonIndexedPrimitives( PrimitiveType primType, uint32_t vertexStart, uint32_t vertexCount )
-    {
-        auto glTopology  = PGToOpenGLPrimitiveType( primType );
-        glDrawArrays( glTopology, vertexStart, vertexCount );
-    }*/
 
     Sampler::~Sampler()
     {
@@ -869,6 +823,37 @@ namespace Gfx
         return fence;
     }
 
+    // Buffer Device::NewBuffer( void* data, size_t length, BufferType type ) const
+    Buffer Device::NewBuffer( size_t length, BufferType type ) const
+    {
+        Buffer buffer;
+        buffer.m_device = m_handle;
+        buffer.m_type   = type;
+        buffer.m_length = length;
+
+        VkBufferCreateInfo info = {};
+        info.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        info.usage       = PGToVulkanBufferType( type );
+        info.size        = length;
+        info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        VkResult ret     = vkCreateBuffer( m_handle, &info, nullptr, &buffer.m_handle );
+        PG_ASSERT( ret == VK_SUCCESS );
+
+        VkMemoryRequirements memRequirements;
+        vkGetBufferMemoryRequirements( m_handle, buffer.m_handle, &memRequirements );
+
+        VkMemoryAllocateInfo allocInfo = {};
+        allocInfo.sType                = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize       = memRequirements.size;
+        VkMemoryPropertyFlags flags    = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        allocInfo.memoryTypeIndex      = FindMemoryType( memRequirements.memoryTypeBits, flags );
+        ret = vkAllocateMemory( m_handle, &allocInfo, nullptr, &buffer.m_memory );
+        PG_ASSERT( ret == VK_SUCCESS );
+
+        vkBindBufferMemory( m_handle, buffer.m_handle, buffer.m_memory, 0 );
+
+        return buffer;
+    }
 
     VkDevice Device::GetNativeHandle() const
     {

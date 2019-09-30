@@ -21,6 +21,8 @@ public:
 
     std::string entryPoint;
     Gfx::ShaderStage stage;
+    std::unordered_map< std::string, uint32_t > inputLocations;
+    std::unordered_map< std::string, uint32_t > outputLocations;
 };
 
 class Shader : public Resource

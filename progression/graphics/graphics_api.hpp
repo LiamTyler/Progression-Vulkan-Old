@@ -114,15 +114,6 @@ namespace Gfx
         NUM_BUFFER_TYPE
     };
 
-    enum class BufferUsage
-    {
-        STATIC  = 0,
-        DYNAMIC = 1,
-        STREAM  = 2,
-
-        NUM_BUFFER_USAGE
-    };
-
     enum class BufferDataType
     {
         INVALID = 0,
@@ -213,32 +204,30 @@ namespace Gfx
 
     class Buffer : public NonCopyable
     {
+    friend class Device;
     public:
         Buffer() = default;
         ~Buffer();
         Buffer( Buffer&& buff );
         Buffer& operator=( Buffer&& buff );
 
-        static Buffer Create( void* data, size_t length, BufferType type, BufferUsage usage );
-        void SetData( void* src, size_t length );
-        void SetData( void* src, size_t offset, size_t length );
+        void Free();
+        void* Map();
+        void UnMap();
+        void Bind( size_t offset = 0 ) const;
         size_t GetLength() const;
         BufferType GetType() const;
-        BufferUsage GetUsage() const;
-        // GLuint GetNativeHandle() const;
-        // operator bool() const;
+        VkBuffer GetNativeHandle() const;
+        operator bool() const;
 
     protected:
-        void Bind() const;
 
         BufferType m_type;
-        BufferUsage m_usage;
-        size_t m_length       = 0; // in bytes
-        // GLuint m_nativeHandle = ~0u;
+        size_t m_length; // in bytes
+        VkBuffer m_handle = VK_NULL_HANDLE;
+        VkDeviceMemory m_memory;
+        VkDevice m_device;
     };
-
-    //void BindVertexBuffer( const Buffer& buffer, uint32_t index, int offset, uint32_t stride );
-    //void BindIndexBuffer( const Buffer& buffer );
 
     enum class VertexInputRate
     {
@@ -292,9 +281,6 @@ namespace Gfx
 
         NUM_PRIMITIVE_TYPE
     };
-
-    //void DrawIndexedPrimitives( PrimitiveType primType, IndexType indexType, uint32_t offset, uint32_t count );
-    //void DrawNonIndexedPrimitives( PrimitiveType primType, uint32_t vertexStart, uint32_t vertexCount );
 
     enum class FilterMode
     {
@@ -742,6 +728,7 @@ namespace Gfx
         static Device CreateDefault();
         CommandPool NewCommandPool() const;
         Fence NewFence() const;
+        Buffer NewBuffer( size_t length, BufferType type ) const;
         void SubmitRenderCommands( int numBuffers, CommandBuffer* cmdBufs ) const;
         void SubmitFrame( uint32_t imageIndex ) const;
 

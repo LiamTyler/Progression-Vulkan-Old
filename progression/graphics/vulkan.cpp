@@ -433,13 +433,17 @@ static bool PickPhysicalDevice() {
 
     // sort and select the best GPU available
     std::sort( deviceInfos.begin(), deviceInfos.end(), []( const auto& lhs, const auto& rhs ) { return lhs.score > rhs.score; } );
-    g_renderState.physicalDeviceInfo = deviceInfos[0];
 
-    if ( g_renderState.physicalDeviceInfo.score <= 0 )
+    auto& physicalInfo = g_renderState.physicalDeviceInfo;
+    physicalInfo       = deviceInfos[0];
+
+    if ( physicalInfo.score <= 0 )
     {
-        g_renderState.physicalDeviceInfo.device = VK_NULL_HANDLE;
+        physicalInfo.device = VK_NULL_HANDLE;
         return false;
     }
+
+    vkGetPhysicalDeviceMemoryProperties( physicalInfo.device, &physicalInfo.memProperties );
     
     return true;
 }
@@ -732,6 +736,22 @@ void VulkanShutdown()
     DestroyDebugUtilsMessengerEXT();
     vkDestroySurfaceKHR( g_renderState.instance, g_renderState.surface, nullptr );
     vkDestroyInstance( g_renderState.instance, nullptr );
+}
+
+uint32_t FindMemoryType( uint32_t typeFilter, VkMemoryPropertyFlags properties )
+{
+    auto& memProperties = g_renderState.physicalDeviceInfo.memProperties;
+    for ( uint32_t i = 0; i < memProperties.memoryTypeCount; ++i )
+    {
+        if ( ( typeFilter & ( 1 << i ) ) && ( memProperties.memoryTypes[i].propertyFlags & properties ) == properties )
+        {
+            return i;
+        }
+    }
+
+    PG_ASSERT( false );
+
+    return ~0u;
 }
 
 } // namespace Gfx

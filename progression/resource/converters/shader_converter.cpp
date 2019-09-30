@@ -107,6 +107,18 @@ ConverterStatus ShaderConverter::Convert()
         std::ofstream out( m_outputContentFile, std::ios::binary );
         serialize::Write( out, reflectInfo.entryPoint );
         serialize::Write( out, reflectInfo.stage );
+        serialize::Write( out, reflectInfo.inputLocations.size() );
+        for ( const auto& [varName, varLoc] : reflectInfo.inputLocations )
+        {
+            serialize::Write( out, varName );
+            serialize::Write( out, varLoc );
+        }
+        serialize::Write( out, reflectInfo.outputLocations.size() );
+        for ( const auto& [varName, varLoc] : reflectInfo.outputLocations )
+        {
+            serialize::Write( out, varName );
+            serialize::Write( out, varLoc );
+        }
         serialize::Write( out, buffer );
     }
 

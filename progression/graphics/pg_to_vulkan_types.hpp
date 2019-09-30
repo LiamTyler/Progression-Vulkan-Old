@@ -68,32 +68,18 @@ namespace Gfx
     }
 
     
-    //constexpr GLenum PGToOpenGLBufferType( BufferType type )
-    //{
-    //    GLenum convert[] =
-    //    {
-    //        GL_ARRAY_BUFFER,         // VERTEX
-    //        GL_ELEMENT_ARRAY_BUFFER, // INDEX
-    //    };
+    constexpr VkBufferUsageFlagBits PGToVulkanBufferType( BufferType type )
+    {
+        VkBufferUsageFlagBits convert[] =
+        {
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, // VERTEX
+            VK_BUFFER_USAGE_INDEX_BUFFER_BIT,  // INDEX 
+        };
 
-    //    static_assert( ARRAY_COUNT( convert ) == static_cast< int >( BufferType::NUM_BUFFER_TYPE) );
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( BufferType::NUM_BUFFER_TYPE) );
 
-    //    return convert[static_cast< int >( type )];
-    //}
-
-    //constexpr GLenum PGToOpenGLBufferUsage( BufferUsage usage )
-    //{
-    //    GLenum convert[] =
-    //    {
-    //        GL_STATIC_DRAW,  // STATIC
-    //        GL_DYNAMIC_DRAW, // DYNAMIC
-    //        GL_STREAM_DRAW,  // STREAM
-    //    };
-
-    //    static_assert( ARRAY_COUNT( convert ) == static_cast< int >( BufferUsage::NUM_BUFFER_USAGE ) );
-
-    //    return convert[static_cast< int >( usage )];
-    //}
+        return convert[static_cast< int >( type )];
+    }
 
     constexpr VkFormat PGToVulkanBufferDataType( BufferDataType type )
     {
