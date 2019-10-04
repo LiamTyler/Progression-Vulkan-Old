@@ -31,7 +31,7 @@ namespace RenderSystem
         }
         else
         {
-            s_samplers[name] = Gfx::Sampler::Create( desc );
+            //s_samplers[name] = Gfx::Sampler::Create( desc );
             return &s_samplers[name];
         }
     }
@@ -74,6 +74,7 @@ namespace RenderSystem
             LOG_ERR( "Could not initialize vulkan" );
             return false;
         }
+        // return true;
 
         InitSamplers();
         s_window = GetMainWindow();

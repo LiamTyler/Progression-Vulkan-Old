@@ -5,9 +5,23 @@
 #include "graphics/graphics_api.hpp"
 #include "resource/resource.hpp"
 #include <vulkan/vulkan.hpp>
+#include <unordered_map>
 
 namespace Progression
 {
+
+namespace Gfx
+{
+    enum class ShaderStage
+    {
+        VERTEX                  = 0x00000001,
+        TESSELLATION_CONTROL    = 0x00000002,
+        TESSELLATION_EVALUATION = 0x00000004,
+        GEOMETRY                = 0x00000008,
+        FRAGMENT                = 0x00000010,
+        COMPUTE                 = 0x00000020,
+    };
+}
 
 struct ShaderCreateInfo : public ResourceCreateInfo
 {

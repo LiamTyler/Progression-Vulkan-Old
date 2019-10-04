@@ -1,8 +1,9 @@
 #pragma once
 
-#include "graphics/graphics_api.hpp"
 #include "core/assert.hpp"
-#include <tuple>
+#include "graphics/graphics_api.hpp"
+#include "resource/shader.hpp"
+#include <unordered_map>
 
 namespace Progression
 {

@@ -166,7 +166,7 @@ bool Image::Load( ResourceCreateInfo* createInfo )
 
     if ( m_flags & IMAGE_CREATE_TEXTURE_ON_LOAD )
     {
-        m_texture = Gfx::Texture::Create( m_texture.m_desc, m_pixels );
+        // m_texture = Gfx::Texture::Create( m_texture.m_desc, m_pixels );
     }
 
     if ( m_flags & IMAGE_FREE_CPU_COPY_ON_LOAD )
@@ -246,7 +246,7 @@ bool Image::Deserialize( char*& buffer )
     {
         if ( m_flags & IMAGE_FREE_CPU_COPY_ON_LOAD )
         {
-            m_texture = Gfx::Texture::Create( m_texture.m_desc, buffer );
+            // m_texture = Gfx::Texture::Create( m_texture.m_desc, buffer );
             buffer += totalSize;
         }
     }
@@ -313,7 +313,7 @@ bool Image::Save( const std::string& fname, bool flipVertically ) const
 
 void Image::UploadToGpu()
 {
-    m_texture = Gfx::Texture::Create( m_texture.m_desc, m_pixels );
+    // m_texture = Gfx::Texture::Create( m_texture.m_desc, m_pixels );
 }
 
 void Image::ReadToCpu()
