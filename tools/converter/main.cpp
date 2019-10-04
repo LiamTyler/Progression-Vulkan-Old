@@ -40,7 +40,7 @@ int main( int argc, char* argv[] )
 {
     PG_UNUSED( argc );
     PG_UNUSED( argv );
-    PG::EngineInitialize( PG_ROOT_DIR "configs/offline.toml" );
+    PG::EngineInitialize( PG_ROOT_DIR "configs/offline.toml", false );
 
     namespace fs = std::filesystem;
     fs::create_directories( PG_RESOURCE_DIR "cache/shaders/" );
@@ -123,7 +123,7 @@ int main( int argc, char* argv[] )
     //     LOG_ERR( "Failed to convert resource with error code: ", retVal );
     // }
 
-    PG::EngineQuit();
+    PG::EngineQuit( false );
 
     return 0;
 }

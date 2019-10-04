@@ -68,6 +68,7 @@ namespace Gfx
         // VkCommandPool commandPool;
         // std::vector< VkCommandBuffer > commandBuffers;
         CommandPool commandPool;
+        CommandPool transientCommandPool;
         std::vector< CommandBuffer > commandBuffers;
         
         std::vector< VkSemaphore > presentCompleteSemaphores;

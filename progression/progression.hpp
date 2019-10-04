@@ -35,8 +35,8 @@ namespace Progression
 
 extern bool EngineShutdown;
 
-bool EngineInitialize( std::string config_name = "" );
+bool EngineInitialize( std::string config_name = "", bool initRenderingSystem = true );
 
-void EngineQuit();
+void EngineQuit( bool shutdownRendering = true );
 
 } // namespace Progression

@@ -78,12 +78,12 @@ namespace Gfx
         return fence;
     }
 
-    CommandPool Device::NewCommandPool() const
+    CommandPool Device::NewCommandPool( CommandPoolFlags flags ) const
     {
         VkCommandPoolCreateInfo poolInfo = {};
         poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.queueFamilyIndex = g_renderState.physicalDeviceInfo.indices.graphicsFamily;
-        poolInfo.flags            = 0;
+        poolInfo.flags            = PGToVulkanCommandPoolFlags( flags );
 
         CommandPool cmdPool;
         cmdPool.m_device = m_handle;
@@ -96,16 +96,18 @@ namespace Gfx
     }
 
     // Buffer Device::NewBuffer( void* data, size_t length, BufferType type ) const
-    Buffer Device::NewBuffer( size_t length, BufferType type ) const
+    Buffer Device::NewBuffer( size_t length, BufferType type, MemoryType memoryType ) const
     {
         Buffer buffer;
-        buffer.m_device = m_handle;
-        buffer.m_type   = type;
-        buffer.m_length = length;
+        buffer.m_device       = m_handle;
+        buffer.m_type         = type;
+        buffer.m_memoryType   = memoryType;
+        buffer.m_length       = length;
 
         VkBufferCreateInfo info = {};
         info.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         info.usage       = PGToVulkanBufferType( type );
+        // info.usage       = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
         info.size        = length;
         info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         VkResult ret     = vkCreateBuffer( m_handle, &info, nullptr, &buffer.m_handle );
@@ -117,7 +119,8 @@ namespace Gfx
         VkMemoryAllocateInfo allocInfo = {};
         allocInfo.sType                = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize       = memRequirements.size;
-        VkMemoryPropertyFlags flags    = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        VkMemoryPropertyFlags flags    = PGToVulkanMemoryType( memoryType );
+        // VkMemoryPropertyFlags flags    = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
         allocInfo.memoryTypeIndex      = FindMemoryType( memRequirements.memoryTypeBits, flags );
         ret = vkAllocateMemory( m_handle, &allocInfo, nullptr, &buffer.m_memory );
         PG_ASSERT( ret == VK_SUCCESS );
@@ -305,7 +308,27 @@ namespace Gfx
         return pass;
     }
 
+    void Device::Copy( Buffer dst, Buffer src ) const
+    {
+        CommandBuffer buffer = g_renderState.transientCommandPool.NewCommandBuffer();
 
+        buffer.BeginRecording( CommandBufferUsage::ONE_TIME_SUBMIT );
+        buffer.Copy( dst, src );
+        buffer.EndRecording();
+
+        VkSubmitInfo submitInfo = {};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        VkCommandBuffer vkCmdBuf = buffer.GetNativeHandle();
+        submitInfo.pCommandBuffers = &vkCmdBuf;
+
+        vkQueueSubmit( m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle( m_graphicsQueue );
+
+        buffer.Free();
+    }
+
+     
     VkDevice Device::GetNativeHandle() const
     {
         return m_handle;

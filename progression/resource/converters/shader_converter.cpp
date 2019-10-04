@@ -96,7 +96,7 @@ ConverterStatus ShaderConverter::Convert()
         }
 //#endif // #if USING( LINUX_PROGRAM )
 
-        std::ifstream file( m_outputContentFile, std::ios::ate | std::ios::binary);
+        std::ifstream file( m_outputContentFile, std::ios::ate | std::ios::binary );
         size_t fileSize = static_cast< size_t >( file.tellg() );
         std::vector< char > buffer( fileSize );
         file.seekg( 0 );
@@ -119,6 +119,7 @@ ConverterStatus ShaderConverter::Convert()
             serialize::Write( out, varName );
             serialize::Write( out, varLoc );
         }
+        LOG( "SPIRV SIZE: ", buffer.size() );
         serialize::Write( out, buffer );
     }
 

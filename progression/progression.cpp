@@ -8,7 +8,7 @@ namespace Progression
 
 bool EngineShutdown = false;
 
-bool EngineInitialize( std::string config_name )
+bool EngineInitialize( std::string config_name, bool initRenderingSystem )
 {
     if ( config_name == "" )
     {
@@ -62,19 +62,27 @@ bool EngineInitialize( std::string config_name )
     Input::Init();
     ResourceManager::Init();
     ECS::init();
-    if ( !RenderSystem::Init() )
+
+    if ( initRenderingSystem )
     {
-        LOG_ERR( "Could not initialize the rendering system" );
-        return false;
+        if ( !RenderSystem::Init() )
+        {
+            LOG_ERR( "Could not initialize the rendering system" );
+            return false;
+        }
     }
 
     return true;
 }
 
-void EngineQuit()
-{
-    ResourceManager::Shutdown(); // need to delete the gpu data before destroying the vulkan instance
-    RenderSystem::Shutdown();
+void EngineQuit( bool shutdownRendering )
+{ 
+    if ( shutdownRendering )
+    {
+        RenderSystem::Shutdown();
+    }
+    
+    ResourceManager::Shutdown();
     ECS::shutdown();
     Input::Free();
     ShutdownWindowSystem();

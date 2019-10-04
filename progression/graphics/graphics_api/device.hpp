@@ -18,13 +18,15 @@ namespace Gfx
         operator bool() const;
 
         static Device CreateDefault();
-        CommandPool NewCommandPool() const;
-        Buffer NewBuffer( size_t length, BufferType type ) const;
+        CommandPool NewCommandPool( CommandPoolFlags flags = CommandPoolFlags::NONE ) const;
+        Buffer NewBuffer( size_t length, BufferType type, MemoryType memoryType ) const;
         Fence NewFence() const;
         Pipeline NewPipeline( const PipelineDescriptor& desc ) const;
         RenderPass NewRenderPass( const RenderPassDescriptor& desc ) const;
         void SubmitRenderCommands( int numBuffers, CommandBuffer* cmdBufs ) const;
         void SubmitFrame( uint32_t imageIndex ) const;
+
+        void Copy( Buffer dst, Buffer src ) const;
 
         VkDevice GetNativeHandle() const;
         VkQueue GraphicsQueue() const;

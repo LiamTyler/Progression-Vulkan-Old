@@ -69,17 +69,9 @@ namespace Gfx
     }
 
     
-    constexpr VkBufferUsageFlagBits PGToVulkanBufferType( BufferType type )
+    constexpr VkBufferUsageFlags PGToVulkanBufferType( BufferType type )
     {
-        VkBufferUsageFlagBits convert[] =
-        {
-            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, // VERTEX
-            VK_BUFFER_USAGE_INDEX_BUFFER_BIT,  // INDEX 
-        };
-
-        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( BufferType::NUM_BUFFER_TYPE) );
-
-        return convert[static_cast< int >( type )];
+        return static_cast< VkBufferUsageFlags >( type );
     }
 
     constexpr VkFormat PGToVulkanBufferDataType( BufferDataType type )
@@ -152,6 +144,11 @@ namespace Gfx
         static_assert( ARRAY_COUNT( convert ) == static_cast< int >( BufferDataType::NUM_BUFFER_DATA_TYPE ) );
 
         return convert[static_cast< int >( type )];
+    }
+
+    constexpr VkMemoryPropertyFlags PGToVulkanMemoryType( MemoryType type )
+    {
+        return static_cast< VkMemoryPropertyFlags >( type );
     }
 
     constexpr VkVertexInputRate PGToVulkanVertexInputRate( VertexInputRate inputRate )
@@ -445,6 +442,16 @@ namespace Gfx
         PG_ASSERT( convert.find( format ) != convert.end() );
 
         return convert[format];
+    }
+
+    constexpr VkCommandBufferUsageFlags PGToVulkanCommandBufferUsage( CommandBufferUsage flags )
+    {
+        return static_cast< VkCommandBufferUsageFlags >( flags );
+    }
+
+    constexpr VkCommandPoolCreateFlags PGToVulkanCommandPoolFlags( CommandPoolFlags flags )
+    {
+        return static_cast< VkCommandPoolCreateFlags >( flags );
     }
 
     constexpr VkAttachmentLoadOp PGToVulkanLoadAction( LoadAction op )

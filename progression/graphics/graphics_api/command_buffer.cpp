@@ -1,5 +1,6 @@
 #include "graphics/graphics_api/command_buffer.hpp"
 #include "core/assert.hpp"
+#include "graphics/pg_to_vulkan_types.hpp"
 #include "graphics/vulkan.hpp"
 
 namespace Progression
@@ -17,12 +18,19 @@ namespace Gfx
         return m_handle;
     }
 
-    bool CommandBuffer::BeginRecording()
+    void CommandBuffer::Free()
+    {
+        PG_ASSERT( m_handle != VK_NULL_HANDLE );
+        vkFreeCommandBuffers( m_device, m_pool, 1, &m_handle );
+        m_handle = VK_NULL_HANDLE;
+    }
+
+    bool CommandBuffer::BeginRecording( CommandBufferUsage flags )
     {
         PG_ASSERT( m_handle != VK_NULL_HANDLE );
         m_beginInfo = {};
         m_beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        m_beginInfo.flags            = 0;
+        m_beginInfo.flags            = PGToVulkanCommandBufferUsage( flags );
         m_beginInfo.pInheritanceInfo = nullptr;
         return vkBeginCommandBuffer( m_handle, &m_beginInfo ) == VK_SUCCESS;
     }
@@ -58,6 +66,13 @@ namespace Gfx
     {
         vkCmdBindPipeline( m_handle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.GetNativeHandle() );
     }
+
+    void CommandBuffer::Copy( const Buffer& dst, const Buffer& src )
+    {
+        VkBufferCopy copyRegion = {};
+        copyRegion.size = src.GetLength();
+        vkCmdCopyBuffer( m_handle, src.GetNativeHandle(), dst.GetNativeHandle(), 1, &copyRegion );
+    }
     
     void CommandBuffer::Draw( uint32_t firstVert, uint32_t vertCount, uint32_t instanceCount, uint32_t firstInstance )
     {
@@ -92,6 +107,8 @@ namespace Gfx
         {
             buf.m_handle = VK_NULL_HANDLE;
         }
+        buf.m_device = m_device;
+        buf.m_pool   = m_handle;
 
         return buf;
     }

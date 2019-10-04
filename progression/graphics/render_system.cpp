@@ -75,7 +75,8 @@ namespace RenderSystem
             LOG_ERR( "Could not initialize vulkan" );
             return false;
         }
-        // return true;
+
+        g_renderState.transientCommandPool = g_renderState.device.NewCommandPool( CommandPoolFlags::TRANSIENT );
 
         InitSamplers();
         s_window = GetMainWindow();
@@ -103,10 +104,14 @@ namespace RenderSystem
             glm::vec3(  0.5,  0.5, 0 ), glm::vec3( 0, 1, 0 ),
         };
 
-        s_buffer = g_renderState.device.NewBuffer( sizeof( vertices ), BufferType::VERTEX );
-        void* data = s_buffer.Map();
-        memcpy( data, vertices, s_buffer.GetLength() );
-        s_buffer.UnMap();
+        Buffer stagingBuffer = g_renderState.device.NewBuffer( sizeof( vertices ), BufferType::TRANSFER_SRC, MemoryType::HOST_VISIBLE | MemoryType::HOST_COHERENT );
+        void* data = stagingBuffer.Map();
+        memcpy( data, vertices, stagingBuffer.GetLength() );
+        stagingBuffer.UnMap();
+
+        s_buffer = g_renderState.device.NewBuffer( sizeof( vertices ), BufferType::TRANSFER_DST | BufferType::VERTEX, MemoryType::DEVICE_LOCAL );
+        g_renderState.device.Copy( s_buffer, stagingBuffer );
+        stagingBuffer.Free();
 
         PipelineDescriptor pipelineDesc;
         pipelineDesc.renderPass             = &g_renderState.renderPass;
@@ -167,7 +172,9 @@ namespace RenderSystem
             sampler.Free();
         }
 
+        s_buffer.Free();
         s_pipeline.Free();
+        g_renderState.transientCommandPool.Free();
 
         VulkanShutdown();
     }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/enum_bit_operations.hpp"
 #include <vulkan/vulkan.hpp>
 
 namespace Progression
@@ -86,11 +87,28 @@ namespace Gfx
 
     enum class BufferType
     {
-        VERTEX = 0,
-        INDEX  = 1,
+        TRANSFER_SRC  = 1 << 0,
+        TRANSFER_DST  = 1 << 1,
+        UNIFORM_TEXEL = 1 << 2,
+        STORAGE_TEXEL = 1 << 3,
+        UNIFORM       = 1 << 4,
+        STORAGE       = 1 << 5,
+        INDEX         = 1 << 6,
+        VERTEX        = 1 << 7,
+        INDIRECT      = 1 << 8,
 
-        NUM_BUFFER_TYPE
+        NUM_BUFFER_TYPE = 9
     };
+    DEFINE_ENUM_BITWISE_OPERATORS( BufferType );
+
+    enum class MemoryType
+    {
+        DEVICE_LOCAL  = 1 << 0,
+        HOST_VISIBLE  = 1 << 1,
+        HOST_COHERENT = 1 << 2,
+        HOST_CACHED   = 1 << 3,
+    };
+    DEFINE_ENUM_BITWISE_OPERATORS( MemoryType );
 
     class Buffer
     {
@@ -101,12 +119,14 @@ namespace Gfx
         void UnMap();
         void Bind( size_t offset = 0 ) const;
         size_t GetLength() const;
+        MemoryType GetMemoryType() const;
         BufferType GetType() const;
         VkBuffer GetNativeHandle() const;
         operator bool() const;
 
     protected:
         BufferType m_type;
+        MemoryType m_memoryType;
         size_t m_length         = 0; // in bytes
         VkBuffer m_handle       = VK_NULL_HANDLE;
         VkDeviceMemory m_memory = VK_NULL_HANDLE;
