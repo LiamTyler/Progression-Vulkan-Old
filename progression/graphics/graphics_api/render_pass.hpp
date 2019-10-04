@@ -59,10 +59,10 @@ namespace Gfx
 
     class RenderPass
     {
+        friend class Device;
     public:
         RenderPass() = default;
 
-        static RenderPass Create( const RenderPassDescriptor& desc );
         void Free();
         VkRenderPass GetNativeHandle() const;
         operator bool() const;
@@ -71,6 +71,7 @@ namespace Gfx
 
     private:
         VkRenderPass m_handle = VK_NULL_HANDLE;
+        VkDevice     m_device = VK_NULL_HANDLE;
     };
 
 } // namespace Gfx

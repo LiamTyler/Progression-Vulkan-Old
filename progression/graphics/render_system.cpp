@@ -31,6 +31,7 @@ namespace RenderSystem
         }
         else
         {
+            PG_UNUSED( desc );
             //s_samplers[name] = Gfx::Sampler::Create( desc );
             return &s_samplers[name];
         }
@@ -131,7 +132,7 @@ namespace RenderSystem
         pipelineDesc.shaders[1] = simpleFrag.get();
         pipelineDesc.numShaders = 2;
 
-        s_pipeline = Pipeline::Create( pipelineDesc );
+        s_pipeline = g_renderState.device.NewPipeline( pipelineDesc );
         if ( !s_pipeline )
         {
             LOG_ERR( "Could not create pipeline" );

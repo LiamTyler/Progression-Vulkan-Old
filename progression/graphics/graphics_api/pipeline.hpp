@@ -159,10 +159,10 @@ namespace Gfx
 
     class Pipeline
     {
+        friend class Device;
     public:
         Pipeline() = default;
 
-        static Pipeline Create( const PipelineDescriptor& desc );
         void Free();
         VkPipeline GetNativeHandle() const;
         operator bool() const;
@@ -171,6 +171,7 @@ namespace Gfx
         PipelineDescriptor m_desc;
         VkPipeline m_pipeline             = VK_NULL_HANDLE;
         VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
+        VkDevice m_device                 = VK_NULL_HANDLE;
     };
 
 } // namespace Gfx

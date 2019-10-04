@@ -226,8 +226,10 @@ static VkPresentModeKHR ChooseSwapPresentMode( const std::vector< VkPresentModeK
 
     for (const auto& availablePresentMode : availablePresentModes)
     {
-        if ( availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR )
+        // if ( availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR )
+        if ( availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR )
         {
+            LOG( "Found mailbox mode" );
             return availablePresentMode;
         }
         // else if ( availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR )
@@ -236,6 +238,7 @@ static VkPresentModeKHR ChooseSwapPresentMode( const std::vector< VkPresentModeK
         // }
     }
 
+    LOG( "did not find mailbox mode" );
     return mode;
 }
 
@@ -452,7 +455,7 @@ static bool CreateRenderPass()
 {
     RenderPassDescriptor renderPassDesc;
     renderPassDesc.colorAttachmentDescriptors[0].format = VulkanToPGPixelFormat( g_renderState.swapChain.imageFormat );
-    g_renderState.renderPass = RenderPass::Create( renderPassDesc );
+    g_renderState.renderPass = g_renderState.device.NewRenderPass( renderPassDesc );
     return g_renderState.renderPass;
 }
 

@@ -2,6 +2,7 @@
 
 #include "graphics/graphics_api/command_buffer.hpp"
 #include "graphics/graphics_api/fence.hpp"
+#include "graphics/graphics_api/pipeline.hpp"
 
 namespace Progression
 {
@@ -18,8 +19,10 @@ namespace Gfx
 
         static Device CreateDefault();
         CommandPool NewCommandPool() const;
-        Fence NewFence() const;
         Buffer NewBuffer( size_t length, BufferType type ) const;
+        Fence NewFence() const;
+        Pipeline NewPipeline( const PipelineDescriptor& desc ) const;
+        RenderPass NewRenderPass( const RenderPassDescriptor& desc ) const;
         void SubmitRenderCommands( int numBuffers, CommandBuffer* cmdBufs ) const;
         void SubmitFrame( uint32_t imageIndex ) const;
 
