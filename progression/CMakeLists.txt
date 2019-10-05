@@ -58,7 +58,6 @@ set(
     core/config.hpp
     core/core_defines.hpp
     core/ecs.hpp
-    core/enum_bit_operations.hpp
     core/frustum.hpp
     core/feature_defines.hpp
     core/input.hpp

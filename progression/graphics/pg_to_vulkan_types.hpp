@@ -37,7 +37,7 @@ namespace Gfx
         return convert[static_cast< int >( factor )];
     }
 
-    constexpr VkBlendOp PGToOpenGLBlendEquation( BlendEquation eq )
+    constexpr VkBlendOp PGToVulkanBlendEquation( BlendEquation eq )
     {
         VkBlendOp convert[] =
         {
@@ -68,6 +68,10 @@ namespace Gfx
         return static_cast< VkPolygonMode >( mode );
     }
 
+    constexpr VkIndexType PGToVulkanIndexType( IndexType indexType )
+    {
+        return static_cast< VkIndexType >( indexType );
+    }
     
     constexpr VkBufferUsageFlags PGToVulkanBufferType( BufferType type )
     {
@@ -172,19 +176,6 @@ namespace Gfx
 
         return convert[static_cast< int >( topology )];
     }
-
-    //constexpr GLenum PGToOpenGLIndexType( IndexType indexType )
-    //{
-    //    GLenum convert[] =
-    //    {
-    //        GL_UNSIGNED_SHORT, // UNSIGNED_SHORT
-    //        GL_UNSIGNED_INT,   // UNSIGNED_INT
-    //    };
-
-    //    static_assert( ARRAY_COUNT( convert ) == static_cast< int >( IndexType::NUM_INDEX_TYPE ) );
-
-    //    return convert[static_cast< int >( indexType )];
-    //}
 
     //constexpr GLenum PGToOpenGLFilterMode( FilterMode mode )
     //{
@@ -449,7 +440,7 @@ namespace Gfx
         return static_cast< VkCommandBufferUsageFlags >( flags );
     }
 
-    constexpr VkCommandPoolCreateFlags PGToVulkanCommandPoolFlags( CommandPoolFlags flags )
+    constexpr VkCommandPoolCreateFlags PGToVulkanCommandPoolCreateFlags( CommandPoolCreateFlags flags )
     {
         return static_cast< VkCommandPoolCreateFlags >( flags );
     }

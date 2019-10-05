@@ -54,6 +54,7 @@ namespace RenderSystem
 static Window* s_window;
 static Pipeline s_pipeline;
 static Buffer s_buffer;
+static Buffer s_indexBuffer;
 
 namespace Progression
 {
@@ -76,7 +77,7 @@ namespace RenderSystem
             return false;
         }
 
-        g_renderState.transientCommandPool = g_renderState.device.NewCommandPool( CommandPoolFlags::TRANSIENT );
+        g_renderState.transientCommandPool = g_renderState.device.NewCommandPool( COMMAND_POOL_TRANSIENT );
 
         InitSamplers();
         s_window = GetMainWindow();
@@ -99,19 +100,16 @@ namespace RenderSystem
 
         glm::vec3 vertices[] =
         {
-            glm::vec3(    0, -0.5, 0 ), glm::vec3( 1, 0, 0 ),
-            glm::vec3( -0.5,  0.5, 0 ), glm::vec3( 0, 0, 1 ),
-            glm::vec3(  0.5,  0.5, 0 ), glm::vec3( 0, 1, 0 ),
+            glm::vec3( -0.5, -0.5, 0 ), glm::vec3( 1, 0, 0 ),
+            glm::vec3( -0.5,  0.5, 0 ), glm::vec3( 1, 1, 1 ),
+            glm::vec3(  0.5,  0.5, 0 ), glm::vec3( 0, 0, 1 ),
+            glm::vec3(  0.5, -0.5, 0 ), glm::vec3( 0, 1, 0 ),
         };
 
-        Buffer stagingBuffer = g_renderState.device.NewBuffer( sizeof( vertices ), BufferType::TRANSFER_SRC, MemoryType::HOST_VISIBLE | MemoryType::HOST_COHERENT );
-        void* data = stagingBuffer.Map();
-        memcpy( data, vertices, stagingBuffer.GetLength() );
-        stagingBuffer.UnMap();
+        std::vector< uint16_t > indices = { 0, 1, 2, 2, 3, 0 };
 
-        s_buffer = g_renderState.device.NewBuffer( sizeof( vertices ), BufferType::TRANSFER_DST | BufferType::VERTEX, MemoryType::DEVICE_LOCAL );
-        g_renderState.device.Copy( s_buffer, stagingBuffer );
-        stagingBuffer.Free();
+        s_buffer      = g_renderState.device.NewBuffer( sizeof( vertices ), vertices, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL );
+        s_indexBuffer = g_renderState.device.NewBuffer( indices.size() * sizeof( uint16_t ), indices.data(), BUFFER_TYPE_INDEX, MEMORY_TYPE_DEVICE_LOCAL );
 
         PipelineDescriptor pipelineDesc;
         pipelineDesc.renderPass             = &g_renderState.renderPass;
@@ -153,10 +151,9 @@ namespace RenderSystem
             cmdBuf.BeginRecording();
             cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[i] );
             cmdBuf.BindRenderPipeline( s_pipeline );
-            VkBuffer vertexBuffers[] = { s_buffer.GetNativeHandle() };
-            VkDeviceSize offsets[] = { 0 };
-            vkCmdBindVertexBuffers( cmdBuf.GetNativeHandle(), 0, 1, vertexBuffers, offsets );
-            cmdBuf.Draw( 0, 3 );
+            cmdBuf.BindVertexBuffer( s_buffer );
+            cmdBuf.BindIndexBuffer( s_indexBuffer, IndexType::UNSIGNED_SHORT );
+            cmdBuf.DrawIndexed( 0, 6 );
             cmdBuf.EndRenderPass();
             cmdBuf.EndRecording();
         }
@@ -173,6 +170,7 @@ namespace RenderSystem
         }
 
         s_buffer.Free();
+        s_indexBuffer.Free();
         s_pipeline.Free();
         g_renderState.transientCommandPool.Free();
 

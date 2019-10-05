@@ -3,6 +3,7 @@
 #include "core/platform_defines.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
 #include "graphics/vulkan.hpp"
+#include "utils/logger.hpp"
 #include <set>
 
 namespace Progression
@@ -37,7 +38,7 @@ namespace Gfx
         createInfo.enabledExtensionCount   = static_cast< uint32_t >( VK_DEVICE_EXTENSIONS.size() );
         createInfo.ppEnabledExtensionNames = VK_DEVICE_EXTENSIONS.data();
 
-        // Specify device specific validation layers (ignored after v1.1.123)
+        // Specify device specific validation layers (ignored after v1.1.123?)
     #if !USING( SHIP_BUILD )
         createInfo.enabledLayerCount   = static_cast< uint32_t >( VK_VALIDATION_LAYERS.size() );
         createInfo.ppEnabledLayerNames = VK_VALIDATION_LAYERS.data();
@@ -78,12 +79,12 @@ namespace Gfx
         return fence;
     }
 
-    CommandPool Device::NewCommandPool( CommandPoolFlags flags ) const
+    CommandPool Device::NewCommandPool( CommandPoolCreateFlags flags ) const
     {
         VkCommandPoolCreateInfo poolInfo = {};
         poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.queueFamilyIndex = g_renderState.physicalDeviceInfo.indices.graphicsFamily;
-        poolInfo.flags            = PGToVulkanCommandPoolFlags( flags );
+        poolInfo.flags            = PGToVulkanCommandPoolCreateFlags( flags );
 
         CommandPool cmdPool;
         cmdPool.m_device = m_handle;
@@ -95,7 +96,6 @@ namespace Gfx
         return cmdPool;
     }
 
-    // Buffer Device::NewBuffer( void* data, size_t length, BufferType type ) const
     Buffer Device::NewBuffer( size_t length, BufferType type, MemoryType memoryType ) const
     {
         Buffer buffer;
@@ -107,7 +107,6 @@ namespace Gfx
         VkBufferCreateInfo info = {};
         info.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         info.usage       = PGToVulkanBufferType( type );
-        // info.usage       = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
         info.size        = length;
         info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         VkResult ret     = vkCreateBuffer( m_handle, &info, nullptr, &buffer.m_handle );
@@ -120,7 +119,6 @@ namespace Gfx
         allocInfo.sType                = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize       = memRequirements.size;
         VkMemoryPropertyFlags flags    = PGToVulkanMemoryType( memoryType );
-        // VkMemoryPropertyFlags flags    = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
         allocInfo.memoryTypeIndex      = FindMemoryType( memRequirements.memoryTypeBits, flags );
         ret = vkAllocateMemory( m_handle, &allocInfo, nullptr, &buffer.m_memory );
         PG_ASSERT( ret == VK_SUCCESS );
@@ -128,6 +126,36 @@ namespace Gfx
         vkBindBufferMemory( m_handle, buffer.m_handle, buffer.m_memory, 0 );
 
         return buffer;
+    }
+
+    Buffer Device::NewBuffer( size_t length, void* data, BufferType type, MemoryType memoryType ) const
+    {
+        Buffer dstBuffer;
+
+        if ( memoryType & MEMORY_TYPE_DEVICE_LOCAL )
+        {
+            Buffer stagingBuffer = NewBuffer( length, BUFFER_TYPE_TRANSFER_SRC, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
+            void* stagingBufferData = stagingBuffer.Map();
+            memcpy( stagingBufferData, data, length );
+            stagingBuffer.UnMap();
+
+            dstBuffer = NewBuffer( length, type | BUFFER_TYPE_TRANSFER_DST, memoryType );
+            Copy( dstBuffer, stagingBuffer );
+            stagingBuffer.Free();
+        }
+        else if ( ( memoryType & MEMORY_TYPE_HOST_VISIBLE ) && ( memoryType & MEMORY_TYPE_HOST_COHERENT ) )
+        {
+            dstBuffer = NewBuffer( length, type, memoryType );
+            void* dstBufferData = dstBuffer.Map();
+            memcpy( dstBufferData, data, length );
+            dstBuffer.UnMap();
+        }
+        else
+        {
+            PG_ASSERT( false, "Unknown MemoryType passed into NewBuffer. Not copying data into buffer" );
+        }
+
+        return dstBuffer;
     }
 
     Pipeline Device::NewPipeline( const PipelineDescriptor& desc ) const
@@ -312,7 +340,7 @@ namespace Gfx
     {
         CommandBuffer buffer = g_renderState.transientCommandPool.NewCommandBuffer();
 
-        buffer.BeginRecording( CommandBufferUsage::ONE_TIME_SUBMIT );
+        buffer.BeginRecording( COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT );
         buffer.Copy( dst, src );
         buffer.EndRecording();
 

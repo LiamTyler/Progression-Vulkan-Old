@@ -1,7 +1,6 @@
 #pragma once
 
 #include "graphics/graphics_api/render_pass.hpp"
-#include "core/enum_bit_operations.hpp"
 #include "graphics/graphics_api/pipeline.hpp"
 #include <vulkan/vulkan.hpp>
 
@@ -10,12 +9,12 @@ namespace Progression
 namespace Gfx
 {
 
-    enum class CommandBufferUsage
+    enum CommandBufferUsageBits
     {
-        NONE            = 0,
-        ONE_TIME_SUBMIT = 1 << 0,
+        COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT = 1 << 0,
     };
-    DEFINE_ENUM_BITWISE_OPERATORS( CommandBufferUsage );
+
+    typedef uint32_t CommandBufferUsage;
 
     class CommandBuffer
     {
@@ -27,28 +26,32 @@ namespace Gfx
         VkCommandBuffer GetNativeHandle() const;
 
         void Free();
-        bool BeginRecording( CommandBufferUsage flags = CommandBufferUsage::NONE );
-        bool EndRecording();
-        void BeginRenderPass( const RenderPass& renderPass, VkFramebuffer framebuffer );
-        void EndRenderPass();
-        void BindRenderPipeline( const Pipeline& pipeline );
+        bool BeginRecording( CommandBufferUsage flags = 0 ) const;
+        bool EndRecording() const;
+        void BeginRenderPass( const RenderPass& renderPass, VkFramebuffer framebuffer ) const;
+        void EndRenderPass() const;
+        void BindRenderPipeline( const Pipeline& pipeline ) const;
+        void BindVertexBuffer( const Buffer& buffer, size_t offset = 0, uint32_t firstBinding = 0 ) const;
+        void BindVertexBuffers( uint32_t numBuffers, const Buffer* buffers, size_t* offsets, uint32_t firstBinding = 0 ) const;
+        void BindIndexBuffer( const Buffer& buffer, IndexType indexType, size_t offset = 0 ) const;
 
         void Copy( const Buffer& dst, const Buffer& src );
 
-        void Draw( uint32_t firstVert, uint32_t vertCount, uint32_t instanceCount = 1, uint32_t firstInstance = 0 );
+        void Draw( uint32_t firstVert, uint32_t vertCount, uint32_t instanceCount = 1, uint32_t firstInstance = 0 ) const;
+        void DrawIndexed( uint32_t firstIndex, uint32_t indexCount, int vertexOffset = 0, uint32_t firstInstance = 0, uint32_t instanceCount = 1 ) const;
+
     private:
         VkDevice m_device        = VK_NULL_HANDLE;
         VkCommandPool m_pool     = VK_NULL_HANDLE;
         VkCommandBuffer m_handle = VK_NULL_HANDLE;
-        VkCommandBufferBeginInfo m_beginInfo;
     };
 
-    enum class CommandPoolFlags
+    typedef enum CommandPoolCreateFlagBits
     {
-        NONE      = 0,
-        TRANSIENT = 1 << 0,
-    };
-    DEFINE_ENUM_BITWISE_OPERATORS( CommandPoolFlags );
+        COMMAND_POOL_TRANSIENT = 1 << 0,
+    } CommandPoolCreateFlagBits;
+
+    typedef uint32_t CommandPoolCreateFlags;
 
     class CommandPool
     {

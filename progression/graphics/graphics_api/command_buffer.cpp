@@ -25,22 +25,22 @@ namespace Gfx
         m_handle = VK_NULL_HANDLE;
     }
 
-    bool CommandBuffer::BeginRecording( CommandBufferUsage flags )
+    bool CommandBuffer::BeginRecording( CommandBufferUsage flags ) const
     {
         PG_ASSERT( m_handle != VK_NULL_HANDLE );
-        m_beginInfo = {};
-        m_beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        m_beginInfo.flags            = PGToVulkanCommandBufferUsage( flags );
-        m_beginInfo.pInheritanceInfo = nullptr;
-        return vkBeginCommandBuffer( m_handle, &m_beginInfo ) == VK_SUCCESS;
+        VkCommandBufferBeginInfo beginInfo = {};
+        beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags            = PGToVulkanCommandBufferUsage( flags );
+        beginInfo.pInheritanceInfo = nullptr;
+        return vkBeginCommandBuffer( m_handle, &beginInfo ) == VK_SUCCESS;
     }
 
-    bool CommandBuffer::EndRecording()
+    bool CommandBuffer::EndRecording() const
     {
         return vkEndCommandBuffer( m_handle ) == VK_SUCCESS;
     }
 
-    void CommandBuffer::BeginRenderPass( const RenderPass& renderPass, VkFramebuffer framebuffer )
+    void CommandBuffer::BeginRenderPass( const RenderPass& renderPass, VkFramebuffer framebuffer ) const
     {
         VkRenderPassBeginInfo renderPassInfo = {};
         renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -57,14 +57,36 @@ namespace Gfx
         vkCmdBeginRenderPass( m_handle, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
     }
 
-    void CommandBuffer::EndRenderPass()
+    void CommandBuffer::EndRenderPass() const
     {
         vkCmdEndRenderPass( m_handle );
     }
 
-    void CommandBuffer::BindRenderPipeline( const Pipeline& pipeline )
+    void CommandBuffer::BindRenderPipeline( const Pipeline& pipeline ) const
     {
         vkCmdBindPipeline( m_handle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.GetNativeHandle() );
+    }
+
+    void CommandBuffer::BindVertexBuffer( const Buffer& buffer, size_t offset, uint32_t firstBinding ) const
+    {
+        VkBuffer vertexBuffers[] = { buffer.GetNativeHandle() };
+        vkCmdBindVertexBuffers( m_handle, firstBinding, 1, vertexBuffers, &offset );
+    }
+
+    void CommandBuffer::BindVertexBuffers( uint32_t numBuffers, const Buffer* buffers, size_t* offsets, uint32_t firstBinding ) const
+    {
+        std::vector< VkBuffer > vertexBuffers( numBuffers );
+        for ( uint32_t i = 0; i < numBuffers; ++i )
+        {
+            vertexBuffers[i] = buffers[i].GetNativeHandle();
+        }
+
+        vkCmdBindVertexBuffers( m_handle, firstBinding, numBuffers, vertexBuffers.data(), offsets );
+    }
+
+    void CommandBuffer::BindIndexBuffer( const Buffer& buffer, IndexType indexType, size_t offset ) const
+    {
+        vkCmdBindIndexBuffer( m_handle, buffer.GetNativeHandle(), 0, PGToVulkanIndexType( indexType ) );
     }
 
     void CommandBuffer::Copy( const Buffer& dst, const Buffer& src )
@@ -74,10 +96,16 @@ namespace Gfx
         vkCmdCopyBuffer( m_handle, src.GetNativeHandle(), dst.GetNativeHandle(), 1, &copyRegion );
     }
     
-    void CommandBuffer::Draw( uint32_t firstVert, uint32_t vertCount, uint32_t instanceCount, uint32_t firstInstance )
+    void CommandBuffer::Draw( uint32_t firstVert, uint32_t vertCount, uint32_t instanceCount, uint32_t firstInstance ) const
     {
         vkCmdDraw( m_handle, vertCount, instanceCount, firstVert, firstInstance );
     }
+
+    void CommandBuffer::DrawIndexed( uint32_t firstIndex, uint32_t indexCount, int vertexOffset, uint32_t firstInstance, uint32_t instanceCount ) const
+    {
+        vkCmdDrawIndexed( m_handle, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance );
+    }
+
 
     void CommandPool::Free()
     {

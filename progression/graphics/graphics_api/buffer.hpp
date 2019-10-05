@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/enum_bit_operations.hpp"
 #include <vulkan/vulkan.hpp>
 
 namespace Progression
@@ -85,30 +84,30 @@ namespace Gfx
 
     int SizeOfIndexType( IndexType type );
 
-    enum class BufferType
+    typedef enum BufferTypeBits
     {
-        TRANSFER_SRC  = 1 << 0,
-        TRANSFER_DST  = 1 << 1,
-        UNIFORM_TEXEL = 1 << 2,
-        STORAGE_TEXEL = 1 << 3,
-        UNIFORM       = 1 << 4,
-        STORAGE       = 1 << 5,
-        INDEX         = 1 << 6,
-        VERTEX        = 1 << 7,
-        INDIRECT      = 1 << 8,
+        BUFFER_TYPE_TRANSFER_SRC  = 1 << 0,
+        BUFFER_TYPE_TRANSFER_DST  = 1 << 1,
+        BUFFER_TYPE_UNIFORM_TEXEL = 1 << 2,
+        BUFFER_TYPE_STORAGE_TEXEL = 1 << 3,
+        BUFFER_TYPE_UNIFORM       = 1 << 4,
+        BUFFER_TYPE_STORAGE       = 1 << 5,
+        BUFFER_TYPE_INDEX         = 1 << 6,
+        BUFFER_TYPE_VERTEX        = 1 << 7,
+        BUFFER_TYPE_INDIRECT      = 1 << 8,
+    } BufferTypeBits;
 
-        NUM_BUFFER_TYPE = 9
-    };
-    DEFINE_ENUM_BITWISE_OPERATORS( BufferType );
+    typedef uint32_t BufferType;
 
-    enum class MemoryType
+    typedef enum MemoryTypeBits
     {
-        DEVICE_LOCAL  = 1 << 0,
-        HOST_VISIBLE  = 1 << 1,
-        HOST_COHERENT = 1 << 2,
-        HOST_CACHED   = 1 << 3,
-    };
-    DEFINE_ENUM_BITWISE_OPERATORS( MemoryType );
+        MEMORY_TYPE_DEVICE_LOCAL  = 1 << 0,
+        MEMORY_TYPE_HOST_VISIBLE  = 1 << 1,
+        MEMORY_TYPE_HOST_COHERENT = 1 << 2,
+        MEMORY_TYPE_HOST_CACHED   = 1 << 3,
+    } MemoryTypeBits;
+
+    typedef uint32_t MemoryType;
 
     class Buffer
     {

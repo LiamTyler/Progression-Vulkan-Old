@@ -18,8 +18,9 @@ namespace Gfx
         operator bool() const;
 
         static Device CreateDefault();
-        CommandPool NewCommandPool( CommandPoolFlags flags = CommandPoolFlags::NONE ) const;
+        CommandPool NewCommandPool( CommandPoolCreateFlags flags = 0 ) const;
         Buffer NewBuffer( size_t length, BufferType type, MemoryType memoryType ) const;
+        Buffer NewBuffer( size_t length, void* data, BufferType type, MemoryType memoryType ) const;
         Fence NewFence() const;
         Pipeline NewPipeline( const PipelineDescriptor& desc ) const;
         RenderPass NewRenderPass( const RenderPassDescriptor& desc ) const;
