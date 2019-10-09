@@ -120,6 +120,7 @@ public:
     }
 
     void UseColors( bool b ) { m_useColors = b; }
+    std::ostream& OutputLocation();
 
 private:
     bool m_useColors;

@@ -1,6 +1,7 @@
 #include "graphics/render_system.hpp"
 #include "core/assert.hpp"
 #include "core/scene.hpp"
+#include "core/time.hpp"
 #include "core/window.hpp"
 #include "graphics/graphics_api.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
@@ -55,6 +56,8 @@ static Window* s_window;
 static Pipeline s_pipeline;
 static Buffer s_buffer;
 static Buffer s_indexBuffer;
+VkDescriptorSetLayout descriptorSetLayout;
+std::vector< Progression::Gfx::Buffer > ubos;
 
 namespace Progression
 {
@@ -110,6 +113,27 @@ namespace RenderSystem
 
         s_buffer      = g_renderState.device.NewBuffer( sizeof( vertices ), vertices, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL );
         s_indexBuffer = g_renderState.device.NewBuffer( indices.size() * sizeof( uint16_t ), indices.data(), BUFFER_TYPE_INDEX, MEMORY_TYPE_DEVICE_LOCAL );
+
+        ubos.resize( g_renderState.swapChain.images.size() );
+        for ( auto& ubo : ubos )
+        {
+            ubo = g_renderState.device.NewBuffer( sizeof( glm::mat4 ), BUFFER_TYPE_UNIFORM, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
+        }
+
+        VkDescriptorSetLayoutBinding uboLayoutBinding = {};
+        uboLayoutBinding.binding = 0;
+        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        uboLayoutBinding.descriptorCount = 1;
+        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        uboLayoutBinding.pImmutableSamplers = nullptr;
+
+        VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.bindingCount = 1;
+        layoutInfo.pBindings = &uboLayoutBinding;
+
+        VkResult ret = vkCreateDescriptorSetLayout( g_renderState.device.GetNativeHandle(), &layoutInfo, nullptr, &descriptorSetLayout );
+        PG_ASSERT( ret == VK_SUCCESS );
 
         PipelineDescriptor pipelineDesc;
         pipelineDesc.renderPass             = &g_renderState.renderPass;
@@ -187,6 +211,13 @@ namespace RenderSystem
         vkResetFences( dev, 1, &g_renderState.inFlightFences[currentFrame] );
 
         auto imageIndex = g_renderState.swapChain.AcquireNextImage( g_renderState.presentCompleteSemaphores[currentFrame] );
+   
+        glm::mat4 model = glm::rotate( glm::mat4( 1.0f ), Time::DeltaTime() * glm::radians( 90.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) );
+        auto MVP        = scene->camera.GetVP() * model;
+        void* data      = ubos[imageIndex].Map();
+        memcpy( data, &MVP, sizeof( glm::mat4 ) );
+        ubos[imageIndex].UnMap();
+
         g_renderState.device.SubmitRenderCommands( 1, &g_renderState.commandBuffers[imageIndex] );
 
         g_renderState.device.SubmitFrame( imageIndex );

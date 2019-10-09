@@ -119,7 +119,13 @@ ConverterStatus ShaderConverter::Convert()
             serialize::Write( out, varName );
             serialize::Write( out, varLoc );
         }
-        LOG( "SPIRV SIZE: ", buffer.size() );
+        serialize::Write( out, reflectInfo.descriptorSetLayouts.size() );
+        for ( const auto& set : reflectInfo.descriptorSetLayouts )
+        {
+            serialize::Write( out, set.setNumber );
+            serialize::Write( out, set.createInfo );
+            serialize::Write( out, set.bindings );
+        }
         serialize::Write( out, buffer );
     }
 

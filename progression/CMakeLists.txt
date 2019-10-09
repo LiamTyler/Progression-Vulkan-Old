@@ -4,7 +4,6 @@ project(Progression-lib)
 
 include(Progression-base)
 
-
 configure_file(${PROGRESSION_DIR}/cmake/platform_defines.hpp.in ${PROGRESSION_DIR}/progression/core/platform_defines.hpp)
 
 set(
@@ -108,14 +107,11 @@ set(
 set(
 	EXTERNALS
 	../ext/getopt/getopt.c
-    #../ext/glad/src/glad.c
     ../ext/memory_map/MemoryMapped.cpp    
     ../ext/tinyobjloader/tiny_obj_loader.cc
 	
 	../ext/cpptoml.h
     ../ext/getopt/getopt.h
-    #../ext/glad/include/glad/glad.h
-    #../ext/glad/include/KHR/khrplatform.h
     ../ext/memory_map/MemoryMapped.h
     ../ext/stb_image/stb_image.h
     ../ext/stb_image/stb_image_write.h
@@ -123,6 +119,8 @@ set(
 
     ../ext/SPIRV-Reflect/spirv_reflect.h
     ../ext/SPIRV-Reflect/spirv_reflect.c
+    ../ext/SPIRV-Reflect/common/output_stream.cpp
+    ../ext/SPIRV-Reflect/common/output_stream.h
 )
 
 set(
@@ -163,8 +161,11 @@ set(
 	${OTHER}
 )
 
-# Needs cmake 3.12.4
-#list(TRANSFORM ALL_FILES PREPEND ${CMAKE_CURRENT_SOURCE_DIR}/)
+include_directories(
+    ${CMAKE_SOURCE_DIR}/ext/SPIRV-Reflect/
+    ${CMAKE_SOURCE_DIR}/ext/SPIRV-Reflect/examples
+    ${CMAKE_SOURCE_DIR}/ext/SPIRV-Reflect/common
+)
 
 SET(listVar "")
 FOREACH(f ${ALL_FILES})

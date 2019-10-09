@@ -44,3 +44,15 @@ void Logger::Shutdown()
     }
 #endif // #if !USING( SHIP_BUILD )
 }
+
+std::ostream& Logger::OutputLocation()
+{
+    if ( m_outputFile )
+    {
+        return m_outputFile;
+    }
+    else
+    {
+        return std::cout;
+    }
+}

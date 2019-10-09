@@ -7,6 +7,8 @@
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
 #include "SPIRV-Reflect/spirv_reflect.h"
+#include "SPIRV-Reflect/common/output_stream.h"
+#include <sstream>
 
 static bool LoadBinaryFile( std::string& source, const std::string& filename )
 {
@@ -125,6 +127,16 @@ namespace Progression
             reflectInfo.outputLocations[varName] = location;
         }
 
+        size_t numDescriptorSets;
+        serialize::Read( buffer, numDescriptorSets );
+        reflectInfo.descriptorSetLayouts.resize( numDescriptorSets );
+        for ( size_t i = 0; i < numDescriptorSets; ++i )
+        {
+            serialize::Read( buffer, reflectInfo.descriptorSetLayouts[i].setNumber );
+            serialize::Read( buffer, reflectInfo.descriptorSetLayouts[i].createInfo );
+            serialize::Read( buffer, reflectInfo.descriptorSetLayouts[i].bindings );
+        }
+
         size_t spirvSize;
         serialize::Read( buffer, spirvSize );
 
@@ -142,6 +154,66 @@ namespace Progression
         return true;
     }
 
+    // From SPIRV-Reflect
+    static void PrintDescriptorBinding( const SpvReflectDescriptorBinding& obj, bool write_set, const char* indent )
+    {
+        const char* t = indent;
+        LOG( t, "binding : ", obj.binding );
+        if ( write_set )
+        {
+            LOG( t, "set     : ", obj.set );
+        }
+        LOG( t, "type    : ", ToStringDescriptorType( obj.descriptor_type ) );
+
+        // array
+        if ( obj.array.dims_count > 0 )
+        {
+            std::stringstream os;
+            os << t << "array   : ";
+            for ( uint32_t dim_index = 0; dim_index < obj.array.dims_count; ++dim_index )
+            {
+                os << "[" << obj.array.dims[dim_index] << "]";
+            }
+            LOG( os.str() );
+        }
+
+        // counter
+        if ( obj.uav_counter_binding != nullptr )
+        {
+            LOG( t, "counter : (set = ", obj.uav_counter_binding->set, ", binding = ", obj.uav_counter_binding->binding, ", name = ", obj.uav_counter_binding->name, ");" );
+        }
+
+        if ( ( obj.type_description->type_name != nullptr ) && ( strlen(obj.type_description->type_name ) > 0 ) )
+        {
+            LOG( t, "name    : ", obj.name, " (", obj.type_description->type_name, ")" );
+        }
+        else
+        {
+            LOG( t, "name    : ", obj.name );
+        }
+    }
+
+    // From SPIRV-Reflect
+    static void PrintDescriptorSet( const SpvReflectDescriptorSet& obj, const char* indent )
+    {
+        const char* t     = indent;
+        std::string tt    = std::string(indent) + "  ";
+        std::string ttttt = std::string(indent) + "    ";
+
+        LOG( t, "set           : ", obj.set );
+        LOG( t, "binding count : ", obj.binding_count );
+        for ( uint32_t i = 0; i < obj.binding_count; ++i )
+        {
+            const SpvReflectDescriptorBinding& binding = *obj.bindings[i];
+            LOG( tt, i, ":" );
+            PrintDescriptorBinding( binding, false, ttttt.c_str() );
+            if ( i < ( obj.binding_count - 1 ) )
+            {
+                LOG( "" );
+            }
+        }
+    }
+
     ShaderReflectInfo Shader::Reflect( const uint32_t* spirv, size_t spirvSizeInBytes )
     {
         ShaderReflectInfo info;
@@ -150,6 +222,7 @@ namespace Progression
         SpvReflectResult result = spvReflectCreateShaderModule( spirvSizeInBytes, spirv, &module );
         PG_MAYBE_UNUSED( result );
         PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
+        PG_ASSERT( module.entry_point_count == 1 );
 
         uint32_t count = 0;
         result = spvReflectEnumerateInputVariables( &module, &count, NULL );
@@ -181,14 +254,77 @@ namespace Progression
             info.outputLocations[outputVars[i]->name] = outputVars[i]->location;
         }
 
-        LOG( "Entry point = ", module.entry_point_name );
-        LOG( "Entry point count = ", module.entry_point_count );
-        LOG( "Stage = ", module.shader_stage );
-        LOG( "spirv size = ", spirvSizeInBytes );
-        PG_ASSERT( module.entry_point_count == 1);
-
         info.entryPoint = module.entry_point_name;
         info.stage      = static_cast< Gfx::ShaderStage >( module.shader_stage );
+        std::unordered_map< Gfx::ShaderStage, std::string > shaderStageNames =
+        {
+            { Gfx::ShaderStage::VERTEX, "VERTEX" },
+            { Gfx::ShaderStage::TESSELLATION_CONTROL, "TESSELLATION_CONTROL" },
+            { Gfx::ShaderStage::TESSELLATION_EVALUATION, "TESSELLATION_EVALUATION" },
+            { Gfx::ShaderStage::GEOMETRY, "GEOMETRY" },
+            { Gfx::ShaderStage::FRAGMENT, "FRAGMENT" },
+            { Gfx::ShaderStage::COMPUTE, "COMPUTE" },
+        };
+
+        LOG( "Entry point       = ", module.entry_point_name );
+        LOG( "Stage             = ", shaderStageNames[info.stage] );
+        LOG( "Source lang       = ", spvReflectSourceLanguage( module.source_language ) );
+        LOG( "Source lang ver   = ", module.source_language_version );
+        LOG( "Spirv size        = ", spirvSizeInBytes );
+        
+        result = spvReflectEnumerateDescriptorSets( &module, &count, NULL );
+        PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
+
+        std::vector< SpvReflectDescriptorSet* > sets( count );
+        result = spvReflectEnumerateDescriptorSets( &module, &count, sets.data() );
+        PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
+
+        info.descriptorSetLayouts.resize( sets.size(), DescriptorSetLayoutData{} );
+        for ( size_t i_set = 0; i_set < sets.size(); ++i_set )
+        {
+            const SpvReflectDescriptorSet& refl_set = *(sets[i_set]);
+            DescriptorSetLayoutData& layout         = info.descriptorSetLayouts[i_set];
+            layout.bindings.resize( refl_set.binding_count );
+            for ( uint32_t i_binding = 0; i_binding < refl_set.binding_count; ++i_binding )
+            {
+                const SpvReflectDescriptorBinding& refl_binding = *(refl_set.bindings[i_binding]);
+                VkDescriptorSetLayoutBinding& layout_binding    = layout.bindings[i_binding];
+                layout_binding.binding                          = refl_binding.binding;
+                layout_binding.descriptorType                   = static_cast< VkDescriptorType >( refl_binding.descriptor_type );
+                layout_binding.descriptorCount                  = 1;
+                for ( uint32_t i_dim = 0; i_dim < refl_binding.array.dims_count; ++i_dim )
+                {
+                    layout_binding.descriptorCount *= refl_binding.array.dims[i_dim];
+                }
+                layout_binding.stageFlags         = static_cast<VkShaderStageFlagBits >( module.shader_stage );
+                layout_binding.pImmutableSamplers = nullptr;
+            }
+
+            layout.setNumber               = refl_set.set;
+            layout.createInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            layout.createInfo.bindingCount = refl_set.binding_count;
+            layout.createInfo.pBindings    = layout.bindings.data();
+        }
+
+#if USING( DEBUG_BUILD )
+        const char* t  = "  ";
+        const char* tt = "    ";
+        LOG( "Descriptor sets:" );
+        for ( size_t index = 0; index < sets.size(); ++index )
+        {
+            auto p_set = sets[index];
+
+            // descriptor sets can also be retrieved directly from the module, by set index
+            auto p_set2 = spvReflectGetDescriptorSet( &module, p_set->set, &result );
+            PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
+            PG_ASSERT( p_set == p_set2 );
+            PG_UNUSED( p_set2 );
+
+            LOG( t, index, ":" );
+            PrintDescriptorSet( *p_set, tt );
+            LOG( "\n" );
+        }
+#endif // #if USING( DEBUG_BUILD )
 
         spvReflectDestroyShaderModule( &module );
 
