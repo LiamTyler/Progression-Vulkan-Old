@@ -33,5 +33,22 @@ namespace Gfx
         return m_pipeline != VK_NULL_HANDLE;
     }
 
+    Viewport FullScreenViewport()
+    {
+        Viewport v;
+        v.width  = static_cast< float >( g_renderState.swapChain.extent.width );
+        v.height = static_cast< float >( g_renderState.swapChain.extent.height );
+        return v;
+    }
+
+    Scissor FullScreenScissor()
+    {
+        Scissor s;
+        s.width  = g_renderState.swapChain.extent.width;
+        s.height = g_renderState.swapChain.extent.height;
+        return s;
+    }
+
+
 } // namespace Gfx
 } // namespace Progression

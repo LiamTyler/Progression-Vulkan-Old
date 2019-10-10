@@ -119,6 +119,8 @@ namespace Gfx
         float maxDepth = 1.0f;
     };
 
+    Viewport FullScreenViewport();
+
     struct Scissor
     {
         int x = 0;
@@ -126,6 +128,8 @@ namespace Gfx
         int width;
         int height;
     };
+
+    Scissor FullScreenScissor();
 
     enum class PrimitiveType
     {

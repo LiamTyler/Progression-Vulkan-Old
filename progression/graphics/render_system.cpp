@@ -168,17 +168,8 @@ namespace RenderSystem
         pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 1, &bindingDesc, 2, attribDescs.data() );
         pipelineDesc.rasterizerInfo.winding = WindingOrder::CLOCKWISE;
 
-        pipelineDesc.viewport.x        = 0.0f;
-        pipelineDesc.viewport.y        = 0.0f;
-        pipelineDesc.viewport.width    = static_cast< float >( g_renderState.swapChain.extent.width );
-        pipelineDesc.viewport.height   = static_cast< float >( g_renderState.swapChain.extent.height );
-        pipelineDesc.viewport.minDepth = 0.0f;
-        pipelineDesc.viewport.maxDepth = 1.0f;
-
-        pipelineDesc.scissor.x      = 0;
-        pipelineDesc.scissor.y      = 0;
-        pipelineDesc.scissor.width  = g_renderState.swapChain.extent.width;
-        pipelineDesc.scissor.height = g_renderState.swapChain.extent.height;
+        pipelineDesc.viewport = FullScreenViewport();
+        pipelineDesc.scissor  = FullScreenScissor();
 
         pipelineDesc.shaders[0] = simpleVert.get();
         pipelineDesc.shaders[1] = simpleFrag.get();
