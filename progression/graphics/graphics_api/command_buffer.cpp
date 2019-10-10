@@ -14,7 +14,7 @@ namespace Gfx
         return m_handle != VK_NULL_HANDLE;
     }
     
-    VkCommandBuffer CommandBuffer::GetNativeHandle() const
+    VkCommandBuffer CommandBuffer::GetHandle() const
     {
         return m_handle;
     }
@@ -45,7 +45,7 @@ namespace Gfx
     {
         VkRenderPassBeginInfo renderPassInfo = {};
         renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass        = renderPass.GetNativeHandle();
+        renderPassInfo.renderPass        = renderPass.GetHandle();
         renderPassInfo.framebuffer       = framebuffer;
         renderPassInfo.renderArea.offset = { 0, 0 };
         renderPassInfo.renderArea.extent = g_renderState.swapChain.extent;
@@ -65,7 +65,7 @@ namespace Gfx
 
     void CommandBuffer::BindRenderPipeline( const Pipeline& pipeline ) const
     {
-        vkCmdBindPipeline( m_handle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.GetNativeHandle() );
+        vkCmdBindPipeline( m_handle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.GetHandle() );
     }
 
     void CommandBuffer::BindDescriptorSets( uint32_t numSets, DescriptorSet* sets, const Pipeline& pipeline, uint32_t firstSet ) const
@@ -76,7 +76,7 @@ namespace Gfx
 
     void CommandBuffer::BindVertexBuffer( const Buffer& buffer, size_t offset, uint32_t firstBinding ) const
     {
-        VkBuffer vertexBuffers[] = { buffer.GetNativeHandle() };
+        VkBuffer vertexBuffers[] = { buffer.GetHandle() };
         vkCmdBindVertexBuffers( m_handle, firstBinding, 1, vertexBuffers, &offset );
     }
 
@@ -85,7 +85,7 @@ namespace Gfx
         std::vector< VkBuffer > vertexBuffers( numBuffers );
         for ( uint32_t i = 0; i < numBuffers; ++i )
         {
-            vertexBuffers[i] = buffers[i].GetNativeHandle();
+            vertexBuffers[i] = buffers[i].GetHandle();
         }
 
         vkCmdBindVertexBuffers( m_handle, firstBinding, numBuffers, vertexBuffers.data(), offsets );
@@ -93,14 +93,14 @@ namespace Gfx
 
     void CommandBuffer::BindIndexBuffer( const Buffer& buffer, IndexType indexType, size_t offset ) const
     {
-        vkCmdBindIndexBuffer( m_handle, buffer.GetNativeHandle(), offset, PGToVulkanIndexType( indexType ) );
+        vkCmdBindIndexBuffer( m_handle, buffer.GetHandle(), offset, PGToVulkanIndexType( indexType ) );
     }
 
     void CommandBuffer::Copy( const Buffer& dst, const Buffer& src )
     {
         VkBufferCopy copyRegion = {};
         copyRegion.size = src.GetLength();
-        vkCmdCopyBuffer( m_handle, src.GetNativeHandle(), dst.GetNativeHandle(), 1, &copyRegion );
+        vkCmdCopyBuffer( m_handle, src.GetHandle(), dst.GetHandle(), 1, &copyRegion );
     }
     
     void CommandBuffer::Draw( uint32_t firstVert, uint32_t vertCount, uint32_t instanceCount, uint32_t firstInstance ) const

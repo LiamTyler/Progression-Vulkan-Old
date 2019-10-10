@@ -18,7 +18,7 @@ namespace Gfx
         m_pipelineLayout = VK_NULL_HANDLE;
     }
 
-    VkPipeline Pipeline::GetNativeHandle() const
+    VkPipeline Pipeline::GetHandle() const
     {
         return m_pipeline;
     }

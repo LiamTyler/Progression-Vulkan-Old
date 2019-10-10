@@ -269,7 +269,7 @@ namespace Gfx
         pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
         pipelineInfo.stageCount          = static_cast< uint32_t >( shaderStages.size() );
         pipelineInfo.pStages             = shaderStages.data();
-        pipelineInfo.pVertexInputState   = &p.m_desc.vertexDescriptor.GetNativeHandle();
+        pipelineInfo.pVertexInputState   = &p.m_desc.vertexDescriptor.GetHandle();
         pipelineInfo.pInputAssemblyState = &inputAssembly;
         pipelineInfo.pViewportState      = &viewportState;
         pipelineInfo.pRasterizationState = &rasterizer;
@@ -278,8 +278,8 @@ namespace Gfx
         pipelineInfo.pColorBlendState    = &colorBlending;
         pipelineInfo.pDynamicState       = nullptr;
         pipelineInfo.layout              = p.m_pipelineLayout;
-        pipelineInfo.renderPass          = desc.renderPass->GetNativeHandle();
-        pipelineInfo.renderPass          = desc.renderPass->GetNativeHandle();
+        pipelineInfo.renderPass          = desc.renderPass->GetHandle();
+        pipelineInfo.renderPass          = desc.renderPass->GetHandle();
         pipelineInfo.subpass             = 0;
         pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
 
@@ -366,7 +366,7 @@ namespace Gfx
         VkSubmitInfo submitInfo = {};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.commandBufferCount = 1;
-        VkCommandBuffer vkCmdBuf = buffer.GetNativeHandle();
+        VkCommandBuffer vkCmdBuf = buffer.GetHandle();
         submitInfo.pCommandBuffers = &vkCmdBuf;
 
         vkQueueSubmit( m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
@@ -376,7 +376,7 @@ namespace Gfx
     }
 
      
-    VkDevice Device::GetNativeHandle() const
+    VkDevice Device::GetHandle() const
     {
         return m_handle;
     }
@@ -402,7 +402,7 @@ namespace Gfx
         VkCommandBuffer vkCmdBufs[5];
         for ( int i = 0; i < numBuffers; ++i )
         {
-            vkCmdBufs[i] = cmdBufs[i].GetNativeHandle();
+            vkCmdBufs[i] = cmdBufs[i].GetHandle();
         }
 
         VkSubmitInfo submitInfo = {};
@@ -440,7 +440,7 @@ namespace Gfx
         vkQueuePresentKHR( m_presentQueue, &presentInfo );
         
         g_renderState.currentFrame = ( g_renderState.currentFrame + 1 ) % MAX_FRAMES_IN_FLIGHT;
-        // vkDeviceWaitIdle( g_renderState.device.GetNativeHandle() );
+        // vkDeviceWaitIdle( g_renderState.device.GetHandle() );
     }
 
 } // namespace Gfx

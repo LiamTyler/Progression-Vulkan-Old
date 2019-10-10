@@ -137,7 +137,7 @@ namespace RenderSystem
         s_descriptorPool = g_renderState.device.NewDescriptorPool( 1, &poolSize, g_renderState.swapChain.images.size() );
 
         const auto& layoutInfo = simpleVert->reflectInfo.descriptorSetLayouts[0].createInfo;
-        VkResult ret = vkCreateDescriptorSetLayout( g_renderState.device.GetNativeHandle(), &layoutInfo, nullptr, &descriptorSetLayout );
+        VkResult ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(), &layoutInfo, nullptr, &descriptorSetLayout );
         PG_ASSERT( ret == VK_SUCCESS );
 
         auto numImages = g_renderState.swapChain.images.size();
@@ -147,12 +147,12 @@ namespace RenderSystem
         for ( size_t i = 0; i < g_renderState.swapChain.images.size(); i++ )
         {
             VkDescriptorBufferInfo bufferInfo = {};
-            bufferInfo.buffer = ubos[i].GetNativeHandle();
+            bufferInfo.buffer = ubos[i].GetHandle();
             bufferInfo.offset = 0;
             bufferInfo.range  = sizeof( glm::mat4 );
             VkWriteDescriptorSet descriptorWrite = {};
             descriptorWrite.sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.dstSet           = descriptorSets[i].GetNativeHandle();
+            descriptorWrite.dstSet           = descriptorSets[i].GetHandle();
             descriptorWrite.dstBinding       = 0;
             descriptorWrite.dstArrayElement  = 0;
             descriptorWrite.descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -160,7 +160,7 @@ namespace RenderSystem
             descriptorWrite.pBufferInfo      = &bufferInfo;
             descriptorWrite.pImageInfo       = nullptr; // Optional
             descriptorWrite.pTexelBufferView = nullptr; // Optional
-            vkUpdateDescriptorSets( g_renderState.device.GetNativeHandle(), 1, &descriptorWrite, 0, nullptr );
+            vkUpdateDescriptorSets( g_renderState.device.GetHandle(), 1, &descriptorWrite, 0, nullptr );
         }
 
         PipelineDescriptor pipelineDesc;
@@ -213,14 +213,14 @@ namespace RenderSystem
 
     void Shutdown()
     {
-        vkDeviceWaitIdle( g_renderState.device.GetNativeHandle() );
+        vkDeviceWaitIdle( g_renderState.device.GetHandle() );
         for ( auto& [name, sampler] : s_samplers )
         {
             sampler.Free();
         }
 
         s_descriptorPool.Free();
-        vkDestroyDescriptorSetLayout( g_renderState.device.GetNativeHandle(), descriptorSetLayout, nullptr );
+        vkDestroyDescriptorSetLayout( g_renderState.device.GetHandle(), descriptorSetLayout, nullptr );
         for ( auto& ubo : ubos )
         {
             ubo.Free();
@@ -238,7 +238,7 @@ namespace RenderSystem
         PG_UNUSED( scene );
         
         size_t currentFrame = g_renderState.currentFrame;
-        VkDevice dev = g_renderState.device.GetNativeHandle();
+        VkDevice dev = g_renderState.device.GetHandle();
         vkWaitForFences( dev, 1, &g_renderState.inFlightFences[currentFrame], VK_TRUE, UINT64_MAX );
         vkResetFences( dev, 1, &g_renderState.inFlightFences[currentFrame] );
 

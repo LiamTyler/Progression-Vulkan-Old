@@ -12,7 +12,7 @@ namespace Gfx
     public:
         DescriptorSet() = default;
 
-        VkDescriptorSet GetNativeHandle() const;
+        VkDescriptorSet GetHandle() const;
         operator bool() const;
 
     private:
@@ -27,7 +27,7 @@ namespace Gfx
 
         void Free();
         std::vector< DescriptorSet > NewDescriptorSets( uint32_t numLayouts, VkDescriptorSetLayout* layouts ) const;
-        VkDescriptorPool GetNativeHandle() const;
+        VkDescriptorPool GetHandle() const;
         operator bool() const;
 
     private:

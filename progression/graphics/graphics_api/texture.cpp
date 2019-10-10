@@ -132,13 +132,13 @@ namespace Gfx
     {
         if ( m_image != VK_NULL_HANDLE )
         {
-            vkDestroyImage( g_renderState.device.GetNativeHandle(), m_image, nullptr );
+            vkDestroyImage( g_renderState.device.GetHandle(), m_image, nullptr );
             m_image = VK_NULL_HANDLE;
         }
 
         if ( m_imageView != VK_NULL_HANDLE )
         {
-            vkDestroyImageView( g_renderState.device.GetNativeHandle(), m_imageView, nullptr );
+            vkDestroyImageView( g_renderState.device.GetHandle(), m_imageView, nullptr );
             m_imageView = VK_NULL_HANDLE;
         }
     }
@@ -184,7 +184,7 @@ namespace Gfx
         return m_desc.depth;
     }
 
-    VkImage Texture::GetNativeHandle() const
+    VkImage Texture::GetHandle() const
     {
         return m_image;
     }

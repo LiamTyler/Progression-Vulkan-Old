@@ -77,7 +77,7 @@ namespace Progression
         vkShaderInfo.codeSize = spirvSize;
         vkShaderInfo.pCode    = spirvData;
 
-        VkResult ret = vkCreateShaderModule( Gfx::g_renderState.device.GetNativeHandle(), &vkShaderInfo, nullptr, &m_shaderModule );
+        VkResult ret = vkCreateShaderModule( Gfx::g_renderState.device.GetHandle(), &vkShaderInfo, nullptr, &m_shaderModule );
         if ( ret != VK_SUCCESS )
         {
             return false;
@@ -147,7 +147,7 @@ namespace Progression
         vkShaderInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         vkShaderInfo.codeSize = spirvSize;
         vkShaderInfo.pCode    = reinterpret_cast< const uint32_t* >( buffer );
-        VkResult ret = vkCreateShaderModule( Gfx::g_renderState.device.GetNativeHandle(), &vkShaderInfo, nullptr, &m_shaderModule );
+        VkResult ret = vkCreateShaderModule( Gfx::g_renderState.device.GetHandle(), &vkShaderInfo, nullptr, &m_shaderModule );
         if ( ret != VK_SUCCESS )
         {
             return false;
@@ -349,12 +349,12 @@ namespace Progression
     {
         if ( m_shaderModule != VK_NULL_HANDLE )
         {
-            vkDestroyShaderModule( Gfx::g_renderState.device.GetNativeHandle(), m_shaderModule, nullptr );
+            vkDestroyShaderModule( Gfx::g_renderState.device.GetHandle(), m_shaderModule, nullptr );
             m_shaderModule = VK_NULL_HANDLE;
         }
     }
 
-    VkShaderModule Shader::GetNativeHandle() const
+    VkShaderModule Shader::GetHandle() const
     {
         return m_shaderModule;
     }

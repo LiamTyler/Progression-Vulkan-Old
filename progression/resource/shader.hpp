@@ -65,7 +65,7 @@ public:
     VkPipelineShaderStageCreateInfo GetVkPipelineShaderStageCreateInfo() const;
 
     void Free();
-    VkShaderModule GetNativeHandle() const;
+    VkShaderModule GetHandle() const;
     operator bool() const;
 
     ShaderReflectInfo reflectInfo;

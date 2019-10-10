@@ -164,7 +164,7 @@ namespace Gfx
         uint32_t GetHeight() const;
         uint32_t GetDepth() const;
 
-        VkImage GetNativeHandle() const;
+        VkImage GetHandle() const;
         VkImageView GetView() const;
 
         operator bool() const;

@@ -38,7 +38,7 @@ namespace Gfx
         static VertexInputDescriptor Create( uint8_t numBinding, VertexBindingDescriptor* bindingDesc,
                                              uint8_t numAttrib, VertexAttributeDescriptor* attribDesc );
 
-        const VkPipelineVertexInputStateCreateInfo& GetNativeHandle();
+        const VkPipelineVertexInputStateCreateInfo& GetHandle();
 
     private:
         VkPipelineVertexInputStateCreateInfo m_createInfo;

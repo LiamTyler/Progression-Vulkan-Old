@@ -31,7 +31,7 @@ namespace Gfx
 
         void Copy( Buffer dst, Buffer src ) const;
 
-        VkDevice GetNativeHandle() const;
+        VkDevice GetHandle() const;
         VkQueue GraphicsQueue() const;
         VkQueue PresentQueue() const;
 

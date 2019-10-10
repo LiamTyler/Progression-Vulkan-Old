@@ -13,7 +13,7 @@ namespace Gfx
         m_handle = VK_NULL_HANDLE;
     }
         
-    VkRenderPass RenderPass::GetNativeHandle() const
+    VkRenderPass RenderPass::GetHandle() const
     {
         return m_handle;
     }

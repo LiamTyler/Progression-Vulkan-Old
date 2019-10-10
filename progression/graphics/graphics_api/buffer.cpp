@@ -55,7 +55,7 @@ namespace Gfx
         return m_memoryType;
     }
 
-    VkBuffer Buffer::GetNativeHandle() const
+    VkBuffer Buffer::GetHandle() const
     {
         return m_handle;
     }

@@ -6,7 +6,7 @@ namespace Progression
 namespace Gfx
 {
 
-    VkDescriptorSet DescriptorSet::GetNativeHandle() const
+    VkDescriptorSet DescriptorSet::GetHandle() const
     {
         return m_handle;
     }
@@ -41,7 +41,7 @@ namespace Gfx
         return descriptorSets;
     }
     
-    VkDescriptorPool DescriptorPool::GetNativeHandle() const
+    VkDescriptorPool DescriptorPool::GetHandle() const
     {
         return m_handle;
     }

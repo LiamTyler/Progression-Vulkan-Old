@@ -465,7 +465,7 @@ static bool CreateSwapChainFrameBuffers()
 
     VkFramebufferCreateInfo framebufferInfo = {};
     framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.renderPass      = g_renderState.renderPass.GetNativeHandle();
+    framebufferInfo.renderPass      = g_renderState.renderPass.GetHandle();
     framebufferInfo.attachmentCount = 1;
     framebufferInfo.pAttachments    = attachments;
     framebufferInfo.width           = g_renderState.swapChain.extent.width;
@@ -476,7 +476,7 @@ static bool CreateSwapChainFrameBuffers()
     for ( size_t i = 0; i < g_renderState.swapChain.images.size(); ++i )
     {
         attachments[0] = g_renderState.swapChain.imageViews[i];
-        if ( vkCreateFramebuffer( g_renderState.device.GetNativeHandle(), &framebufferInfo, nullptr, &g_renderState.swapChainFramebuffers[i] ) != VK_SUCCESS )
+        if ( vkCreateFramebuffer( g_renderState.device.GetHandle(), &framebufferInfo, nullptr, &g_renderState.swapChainFramebuffers[i] ) != VK_SUCCESS )
         {
             return false;
         }
@@ -520,7 +520,7 @@ static bool CreateSemaphores()
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    VkDevice dev = g_renderState.device.GetNativeHandle();
+    VkDevice dev = g_renderState.device.GetHandle();
 
     for ( size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
     {
@@ -677,7 +677,7 @@ bool VulkanInit()
         return false;
     }
 
-    if ( !g_renderState.swapChain.Create( g_renderState.device.GetNativeHandle() ) )
+    if ( !g_renderState.swapChain.Create( g_renderState.device.GetHandle() ) )
     {
         LOG_ERR( "Could not create swap chain" );
         return false;
@@ -712,7 +712,7 @@ bool VulkanInit()
 
 void VulkanShutdown()
 {
-    VkDevice dev = g_renderState.device.GetNativeHandle();
+    VkDevice dev = g_renderState.device.GetHandle();
 
     for ( size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
     {

@@ -24,7 +24,7 @@ namespace Gfx
         CommandBuffer() = default;
 
         operator bool() const;
-        VkCommandBuffer GetNativeHandle() const;
+        VkCommandBuffer GetHandle() const;
 
         void Free();
         bool BeginRecording( CommandBufferUsage flags = 0 ) const;

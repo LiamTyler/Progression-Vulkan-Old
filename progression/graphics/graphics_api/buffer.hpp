@@ -120,7 +120,7 @@ namespace Gfx
         size_t GetLength() const;
         MemoryType GetMemoryType() const;
         BufferType GetType() const;
-        VkBuffer GetNativeHandle() const;
+        VkBuffer GetHandle() const;
         operator bool() const;
 
     protected:

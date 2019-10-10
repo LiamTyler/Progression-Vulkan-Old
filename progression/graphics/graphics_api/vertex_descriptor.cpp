@@ -37,7 +37,7 @@ namespace Gfx
         return desc;
     }
 
-    const VkPipelineVertexInputStateCreateInfo& VertexInputDescriptor::GetNativeHandle()
+    const VkPipelineVertexInputStateCreateInfo& VertexInputDescriptor::GetHandle()
     {
         return m_createInfo;
     }

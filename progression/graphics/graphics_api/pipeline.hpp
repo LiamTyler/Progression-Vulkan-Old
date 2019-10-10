@@ -164,7 +164,7 @@ namespace Gfx
         Pipeline() = default;
 
         void Free();
-        VkPipeline GetNativeHandle() const;
+        VkPipeline GetHandle() const;
         VkPipelineLayout GetLayoutHandle() const;
         operator bool() const;
 

@@ -64,7 +64,7 @@ namespace Gfx
         RenderPass() = default;
 
         void Free();
-        VkRenderPass GetNativeHandle() const;
+        VkRenderPass GetHandle() const;
         operator bool() const;
 
         RenderPassDescriptor desc;
