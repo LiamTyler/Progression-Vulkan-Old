@@ -1,6 +1,7 @@
 #pragma once
 
 #include "graphics/graphics_api/command_buffer.hpp"
+#include "graphics/graphics_api/descriptor.hpp"
 #include "graphics/graphics_api/fence.hpp"
 #include "graphics/graphics_api/pipeline.hpp"
 
@@ -14,11 +15,12 @@ namespace Gfx
     public:
         Device() = default;
 
+        static Device CreateDefault();
         void Free();
         operator bool() const;
 
-        static Device CreateDefault();
         CommandPool NewCommandPool( CommandPoolCreateFlags flags = 0 ) const;
+        DescriptorPool NewDescriptorPool( int numPoolSizes, VkDescriptorPoolSize* poolSizes, uint32_t maxSets = 1 ) const;
         Buffer NewBuffer( size_t length, BufferType type, MemoryType memoryType ) const;
         Buffer NewBuffer( size_t length, void* data, BufferType type, MemoryType memoryType ) const;
         Fence NewFence() const;

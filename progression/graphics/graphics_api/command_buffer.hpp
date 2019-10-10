@@ -8,6 +8,7 @@ namespace Progression
 {
 namespace Gfx
 {
+    class DescriptorSet;
 
     enum CommandBufferUsageBits
     {
@@ -31,6 +32,7 @@ namespace Gfx
         void BeginRenderPass( const RenderPass& renderPass, VkFramebuffer framebuffer ) const;
         void EndRenderPass() const;
         void BindRenderPipeline( const Pipeline& pipeline ) const;
+        void BindDescriptorSets( uint32_t numSets, DescriptorSet* sets, const Pipeline& pipeline, uint32_t firstSet = 0 ) const;
         void BindVertexBuffer( const Buffer& buffer, size_t offset = 0, uint32_t firstBinding = 0 ) const;
         void BindVertexBuffers( uint32_t numBuffers, const Buffer* buffers, size_t* offsets, uint32_t firstBinding = 0 ) const;
         void BindIndexBuffer( const Buffer& buffer, IndexType indexType, size_t offset = 0 ) const;

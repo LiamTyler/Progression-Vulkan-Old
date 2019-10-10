@@ -22,6 +22,8 @@ set(
     graphics/graphics_api/buffer.hpp
     graphics/graphics_api/command_buffer.cpp
     graphics/graphics_api/command_buffer.hpp
+    graphics/graphics_api/descriptor.cpp
+    graphics/graphics_api/descriptor.hpp
     graphics/graphics_api/device.cpp
     graphics/graphics_api/device.hpp
     graphics/graphics_api/fence.cpp

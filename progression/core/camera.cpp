@@ -45,7 +45,8 @@ void Camera::UpdateViewMatrix()
 
 void Camera::UpdateProjectionMatrix()
 {
-    m_projectionMatrix = glm::perspective( m_fieldOfView, m_aspectRatio, m_nearPlane, m_farPlane );
+    m_projectionMatrix        = glm::perspective( m_fieldOfView, m_aspectRatio, m_nearPlane, m_farPlane );
+    m_projectionMatrix[1][1] *= -1;
 }
 
 glm::mat4 Camera::GetV() const

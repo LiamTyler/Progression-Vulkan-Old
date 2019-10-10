@@ -9,9 +9,8 @@ namespace Time
 {
 
     void Reset();
-    float TimeSinceStart();
+    float Time();
     float DeltaTime();
-    unsigned int TotalFramesDrawn();
     void StartFrame();
     void EndFrame();
 

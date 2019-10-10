@@ -120,6 +120,7 @@ ConverterStatus ShaderConverter::Convert()
             serialize::Write( out, varLoc );
         }
         serialize::Write( out, reflectInfo.descriptorSetLayouts.size() );
+        LOG( "num descs: ", reflectInfo.descriptorSetLayouts.size() );
         for ( const auto& set : reflectInfo.descriptorSetLayouts )
         {
             serialize::Write( out, set.setNumber );

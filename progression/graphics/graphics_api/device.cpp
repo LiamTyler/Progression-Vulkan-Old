@@ -6,6 +6,8 @@
 #include "utils/logger.hpp"
 #include <set>
 
+extern VkDescriptorSetLayout descriptorSetLayout;
+
 namespace Progression
 {
 namespace Gfx
@@ -39,12 +41,12 @@ namespace Gfx
         createInfo.ppEnabledExtensionNames = VK_DEVICE_EXTENSIONS.data();
 
         // Specify device specific validation layers (ignored after v1.1.123?)
-    #if !USING( SHIP_BUILD )
+#if !USING( SHIP_BUILD )
         createInfo.enabledLayerCount   = static_cast< uint32_t >( VK_VALIDATION_LAYERS.size() );
         createInfo.ppEnabledLayerNames = VK_VALIDATION_LAYERS.data();
-    #else // #if !USING( SHIP_BUILD )
+#else // #if !USING( SHIP_BUILD )
         createInfo.enabledLayerCount   = 0;
-    #endif // #else // #if !USING( SHIP_BUILD )
+#endif // #else // #if !USING( SHIP_BUILD )
 
         if ( vkCreateDevice( g_renderState.physicalDeviceInfo.device, &createInfo, nullptr, &device.m_handle ) != VK_SUCCESS )
         {
@@ -66,19 +68,6 @@ namespace Gfx
         }
     }
 
-    Fence Device::NewFence() const
-    {
-        Fence fence;
-        VkFenceCreateInfo fenceInfo = {};
-        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-        fence.m_device  = m_handle;
-        VkResult ret    = vkCreateFence( m_handle, &fenceInfo, nullptr, &fence.m_handle );
-        PG_ASSERT( ret == VK_SUCCESS );
-
-        return fence;
-    }
-
     CommandPool Device::NewCommandPool( CommandPoolCreateFlags flags ) const
     {
         VkCommandPoolCreateInfo poolInfo = {};
@@ -94,6 +83,36 @@ namespace Gfx
         }
 
         return cmdPool;
+    }
+
+    DescriptorPool Device::NewDescriptorPool( int numPoolSizes, VkDescriptorPoolSize* poolSizes, uint32_t maxSets ) const
+    {
+        DescriptorPool pool;
+        pool.m_device = m_handle;
+
+        VkDescriptorPoolCreateInfo poolInfo = {};
+        poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.poolSizeCount = numPoolSizes;
+        poolInfo.pPoolSizes    = poolSizes;
+        poolInfo.maxSets       = maxSets;
+
+        VkResult ret = vkCreateDescriptorPool( m_handle, &poolInfo, nullptr, &pool.m_handle );
+        PG_ASSERT( ret == VK_SUCCESS );
+
+        return pool;
+    }
+
+    Fence Device::NewFence() const
+    {
+        Fence fence;
+        VkFenceCreateInfo fenceInfo = {};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+        fence.m_device  = m_handle;
+        VkResult ret    = vkCreateFence( m_handle, &fenceInfo, nullptr, &fence.m_handle );
+        PG_ASSERT( ret == VK_SUCCESS );
+
+        return fence;
     }
 
     Buffer Device::NewBuffer( size_t length, BufferType type, MemoryType memoryType ) const
@@ -237,7 +256,6 @@ namespace Gfx
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
         pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount         = 1;
-        extern VkDescriptorSetLayout descriptorSetLayout;
         pipelineLayoutInfo.pSetLayouts            = &descriptorSetLayout;
         pipelineLayoutInfo.pushConstantRangeCount = 0;
         pipelineLayoutInfo.pPushConstantRanges    = nullptr;

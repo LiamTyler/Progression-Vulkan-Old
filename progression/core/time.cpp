@@ -19,7 +19,7 @@ namespace Time
         s_currentFrameStartTime = 0;
     }
 
-    float TotalTime()
+    float Time()
     {
         return static_cast< float >( glfwGetTime() );
     }
@@ -31,7 +31,7 @@ namespace Time
 
     void StartFrame()
     {
-        s_currentFrameStartTime = TotalTime();
+        s_currentFrameStartTime = Time();
         s_deltaTime             = s_currentFrameStartTime - s_lastFrameStartTime;
     }
 
@@ -48,8 +48,7 @@ namespace Time
     double GetDuration( const std::chrono::high_resolution_clock::time_point& point )
     {
         auto now = std::chrono::high_resolution_clock::now();
-        return std::chrono::duration_cast< std::chrono::microseconds >( now - point ).count() /
-               (float) 1000;
+        return std::chrono::duration_cast< std::chrono::microseconds >( now - point ).count() / static_cast< float >( 1000 );
     }
 
 } // namespace Time

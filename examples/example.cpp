@@ -26,10 +26,8 @@ int main( int argc, char* argv[] )
     {
         Window* window = GetMainWindow();
         // window->setRelativeMouse(true);
-
-        PG::Input::PollEvents();
-
-        Camera camera( glm::vec3( 0, 0, 3 ), glm::vec3( 0 ) );
+        
+        Scene* scene = Scene::Load( PG_RESOURCE_DIR "scenes/scene1.txt" );
 
         PG::Input::PollEvents();
 
@@ -44,7 +42,7 @@ int main( int argc, char* argv[] )
                 PG::EngineShutdown = true;
             }
 
-            RenderSystem::Render( nullptr );
+            RenderSystem::Render( scene );
 
             window->EndFrame();
         }

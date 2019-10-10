@@ -23,6 +23,11 @@ namespace Gfx
         return m_pipeline;
     }
 
+    VkPipelineLayout Pipeline::GetLayoutHandle() const
+    {
+        return m_pipelineLayout;
+    }
+
     Pipeline::operator bool() const
     {
         return m_pipeline != VK_NULL_HANDLE;

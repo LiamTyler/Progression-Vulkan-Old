@@ -56,8 +56,11 @@ static Window* s_window;
 static Pipeline s_pipeline;
 static Buffer s_buffer;
 static Buffer s_indexBuffer;
+static DescriptorPool s_descriptorPool;
 VkDescriptorSetLayout descriptorSetLayout;
 std::vector< Progression::Gfx::Buffer > ubos;
+VkDescriptorPool descriptorPool;
+std::vector<VkDescriptorSet> descriptorSets;
 
 namespace Progression
 {
@@ -84,6 +87,11 @@ namespace RenderSystem
 
         InitSamplers();
         s_window = GetMainWindow();
+
+        ResourceManager::LoadFastFile( PG_RESOURCE_DIR "cache/fastfiles/resource.txt.ff" );
+        auto simpleVert = ResourceManager::Get< Shader >( "simpleVert" );
+        auto simpleFrag = ResourceManager::Get< Shader >( "simpleFrag" );
+
 
         VertexBindingDescriptor bindingDesc;
         bindingDesc.binding   = 0;
@@ -117,28 +125,48 @@ namespace RenderSystem
         ubos.resize( g_renderState.swapChain.images.size() );
         for ( auto& ubo : ubos )
         {
-            ubo = g_renderState.device.NewBuffer( sizeof( glm::mat4 ), BUFFER_TYPE_UNIFORM, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
+            ubo = g_renderState.device.NewBuffer( sizeof( glm::mat4 ), BUFFER_TYPE_UNIFORM,
+                                                  MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
         }
 
-        VkDescriptorSetLayoutBinding uboLayoutBinding = {};
-        uboLayoutBinding.binding = 0;
-        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        uboLayoutBinding.descriptorCount = 1;
-        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        uboLayoutBinding.pImmutableSamplers = nullptr;
 
-        VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = 1;
-        layoutInfo.pBindings = &uboLayoutBinding;
+        VkDescriptorPoolSize poolSize = {};
+        poolSize.type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSize.descriptorCount = static_cast< uint32_t >( g_renderState.swapChain.images.size() );
 
+        s_descriptorPool = g_renderState.device.NewDescriptorPool( 1, &poolSize, g_renderState.swapChain.images.size() );
+
+        const auto& layoutInfo = simpleVert->reflectInfo.descriptorSetLayouts[0].createInfo;
         VkResult ret = vkCreateDescriptorSetLayout( g_renderState.device.GetNativeHandle(), &layoutInfo, nullptr, &descriptorSetLayout );
         PG_ASSERT( ret == VK_SUCCESS );
+
+        auto numImages = g_renderState.swapChain.images.size();
+        std::vector< VkDescriptorSetLayout > layouts( g_renderState.swapChain.images.size(), descriptorSetLayout );
+        auto descriptorSets = s_descriptorPool.NewDescriptorSets( numImages, layouts.data() );
+
+        for ( size_t i = 0; i < g_renderState.swapChain.images.size(); i++ )
+        {
+            VkDescriptorBufferInfo bufferInfo = {};
+            bufferInfo.buffer = ubos[i].GetNativeHandle();
+            bufferInfo.offset = 0;
+            bufferInfo.range  = sizeof( glm::mat4 );
+            VkWriteDescriptorSet descriptorWrite = {};
+            descriptorWrite.sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite.dstSet           = descriptorSets[i].GetNativeHandle();
+            descriptorWrite.dstBinding       = 0;
+            descriptorWrite.dstArrayElement  = 0;
+            descriptorWrite.descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrite.descriptorCount  = 1;
+            descriptorWrite.pBufferInfo      = &bufferInfo;
+            descriptorWrite.pImageInfo       = nullptr; // Optional
+            descriptorWrite.pTexelBufferView = nullptr; // Optional
+            vkUpdateDescriptorSets( g_renderState.device.GetNativeHandle(), 1, &descriptorWrite, 0, nullptr );
+        }
 
         PipelineDescriptor pipelineDesc;
         pipelineDesc.renderPass             = &g_renderState.renderPass;
         pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 1, &bindingDesc, 2, attribDescs.data() );
-        pipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
+        pipelineDesc.rasterizerInfo.winding = WindingOrder::CLOCKWISE;
 
         pipelineDesc.viewport.x        = 0.0f;
         pipelineDesc.viewport.y        = 0.0f;
@@ -152,9 +180,6 @@ namespace RenderSystem
         pipelineDesc.scissor.width  = g_renderState.swapChain.extent.width;
         pipelineDesc.scissor.height = g_renderState.swapChain.extent.height;
 
-        ResourceManager::LoadFastFile( PG_RESOURCE_DIR "cache/fastfiles/resource.txt.ff" );
-        auto simpleVert = ResourceManager::Get< Shader >( "simpleVert" );
-        auto simpleFrag = ResourceManager::Get< Shader >( "simpleFrag" );
         pipelineDesc.shaders[0] = simpleVert.get();
         pipelineDesc.shaders[1] = simpleFrag.get();
         pipelineDesc.numShaders = 2;
@@ -177,6 +202,7 @@ namespace RenderSystem
             cmdBuf.BindRenderPipeline( s_pipeline );
             cmdBuf.BindVertexBuffer( s_buffer );
             cmdBuf.BindIndexBuffer( s_indexBuffer, IndexType::UNSIGNED_SHORT );
+            cmdBuf.BindDescriptorSets( 1, &descriptorSets[i], s_pipeline );
             cmdBuf.DrawIndexed( 0, 6 );
             cmdBuf.EndRenderPass();
             cmdBuf.EndRecording();
@@ -193,6 +219,12 @@ namespace RenderSystem
             sampler.Free();
         }
 
+        s_descriptorPool.Free();
+        vkDestroyDescriptorSetLayout( g_renderState.device.GetNativeHandle(), descriptorSetLayout, nullptr );
+        for ( auto& ubo : ubos )
+        {
+            ubo.Free();
+        }
         s_buffer.Free();
         s_indexBuffer.Free();
         s_pipeline.Free();
@@ -212,7 +244,7 @@ namespace RenderSystem
 
         auto imageIndex = g_renderState.swapChain.AcquireNextImage( g_renderState.presentCompleteSemaphores[currentFrame] );
    
-        glm::mat4 model = glm::rotate( glm::mat4( 1.0f ), Time::DeltaTime() * glm::radians( 90.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) );
+        glm::mat4 model = glm::rotate( glm::mat4( 1.0f ), Time::Time() * glm::radians( 90.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) );
         auto MVP        = scene->camera.GetVP() * model;
         void* data      = ubos[imageIndex].Map();
         memcpy( data, &MVP, sizeof( glm::mat4 ) );

@@ -1,5 +1,6 @@
 #include "graphics/graphics_api/command_buffer.hpp"
 #include "core/assert.hpp"
+#include "graphics/graphics_api/descriptor.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
 #include "graphics/vulkan.hpp"
 
@@ -67,6 +68,12 @@ namespace Gfx
         vkCmdBindPipeline( m_handle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.GetNativeHandle() );
     }
 
+    void CommandBuffer::BindDescriptorSets( uint32_t numSets, DescriptorSet* sets, const Pipeline& pipeline, uint32_t firstSet ) const
+    {
+        vkCmdBindDescriptorSets( m_handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                 pipeline.GetLayoutHandle(), firstSet, numSets, (VkDescriptorSet*) sets, 0, nullptr );
+    }
+
     void CommandBuffer::BindVertexBuffer( const Buffer& buffer, size_t offset, uint32_t firstBinding ) const
     {
         VkBuffer vertexBuffers[] = { buffer.GetNativeHandle() };
@@ -86,7 +93,7 @@ namespace Gfx
 
     void CommandBuffer::BindIndexBuffer( const Buffer& buffer, IndexType indexType, size_t offset ) const
     {
-        vkCmdBindIndexBuffer( m_handle, buffer.GetNativeHandle(), 0, PGToVulkanIndexType( indexType ) );
+        vkCmdBindIndexBuffer( m_handle, buffer.GetNativeHandle(), offset, PGToVulkanIndexType( indexType ) );
     }
 
     void CommandBuffer::Copy( const Buffer& dst, const Buffer& src )

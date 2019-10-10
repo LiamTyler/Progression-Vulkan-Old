@@ -129,12 +129,15 @@ namespace Progression
 
         size_t numDescriptorSets;
         serialize::Read( buffer, numDescriptorSets );
+        LOG( "num descs: ", numDescriptorSets );
         reflectInfo.descriptorSetLayouts.resize( numDescriptorSets );
         for ( size_t i = 0; i < numDescriptorSets; ++i )
         {
             serialize::Read( buffer, reflectInfo.descriptorSetLayouts[i].setNumber );
             serialize::Read( buffer, reflectInfo.descriptorSetLayouts[i].createInfo );
             serialize::Read( buffer, reflectInfo.descriptorSetLayouts[i].bindings );
+
+            reflectInfo.descriptorSetLayouts[i].createInfo.pBindings = reflectInfo.descriptorSetLayouts[i].bindings.data();
         }
 
         size_t spirvSize;
