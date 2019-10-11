@@ -209,23 +209,23 @@ namespace Gfx
     //    return convert[static_cast< int >( mode )];
     //}
 
-    //constexpr GLenum PGToOpenGLImageType( ImageType type )
-    //{
-    //    GLenum convert[] =
-    //    {
-    //        GL_TEXTURE_1D,              // TYPE_1D
-    //        GL_TEXTURE_1D_ARRAY,        // TYPE_1D_ARRAY
-    //        GL_TEXTURE_2D,              // TYPE_2D 
-    //        GL_TEXTURE_2D_ARRAY,        // TYPE_2D_ARRAY
-    //        GL_TEXTURE_CUBE_MAP,        // TYPE_2D_ARRAY
-    //        GL_TEXTURE_CUBE_MAP_ARRAY,  // TYPE_CUBEMAP_ARRAY
-    //        GL_TEXTURE_3D,              // TYPE_3D_ARRAY
-    //    };
+    constexpr VkImageType PGToVulkanImageType( ImageType type )
+    {
+        VkImageType convert[] =
+        {
+            VK_IMAGE_TYPE_1D,        // TYPE_1D
+            VK_IMAGE_TYPE_1D,        // TYPE_1D_ARRAY
+            VK_IMAGE_TYPE_2D,        // TYPE_2D 
+            VK_IMAGE_TYPE_2D,        // TYPE_2D_ARRAY
+            VK_IMAGE_TYPE_2D,        // TYPE_2D_ARRAY
+            VK_IMAGE_TYPE_2D,        // TYPE_CUBEMAP_ARRAY
+            VK_IMAGE_TYPE_3D,        // TYPE_3D_ARRAY
+        };
 
-    //    static_assert( ARRAY_COUNT( convert ) == static_cast< int >( ImageType::NUM_IMAGE_TYPES ) );
+        static_assert( ARRAY_COUNT( convert ) == static_cast< int >( ImageType::NUM_IMAGE_TYPES ) );
 
-    //    return convert[static_cast< int >( type )];
-    //}
+        return convert[static_cast< int >( type )];
+    }
 
     constexpr VkFormat PGToVulanPixelFormat( PixelFormat format )
     {

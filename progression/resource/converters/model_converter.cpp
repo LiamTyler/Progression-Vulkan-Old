@@ -96,6 +96,7 @@ ConverterStatus ModelConverter::Convert()
     {
         Model model;
         createInfo.freeCpuCopy = false;
+        createInfo.createGpuCopy = false;
         if ( !model.Load( &createInfo ) )
         {
             LOG_ERR( "Could not load the model '", createInfo.filename, "'" );

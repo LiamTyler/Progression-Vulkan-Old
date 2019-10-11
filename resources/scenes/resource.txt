@@ -5,3 +5,10 @@ filename simple.vert
 Shader
 name simpleFrag
 filename simple.frag
+
+Model
+name cube
+filename models/cube.obj
+optimize true
+freeCpuCopy true
+createGpuCopy true

@@ -3,6 +3,7 @@
 #include "graphics/graphics_api/command_buffer.hpp"
 #include "graphics/graphics_api/descriptor.hpp"
 #include "graphics/graphics_api/fence.hpp"
+#include "graphics/graphics_api/texture.hpp"
 #include "graphics/graphics_api/pipeline.hpp"
 
 namespace Progression
@@ -23,6 +24,7 @@ namespace Gfx
         DescriptorPool NewDescriptorPool( int numPoolSizes, VkDescriptorPoolSize* poolSizes, uint32_t maxSets = 1 ) const;
         Buffer NewBuffer( size_t length, BufferType type, MemoryType memoryType ) const;
         Buffer NewBuffer( size_t length, void* data, BufferType type, MemoryType memoryType ) const;
+        Texture NewTexture( const ImageDescriptor& desc ) const;
         Fence NewFence() const;
         Pipeline NewPipeline( const PipelineDescriptor& desc ) const;
         RenderPass NewRenderPass( const RenderPassDescriptor& desc ) const;

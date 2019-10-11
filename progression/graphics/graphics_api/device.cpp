@@ -176,6 +176,30 @@ namespace Gfx
 
         return dstBuffer;
     }
+      class ImageDescriptor
+    {
+    public:
+        ImageType type        = ImageType::NUM_IMAGE_TYPES;
+        PixelFormat srcFormat = PixelFormat::NUM_PIXEL_FORMATS;
+        PixelFormat dstFormat = PixelFormat::NUM_PIXEL_FORMATS;
+        uint8_t mipLevels     = 1;
+        uint8_t arrayLayers   = 1;
+        uint32_t width        = 0;
+        uint32_t height       = 0;
+        uint32_t depth        = 1;
+    };
+    Texture Device::NewTexture( const ImageDescriptor& desc ) const
+    {
+        VkImageCreateInfo imageInfo = {};
+        imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.imageType     = PGToVulkanImageType( desc.type );
+        imageInfo.extent.width  = desc.width;
+        imageInfo.extent.height = desc.height;
+        imageInfo.extent.depth  = desc.height;
+        imageInfo.mipLevels     = desc.mipLevels;
+        imageInfo.arrayLayers   = desc.arrayLayers;
+        imageInfo.format    
+    }
 
     Pipeline Device::NewPipeline( const PipelineDescriptor& desc ) const
     {

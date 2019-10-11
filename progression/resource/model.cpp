@@ -214,7 +214,7 @@ bool Model::LoadFromObj( ModelCreateInfo* createInfo )
                             currentMesh.uvs.emplace_back( tx, ty );
                         }
 
-                        currentMesh.indices.push_back( static_cast< uint32_t >( currentMesh.vertices.size() ) );
+                        currentMesh.indices.push_back( static_cast< uint32_t >( currentMesh.indices.size() ) );
                     }
                 }
             }

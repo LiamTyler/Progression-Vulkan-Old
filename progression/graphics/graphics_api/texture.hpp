@@ -173,6 +173,7 @@ namespace Gfx
         ImageDescriptor m_desc;
         VkImage m_image         = VK_NULL_HANDLE;
         VkImageView m_imageView = VK_NULL_HANDLE;
+        VkDeviceMemory m_memory = VK_NULL_HANDLE;
     };
 
 } // namespace Gfx
