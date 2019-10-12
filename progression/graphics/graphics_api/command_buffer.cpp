@@ -50,10 +50,22 @@ namespace Gfx
         renderPassInfo.renderArea.offset = { 0, 0 };
         renderPassInfo.renderArea.extent = g_renderState.swapChain.extent;
 
-        const auto& col = renderPass.desc.colorAttachmentDescriptors[0].clearColor;
-        VkClearValue clearColor        = { col.r, col.g, col.b, col.a };
-        renderPassInfo.clearValueCount = 1;
-        renderPassInfo.pClearValues    = &clearColor;
+        VkClearValue clearValues[9] = {};
+        size_t i = 0;
+        const auto& colorA = renderPass.desc.colorAttachmentDescriptors;
+        for ( ; i < colorA.size() && colorA[i].format != PixelFormat::INVALID; ++i )
+        {
+            const auto& col = renderPass.desc.colorAttachmentDescriptors[i].clearColor;
+            clearValues[i].color = { col.r, col.g, col.b, col.a };
+        }
+        if ( renderPass.desc.depthAttachmentDescriptor.format != PixelFormat::INVALID )
+        {
+            clearValues[i].depthStencil = { renderPass.desc.depthAttachmentDescriptor.clearValue, 0 };
+            ++i;
+        }
+
+        renderPassInfo.clearValueCount = static_cast< uint32_t >( i );
+        renderPassInfo.pClearValues    = clearValues;
 
         vkCmdBeginRenderPass( m_handle, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
     }

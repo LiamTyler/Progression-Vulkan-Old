@@ -6,9 +6,18 @@ Shader
 name simpleFrag
 filename simple.frag
 
+Image
+name chaletTex
+filenames textures/chalet.jpg
+sampler linear_clamped
+flipVertically true
+generateMipmaps false
+createTexture true
+freeCpuCopy true
+
 Model
 name cube
-filename models/cube.obj
+filename models/chalet2.obj
 optimize true
 freeCpuCopy true
 createGpuCopy true

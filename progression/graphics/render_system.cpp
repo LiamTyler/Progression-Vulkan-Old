@@ -55,8 +55,6 @@ namespace RenderSystem
 
 static Window* s_window;
 static Pipeline s_pipeline;
-static Buffer s_buffer;
-static Buffer s_indexBuffer;
 static DescriptorPool s_descriptorPool;
 VkDescriptorSetLayout descriptorSetLayout;
 std::vector< Progression::Gfx::Buffer > ubos;
@@ -98,19 +96,11 @@ namespace RenderSystem
             return true;
         }
 
-        // ImageCreateInfo imageCreateInfo = {};
-        // imageCreateInfo.name = "Cockatoo";
-        // imageCreateInfo.filenames.push_back( PG_RESOURCE_DIR "textures/cockatoo.jpg" );
-        // imageCreateInfo.flags |= IMAGE_CREATE_TEXTURE_ON_LOAD;
-        // imageCreateInfo.flags |= IMAGE_FREE_CPU_COPY_ON_LOAD;
-        // s_image = ResourceManager::Load< Image >( &imageCreateInfo );
-
         ResourceManager::LoadFastFile( PG_RESOURCE_DIR "cache/fastfiles/resource.txt.ff" );
         auto simpleVert = ResourceManager::Get< Shader >( "simpleVert" );
         auto simpleFrag = ResourceManager::Get< Shader >( "simpleFrag" );
 
-        s_image = ResourceManager::Get< Image >( "cockatoo" );
-
+        s_image = ResourceManager::Get< Image >( "chaletTex" );
 
         VertexBindingDescriptor bindingDesc[2];
         bindingDesc[0].binding   = 0;
@@ -132,37 +122,6 @@ namespace RenderSystem
         attribDescs[1].format   = BufferDataType::FLOAT2;
         attribDescs[1].offset   = 0;
         
-        float vertices[] =
-        {
-            -0.5, -0.5, 0,
-            -0.5,  0.5, 0,
-             0.5,  0.5, 0,
-             0.5, -0.5, 0,
-            0, 1,
-            0, 0,
-            1, 0,
-            1, 1,
-        };
-        
-        /*
-        attribDescs[1].binding  = 0;
-        attribDescs[1].location = 1;
-        attribDescs[1].format   = BufferDataType::FLOAT3;
-        attribDescs[1].offset   = sizeof( glm::vec3 );
-
-        glm::vec3 vertices[] =
-        {
-            glm::vec3( -0.5, -0.5, 0 ), glm::vec3( 1, 0, 0 ),
-            glm::vec3( -0.5,  0.5, 0 ), glm::vec3( 1, 1, 1 ),
-            glm::vec3(  0.5,  0.5, 0 ), glm::vec3( 0, 0, 1 ),
-            glm::vec3(  0.5, -0.5, 0 ), glm::vec3( 0, 1, 0 ),
-        };
-        */
-
-        std::vector< uint16_t > indices = { 0, 1, 2, 2, 3, 0 };
-
-        s_buffer      = g_renderState.device.NewBuffer( sizeof( vertices ), vertices, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL );
-        s_indexBuffer = g_renderState.device.NewBuffer( indices.size() * sizeof( uint16_t ), indices.data(), BUFFER_TYPE_INDEX, MEMORY_TYPE_DEVICE_LOCAL );
 
         uint32_t numImages = static_cast< uint32_t >( g_renderState.swapChain.images.size() );
         ubos.resize( numImages );
@@ -182,7 +141,6 @@ namespace RenderSystem
 
         std::vector< DescriptorSetLayoutData > descriptorSetData = simpleVert->reflectInfo.descriptorSetLayouts;
         descriptorSetData.insert( descriptorSetData.end(), simpleFrag->reflectInfo.descriptorSetLayouts.begin(), simpleFrag->reflectInfo.descriptorSetLayouts.end() );
-        // const auto& layoutInfo = simpleVert->reflectInfo.descriptorSetLayouts[0].createInfo;
         auto combined = CombineDescriptorSetLayouts( descriptorSetData );
         PG_ASSERT( combined.size() == 1 );
         const auto& layoutInfo = combined[0].createInfo;
@@ -226,9 +184,9 @@ namespace RenderSystem
 
         PipelineDescriptor pipelineDesc;
         pipelineDesc.renderPass             = &g_renderState.renderPass;
-        // pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 2, bindingDesc, 2, attribDescs.data() );
         pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 2, bindingDesc, 2, attribDescs.data() );
-        pipelineDesc.rasterizerInfo.winding = WindingOrder::CLOCKWISE;
+        pipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
+        // pipelineDesc.rasterizerInfo.winding = WindingOrder::CLOCKWISE;
 
         pipelineDesc.viewport = FullScreenViewport();
         pipelineDesc.scissor  = FullScreenScissor();
@@ -247,7 +205,7 @@ namespace RenderSystem
         simpleVert->Free();
         simpleFrag->Free();
 
-        // auto model = ResourceManager::Get< Model >( "cube" );
+        auto model = ResourceManager::Get< Model >( "cube" );
 
         for ( size_t i = 0; i < g_renderState.commandBuffers.size(); ++i )
         {
@@ -255,15 +213,14 @@ namespace RenderSystem
             cmdBuf.BeginRecording();
             cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[i] );
             cmdBuf.BindRenderPipeline( s_pipeline );
-            cmdBuf.BindVertexBuffer( s_buffer, 0, 0 );
-            cmdBuf.BindVertexBuffer( s_buffer, 4*12, 1 );
-            cmdBuf.BindIndexBuffer(  s_indexBuffer,  IndexType::UNSIGNED_SHORT );
-            //cmdBuf.BindVertexBuffer( model->meshes[0].vertexBuffer, 0, 0 );
-            //cmdBuf.BindVertexBuffer( model->meshes[0].vertexBuffer, model->meshes[0].GetNormalOffset(), 1 );
-            // cmdBuf.BindIndexBuffer(  model->meshes[0].indexBuffer,  model->meshes[0].GetIndexType() );
             cmdBuf.BindDescriptorSets( 1, &descriptorSets[i], s_pipeline );
-            // cmdBuf.DrawIndexed( 0, model->meshes[0].GetNumIndices() );
-            cmdBuf.DrawIndexed( 0, 6 );
+
+            cmdBuf.BindVertexBuffer( model->meshes[0].vertexBuffer, 0, 0 );
+            // cmdBuf.BindVertexBuffer( model->meshes[0].vertexBuffer, model->meshes[0].GetNormalOffset(), 1 );
+            cmdBuf.BindVertexBuffer( model->meshes[0].vertexBuffer, model->meshes[0].GetUVOffset(), 1 );
+            cmdBuf.BindIndexBuffer(  model->meshes[0].indexBuffer,  model->meshes[0].GetIndexType() );
+            cmdBuf.DrawIndexed( 0, model->meshes[0].GetNumIndices() );
+
             cmdBuf.EndRenderPass();
             cmdBuf.EndRecording();
         }
@@ -284,15 +241,12 @@ namespace RenderSystem
 
         if ( !g_converterMode )
         {
-            // s_image->FreeGpuCopy();
             s_descriptorPool.Free();
             vkDestroyDescriptorSetLayout( g_renderState.device.GetHandle(), descriptorSetLayout, nullptr );
             for ( auto& ubo : ubos )
             {
                 ubo.Free();
             }
-            s_buffer.Free();
-            s_indexBuffer.Free();
             s_pipeline.Free();
         }
 
@@ -309,9 +263,11 @@ namespace RenderSystem
         auto imageIndex = g_renderState.swapChain.AcquireNextImage( g_renderState.presentCompleteSemaphores[currentFrame] );
 
         glm::mat4 M( 1 );
-        // M = glm::rotate( M, Time::Time() * glm::radians( 90.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
-        M = glm::rotate( M, Time::Time() * glm::radians( 90.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) );
-        M = glm::scale( M, glm::vec3( 1 ) );
+        M = glm::translate( M, glm::vec3( 0.0f, -0.7f, 0.0f ) );
+        M = glm::rotate( M, Time::Time() * glm::radians( 90.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
+        M = glm::rotate( M, glm::radians( -90.0f ), glm::vec3( 1.0f, 0.0f, 0.0f ) );
+        // M = glm::rotate( M, Time::Time() * glm::radians( 90.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) );
+        M = glm::scale( M, glm::vec3( 1.0 ) );
         // auto N = glm::transpose( glm::inverse( M ) );
         auto MVP        = scene->camera.GetVP() * M;
         void* data      = ubos[imageIndex].Map();
@@ -339,6 +295,9 @@ namespace RenderSystem
 
         samplerDesc.minFilter = FilterMode::LINEAR;
         samplerDesc.magFilter = FilterMode::LINEAR;
+        samplerDesc.wrapModeU = WrapMode::REPEAT;
+        samplerDesc.wrapModeV = WrapMode::REPEAT;
+        samplerDesc.wrapModeW = WrapMode::REPEAT;
         AddSampler( "linear_clamped", samplerDesc );
     }
 

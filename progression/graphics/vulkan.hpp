@@ -64,9 +64,8 @@ namespace Gfx
         VkSurfaceKHR surface;
         PhysicalDeviceInfo physicalDeviceInfo;
         SwapChain swapChain;
+        Texture depthTex;
         std::vector< VkFramebuffer > swapChainFramebuffers;
-        // VkCommandPool commandPool;
-        // std::vector< VkCommandBuffer > commandBuffers;
         CommandPool commandPool;
         CommandPool transientCommandPool;
         std::vector< CommandBuffer > commandBuffers;
@@ -92,7 +91,7 @@ namespace Gfx
 
     bool FormatSupported( VkFormat format, VkFormatFeatureFlags requestedSupport );
 
-    VkImageView CreateImageView( VkImage image, VkFormat format );
+    VkImageView CreateImageView( VkImage image, VkFormat format, VkImageAspectFlags aspectFlags );
 
 } // namepspace Gfx
 } // namepspace Progression

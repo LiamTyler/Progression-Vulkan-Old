@@ -14,8 +14,6 @@ enum ImageFlagBits
     IMAGE_FREE_CPU_COPY_ON_LOAD       = 1 << 1,
     IMAGE_FLIP_VERTICALLY             = 1 << 2,
     IMAGE_GENERATE_MIPMAPS_ON_CONVERT = 1 << 3,
-
-    NUM_IMAGE_FLAGS                   = 4
 };
 
 typedef uint32_t ImageFlags;
@@ -51,8 +49,7 @@ public:
     Gfx::Texture* GetTexture();
     Gfx::ImageDescriptor GetDescriptor() const;
     Gfx::ImageType GetType() const;
-    Gfx::PixelFormat GetSrcPixelFormat() const;
-    Gfx::PixelFormat GetDstPixelFormat() const;
+    Gfx::PixelFormat GetPixelFormat() const;
     uint8_t GetMipLevels() const;
     uint8_t GetArrayLayers() const;
     uint32_t GetWidth() const;

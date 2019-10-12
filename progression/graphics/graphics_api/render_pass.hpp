@@ -45,6 +45,7 @@ namespace Gfx
         float clearValue        = 1.0f;
         LoadAction loadAction   = LoadAction::CLEAR;
         StoreAction storeAction = StoreAction::STORE;
+        PixelFormat format      = PixelFormat::INVALID;
     };
 
     class RenderPassDescriptor

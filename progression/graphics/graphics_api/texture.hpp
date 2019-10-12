@@ -118,8 +118,11 @@ namespace Gfx
         NUM_PIXEL_FORMATS
     };
 
+    int NumComponentsInPixelFromat( const PixelFormat& format );
     int SizeOfPixelFromat( const PixelFormat& format );
     bool PixelFormatIsCompressed( const PixelFormat& format );
+    bool PixelFormatIsDepthFormat( const PixelFormat& format );
+    bool PixelFormatIsStencil( const PixelFormat& format );
 
     enum class ImageType : uint8_t
     {
@@ -137,14 +140,13 @@ namespace Gfx
     class ImageDescriptor
     {
     public:
-        ImageType type        = ImageType::NUM_IMAGE_TYPES;
-        PixelFormat srcFormat = PixelFormat::NUM_PIXEL_FORMATS;
-        PixelFormat dstFormat = PixelFormat::NUM_PIXEL_FORMATS;
-        uint8_t mipLevels     = 1;
-        uint8_t arrayLayers   = 1;
-        uint32_t width        = 0;
-        uint32_t height       = 0;
-        uint32_t depth        = 1;
+        ImageType type      = ImageType::NUM_IMAGE_TYPES;
+        PixelFormat format  = PixelFormat::NUM_PIXEL_FORMATS;
+        uint8_t mipLevels   = 1;
+        uint8_t arrayLayers = 1;
+        uint32_t width      = 0;
+        uint32_t height     = 0;
+        uint32_t depth      = 1;
     };
 
     class Texture

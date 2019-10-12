@@ -15,6 +15,11 @@ namespace Gfx
         return static_cast< VkShaderStageFlagBits >( stage );
     }
 
+    constexpr VkCompareOp PGToVulkanCompareFunction( CompareFunction op )
+    {
+        return static_cast< VkCompareOp >( op );
+    }
+
     constexpr VkBlendFactor PGToVulkanBlendFactor( BlendFactor factor )
     {
         VkBlendFactor convert[] =

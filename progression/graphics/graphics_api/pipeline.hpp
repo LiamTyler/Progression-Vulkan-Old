@@ -16,11 +16,11 @@ namespace Gfx
     {
         NEVER   = 0,
         LESS    = 1,
-        LEQUAL  = 2,
-        EQUAL   = 3,
-        GEQUAL  = 4,
-        GREATER = 5,
-        NEQUAL  = 6,
+        EQUAL   = 2,
+        LEQUAL  = 3,
+        GREATER = 4,
+        NEQUAL  = 5,
+        GEQUAL  = 6,
         ALWAYS  = 7,
 
         NUM_COMPARE_FUNCTION
@@ -34,7 +34,7 @@ namespace Gfx
         CompareFunction compareFunc = CompareFunction::LESS; 
     };
 
-        enum class BlendFactor
+    enum class BlendFactor
     {
         ZERO                    = 0,
         ONE                     = 1,
@@ -69,9 +69,9 @@ namespace Gfx
         BlendFactor dstColorBlendFactor;
         BlendFactor srcAlphaBlendFactor;
         BlendFactor dstAlphaBlendFactor;
-        BlendEquation colorBlendEquation = BlendEquation::ADD;
-        BlendEquation alphaBlendEquation = BlendEquation::ADD;
-        bool blendingEnabled             = false;
+        BlendEquation colorBlendEquation;
+        BlendEquation alphaBlendEquation;
+        bool blendingEnabled = false;
     };
 
     enum class WindingOrder
@@ -92,7 +92,7 @@ namespace Gfx
         NUM_CULL_FACE
     };
 
-        enum class PolygonMode
+    enum class PolygonMode
     {
         FILL  = 0,
         LINE  = 1,

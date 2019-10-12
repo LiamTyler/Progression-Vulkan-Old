@@ -19,103 +19,6 @@ namespace Progression
 
 using namespace Gfx;
 
-int NumComponentsInPixelFromat( const PixelFormat& format )
-{
-    int components[] =
-    {
-        0,  // INVALID
-        1,  // R8_UNORM
-        1,  // R8_SNORM
-        1,  // R8_UINT
-        1,  // R8_SINT
-        1,  // R8_SRGB
-        2,  // R8_G8_UNORM
-        2,  // R8_G8_SNORM
-        2,  // R8_G8_UINT
-        2,  // R8_G8_SINT
-        2,  // R8_G8_SRGB
-        3,  // R8_G8_B8_UNORM
-        3,  // R8_G8_B8_SNORM
-        3,  // R8_G8_B8_UINT
-        3,  // R8_G8_B8_SINT
-        3,  // R8_G8_B8_SRGB
-        3,  // B8_G8_R8_UNORM
-        3,  // B8_G8_R8_SNORM
-        3,  // B8_G8_R8_UINT
-        3,  // B8_G8_R8_SINT
-        3,  // B8_G8_R8_SRGB
-        4,  // R8_G8_B8_A8_UNORM
-        4,  // R8_G8_B8_A8_SNORM
-        4,  // R8_G8_B8_A8_UINT
-        4,  // R8_G8_B8_A8_SINT
-        4,  // R8_G8_B8_A8_SRGB
-        4,  // B8_G8_R8_A8_UNORM
-        4,  // B8_G8_R8_A8_SNORM
-        4,  // B8_G8_R8_A8_UINT
-        4,  // B8_G8_R8_A8_SINT
-        4,  // B8_G8_R8_A8_SRGB
-        2,  // R16_UNORM
-        2,  // R16_SNORM
-        2,  // R16_UINT
-        2,  // R16_SINT
-        2,  // R16_FLOAT
-        4,  // R16_G16_UNORM
-        4,  // R16_G16_SNORM
-        4,  // R16_G16_UINT
-        4,  // R16_G16_SINT
-        4,  // R16_G16_FLOAT
-        6,  // R16_G16_B16_UNORM
-        6,  // R16_G16_B16_SNORM
-        6,  // R16_G16_B16_UINT
-        6,  // R16_G16_B16_SINT
-        6,  // R16_G16_B16_FLOAT
-        8,  // R16_G16_B16_A16_UNORM
-        8,  // R16_G16_B16_A16_SNORM
-        8,  // R16_G16_B16_A16_UINT
-        8,  // R16_G16_B16_A16_SINT
-        8,  // R16_G16_B16_A16_FLOAT
-        4,  // R32_UINT
-        4,  // R32_SINT
-        4,  // R32_FLOAT
-        8,  // R32_G32_UINT
-        8,  // R32_G32_SINT
-        8,  // R32_G32_FLOAT
-        12, // R32_G32_B32_UINT
-        12, // R32_G32_B32_SINT
-        12, // R32_G32_B32_FLOAT
-        16, // R32_G32_B32_A32_UINT
-        16, // R32_G32_B32_A32_SINT
-        16, // R32_G32_B32_A32_FLOAT
-        2,  // DEPTH_16_UNORM
-        4,  // DEPTH_32_FLOAT
-        3,  // DEPTH_16_UNORM_STENCIL_8_UINT
-        4,  // DEPTH_24_UNORM_STENCIL_8_UINT
-        5,  // DEPTH_32_FLOAT_STENCIL_8_UINT
-        1,  // STENCIL_8_UINT
-        8,  // BC1_RGB_UNORM
-        8,  // BC1_RGB_SRGB
-        8,  // BC1_RGBA_UNORM
-        8,  // BC1_RGBA_SRGB
-        16, // BC2_UNORM
-        16, // BC2_SRGB
-        16, // BC3_UNORM
-        16, // BC3_SRGB
-        8,  // BC4_UNORM
-        8,  // BC4_SNORM
-        16, // BC5_UNORM
-        16, // BC5_SNORM
-        16, // BC6H_UFLOAT
-        16, // BC6H_SFLOAT
-        16, // BC7_UNORM
-        16, // BC7_SRGB
-    };
-
-    PG_ASSERT( static_cast< int >( format )   < static_cast< int >( PixelFormat::NUM_PIXEL_FORMATS ) );
-    static_assert( ARRAY_COUNT( components ) == static_cast< int >( PixelFormat::NUM_PIXEL_FORMATS ) );
-
-    return components[static_cast< int >( format )];
-}
-
 Image::Image( const ImageDescriptor& desc )
 {
     m_texture.m_desc = desc;
@@ -195,8 +98,7 @@ bool Image::Load( ResourceCreateInfo* createInfo )
                 PixelFormat::R8_G8_B8_UNORM,
                 PixelFormat::R8_G8_B8_A8_UNORM,
             };
-            imageDescs[i].srcFormat = componentsToFormat[numComponents - 1];
-            imageDescs[i].dstFormat = componentsToFormat[numComponents - 1];
+            imageDescs[i].format = componentsToFormat[numComponents - 1];
             LOG( "Image: ", name, ", numComponents: ", numComponents );
         }
         else
@@ -208,9 +110,9 @@ bool Image::Load( ResourceCreateInfo* createInfo )
 
     for ( int i = 1; i < numImages; ++i )
     {
-        if ( imageDescs[0].width     != imageDescs[i].width ||
-             imageDescs[0].height    != imageDescs[i].height ||
-             imageDescs[0].srcFormat != imageDescs[i].srcFormat )
+        if ( imageDescs[0].width  != imageDescs[i].width ||
+             imageDescs[0].height != imageDescs[i].height ||
+             imageDescs[0].format != imageDescs[i].format )
         {
             LOG_ERR( "Skybox images must have the same dimensions and format" );
             return false;
@@ -226,7 +128,7 @@ bool Image::Load( ResourceCreateInfo* createInfo )
     {
         m_texture.m_desc.type        = ImageType::TYPE_CUBEMAP;
         m_texture.m_desc.arrayLayers = 6;
-        size_t imSize = imageDescs[0].width * imageDescs[0].height * SizeOfPixelFromat( imageDescs[0].srcFormat );
+        size_t imSize = imageDescs[0].width * imageDescs[0].height * SizeOfPixelFromat( imageDescs[0].format );
         m_pixels = static_cast< unsigned char* >( malloc( 6 * imSize ) );
         for ( int i = 0; i < numImages; ++i )
         {
@@ -262,8 +164,7 @@ bool Image::Serialize( std::ofstream& out ) const
     // serialize::Write( out, name );
     // serialize::Write( out, m_flags );
     serialize::Write( out, m_texture.m_desc.type );
-    serialize::Write( out, m_texture.m_desc.srcFormat );
-    serialize::Write( out, m_texture.m_desc.dstFormat );
+    serialize::Write( out, m_texture.m_desc.format );
     serialize::Write( out, m_texture.m_desc.mipLevels );
     serialize::Write( out, m_texture.m_desc.arrayLayers  );
     serialize::Write( out, m_texture.m_desc.width );
@@ -292,8 +193,7 @@ bool Image::Deserialize( char*& buffer )
         sampler = nullptr;
     }
     serialize::Read( buffer, m_texture.m_desc.type );
-    serialize::Read( buffer, m_texture.m_desc.srcFormat );
-    serialize::Read( buffer, m_texture.m_desc.dstFormat );
+    serialize::Read( buffer, m_texture.m_desc.format );
     serialize::Read( buffer, m_texture.m_desc.mipLevels );
     serialize::Read( buffer, m_texture.m_desc.arrayLayers  );
     serialize::Read( buffer, m_texture.m_desc.width );
@@ -350,7 +250,7 @@ bool Image::Save( const std::string& fname, bool flipVertically ) const
             return false;
         }
 
-        int numComponents = NumComponentsInPixelFromat( m_texture.m_desc.dstFormat );
+        int numComponents = NumComponentsInPixelFromat( m_texture.m_desc.format );
 
         int ret;
         switch ( fname[i + 1] )
@@ -407,7 +307,7 @@ void Image::UploadToGpu()
 
     stagingBuffer.Free();
 
-    m_texture.m_imageView = CreateImageView( m_texture.m_image, vkFormat );
+    // m_texture.m_imageView = CreateImageView( m_texture.m_image, vkFormat );
 }
 
 void Image::ReadToCpu()
@@ -415,12 +315,15 @@ void Image::ReadToCpu()
     PG_ASSERT( false, "Currently don't support reading texture data back to the cpu" );
     FreeCpuCopy();
     m_pixels = m_texture.GetPixelData();
-    m_texture.m_desc.srcFormat = m_texture.m_desc.dstFormat;
+    m_texture.m_desc.format = m_texture.m_desc.format;
 }
 
 void Image::FreeGpuCopy()
 {
-    m_texture.Free();
+    if ( m_texture )
+    {
+        m_texture.Free();
+    }
 }
 
 void Image::FreeCpuCopy()
@@ -446,14 +349,9 @@ ImageType Image::GetType() const
     return m_texture.m_desc.type;
 }
 
-PixelFormat Image::GetSrcPixelFormat() const
+PixelFormat Image::GetPixelFormat() const
 {
-    return m_texture.m_desc.srcFormat;
-}
-
-PixelFormat Image::GetDstPixelFormat() const
-{
-    return m_texture.m_desc.dstFormat;
+    return m_texture.m_desc.format;
 }
 
 uint8_t Image::GetMipLevels() const
@@ -489,7 +387,7 @@ unsigned char* Image::GetPixels() const
 size_t Image::GetTotalImageBytes() const
 {
     PG_ASSERT( m_texture.m_desc.mipLevels == 1, "havent added mipmapping yet" );
-    int pixelSize = SizeOfPixelFromat( m_texture.m_desc.dstFormat );
+    int pixelSize = SizeOfPixelFromat( m_texture.m_desc.format );
     uint32_t w    = m_texture.m_desc.width;
     uint32_t h    = m_texture.m_desc.height;
     uint32_t d    = m_texture.m_desc.depth;

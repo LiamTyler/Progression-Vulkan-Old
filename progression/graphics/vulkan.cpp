@@ -456,19 +456,35 @@ static bool PickPhysicalDevice() {
 static bool CreateRenderPass()
 {
     RenderPassDescriptor renderPassDesc;
-    renderPassDesc.colorAttachmentDescriptors[0].format = VulkanToPGPixelFormat( g_renderState.swapChain.imageFormat );
+    renderPassDesc.colorAttachmentDescriptors[0].format  = VulkanToPGPixelFormat( g_renderState.swapChain.imageFormat );
+    renderPassDesc.depthAttachmentDescriptor.format      = PixelFormat::DEPTH_32_FLOAT;
+    renderPassDesc.depthAttachmentDescriptor.loadAction  = LoadAction::CLEAR;
+    renderPassDesc.depthAttachmentDescriptor.storeAction = StoreAction::DONT_CARE;
+
     g_renderState.renderPass = g_renderState.device.NewRenderPass( renderPassDesc );
     return g_renderState.renderPass;
 }
 
+static bool CreateDepthTexture()
+{
+    ImageDescriptor info;
+    info.type   = ImageType::TYPE_2D;
+    info.format = PixelFormat::DEPTH_32_FLOAT;
+    info.width  = g_renderState.swapChain.extent.width;
+    info.height = g_renderState.swapChain.extent.height;
+    g_renderState.depthTex = g_renderState.device.NewTexture( info );
+    return g_renderState.depthTex;
+}
+
 static bool CreateSwapChainFrameBuffers()
 {
-    VkImageView attachments[1];
+    VkImageView attachments[2];
+    attachments[1] = g_renderState.depthTex.GetView();
 
     VkFramebufferCreateInfo framebufferInfo = {};
     framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebufferInfo.renderPass      = g_renderState.renderPass.GetHandle();
-    framebufferInfo.attachmentCount = 1;
+    framebufferInfo.attachmentCount = 2;
     framebufferInfo.pAttachments    = attachments;
     framebufferInfo.width           = g_renderState.swapChain.extent.width;
     framebufferInfo.height          = g_renderState.swapChain.extent.height;
@@ -602,7 +618,7 @@ bool SwapChain::Create( VkDevice dev )
 
     for ( size_t i = 0; i < images.size(); ++i )
     {
-        imageViews[i] = CreateImageView( images[i], imageFormat );
+        imageViews[i] = CreateImageView( images[i], imageFormat, VK_IMAGE_ASPECT_COLOR_BIT );
     }
     
     return true;
@@ -670,6 +686,12 @@ bool VulkanInit()
         return false;
     }
 
+    if ( !CreateDepthTexture() )
+    {
+        LOG_ERR( "Could not create depth texture" );
+        return false;
+    }
+
     if ( !CreateSwapChainFrameBuffers() )
     {
         LOG_ERR( "Could not create swap chain framebuffers" );
@@ -701,6 +723,8 @@ void VulkanShutdown()
         vkDestroySemaphore( dev, g_renderState.renderCompleteSemaphores[i], nullptr );
         vkDestroyFence( dev, g_renderState.inFlightFences[i], nullptr );
     }
+
+    g_renderState.depthTex.Free();
 
     g_renderState.commandPool.Free();
     for ( auto framebuffer : g_renderState.swapChainFramebuffers )
@@ -794,7 +818,7 @@ bool FormatSupported( VkFormat format, VkFormatFeatureFlags requestedSupport )
     return ( props.optimalTilingFeatures & requestedSupport ) == requestedSupport;
 }
 
-VkImageView CreateImageView( VkImage image, VkFormat format )
+VkImageView CreateImageView( VkImage image, VkFormat format, VkImageAspectFlags aspectFlags )
 {
     VkImageViewCreateInfo viewCreateInfo = {};
     viewCreateInfo.sType        = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -807,7 +831,7 @@ VkImageView CreateImageView( VkImage image, VkFormat format )
     viewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
     // specify image purpose and which part to access
-    viewCreateInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+    viewCreateInfo.subresourceRange.aspectMask     = aspectFlags;
     viewCreateInfo.subresourceRange.baseMipLevel   = 0;
     viewCreateInfo.subresourceRange.levelCount     = 1;
     viewCreateInfo.subresourceRange.baseArrayLayer = 0;
