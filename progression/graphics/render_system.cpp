@@ -6,6 +6,7 @@
 #include "graphics/graphics_api.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
 #include "resource/resource_manager.hpp"
+#include "resource/image.hpp"
 #include "resource/model.hpp"
 #include "resource/shader.hpp"
 #include "utils/logger.hpp"
@@ -33,8 +34,7 @@ namespace RenderSystem
         }
         else
         {
-            PG_UNUSED( desc );
-            //s_samplers[name] = Gfx::Sampler::Create( desc );
+            s_samplers[name] = Gfx::g_renderState.device.NewSampler( desc );
             return &s_samplers[name];
         }
     }
@@ -62,6 +62,7 @@ VkDescriptorSetLayout descriptorSetLayout;
 std::vector< Progression::Gfx::Buffer > ubos;
 VkDescriptorPool descriptorPool;
 std::vector<VkDescriptorSet> descriptorSets;
+static std::shared_ptr< Image > s_image;
 
 namespace Progression
 {
@@ -89,6 +90,14 @@ namespace RenderSystem
         InitSamplers();
         s_window = GetMainWindow();
 
+
+        ImageCreateInfo imageCreateInfo = {};
+        imageCreateInfo.name = "Cockatoo";
+        imageCreateInfo.filenames.push_back( PG_RESOURCE_DIR "textures/cockatoo.jpg" );
+        imageCreateInfo.flags |= IMAGE_CREATE_TEXTURE_ON_LOAD;
+        imageCreateInfo.flags |= IMAGE_FREE_CPU_COPY_ON_LOAD;
+        s_image = ResourceManager::Load< Image >( &imageCreateInfo );
+
         ResourceManager::LoadFastFile( PG_RESOURCE_DIR "cache/fastfiles/resource.txt.ff" );
         auto simpleVert = ResourceManager::Get< Shader >( "simpleVert" );
         auto simpleFrag = ResourceManager::Get< Shader >( "simpleFrag" );
@@ -100,7 +109,7 @@ namespace RenderSystem
         bindingDesc[0].inputRate = VertexInputRate::PER_VERTEX;
         
         bindingDesc[1].binding   = 1;
-        bindingDesc[1].stride    = sizeof( glm::vec3 );
+        bindingDesc[1].stride    = sizeof( glm::vec2 );
         bindingDesc[1].inputRate = VertexInputRate::PER_VERTEX;
 
         std::array< VertexAttributeDescriptor, 2 > attribDescs;
@@ -111,20 +120,19 @@ namespace RenderSystem
 
         attribDescs[1].binding  = 1;
         attribDescs[1].location = 1;
-        attribDescs[1].format   = BufferDataType::FLOAT3;
+        attribDescs[1].format   = BufferDataType::FLOAT2;
         attribDescs[1].offset   = 0;
-
         
-        glm::vec3 vertices[] =
+        float vertices[] =
         {
-            glm::vec3( -0.5, -0.5, 0 ),
-            glm::vec3( -0.5,  0.5, 0 ),
-            glm::vec3(  0.5,  0.5, 0 ),
-            glm::vec3(  0.5, -0.5, 0 ),
-            glm::vec3( 1, 0, 0 ),
-            glm::vec3( 1, 1, 1 ),
-            glm::vec3( 0, 0, 1 ),
-            glm::vec3( 0, 1, 0 ),
+            -0.5, -0.5, 0,
+            -0.5,  0.5, 0,
+             0.5,  0.5, 0,
+             0.5, -0.5, 0,
+            0, 1,
+            0, 0,
+            1, 0,
+            1, 1,
         };
         
         /*
@@ -141,7 +149,6 @@ namespace RenderSystem
             glm::vec3(  0.5, -0.5, 0 ), glm::vec3( 0, 1, 0 ),
         };
         */
-        
 
         std::vector< uint16_t > indices = { 0, 1, 2, 2, 3, 0 };
 
@@ -152,39 +159,60 @@ namespace RenderSystem
         ubos.resize( numImages );
         for ( auto& ubo : ubos )
         {
-            ubo = g_renderState.device.NewBuffer( sizeof( glm::mat4 ), BUFFER_TYPE_UNIFORM, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
+            ubo = g_renderState.device.NewBuffer( sizeof( glm::mat4 ), BUFFER_TYPE_UNIFORM,
+                                                  MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
         }
 
-        VkDescriptorPoolSize poolSize = {};
-        poolSize.type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSize.descriptorCount = numImages;
+        VkDescriptorPoolSize poolSize[2] = {};
+        poolSize[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSize[0].descriptorCount = numImages;
+        poolSize[1].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSize[1].descriptorCount = numImages;
 
-        s_descriptorPool = g_renderState.device.NewDescriptorPool( 1, &poolSize, numImages );
+        s_descriptorPool = g_renderState.device.NewDescriptorPool( 2, poolSize, numImages );
 
-        const auto& layoutInfo = simpleVert->reflectInfo.descriptorSetLayouts[0].createInfo;
+        std::vector< DescriptorSetLayoutData > descriptorSetData = simpleVert->reflectInfo.descriptorSetLayouts;
+        descriptorSetData.insert( descriptorSetData.end(), simpleFrag->reflectInfo.descriptorSetLayouts.begin(), simpleFrag->reflectInfo.descriptorSetLayouts.end() );
+        // const auto& layoutInfo = simpleVert->reflectInfo.descriptorSetLayouts[0].createInfo;
+        auto combined = CombineDescriptorSetLayouts( descriptorSetData );
+        PG_ASSERT( combined.size() == 1 );
+        const auto& layoutInfo = combined[0].createInfo;
         VkResult ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(), &layoutInfo, nullptr, &descriptorSetLayout );
         PG_ASSERT( ret == VK_SUCCESS );
 
         std::vector< VkDescriptorSetLayout > layouts( numImages, descriptorSetLayout );
         auto descriptorSets = s_descriptorPool.NewDescriptorSets( numImages, layouts.data() );
 
-        for ( size_t i = 0; i < g_renderState.swapChain.images.size(); i++ )
+        for ( size_t i = 0; i < numImages; i++ )
         {
             VkDescriptorBufferInfo bufferInfo = {};
             bufferInfo.buffer = ubos[i].GetHandle();
             bufferInfo.offset = 0;
             bufferInfo.range  = sizeof( glm::mat4 );
-            VkWriteDescriptorSet descriptorWrite = {};
-            descriptorWrite.sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.dstSet           = descriptorSets[i].GetHandle();
-            descriptorWrite.dstBinding       = 0;
-            descriptorWrite.dstArrayElement  = 0;
-            descriptorWrite.descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrite.descriptorCount  = 1;
-            descriptorWrite.pBufferInfo      = &bufferInfo;
-            descriptorWrite.pImageInfo       = nullptr; // Optional
-            descriptorWrite.pTexelBufferView = nullptr; // Optional
-            vkUpdateDescriptorSets( g_renderState.device.GetHandle(), 1, &descriptorWrite, 0, nullptr );
+
+            VkDescriptorImageInfo imageInfo = {};
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfo.imageView   = s_image->GetTexture()->GetView();
+            imageInfo.sampler     = GetSampler( "nearest_clamped" )->GetHandle();
+
+            VkWriteDescriptorSet descriptorWrite[2] = {};
+            descriptorWrite[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite[0].dstSet           = descriptorSets[i].GetHandle();
+            descriptorWrite[0].dstBinding       = 0;
+            descriptorWrite[0].dstArrayElement  = 0;
+            descriptorWrite[0].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrite[0].descriptorCount  = 1;
+            descriptorWrite[0].pBufferInfo      = &bufferInfo;
+
+            descriptorWrite[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite[1].dstSet           = descriptorSets[i].GetHandle();
+            descriptorWrite[1].dstBinding       = 1;
+            descriptorWrite[1].dstArrayElement  = 0;
+            descriptorWrite[1].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrite[1].descriptorCount  = 1;
+            descriptorWrite[1].pImageInfo       = &imageInfo;
+
+            vkUpdateDescriptorSets( g_renderState.device.GetHandle(), 2, descriptorWrite, 0, nullptr );
         }
 
         PipelineDescriptor pipelineDesc;
@@ -268,8 +296,8 @@ namespace RenderSystem
         glm::mat4 M( 1 );
         // M = glm::rotate( M, Time::Time() * glm::radians( 90.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
         M = glm::rotate( M, Time::Time() * glm::radians( 90.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) );
-        M = glm::scale( M, glm::vec3( .5 ) );
-        auto N = glm::transpose( glm::inverse( M ) );
+        M = glm::scale( M, glm::vec3( 1 ) );
+        // auto N = glm::transpose( glm::inverse( M ) );
         auto MVP        = scene->camera.GetVP() * M;
         void* data      = ubos[imageIndex].Map();
         memcpy( data, &MVP, sizeof( glm::mat4 ) );
@@ -289,14 +317,14 @@ namespace RenderSystem
 
         samplerDesc.minFilter = FilterMode::NEAREST;
         samplerDesc.magFilter = FilterMode::NEAREST;
-        samplerDesc.wrapModeS = WrapMode::CLAMP_TO_EDGE;
-        samplerDesc.wrapModeT = WrapMode::CLAMP_TO_EDGE;
-        samplerDesc.wrapModeR = WrapMode::CLAMP_TO_EDGE;
-        //s_samplers["nearest"] = Sampler::Create( samplerDesc );
+        samplerDesc.wrapModeU = WrapMode::CLAMP_TO_EDGE;
+        samplerDesc.wrapModeV = WrapMode::CLAMP_TO_EDGE;
+        samplerDesc.wrapModeW = WrapMode::CLAMP_TO_EDGE;
+        AddSampler( "nearest_clamped", samplerDesc );
 
         samplerDesc.minFilter = FilterMode::LINEAR;
         samplerDesc.magFilter = FilterMode::LINEAR;
-        //s_samplers["linear"] = Sampler::Create( samplerDesc );
+        AddSampler( "linear_clamped", samplerDesc );
     }
 
 

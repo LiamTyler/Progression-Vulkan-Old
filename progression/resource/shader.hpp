@@ -35,6 +35,8 @@ struct DescriptorSetLayoutData
     std::vector< VkDescriptorSetLayoutBinding > bindings;
 };
 
+std::vector< DescriptorSetLayoutData > CombineDescriptorSetLayouts( std::vector< DescriptorSetLayoutData >& layoutDatas );
+
 class ShaderReflectInfo
 {
 public:

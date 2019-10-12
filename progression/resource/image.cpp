@@ -1,6 +1,8 @@
 #include "resource/image.hpp"
 #include "core/assert.hpp"
 #include "graphics/render_system.hpp"
+#include "graphics/pg_to_vulkan_types.hpp"
+#include "graphics/vulkan.hpp"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image/stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -11,44 +13,110 @@
 #include <filesystem>
 #include <utility>
 
+
 namespace Progression
 {
 
-int NumComponentsInPixelFromat( const Gfx::PixelFormat& format )
+using namespace Gfx;
+
+int NumComponentsInPixelFromat( const PixelFormat& format )
 {
     int components[] =
     {
-        1, // R8_Uint
-        1, // R16_Float
-        1, // R32_Float
-
-        2, // R8_G8_Uint
-        2, // R16_G16_Float
-        2, // R32_G32_Float
-
-        3, // R8_G8_B8_Uint
-        3, // R16_G16_B16_Float
-        3, // R32_G32_B32_Float
-
-        4, // R8_G8_B8_A8_Uint
-        4, // R16_G16_B16_A16_Float
-        4, // R32_G32_B32_A32_Float
-
-        4, // R8_G8_B8_Uint_sRGB
-        4, // R8_G8_B8_A8_Uint_sRGB
-
-        3, // R11_G11_B10_Float
-
-        1, // DEPTH32_Float
+        0,  // INVALID
+        1,  // R8_UNORM
+        1,  // R8_SNORM
+        1,  // R8_UINT
+        1,  // R8_SINT
+        1,  // R8_SRGB
+        2,  // R8_G8_UNORM
+        2,  // R8_G8_SNORM
+        2,  // R8_G8_UINT
+        2,  // R8_G8_SINT
+        2,  // R8_G8_SRGB
+        3,  // R8_G8_B8_UNORM
+        3,  // R8_G8_B8_SNORM
+        3,  // R8_G8_B8_UINT
+        3,  // R8_G8_B8_SINT
+        3,  // R8_G8_B8_SRGB
+        3,  // B8_G8_R8_UNORM
+        3,  // B8_G8_R8_SNORM
+        3,  // B8_G8_R8_UINT
+        3,  // B8_G8_R8_SINT
+        3,  // B8_G8_R8_SRGB
+        4,  // R8_G8_B8_A8_UNORM
+        4,  // R8_G8_B8_A8_SNORM
+        4,  // R8_G8_B8_A8_UINT
+        4,  // R8_G8_B8_A8_SINT
+        4,  // R8_G8_B8_A8_SRGB
+        4,  // B8_G8_R8_A8_UNORM
+        4,  // B8_G8_R8_A8_SNORM
+        4,  // B8_G8_R8_A8_UINT
+        4,  // B8_G8_R8_A8_SINT
+        4,  // B8_G8_R8_A8_SRGB
+        2,  // R16_UNORM
+        2,  // R16_SNORM
+        2,  // R16_UINT
+        2,  // R16_SINT
+        2,  // R16_FLOAT
+        4,  // R16_G16_UNORM
+        4,  // R16_G16_SNORM
+        4,  // R16_G16_UINT
+        4,  // R16_G16_SINT
+        4,  // R16_G16_FLOAT
+        6,  // R16_G16_B16_UNORM
+        6,  // R16_G16_B16_SNORM
+        6,  // R16_G16_B16_UINT
+        6,  // R16_G16_B16_SINT
+        6,  // R16_G16_B16_FLOAT
+        8,  // R16_G16_B16_A16_UNORM
+        8,  // R16_G16_B16_A16_SNORM
+        8,  // R16_G16_B16_A16_UINT
+        8,  // R16_G16_B16_A16_SINT
+        8,  // R16_G16_B16_A16_FLOAT
+        4,  // R32_UINT
+        4,  // R32_SINT
+        4,  // R32_FLOAT
+        8,  // R32_G32_UINT
+        8,  // R32_G32_SINT
+        8,  // R32_G32_FLOAT
+        12, // R32_G32_B32_UINT
+        12, // R32_G32_B32_SINT
+        12, // R32_G32_B32_FLOAT
+        16, // R32_G32_B32_A32_UINT
+        16, // R32_G32_B32_A32_SINT
+        16, // R32_G32_B32_A32_FLOAT
+        2,  // DEPTH_16_UNORM
+        4,  // DEPTH_32_FLOAT
+        3,  // DEPTH_16_UNORM_STENCIL_8_UINT
+        4,  // DEPTH_24_UNORM_STENCIL_8_UINT
+        5,  // DEPTH_32_FLOAT_STENCIL_8_UINT
+        1,  // STENCIL_8_UINT
+        8,  // BC1_RGB_UNORM
+        8,  // BC1_RGB_SRGB
+        8,  // BC1_RGBA_UNORM
+        8,  // BC1_RGBA_SRGB
+        16, // BC2_UNORM
+        16, // BC2_SRGB
+        16, // BC3_UNORM
+        16, // BC3_SRGB
+        8,  // BC4_UNORM
+        8,  // BC4_SNORM
+        16, // BC5_UNORM
+        16, // BC5_SNORM
+        16, // BC6H_UFLOAT
+        16, // BC6H_SFLOAT
+        16, // BC7_UNORM
+        16, // BC7_SRGB
     };
 
-    // PG_ASSERT( static_cast< int >( format )   < static_cast< int >( Gfx::PixelFormat::NUM_PIXEL_FORMATS ) );
-    // static_assert( ARRAY_COUNT( components ) == static_cast< int >( Gfx::PixelFormat::NUM_PIXEL_FORMATS ) );
+    PG_ASSERT( static_cast< int >( format )   < static_cast< int >( PixelFormat::NUM_PIXEL_FORMATS ) );
+    static_assert( ARRAY_COUNT( components ) == static_cast< int >( PixelFormat::NUM_PIXEL_FORMATS ) );
 
     return components[static_cast< int >( format )];
 }
 
-Image::Image( const Gfx::ImageDescriptor& desc )
+Image::Image( const ImageDescriptor& desc )
 {
     m_texture.m_desc = desc;
     m_pixels         = (unsigned char*) malloc( GetTotalImageBytes() );
@@ -87,10 +155,11 @@ bool Image::Load( ResourceCreateInfo* createInfo )
     ImageCreateInfo* info = static_cast< ImageCreateInfo* >( createInfo );
     name                  = info->name;
     m_flags               = info->flags;
+    PG_ASSERT( ( m_flags & IMAGE_CREATE_TEXTURE_ON_LOAD ) || !( m_flags & IMAGE_FREE_CPU_COPY_ON_LOAD ) );
 
     int numImages = static_cast< int >( info->filenames.size() );
     PG_ASSERT( numImages == 1 || numImages == 6 );
-    std::vector< Gfx::ImageDescriptor > imageDescs( numImages );
+    std::vector< ImageDescriptor > imageDescs( numImages );
     std::vector< unsigned char* > imageData( numImages );
 
     for ( int i = 0; i < numImages; ++i )
@@ -101,7 +170,8 @@ bool Image::Load( ResourceCreateInfo* createInfo )
         {
             stbi_set_flip_vertically_on_load( info->flags & IMAGE_FLIP_VERTICALLY );
             int width, height, numComponents;
-            unsigned char* pixels = stbi_load( file.c_str(), &width, &height, &numComponents, 0 );
+            unsigned char* pixels = stbi_load( file.c_str(), &width, &height, &numComponents, 4 );
+            numComponents = 4;
 
             if ( !pixels )
             {
@@ -115,18 +185,18 @@ bool Image::Load( ResourceCreateInfo* createInfo )
             imageDescs[i].depth       = 1;
             imageDescs[i].arrayLayers = 1;
             imageDescs[i].mipLevels   = 1;
-            imageDescs[i].type        = Gfx::ImageType::TYPE_2D;
+            imageDescs[i].type        = ImageType::TYPE_2D;
             
             // TODO: how to detect sRGB?
-            Gfx::PixelFormat componentsToFormat[] =
+            PixelFormat componentsToFormat[] =
             {
-                Gfx::PixelFormat::R8_UINT,
-                Gfx::PixelFormat::R8_G8_UINT,
-                Gfx::PixelFormat::R8_G8_B8_UINT,
-                Gfx::PixelFormat::R8_G8_B8_A8_UINT,
+                PixelFormat::R8_UNORM,
+                PixelFormat::R8_G8_UNORM,
+                PixelFormat::R8_G8_B8_UNORM,
+                PixelFormat::R8_G8_B8_A8_UNORM,
             };
             imageDescs[i].srcFormat = componentsToFormat[numComponents - 1];
-            imageDescs[i].dstFormat = info->dstFormat;
+            imageDescs[i].dstFormat = componentsToFormat[numComponents - 1];
             LOG( "Image: ", name, ", numComponents: ", numComponents );
         }
         else
@@ -154,9 +224,9 @@ bool Image::Load( ResourceCreateInfo* createInfo )
     }
     else
     {
-        m_texture.m_desc.type        = Gfx::ImageType::TYPE_CUBEMAP;
+        m_texture.m_desc.type        = ImageType::TYPE_CUBEMAP;
         m_texture.m_desc.arrayLayers = 6;
-        size_t imSize = imageDescs[0].width * imageDescs[0].height * Gfx::SizeOfPixelFromat( imageDescs[0].srcFormat );
+        size_t imSize = imageDescs[0].width * imageDescs[0].height * SizeOfPixelFromat( imageDescs[0].srcFormat );
         m_pixels = static_cast< unsigned char* >( malloc( 6 * imSize ) );
         for ( int i = 0; i < numImages; ++i )
         {
@@ -166,7 +236,7 @@ bool Image::Load( ResourceCreateInfo* createInfo )
 
     if ( m_flags & IMAGE_CREATE_TEXTURE_ON_LOAD )
     {
-        // m_texture = Gfx::Texture::Create( m_texture.m_desc, m_pixels );
+        UploadToGpu();
     }
 
     if ( m_flags & IMAGE_FREE_CPU_COPY_ON_LOAD )
@@ -246,7 +316,7 @@ bool Image::Deserialize( char*& buffer )
     {
         if ( m_flags & IMAGE_FREE_CPU_COPY_ON_LOAD )
         {
-            // m_texture = Gfx::Texture::Create( m_texture.m_desc, buffer );
+            // m_texture = Texture::Create( m_texture.m_desc, buffer );
             buffer += totalSize;
         }
     }
@@ -259,7 +329,7 @@ bool Image::Save( const std::string& fname, bool flipVertically ) const
     std::string ext = std::filesystem::path( fname ).extension().string();
     if ( ext == ".jpg" || ext == ".png" || ext == ".tga" || ext == ".bmp" )
     {
-        if ( m_texture.m_desc.type != Gfx::ImageType::TYPE_2D )
+        if ( m_texture.m_desc.type != ImageType::TYPE_2D )
         {
             LOG_ERR( "Can't save image with multiple faces, mips, or depth > 1 to file format: ", ext );
             return false;
@@ -313,7 +383,25 @@ bool Image::Save( const std::string& fname, bool flipVertically ) const
 
 void Image::UploadToGpu()
 {
-    // m_texture = Gfx::Texture::Create( m_texture.m_desc, m_pixels );
+    auto& device = g_renderState.device;
+    size_t imSize = GetTotalImageBytes();
+    Buffer stagingBuffer = device.NewBuffer( imSize, BUFFER_TYPE_TRANSFER_SRC, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
+    void* stagingBufferData = stagingBuffer.Map();
+    memcpy( stagingBufferData, m_pixels, imSize );
+    stagingBuffer.UnMap();
+
+    VkFormat vkFormat = PGToVulkanPixelFormat( m_texture.GetPixelFormat() );
+    PG_ASSERT( FormatSupported( vkFormat, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT ) );
+
+    m_texture = device.NewTexture( m_texture.m_desc );
+    TransitionImageLayout( m_texture.GetHandle(), vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
+    device.CopyBufferToImage( stagingBuffer, m_texture );
+    TransitionImageLayout( m_texture.GetHandle(), vkFormat,
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+
+    stagingBuffer.Free();
+
+    m_texture.m_imageView = CreateImageView( m_texture.m_image, vkFormat );
 }
 
 void Image::ReadToCpu()
@@ -336,27 +424,27 @@ void Image::FreeCpuCopy()
     }
 }
 
-Gfx::Texture* Image::GetTexture()
+Texture* Image::GetTexture()
 {
     return &m_texture;
 }
 
-Gfx::ImageDescriptor Image::GetDescriptor() const
+ImageDescriptor Image::GetDescriptor() const
 {
     return m_texture.m_desc;
 }
 
-Gfx::ImageType Image::GetType() const
+ImageType Image::GetType() const
 {
     return m_texture.m_desc.type;
 }
 
-Gfx::PixelFormat Image::GetSrcPixelFormat() const
+PixelFormat Image::GetSrcPixelFormat() const
 {
     return m_texture.m_desc.srcFormat;
 }
 
-Gfx::PixelFormat Image::GetDstPixelFormat() const
+PixelFormat Image::GetDstPixelFormat() const
 {
     return m_texture.m_desc.dstFormat;
 }

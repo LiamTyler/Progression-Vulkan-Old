@@ -96,6 +96,12 @@ namespace Gfx
         vkCmdBindIndexBuffer( m_handle, buffer.GetHandle(), offset, PGToVulkanIndexType( indexType ) );
     }
 
+    void CommandBuffer::PipelineBarrier( VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage,
+                                         const VkImageMemoryBarrier& barrier ) const
+    {
+        vkCmdPipelineBarrier( m_handle, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+    }
+
     void CommandBuffer::Copy( const Buffer& dst, const Buffer& src )
     {
         VkBufferCopy copyRegion = {};

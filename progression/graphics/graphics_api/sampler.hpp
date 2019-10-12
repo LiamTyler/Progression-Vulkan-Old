@@ -1,6 +1,6 @@
 #pragma once
 
-#include "glm/vec4.hpp"
+#include <vulkan/vulkan.hpp>
 
 namespace Progression
 {
@@ -9,14 +9,14 @@ namespace Gfx
 
     enum class FilterMode
     {
-        NEAREST                = 0,
-        LINEAR                 = 1,
-        NEAREST_MIPMAP_NEAREST = 2,
-        LINEAR_MIPMAP_NEAREST  = 3,
-        NEAREST_MIPMAP_LINEAR  = 4,
-        LINEAR_MIPMAP_LINEAR   = 5,
+        NEAREST = 0,
+        LINEAR  = 1,
+    };
 
-        NUM_FILTER_MODE
+    enum class MipFilterMode
+    {
+        NEAREST = 0,
+        LINEAR  = 1,
     };
 
     enum class WrapMode
@@ -25,39 +25,51 @@ namespace Gfx
         MIRRORED_REPEAT = 1,
         CLAMP_TO_EDGE   = 2,
         CLAMP_TO_BORDER = 3,
+    };
 
-        NUM_WRAP_MODE
+    enum class BorderColor
+    {
+        TRANSPARENT_BLACK_FLOAT = 0,
+        TRANSPARENT_BLACK_INT   = 1,
+        OPAQUE_BLACK_FLOAT      = 2,
+        OPAQUE_BLACK_INT        = 3,
+        OPAQUE_WHITE_FLOAT      = 4,
+        OPAQUE_WHITE_INT        = 5,
     };
 
     class SamplerDescriptor
     {
     public:
-        FilterMode minFilter  = FilterMode::LINEAR;
-        FilterMode magFilter  = FilterMode::LINEAR;
-        WrapMode wrapModeS    = WrapMode::CLAMP_TO_EDGE;
-        WrapMode wrapModeT    = WrapMode::CLAMP_TO_EDGE;
-        WrapMode wrapModeR    = WrapMode::CLAMP_TO_EDGE;
-        float maxAnisotropy   = 1.0f;
-        glm::vec4 borderColor = glm::vec4( 0 );
+        FilterMode minFilter    = FilterMode::LINEAR;
+        FilterMode magFilter    = FilterMode::LINEAR;
+        MipFilterMode mipFilter = MipFilterMode::LINEAR;
+        WrapMode wrapModeU      = WrapMode::CLAMP_TO_EDGE;
+        WrapMode wrapModeV      = WrapMode::CLAMP_TO_EDGE;
+        WrapMode wrapModeW      = WrapMode::CLAMP_TO_EDGE;
+        float maxAnisotropy     = 1.0f;
+        BorderColor borderColor = BorderColor::OPAQUE_BLACK_INT;
     };
 
     class Sampler
     {
+        friend class Device;
     public:
         void Free();
 
         FilterMode GetMinFilter() const;
         FilterMode GetMagFilter() const;
-        WrapMode GetWrapModeS() const;
-        WrapMode GetWrapModeT() const;
-        WrapMode GetWrapModeR() const;
+        WrapMode GetWrapModeU() const;
+        WrapMode GetWrapModeV() const;
+        WrapMode GetWrapModeW() const;
         float GetMaxAnisotropy() const;
-        glm::vec4 GetBorderColor() const;
-        // operator bool() const;
+        BorderColor GetBorderColor() const;
+        VkSampler GetHandle() const;
+        operator bool() const;
 
     private:
         SamplerDescriptor m_desc;
-        // GLuint m_nativeHandle = ~0u;
+        VkSampler m_handle = VK_NULL_HANDLE;
+        VkDevice m_device  = VK_NULL_HANDLE;
     };
 
 } // namespace Gfx

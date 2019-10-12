@@ -306,7 +306,8 @@ static int RatePhysicalDevice( const PhysicalDeviceInfo& deviceInfo )
         swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
     }
 
-    if ( !deviceInfo.indices.IsComplete() || !extensionsSupported || !swapChainAdequate )
+    LOG( "aniso supported: ", deviceInfo.deviceFeatures.samplerAnisotropy );
+    if ( !deviceInfo.indices.IsComplete() || !extensionsSupported || !swapChainAdequate || !deviceInfo.deviceFeatures.samplerAnisotropy )
     {
         return 0;
     }
@@ -429,6 +430,7 @@ static bool PickPhysicalDevice() {
         deviceInfos[i].device  = devices[i];
         vkGetPhysicalDeviceProperties( devices[i], &deviceInfos[i].deviceProperties );
         vkGetPhysicalDeviceFeatures( devices[i], &deviceInfos[i].deviceFeatures );
+        deviceInfos[i].deviceFeatures.samplerAnisotropy = VK_TRUE; 
         deviceInfos[i].name    = deviceInfos[i].deviceProperties.deviceName;
         deviceInfos[i].indices = FindQueueFamilies( devices[i], g_renderState.surface );
         deviceInfos[i].score   = RatePhysicalDevice( deviceInfos[i] );
@@ -600,28 +602,7 @@ bool SwapChain::Create( VkDevice dev )
 
     for ( size_t i = 0; i < images.size(); ++i )
     {
-        VkImageViewCreateInfo viewCreateInfo = {};
-
-        viewCreateInfo.sType        = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        viewCreateInfo.image        = images[i];
-        viewCreateInfo.viewType     = VK_IMAGE_VIEW_TYPE_2D;
-        viewCreateInfo.format       = imageFormat;
-        viewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-        // specify image purpose and which part to access
-        viewCreateInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-        viewCreateInfo.subresourceRange.baseMipLevel   = 0;
-        viewCreateInfo.subresourceRange.levelCount     = 1;
-        viewCreateInfo.subresourceRange.baseArrayLayer = 0;
-        viewCreateInfo.subresourceRange.layerCount     = 1;
-
-        if ( vkCreateImageView( device, &viewCreateInfo, nullptr, &imageViews[i] ) != VK_SUCCESS )
-        {
-            return false;
-        }
+        imageViews[i] = CreateImageView( images[i], imageFormat );
     }
     
     return true;
@@ -755,6 +736,88 @@ uint32_t FindMemoryType( uint32_t typeFilter, VkMemoryPropertyFlags properties )
     PG_ASSERT( false );
 
     return ~0u;
+}
+
+void TransitionImageLayout( VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout )
+{
+    CommandBuffer cmdBuf = g_renderState.transientCommandPool.NewCommandBuffer();
+    cmdBuf.BeginRecording( COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT );
+
+    VkImageMemoryBarrier barrier = {};
+    barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.oldLayout                       = oldLayout;
+    barrier.newLayout                       = newLayout;
+    barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image                           = image;
+    barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseMipLevel   = 0;
+    barrier.subresourceRange.levelCount     = 1;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount     = 1;
+    barrier.srcAccessMask                   = 0;
+    barrier.dstAccessMask                   = 0;
+    PG_UNUSED( format );
+
+    VkPipelineStageFlags srcStage, dstStage;
+    if ( oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL )
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
+    else if ( oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
+    {
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    }
+    else
+    {
+        PG_ASSERT( false, "The transition barriers are unknown for the given old and new layouts" );
+    }
+
+    cmdBuf.PipelineBarrier( srcStage, dstStage, barrier );
+
+    cmdBuf.EndRecording();
+    g_renderState.device.Submit( cmdBuf );
+    g_renderState.device.WaitForIdle();
+    cmdBuf.Free();
+}
+
+bool FormatSupported( VkFormat format, VkFormatFeatureFlags requestedSupport )
+{
+    VkFormatProperties props;
+    vkGetPhysicalDeviceFormatProperties( g_renderState.physicalDeviceInfo.device, format, &props );
+    return ( props.optimalTilingFeatures & requestedSupport ) == requestedSupport;
+}
+
+VkImageView CreateImageView( VkImage image, VkFormat format )
+{
+    VkImageViewCreateInfo viewCreateInfo = {};
+    viewCreateInfo.sType        = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewCreateInfo.image        = image;
+    viewCreateInfo.viewType     = VK_IMAGE_VIEW_TYPE_2D;
+    viewCreateInfo.format       = format;
+    viewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    viewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    viewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    viewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+    // specify image purpose and which part to access
+    viewCreateInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+    viewCreateInfo.subresourceRange.baseMipLevel   = 0;
+    viewCreateInfo.subresourceRange.levelCount     = 1;
+    viewCreateInfo.subresourceRange.baseArrayLayer = 0;
+    viewCreateInfo.subresourceRange.layerCount     = 1;
+
+    VkImageView view;
+    VkResult res = vkCreateImageView( g_renderState.device.GetHandle(), &viewCreateInfo, nullptr, &view );
+    PG_ASSERT( res == VK_SUCCESS );
+
+    return view;
 }
 
 } // namespace Gfx

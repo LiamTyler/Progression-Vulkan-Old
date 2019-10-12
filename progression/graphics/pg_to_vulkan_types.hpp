@@ -177,37 +177,25 @@ namespace Gfx
         return convert[static_cast< int >( topology )];
     }
 
-    //constexpr GLenum PGToOpenGLFilterMode( FilterMode mode )
-    //{
-    //    GLenum convert[] =
-    //    {
-    //        GL_NEAREST,                // NEAREST
-    //        GL_LINEAR,                 // LINEAR
-    //        GL_NEAREST_MIPMAP_NEAREST, // NEAREST_MIPMAP_NEAREST
-    //        GL_LINEAR_MIPMAP_NEAREST,  // LINEAR_MIPMAP_NEAREST
-    //        GL_NEAREST_MIPMAP_LINEAR,  // NEAREST_MIPMAP_LINEAR
-    //        GL_LINEAR_MIPMAP_LINEAR,   // LINEAR_MIPMAP_LINEAR
-    //    };
+    constexpr VkFilter PGToVulkanFilterMode( FilterMode mode )
+    {
+        return static_cast< VkFilter >( mode );
+    }
 
-    //    static_assert( ARRAY_COUNT( convert ) == static_cast< int >( FilterMode::NUM_FILTER_MODE ) );
+    constexpr VkSamplerMipmapMode PGToVulkanMipFilter( MipFilterMode mode )
+    {
+        return static_cast< VkSamplerMipmapMode >( mode );
+    }
 
-    //    return convert[static_cast< int >( mode )];
-    //}
+    constexpr VkSamplerAddressMode PGToVulkanWrapMode( WrapMode mode )
+    {
+        return static_cast< VkSamplerAddressMode >( mode );
+    }
 
-    //constexpr GLenum PGToOpenGLWrapMode( WrapMode mode )
-    //{
-    //    GLenum convert[] =
-    //    {
-    //        GL_REPEAT,          // REPEAT
-    //        GL_MIRRORED_REPEAT, // MIRRORED_REPEAT
-    //        GL_CLAMP_TO_EDGE,   // CLAMP_TO_EDGE
-    //        GL_CLAMP_TO_BORDER, // CLAMP_TO_BORDER
-    //    };
-
-    //    static_assert( ARRAY_COUNT( convert ) == static_cast< int >( WrapMode::NUM_WRAP_MODE ) );
-
-    //    return convert[static_cast< int >( mode )];
-    //}
+    constexpr VkBorderColor PGToVulkanBorderColor( BorderColor color )
+    {
+        return static_cast< VkBorderColor >( color );
+    }
 
     constexpr VkImageType PGToVulkanImageType( ImageType type )
     {
@@ -227,7 +215,7 @@ namespace Gfx
         return convert[static_cast< int >( type )];
     }
 
-    constexpr VkFormat PGToVulanPixelFormat( PixelFormat format )
+    constexpr VkFormat PGToVulkanPixelFormat( PixelFormat format )
     {
         VkFormat convert[] =
         {

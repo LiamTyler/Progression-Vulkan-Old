@@ -18,7 +18,7 @@ static std::string GetContentFastFileName( ImageCreateInfo& createInfo )
 
     size_t hash                = std::hash< std::string >{}( filePath.string() );
     std::string baseName       = filePath.filename().string();
-    std::string flipVertically = createInfo.flags & ImageFlags::IMAGE_FLIP_VERTICALLY ? "1" : "0";
+    std::string flipVertically = createInfo.flags & IMAGE_FLIP_VERTICALLY ? "1" : "0";
     std::string format         = std::to_string( (int) createInfo.dstFormat );
 
     return PG_RESOURCE_DIR "cache/images/" + baseName + "_" + flipVertically + "_" +
@@ -106,8 +106,8 @@ ConverterStatus ImageConverter::Convert()
     if ( m_contentNeedsConverting )
     {
         Image image;
-        createInfo.flags |= ImageFlags::IMAGE_FREE_CPU_COPY_ON_LOAD;
-        createInfo.flags |= ImageFlags::IMAGE_CREATE_TEXTURE_ON_LOAD;
+        createInfo.flags |= IMAGE_FREE_CPU_COPY_ON_LOAD;
+        createInfo.flags |= IMAGE_CREATE_TEXTURE_ON_LOAD;
         if ( !image.Load( &createInfo ) )
         {
             LOG_ERR( "Could not load image '", createInfo.name, "'" );

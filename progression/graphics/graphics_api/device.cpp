@@ -17,7 +17,6 @@ namespace Gfx
     {
         Device device;
         const auto& indices                     = g_renderState.physicalDeviceInfo.indices;
-        VkPhysicalDeviceFeatures deviceFeatures = {};
         std::set< uint32_t> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
 
         float queuePriority = 1.0f;
@@ -36,7 +35,7 @@ namespace Gfx
         createInfo.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         createInfo.queueCreateInfoCount    = static_cast< uint32_t >( queueCreateInfos.size() );
         createInfo.pQueueCreateInfos       = queueCreateInfos.data();
-        createInfo.pEnabledFeatures        = &deviceFeatures;
+        createInfo.pEnabledFeatures        = &g_renderState.physicalDeviceInfo.deviceFeatures;
         createInfo.enabledExtensionCount   = static_cast< uint32_t >( VK_DEVICE_EXTENSIONS.size() );
         createInfo.ppEnabledExtensionNames = VK_DEVICE_EXTENSIONS.data();
 
@@ -66,6 +65,22 @@ namespace Gfx
             vkDestroyDevice( m_handle, nullptr );
             m_handle = VK_NULL_HANDLE;
         }
+    }
+
+    void Device::Submit( const CommandBuffer& cmdBuf ) const
+    {
+        VkSubmitInfo submitInfo = {};
+        submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        VkCommandBuffer vkCmdBuf      = cmdBuf.GetHandle();
+        submitInfo.pCommandBuffers    = &vkCmdBuf;
+
+        vkQueueSubmit( m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE );
+    }
+
+    void Device::WaitForIdle() const
+    {
+        vkQueueWaitIdle( m_graphicsQueue );
     }
 
     CommandPool Device::NewCommandPool( CommandPoolCreateFlags flags ) const
@@ -176,18 +191,7 @@ namespace Gfx
 
         return dstBuffer;
     }
-      class ImageDescriptor
-    {
-    public:
-        ImageType type        = ImageType::NUM_IMAGE_TYPES;
-        PixelFormat srcFormat = PixelFormat::NUM_PIXEL_FORMATS;
-        PixelFormat dstFormat = PixelFormat::NUM_PIXEL_FORMATS;
-        uint8_t mipLevels     = 1;
-        uint8_t arrayLayers   = 1;
-        uint32_t width        = 0;
-        uint32_t height       = 0;
-        uint32_t depth        = 1;
-    };
+
     Texture Device::NewTexture( const ImageDescriptor& desc ) const
     {
         VkImageCreateInfo imageInfo = {};
@@ -195,11 +199,68 @@ namespace Gfx
         imageInfo.imageType     = PGToVulkanImageType( desc.type );
         imageInfo.extent.width  = desc.width;
         imageInfo.extent.height = desc.height;
-        imageInfo.extent.depth  = desc.height;
+        imageInfo.extent.depth  = desc.depth;
         imageInfo.mipLevels     = desc.mipLevels;
         imageInfo.arrayLayers   = desc.arrayLayers;
-        imageInfo.format    
+        imageInfo.format        = PGToVulkanPixelFormat( desc.dstFormat );
+        imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageInfo.usage         = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+        imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.flags         = 0;
+
+        Texture tex;
+        tex.m_device = m_handle;
+        tex.m_desc   = desc;
+
+        VkResult res = vkCreateImage( m_handle, &imageInfo, nullptr, &tex.m_image );
+        PG_ASSERT( res == VK_SUCCESS);
+
+        VkMemoryRequirements memRequirements;
+        vkGetImageMemoryRequirements( m_handle, tex.m_image, &memRequirements );
+
+        VkMemoryAllocateInfo allocInfo = {};
+        allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize  = memRequirements.size;
+        allocInfo.memoryTypeIndex = FindMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
+        res = vkAllocateMemory( m_handle, &allocInfo, nullptr, &tex.m_memory );
+        PG_ASSERT( res == VK_SUCCESS);
+        vkBindImageMemory( m_handle, tex.m_image, tex.m_memory, 0 );
+
+        return tex;
     }
+
+    Sampler Device::NewSampler( const SamplerDescriptor& desc ) const
+    {
+        Sampler sampler;
+        sampler.m_desc   = desc;
+        sampler.m_device = m_handle;
+
+        VkSamplerCreateInfo info = {};
+        info.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        info.magFilter               = PGToVulkanFilterMode( desc.magFilter );
+        info.minFilter               = PGToVulkanFilterMode( desc.minFilter );
+        info.addressModeU            = PGToVulkanWrapMode( desc.wrapModeU );
+        info.addressModeV            = PGToVulkanWrapMode( desc.wrapModeV );
+        info.addressModeW            = PGToVulkanWrapMode( desc.wrapModeW );
+        info.anisotropyEnable        = desc.maxAnisotropy > 1.0f ? VK_TRUE : VK_FALSE;
+        info.maxAnisotropy           = desc.maxAnisotropy;
+        info.borderColor             = PGToVulkanBorderColor( desc.borderColor );
+        info.unnormalizedCoordinates = VK_FALSE;
+        info.compareEnable           = VK_FALSE;
+        info.compareOp               = VK_COMPARE_OP_ALWAYS;
+        info.mipmapMode              = PGToVulkanMipFilter( desc.mipFilter );
+        info.mipLodBias              = 0.0f;
+        info.minLod                  = 0.0f;
+        info.maxLod                  = 0.0f;
+
+        VkResult res = vkCreateSampler( m_handle, &info, nullptr, &sampler.m_handle );
+        PG_ASSERT( res == VK_SUCCESS );
+
+        return sampler;
+    }
+
 
     Pipeline Device::NewPipeline( const PipelineDescriptor& desc ) const
     {
@@ -335,7 +396,7 @@ namespace Gfx
             }
 
             colorAttachments.push_back( {} );
-            colorAttachments[i].format         = PGToVulanPixelFormat( attach.format );
+            colorAttachments[i].format         = PGToVulkanPixelFormat( attach.format );
             colorAttachments[i].samples        = VK_SAMPLE_COUNT_1_BIT;
             colorAttachments[i].loadOp         = PGToVulkanLoadAction( attach.loadAction );
             colorAttachments[i].storeOp        = PGToVulkanStoreAction( attach.storeAction );
@@ -381,25 +442,49 @@ namespace Gfx
 
     void Device::Copy( Buffer dst, Buffer src ) const
     {
-        CommandBuffer buffer = g_renderState.transientCommandPool.NewCommandBuffer();
+        CommandBuffer cmdBuf = g_renderState.transientCommandPool.NewCommandBuffer();
 
-        buffer.BeginRecording( COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT );
-        buffer.Copy( dst, src );
-        buffer.EndRecording();
+        cmdBuf.BeginRecording( COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT );
+        cmdBuf.Copy( dst, src );
+        cmdBuf.EndRecording();
 
-        VkSubmitInfo submitInfo = {};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        VkCommandBuffer vkCmdBuf = buffer.GetHandle();
-        submitInfo.pCommandBuffers = &vkCmdBuf;
+        Submit( cmdBuf );
+        WaitForIdle();
 
-        vkQueueSubmit( m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle( m_graphicsQueue );
-
-        buffer.Free();
+        cmdBuf.Free();
     }
 
-     
+    void Device::CopyBufferToImage( const Buffer& buffer, const Texture& tex ) const
+    {
+        CommandBuffer cmdBuf = g_renderState.transientCommandPool.NewCommandBuffer();
+        cmdBuf.BeginRecording( COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT );
+
+        VkBufferImageCopy region               = {};
+        region.bufferOffset                    = 0;
+        region.bufferRowLength                 = 0;
+        region.bufferImageHeight               = 0;
+        region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.imageSubresource.mipLevel       = 0;
+        region.imageSubresource.baseArrayLayer = 0;
+        region.imageSubresource.layerCount     = 1;
+        region.imageOffset                     = { 0, 0, 0 };
+        region.imageExtent                     = { tex.GetWidth(), tex.GetHeight(), 1 };
+
+        vkCmdCopyBufferToImage(
+            cmdBuf.GetHandle(),
+            buffer.GetHandle(),
+            tex.GetHandle(),
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            1,
+            &region
+        );
+
+        cmdBuf.EndRecording();
+        g_renderState.device.Submit( cmdBuf );
+        g_renderState.device.WaitForIdle();
+        cmdBuf.Free();
+    }
+
     VkDevice Device::GetHandle() const
     {
         return m_handle;

@@ -36,6 +36,8 @@ namespace Gfx
         void BindVertexBuffer( const Buffer& buffer, size_t offset = 0, uint32_t firstBinding = 0 ) const;
         void BindVertexBuffers( uint32_t numBuffers, const Buffer* buffers, size_t* offsets, uint32_t firstBinding = 0 ) const;
         void BindIndexBuffer( const Buffer& buffer, IndexType indexType, size_t offset = 0 ) const;
+        void PipelineBarrier( VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage,
+                              const VkImageMemoryBarrier& barrier ) const;
 
         void Copy( const Buffer& dst, const Buffer& src );
 

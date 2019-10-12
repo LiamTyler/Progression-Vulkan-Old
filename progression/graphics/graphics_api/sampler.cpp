@@ -1,4 +1,5 @@
 #include "graphics/graphics_api/sampler.hpp"
+#include "core/assert.hpp"
 
 namespace Progression
 {
@@ -7,6 +8,9 @@ namespace Gfx
 
     void Sampler::Free()
     {
+        PG_ASSERT( m_handle != VK_NULL_HANDLE );
+        vkDestroySampler( m_device, m_handle, nullptr );
+        m_handle = VK_NULL_HANDLE;
     }
 
     FilterMode Sampler::GetMinFilter() const
@@ -19,19 +23,19 @@ namespace Gfx
         return m_desc.magFilter;
     }
 
-    WrapMode Sampler::GetWrapModeS() const
+    WrapMode Sampler::GetWrapModeU() const
     {
-        return m_desc.wrapModeS;
+        return m_desc.wrapModeU;
     }
 
-    WrapMode Sampler::GetWrapModeT() const
+    WrapMode Sampler::GetWrapModeV() const
     {
-        return m_desc.wrapModeT;
+        return m_desc.wrapModeV;
     }
 
-    WrapMode Sampler::GetWrapModeR() const
+    WrapMode Sampler::GetWrapModeW() const
     {
-        return m_desc.wrapModeR;
+        return m_desc.wrapModeW;
     }
 
     float Sampler::GetMaxAnisotropy() const
@@ -39,15 +43,20 @@ namespace Gfx
         return m_desc.maxAnisotropy;
     }
 
-    glm::vec4 Sampler::GetBorderColor() const
+    BorderColor Sampler::GetBorderColor() const
     {
         return m_desc.borderColor;
     }
 
-    /*Sampler::operator bool() const
+    VkSampler Sampler::GetHandle() const
     {
-        return m_nativeHandle != ~0u;
-    }*/
+        return m_handle;
+    }
+
+    Sampler::operator bool() const
+    {
+        return m_handle != VK_NULL_HANDLE;
+    }
 
 } // namespace Gfx
 } // namespace Progression

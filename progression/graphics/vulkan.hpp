@@ -88,5 +88,11 @@ namespace Gfx
 
     uint32_t FindMemoryType( uint32_t typeFilter, VkMemoryPropertyFlags properties );
 
+    void TransitionImageLayout( VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout );
+
+    bool FormatSupported( VkFormat format, VkFormatFeatureFlags requestedSupport );
+
+    VkImageView CreateImageView( VkImage image, VkFormat format );
+
 } // namepspace Gfx
 } // namepspace Progression

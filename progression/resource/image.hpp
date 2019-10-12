@@ -8,7 +8,7 @@
 namespace Progression
 {
 
-enum ImageFlags
+enum ImageFlagBits
 {
     IMAGE_CREATE_TEXTURE_ON_LOAD      = 1 << 0,
     IMAGE_FREE_CPU_COPY_ON_LOAD       = 1 << 1,
@@ -18,29 +18,14 @@ enum ImageFlags
     NUM_IMAGE_FLAGS                   = 4
 };
 
-inline ImageFlags operator|( ImageFlags a, ImageFlags b )
-{
-    return ImageFlags( int( a ) | int( b ) );
-}
-inline ImageFlags& operator|=( ImageFlags& a, ImageFlags b )
-{
-    return (ImageFlags&)( (int&) a |= (int) b );
-}
-inline ImageFlags operator&( ImageFlags a, ImageFlags b )
-{
-    return ImageFlags( int( a ) & int( b ) );
-}
-inline ImageFlags& operator&=( ImageFlags& a, ImageFlags b )
-{
-    return (ImageFlags&)( (int&) a &= (int) b );
-}
+typedef uint32_t ImageFlags;
 
 struct ImageCreateInfo : public ResourceCreateInfo
 {
     std::vector< std::string > filenames;
     Gfx::PixelFormat dstFormat;
     std::string sampler = "";
-    ImageFlags flags    = static_cast< ImageFlags >( 0 );
+    ImageFlags flags    = 0;
 };
 
 class Image : public Resource 
@@ -56,7 +41,6 @@ public:
     void Move( std::shared_ptr< Resource > dst ) override;
     bool Serialize( std::ofstream& outFile ) const override;
     bool Deserialize( char*& buffer ) override;
-
     
     bool Save( const std::string& filename, bool flipVertically = false ) const;
     void UploadToGpu();
@@ -83,7 +67,7 @@ public:
 protected:
     Gfx::Texture m_texture;
     unsigned char* m_pixels = nullptr;
-    ImageFlags m_flags      = static_cast< ImageFlags >( 0 );
+    ImageFlags m_flags      = 0;
 };
 
 } // namespace Progression

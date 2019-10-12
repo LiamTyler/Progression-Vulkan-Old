@@ -150,6 +150,7 @@ namespace Gfx
     class Texture
     {
         friend class ::Progression::Image;
+        friend class Device;
     public:
         Texture() = default;
 
@@ -174,6 +175,7 @@ namespace Gfx
         VkImage m_image         = VK_NULL_HANDLE;
         VkImageView m_imageView = VK_NULL_HANDLE;
         VkDeviceMemory m_memory = VK_NULL_HANDLE;
+        VkDevice m_device       = VK_NULL_HANDLE;
     };
 
 } // namespace Gfx

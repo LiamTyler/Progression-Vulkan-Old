@@ -130,17 +130,16 @@ namespace Gfx
 
     void Texture::Free()
     {
-        if ( m_image != VK_NULL_HANDLE )
-        {
-            vkDestroyImage( g_renderState.device.GetHandle(), m_image, nullptr );
-            m_image = VK_NULL_HANDLE;
-        }
+        PG_ASSERT( m_image  != VK_NULL_HANDLE );
+        PG_ASSERT( m_device != VK_NULL_HANDLE );
+        PG_ASSERT( m_memory != VK_NULL_HANDLE );
 
-        if ( m_imageView != VK_NULL_HANDLE )
-        {
-            vkDestroyImageView( g_renderState.device.GetHandle(), m_imageView, nullptr );
-            m_imageView = VK_NULL_HANDLE;
-        }
+        vkDestroyImage( m_device, m_image, nullptr );
+        vkDestroyImageView( m_device, m_imageView, nullptr );
+        vkFreeMemory( m_device, m_memory, nullptr );
+        m_image     = VK_NULL_HANDLE;
+        m_imageView = VK_NULL_HANDLE;
+        m_memory    = VK_NULL_HANDLE;
     }
 
     unsigned char* Texture::GetPixelData() const
