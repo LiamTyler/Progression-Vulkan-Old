@@ -39,6 +39,14 @@ bool Model::Load( ResourceCreateInfo* createInfo )
     return LoadFromObj( info );
 }
 
+void Model::Free( bool gpuCopy, bool cpuCopy )
+{
+    for ( auto& mesh : meshes )
+    {
+        mesh.Free( gpuCopy, cpuCopy );
+    }
+}
+
 bool Model::Serialize( std::ofstream& out ) const
 {
     // serialize::Write( out, name );

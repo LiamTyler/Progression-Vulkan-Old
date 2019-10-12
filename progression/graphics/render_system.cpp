@@ -66,6 +66,9 @@ static std::shared_ptr< Image > s_image;
 
 namespace Progression
 {
+
+extern bool g_converterMode;
+
 namespace RenderSystem
 {
 
@@ -90,17 +93,23 @@ namespace RenderSystem
         InitSamplers();
         s_window = GetMainWindow();
 
+        if ( g_converterMode )
+        {
+            return true;
+        }
 
-        ImageCreateInfo imageCreateInfo = {};
-        imageCreateInfo.name = "Cockatoo";
-        imageCreateInfo.filenames.push_back( PG_RESOURCE_DIR "textures/cockatoo.jpg" );
-        imageCreateInfo.flags |= IMAGE_CREATE_TEXTURE_ON_LOAD;
-        imageCreateInfo.flags |= IMAGE_FREE_CPU_COPY_ON_LOAD;
-        s_image = ResourceManager::Load< Image >( &imageCreateInfo );
+        // ImageCreateInfo imageCreateInfo = {};
+        // imageCreateInfo.name = "Cockatoo";
+        // imageCreateInfo.filenames.push_back( PG_RESOURCE_DIR "textures/cockatoo.jpg" );
+        // imageCreateInfo.flags |= IMAGE_CREATE_TEXTURE_ON_LOAD;
+        // imageCreateInfo.flags |= IMAGE_FREE_CPU_COPY_ON_LOAD;
+        // s_image = ResourceManager::Load< Image >( &imageCreateInfo );
 
         ResourceManager::LoadFastFile( PG_RESOURCE_DIR "cache/fastfiles/resource.txt.ff" );
         auto simpleVert = ResourceManager::Get< Shader >( "simpleVert" );
         auto simpleFrag = ResourceManager::Get< Shader >( "simpleFrag" );
+
+        s_image = ResourceManager::Get< Image >( "cockatoo" );
 
 
         VertexBindingDescriptor bindingDesc[2];
@@ -269,17 +278,23 @@ namespace RenderSystem
         {
             sampler.Free();
         }
-
-        s_descriptorPool.Free();
-        vkDestroyDescriptorSetLayout( g_renderState.device.GetHandle(), descriptorSetLayout, nullptr );
-        for ( auto& ubo : ubos )
-        {
-            ubo.Free();
-        }
-        s_buffer.Free();
-        s_indexBuffer.Free();
-        s_pipeline.Free();
         g_renderState.transientCommandPool.Free();
+
+        ResourceManager::FreeGPUResources();
+
+        if ( !g_converterMode )
+        {
+            // s_image->FreeGpuCopy();
+            s_descriptorPool.Free();
+            vkDestroyDescriptorSetLayout( g_renderState.device.GetHandle(), descriptorSetLayout, nullptr );
+            for ( auto& ubo : ubos )
+            {
+                ubo.Free();
+            }
+            s_buffer.Free();
+            s_indexBuffer.Free();
+            s_pipeline.Free();
+        }
 
         VulkanShutdown();
     }

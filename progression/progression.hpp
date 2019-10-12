@@ -33,10 +33,11 @@ namespace PG = Progression;
 namespace Progression
 {
 
-extern bool EngineShutdown;
+extern bool g_engineShutdown;
+extern bool g_converterMode;
 
-bool EngineInitialize( std::string config_name = "", bool initRenderingSystem = true );
+bool EngineInitialize( std::string config_name = "" );
 
-void EngineQuit( bool shutdownRendering = true );
+void EngineQuit();
 
 } // namespace Progression

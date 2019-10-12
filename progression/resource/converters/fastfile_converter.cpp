@@ -111,7 +111,8 @@ bool ParseImageCreateInfoFromFile( std::istream& in, ImageCreateInfo& info )
     {
         fname = PG_RESOURCE_DIR + fname;
     }
-    PG_ASSERT( fileIO::ParseLineKeyMap( in, "dstFormat", pixelFormatMap, info.dstFormat ), "Check pixel format for spelling mistake" );
+    // auto res = fileIO::ParseLineKeyMap( in, "dstFormat", pixelFormatMap, info.dstFormat ), "Check pixel format for spelling mistake" 
+    // PG_ASSERT( res, "Check pixel format for spelling mistake" );
     fileIO::ParseLineKeyValOptional( in, "sampler", info.sampler );
 
     bool tmp;

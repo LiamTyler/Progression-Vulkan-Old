@@ -106,14 +106,13 @@ ConverterStatus ImageConverter::Convert()
     if ( m_contentNeedsConverting )
     {
         Image image;
-        createInfo.flags |= IMAGE_FREE_CPU_COPY_ON_LOAD;
+        createInfo.flags &= ~IMAGE_FREE_CPU_COPY_ON_LOAD;
         createInfo.flags |= IMAGE_CREATE_TEXTURE_ON_LOAD;
         if ( !image.Load( &createInfo ) )
         {
             LOG_ERR( "Could not load image '", createInfo.name, "'" );
             return CONVERT_ERROR;
         }
-        image.ReadToCpu();
 
         std::ofstream out( m_outputContentFile, std::ios::binary );
         if ( !image.Serialize( out ) )

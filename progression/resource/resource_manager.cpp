@@ -30,6 +30,22 @@ namespace ResourceManager
         f_resources[GetResourceTypeID< Material >()]["default"] = defaultMat;
     }
 
+    void FreeGPUResources()
+    {
+        for ( auto& [ name, res ] : f_resources[GetResourceTypeID< Shader >()] )
+        {
+            std::static_pointer_cast< Shader >( res )->Free();
+        }
+        for ( auto& [ name, res ] : f_resources[GetResourceTypeID< Image >()] )
+        {
+            std::static_pointer_cast< Image >( res )->FreeGpuCopy();
+        }
+        for ( auto& [ name, res ] : f_resources[GetResourceTypeID< Model >()] )
+        {
+            std::static_pointer_cast< Model >( res )->Free( true, false );
+        }
+    }
+
     void Shutdown()
     {
         f_resources.Clear();

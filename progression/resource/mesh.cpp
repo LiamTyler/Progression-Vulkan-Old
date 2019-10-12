@@ -160,7 +160,6 @@ void Mesh::RecalculateBB()
 
 void Mesh::Free( bool gpuCopy, bool cpuCopy )
 {
-    PG_ASSERT( false );
     if ( cpuCopy )
     {
         m_numVertices = static_cast< uint32_t >( vertices.size() );
@@ -175,10 +174,6 @@ void Mesh::Free( bool gpuCopy, bool cpuCopy )
     {
         vertexBuffer.Free();
         indexBuffer.Free();
-        /*
-        vertexBuffer  = Gfx::Buffer{};
-        indexBuffer   = Gfx::Buffer{};
-        */
         m_numVertices = m_numIndices = 0;
         m_normalOffset = m_uvOffset = ~0u;
     }

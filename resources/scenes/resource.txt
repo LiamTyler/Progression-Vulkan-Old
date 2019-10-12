@@ -12,3 +12,12 @@ filename models/cube.obj
 optimize true
 freeCpuCopy true
 createGpuCopy true
+
+Image
+name cockatoo
+filenames textures/cockatoo.jpg
+sampler linear_clamped
+flipVertically false
+generateMipmaps false
+createTexture true
+freeCpuCopy true

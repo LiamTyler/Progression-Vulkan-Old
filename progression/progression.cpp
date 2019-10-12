@@ -6,9 +6,10 @@ namespace PG = Progression;
 namespace Progression
 {
 
-bool EngineShutdown = false;
+bool g_engineShutdown = false;
+bool g_converterMode  = false;
 
-bool EngineInitialize( std::string config_name, bool initRenderingSystem )
+bool EngineInitialize( std::string config_name )
 {
     if ( config_name == "" )
     {
@@ -62,26 +63,18 @@ bool EngineInitialize( std::string config_name, bool initRenderingSystem )
     Input::Init();
     ResourceManager::Init();
     ECS::init();
-
-    if ( initRenderingSystem )
+    if ( !RenderSystem::Init() )
     {
-        if ( !RenderSystem::Init() )
-        {
-            LOG_ERR( "Could not initialize the rendering system" );
-            return false;
-        }
+        LOG_ERR( "Could not initialize the rendering system" );
+        return false;
     }
 
     return true;
 }
 
-void EngineQuit( bool shutdownRendering )
+void EngineQuit()
 { 
-    if ( shutdownRendering )
-    {
-        RenderSystem::Shutdown();
-    }
-    
+    RenderSystem::Shutdown();
     ResourceManager::Shutdown();
     ECS::shutdown();
     Input::Free();

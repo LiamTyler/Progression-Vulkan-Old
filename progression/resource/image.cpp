@@ -271,7 +271,7 @@ bool Image::Serialize( std::ofstream& out ) const
     serialize::Write( out, m_texture.m_desc.depth );
     size_t totalSize = GetTotalImageBytes();
     serialize::Write( out, totalSize );
-    serialize::Write( out, (char*) m_pixels, GetTotalImageBytes() );
+    serialize::Write( out, (char*) m_pixels, totalSize );
 
     return !out.fail();
 }
@@ -304,7 +304,7 @@ bool Image::Deserialize( char*& buffer )
 
     if ( !( m_flags & IMAGE_FREE_CPU_COPY_ON_LOAD ) )
     {
-        m_pixels = (unsigned char*) malloc( totalSize );
+        m_pixels = static_cast< unsigned char* >( malloc( totalSize ) );
         serialize::Read( buffer, (char*) m_pixels, totalSize );
     }
     else
@@ -316,8 +316,14 @@ bool Image::Deserialize( char*& buffer )
     {
         if ( m_flags & IMAGE_FREE_CPU_COPY_ON_LOAD )
         {
-            // m_texture = Texture::Create( m_texture.m_desc, buffer );
+            m_pixels = reinterpret_cast< unsigned char* >( buffer );
             buffer += totalSize;
+        }
+        UploadToGpu();
+
+        if ( m_flags & IMAGE_FREE_CPU_COPY_ON_LOAD )
+        {
+            m_pixels = nullptr;
         }
     }
     
@@ -406,6 +412,7 @@ void Image::UploadToGpu()
 
 void Image::ReadToCpu()
 {
+    PG_ASSERT( false, "Currently don't support reading texture data back to the cpu" );
     FreeCpuCopy();
     m_pixels = m_texture.GetPixelData();
     m_texture.m_desc.srcFormat = m_texture.m_desc.dstFormat;

@@ -32,14 +32,14 @@ int main( int argc, char* argv[] )
         PG::Input::PollEvents();
 
         // Game loop
-        while ( !PG::EngineShutdown )
+        while ( !PG::g_engineShutdown )
         {
             window->StartFrame();
             PG::Input::PollEvents();
 
             if ( PG::Input::GetKeyDown( PG::PG_K_ESC ) )
             {
-                PG::EngineShutdown = true;
+                PG::g_engineShutdown = true;
             }
 
             RenderSystem::Render( scene );

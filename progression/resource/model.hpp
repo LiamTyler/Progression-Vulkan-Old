@@ -29,6 +29,7 @@ public:
     void Move( std::shared_ptr< Resource > dst ) override;
     bool Serialize( std::ofstream& outFile ) const override;
     bool Deserialize( char*& buffer ) override;
+    void Free( bool gpuCopy = true, bool cpuCopy = true );
     
     bool LoadFromObj( ModelCreateInfo* createInfo );
     void RecalculateBB( bool recursive = false );
