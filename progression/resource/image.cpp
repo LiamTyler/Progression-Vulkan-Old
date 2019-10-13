@@ -99,7 +99,6 @@ bool Image::Load( ResourceCreateInfo* createInfo )
                 PixelFormat::R8_G8_B8_A8_UNORM,
             };
             imageDescs[i].format = componentsToFormat[numComponents - 1];
-            LOG( "Image: ", name, ", numComponents: ", numComponents );
         }
         else
         {

@@ -7,39 +7,23 @@ using namespace Progression;
 static void DisplayHelp()
 {
     auto msg =
-      "Usage: converter [--force|--verbose] <resource type> <specific options for resource "
-      "conversion...>\n"
-      "\nSpecify which type of resource is to be converted into its fastfile specific\n"
-      "format, followed by the options specific to converting that resource, seen with:\n"
-      "  converter <resource type> --help\n\n"
-      "Options\n"
-      "  --fastfile\t\tConvert a resource file\n"
-      "  --force\t\tConvert the resource without checking dependencies\n"
+      "Usage: converter [--force|--verbose] RESOURCE_FILE\n"
+      "\nOptions\n"
+      "  -f, --force\t\tConvert the resource without checking dependencies\n"
       "  -h, --help\t\tPrint this message and exit\n"
-      "  -i, --image\t\tConvert an image\n"
-      "  -m, --model\t\tConvert a model\n"
-      "  -s, --shader\t\tConvert a shader\n"
       "  -v, --verbose\t\tPrint out details during resource conversion\n";
 
     std::cout << msg << std::endl;
 }
 
-// static ConverterStatus ConvertShader( int argc, char** argv, bool force, bool verbose )
-// {
-//     ShaderConverter conv;
-//     return conv.Run( argc, argv, force, verbose );
-// }
-
-// static ConverterStatus ConvertFastfile( int argc, char** argv, bool force, bool verbose )
-// {
-//     FastfileConverter conv;
-//     return conv.Run( argc, argv, force, verbose );
-// }
-
 int main( int argc, char* argv[] )
 {
-    PG_UNUSED( argc );
-    PG_UNUSED( argv );
+    if ( argc == 1 )
+    {
+        DisplayHelp();
+        return 0;
+    }
+
     g_converterMode = true;
     PG::EngineInitialize( PG_ROOT_DIR "configs/offline.toml" );
 
@@ -50,79 +34,70 @@ int main( int argc, char* argv[] )
     fs::create_directories( PG_RESOURCE_DIR "cache/images/" );
     fs::create_directories( PG_RESOURCE_DIR "cache/fastfiles/" );
 
+    bool force   = false;
+    bool verbose = false;
 
-    FastfileConverter conv;
-    conv.inputFile = PG_RESOURCE_DIR "scenes/resource.txt";
-    LOG( "Checking fastfile dependencies..." );
-    AssetStatus status = conv.CheckDependencies();
-    if ( status == ASSET_CHECKING_ERROR )
+    static struct option long_options[] = {
+        { "help", no_argument, 0, 'h' },
+        { "force", no_argument, 0, 'f' },
+        { "verbose", no_argument, 0, 'v' },
+        { 0, 0, 0, 0 }
+    };
+
+    bool helpMessage = false;
+    int option_index = 0;
+    int c            = -1;
+    while ( ( c = getopt_long( argc, argv, "hfv", long_options, &option_index ) ) != -1 )
     {
-        LOG_ERR( "Error while checking fastfile depends" );
-    }
-    else if ( status == ASSET_UP_TO_DATE )
-    {
-        LOG( "Fastfile up to date already" );
-    }
-    else
-    {
-        LOG( "Fastfile out of date, reconverting..." );
-        if ( CONVERT_ERROR == conv.Convert() )
+        switch ( c )
         {
-            LOG_ERR( "Fastfile conversion failed" );
+            case 'f':
+                force = true;
+                break;
+            case 'h':
+                helpMessage = true;
+                break;
+            case 'v':
+                verbose = true;
+                break;
+            case '?':
+                std::cout << "Try 'converter --help for more information" << std::endl;
+                PG::EngineQuit();
+                return 0;
+            default:
+                break;
         }
     }
 
-    // bool force   = false;
-    // bool verbose = false;
-
-    // static struct option long_options[] = {
-    //     { "fastfile", no_argument, 0, 'b' }, { "force", no_argument, 0, 'f' },
-    //     { "help", no_argument, 0, 'h' },     { "image", no_argument, 0, 'i' },
-    //     { "model", no_argument, 0, 'm' },    { "shader", no_argument, 0, 's' },
-    //     { "verbose", no_argument, 0, 'v' },  { 0, 0, 0, 0 }
-    // };
-
-    // int option_index = 0;
-    // int c            = -1;
-
-    // const ConverterStatus noConversionYet = (ConverterStatus)-123456789;
-    // ConverterStatus retVal                = noConversionYet;
-    // while ( retVal == noConversionYet &&
-    //         ( c = getopt_long( argc, argv, "himsv", long_options, &option_index ) ) != -1 )
-    // {
-    //     switch ( c )
-    //     {
-    //         case 'b':
-    //             // retVal = ConvertFastfile( argc, argv, force, verbose );
-    //             break;
-    //         case 'f':
-    //             force = true;
-    //             break;
-    //         case 'h':
-    //             DisplayHelp();
-    //             retVal = CONVERT_HELP_DISPLAYED;
-    //             break;
-    //         case 'i':
-    //             LOG( "Need to parse an image" );
-    //             break;
-    //         case 'm':
-    //             LOG( "Need to parse a model" );
-    //             break;
-    //         case 's':
-    //             // retVal = ConvertShader( argc, argv, force, verbose );
-    //             break;
-    //         case 'v':
-    //             verbose = true;
-    //             break;
-    //         default:
-    //             break;
-    //     }
-    // }
-
-    // if ( retVal != CONVERT_SUCCESS && retVal != CONVERT_HELP_DISPLAYED )
-    // {
-    //     LOG_ERR( "Failed to convert resource with error code: ", retVal );
-    // }
+    if ( helpMessage || optind >= argc )
+    {
+        DisplayHelp();
+    }
+    else
+    {
+        FastfileConverter conv;
+        conv.inputFile = PG_RESOURCE_DIR + std::string( argv[optind] );
+        conv.force     = force;
+        conv.verbose   = verbose;
+        LOG( "Checking fastfile dependencies..." );
+        AssetStatus status = conv.CheckDependencies();
+        if ( status == ASSET_CHECKING_ERROR )
+        {
+            LOG_ERR( "Error while checking fastfile depends" );
+        }
+        else if ( status == ASSET_UP_TO_DATE )
+        {
+            LOG( "Fastfile up to date already" );
+        }
+        else
+        {
+            LOG( "Fastfile out of date, reconverting..." );
+            if ( CONVERT_ERROR == conv.Convert() )
+            {
+                LOG_ERR( "Fastfile conversion failed" );
+            }
+        }
+    }
 
     PG::EngineQuit();
 

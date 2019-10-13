@@ -30,7 +30,7 @@ static std::string GetSettingsFastFileName( const ModelCreateInfo& createInfo )
     int freeCpuCopy = createInfo.freeCpuCopy;
 
     return PG_RESOURCE_DIR "cache/models/settings_" + createInfo.name +
-           std::to_string( optimize ) + std::to_string( freeCpuCopy ) + ".ffi";
+        std::to_string( optimize ) + std::to_string( freeCpuCopy ) + ".ffi";
 }
 
 AssetStatus ModelConverter::CheckDependencies()
@@ -39,6 +39,10 @@ AssetStatus ModelConverter::CheckDependencies()
 
     m_outputContentFile  = GetContentFastFileName( createInfo );
     m_outputSettingsFile = GetSettingsFastFileName( createInfo );
+
+    IF_VERBOSE_MODE( LOG( "\nModel with name '", createInfo.name, "' and filename '", createInfo.filename, "' outputs:" ) );
+    IF_VERBOSE_MODE( LOG( "\tContentFile: ", m_outputContentFile ) );
+    IF_VERBOSE_MODE( LOG( "\tSettingsFile: ", m_outputSettingsFile ) );
 
     if ( !std::filesystem::exists( m_outputSettingsFile ) )
     {
@@ -55,9 +59,11 @@ AssetStatus ModelConverter::CheckDependencies()
     Timestamp outTimestamp( m_outputContentFile );
     Timestamp mtlTimestamp( matFile );
     Timestamp objFileTime( createInfo.filename );
+    IF_VERBOSE_MODE( LOG( "Input model timestamp: ", objFileTime, " MTL timestamp: ", mtlTimestamp,
+                          ", FFI timestamp: ", outTimestamp ) );
 
-     m_contentNeedsConverting = outTimestamp <= objFileTime || outTimestamp <= mtlTimestamp;
-    m_status =  m_contentNeedsConverting ||  m_settingsNeedsConverting ? ASSET_OUT_OF_DATE : ASSET_UP_TO_DATE;
+    m_contentNeedsConverting = outTimestamp <= objFileTime || outTimestamp <= mtlTimestamp;
+    m_status = m_contentNeedsConverting ||  m_settingsNeedsConverting ? ASSET_OUT_OF_DATE : ASSET_UP_TO_DATE;
 
     if ( outTimestamp <= mtlTimestamp )
     {
@@ -68,10 +74,18 @@ AssetStatus ModelConverter::CheckDependencies()
     {
         LOG( "OUT OF DATE: Model file '", createInfo.filename, "' has newer timestamp than saved FFI" );
     }
-    
+
     if ( m_status == ASSET_UP_TO_DATE )
     {
-        LOG( "UP TO DATE: Model file '", createInfo.filename, "' and MTL file '", matFile, "'" );
+        if ( force )
+        {
+            LOG( "UP TO DATE: Model file '", createInfo.name , "' but --force used, so converting anyways\n" );
+            m_status = ASSET_OUT_OF_DATE;
+        }
+        else
+        {
+            LOG( "UP TO DATE: Model file '", createInfo.name , "'" );
+        }
     }
 
     return m_status;
@@ -84,7 +98,7 @@ ConverterStatus ModelConverter::Convert()
         return CONVERT_SUCCESS;
     }
 
-    if ( m_settingsNeedsConverting )
+    if ( m_settingsNeedsConverting || force )
     {
         std::ofstream out( m_outputSettingsFile, std::ios::binary );
         serialize::Write( out, createInfo.name );
@@ -92,10 +106,10 @@ ConverterStatus ModelConverter::Convert()
         serialize::Write( out, createInfo.createGpuCopy );
     }
 
-    if ( m_contentNeedsConverting )
+    if ( m_contentNeedsConverting || force )
     {
         Model model;
-        createInfo.freeCpuCopy = false;
+        createInfo.freeCpuCopy   = false;
         createInfo.createGpuCopy = false;
         if ( !model.Load( &createInfo ) )
         {

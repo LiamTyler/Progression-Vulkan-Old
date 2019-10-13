@@ -161,6 +161,7 @@ bool ParseModelFromFile( std::istream& in, ModelCreateInfo& createInfo )
 
 AssetStatus FastfileConverter::CheckDependencies()
 {
+    IF_VERBOSE_MODE( LOG( "Checking dependencies for fastfile '", inputFile, "'" ) );
     std::ifstream in( inputFile );
     if ( !in )
     {
@@ -172,6 +173,7 @@ AssetStatus FastfileConverter::CheckDependencies()
 
     m_outputContentFile = PG_RESOURCE_DIR "cache/fastfiles/" +
                           std::filesystem::path( inputFile ).filename().string() + ".ff";
+    IF_VERBOSE_MODE( LOG( "Resource file '", inputFile, "' outputs fastfile '", m_outputContentFile, "'" ) );
     if ( !std::filesystem::exists( m_outputContentFile ) )
     {
         LOG( "OUT OF DATE: Fastfile file for '", inputFile, "' does not exist, convert required" );
@@ -182,6 +184,8 @@ AssetStatus FastfileConverter::CheckDependencies()
         Timestamp outTimestamp( m_outputContentFile );
         Timestamp newestFileTime( inputFile );
 
+        IF_VERBOSE_MODE( LOG( "Resource file timestamp: ", newestFileTime, ", fastfile timestamp: ", outTimestamp ) );
+
         m_status = outTimestamp <= newestFileTime ? ASSET_OUT_OF_DATE : ASSET_UP_TO_DATE;
 
         if ( m_status == ASSET_OUT_OF_DATE )
@@ -190,7 +194,8 @@ AssetStatus FastfileConverter::CheckDependencies()
         }
     }
 
-    auto UpdateStatus = [this]( AssetStatus status ) {
+    auto UpdateStatus = [this]( AssetStatus status )
+    {
         if ( status == ASSET_OUT_OF_DATE )
         {
             m_status = ASSET_OUT_OF_DATE;
@@ -207,6 +212,8 @@ AssetStatus FastfileConverter::CheckDependencies()
         if ( line == "Shader" )
         {
             ShaderConverter converter;
+            converter.force   = force;
+            converter.verbose = verbose;
             if ( !ParseShaderCreateInfoFromFile( in, converter.createInfo ) )
             {
                 LOG_ERR( "Error while parsing ShaderCreateInfo" );
@@ -226,6 +233,8 @@ AssetStatus FastfileConverter::CheckDependencies()
         else if ( line == "Image" )
         {
             ImageConverter converter;
+            converter.force   = force;
+            converter.verbose = verbose;
             if ( !ParseImageCreateInfoFromFile( in, converter.createInfo ) )
             {
                 LOG_ERR( "Error while parsing ShaderCreateInfo" );
@@ -245,6 +254,8 @@ AssetStatus FastfileConverter::CheckDependencies()
         else if ( line == "MTLFile")
         {
             MaterialConverter converter;
+            converter.force   = force;
+            converter.verbose = verbose;
             ParseMaterialFileFromFile( in, converter.inputFile );
 
             auto status = converter.CheckDependencies();
@@ -260,6 +271,8 @@ AssetStatus FastfileConverter::CheckDependencies()
         else if ( line == "Model")
         {
             ModelConverter converter;
+            converter.force   = force;
+            converter.verbose = verbose;
             ParseModelFromFile( in, converter.createInfo );
 
             auto status = converter.CheckDependencies();
@@ -280,6 +293,12 @@ AssetStatus FastfileConverter::CheckDependencies()
 
     in.close();
 
+    if ( force && ASSET_UP_TO_DATE )
+    {
+        LOG( "Fastfile '", inputFile, "' is up to date, but --force used, so converting anyways\n" );
+        m_status = ASSET_OUT_OF_DATE;
+    }
+
     return m_status;
 }
 
@@ -299,8 +318,6 @@ ConverterStatus FastfileConverter::Convert()
         LOG_ERR( "Failed to open fastfile '", m_outputContentFile, "' for write" );
         return CONVERT_ERROR;
     }
-
-    std::vector< char > buffer( 4 * 1024 * 1024 );
 
 #define WRITE_RESOURCE( resource, converterList ) \
     { \

@@ -19,6 +19,12 @@ enum AssetStatus
     ASSET_CHECKING_ERROR,
 };
 
+#define IF_VERBOSE_MODE( x ) \
+    if ( verbose ) \
+    { \
+        do { x; } while( false ); \
+    }
+
 class Converter
 {
 public:
@@ -35,6 +41,9 @@ public:
 
     virtual std::string GetName() const;
     AssetStatus GetStatus() const;
+
+    bool force   = false;
+    bool verbose = false;
 
 protected:
     std::string m_outputContentFile;

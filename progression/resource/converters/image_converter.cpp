@@ -44,6 +44,10 @@ AssetStatus ImageConverter::CheckDependencies()
     m_outputContentFile  = GetContentFastFileName( createInfo );
     m_outputSettingsFile = GetSettingsFastFileName( createInfo );
 
+    IF_VERBOSE_MODE( LOG( "\nImage with name '", createInfo.name, "' outputs:" ) );
+    IF_VERBOSE_MODE( LOG( "\tContentFile: ", m_outputContentFile ) );
+    IF_VERBOSE_MODE( LOG( "\tSettingsFile: ", m_outputSettingsFile ) );
+
     if ( !std::filesystem::exists( m_outputSettingsFile ) )
     {
         LOG( "OUT OF DATE: FFI File for image settings file '", m_outputSettingsFile, "' does not exist, needs to be generated" );
@@ -62,10 +66,13 @@ AssetStatus ImageConverter::CheckDependencies()
     else
     {
         auto timestamp = Timestamp( m_outputContentFile );
+        IF_VERBOSE_MODE( LOG( "Image FFI timestamp: ", timestamp ) );
         for ( const auto& fname : createInfo.filenames )
         {
-            if ( timestamp < Timestamp( fname ) )
+            auto ts = Timestamp( fname ) ;
+            if ( timestamp < ts )
             {
+                IF_VERBOSE_MODE( LOG( "Input image '", fname, ", timestamp: ", ts ) );
                 LOG( "OUT OF DATE: Image '", fname, "' has newer timestamp than saved FFI" );
                 m_contentNeedsConverting = true;
                 m_status = ASSET_OUT_OF_DATE;
@@ -81,8 +88,16 @@ AssetStatus ImageConverter::CheckDependencies()
     }
     else
     {
-        m_status = ASSET_UP_TO_DATE;
-        LOG( "UP TO DATE: Image with name '", createInfo.name, "'" );
+        if ( force )
+        {
+            LOG( "UP TO DATE: Image with name '", createInfo.name, "', but --force used, so converting anyways\n" );
+            m_status = ASSET_OUT_OF_DATE;
+        }
+        else
+        {
+            m_status = ASSET_UP_TO_DATE;
+            LOG( "UP TO DATE: Image with name '", createInfo.name, "'" );
+        }
     }
 
     return m_status;
@@ -95,7 +110,7 @@ ConverterStatus ImageConverter::Convert()
         return CONVERT_SUCCESS;
     }
 
-    if ( m_settingsNeedsConverting )
+    if ( m_settingsNeedsConverting || force )
     {
         std::ofstream out( m_outputSettingsFile, std::ios::binary );
         serialize::Write( out, createInfo.name );
@@ -103,7 +118,7 @@ ConverterStatus ImageConverter::Convert()
         serialize::Write( out, createInfo.sampler );
     }
 
-    if ( m_contentNeedsConverting )
+    if ( m_contentNeedsConverting || force )
     {
         Image image;
         createInfo.flags &= ~IMAGE_FREE_CPU_COPY_ON_LOAD;

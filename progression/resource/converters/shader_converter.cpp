@@ -28,6 +28,10 @@ AssetStatus ShaderConverter::CheckDependencies()
     m_outputContentFile  = GetContentFastFileName( createInfo );
     m_outputSettingsFile = GetSettingsFastFileName( createInfo );
 
+    IF_VERBOSE_MODE( LOG( "\nShader with name '", createInfo.name, "' and filename '", createInfo.filename, "' outputs:" ) );
+    IF_VERBOSE_MODE( LOG( "\tContentFile: ", m_outputContentFile ) );
+    IF_VERBOSE_MODE( LOG( "\tSettingsFile: ", m_outputSettingsFile ) );
+
     if ( !std::filesystem::exists( m_outputSettingsFile ) )
     {
         LOG( "OUT OF DATE: FFI File for settings file '", m_outputSettingsFile, "' does not exist, needs to be generated" );
@@ -47,6 +51,7 @@ AssetStatus ShaderConverter::CheckDependencies()
 
     Timestamp outTimestamp( m_outputContentFile );
     Timestamp inputTimestamp( createInfo.filename );
+    IF_VERBOSE_MODE( LOG( "Shader timestamp: ", inputTimestamp, ", FFI timestamp: ", outTimestamp ) );
     m_contentNeedsConverting = outTimestamp <= inputTimestamp;
 
     if ( m_contentNeedsConverting )
@@ -61,8 +66,16 @@ AssetStatus ShaderConverter::CheckDependencies()
     }
     else
     {
-        m_status = ASSET_UP_TO_DATE;
-        LOG( "UP TO DATE: Shader with name '", createInfo.name, "'" );
+        if ( force )
+        {
+            LOG( "UP TO DATE: Shader with name '", createInfo.name, "', but --force used, so converting anyways\n" );
+            m_status = ASSET_OUT_OF_DATE;
+        }
+        else
+        {
+            m_status = ASSET_UP_TO_DATE;
+            LOG( "UP TO DATE: Shader with name '", createInfo.name, "'" );
+        }
     }
 
     return m_status;
@@ -75,16 +88,14 @@ ConverterStatus ShaderConverter::Convert()
         return CONVERT_SUCCESS;
     }
 
-    if ( m_settingsNeedsConverting )
+    if ( m_settingsNeedsConverting || force )
     {
         std::ofstream out( m_outputSettingsFile, std::ios::binary );
         serialize::Write( out, createInfo.name );
     }
 
-    if ( m_contentNeedsConverting )
+    if ( m_contentNeedsConverting || force )
     {
-//#if USING( LINUX_PROGRAM )
-        // std::string outputFile = createInfo.filename + ".spv";
         std::string command = "glslc " + createInfo.filename + " -o " + m_outputContentFile;
         LOG( "Compiling shader '", createInfo.name );
         LOG( command );
@@ -94,7 +105,6 @@ ConverterStatus ShaderConverter::Convert()
             LOG_ERR( "Error while compiling shader: ", createInfo.name );
             return CONVERT_ERROR;
         }
-//#endif // #if USING( LINUX_PROGRAM )
 
         std::ifstream file( m_outputContentFile, std::ios::ate | std::ios::binary );
         size_t fileSize = static_cast< size_t >( file.tellg() );
@@ -120,7 +130,6 @@ ConverterStatus ShaderConverter::Convert()
             serialize::Write( out, varLoc );
         }
         serialize::Write( out, reflectInfo.descriptorSetLayouts.size() );
-        LOG( "num descs: ", reflectInfo.descriptorSetLayouts.size() );
         for ( const auto& set : reflectInfo.descriptorSetLayouts )
         {
             serialize::Write( out, set.setNumber );

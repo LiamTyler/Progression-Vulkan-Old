@@ -229,7 +229,6 @@ static VkPresentModeKHR ChooseSwapPresentMode( const std::vector< VkPresentModeK
         // if ( availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR )
         if ( availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR )
         {
-            LOG( "Found mailbox mode" );
             return availablePresentMode;
         }
         // else if ( availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR )
@@ -238,7 +237,6 @@ static VkPresentModeKHR ChooseSwapPresentMode( const std::vector< VkPresentModeK
         // }
     }
 
-    LOG( "did not find mailbox mode" );
     return mode;
 }
 
@@ -306,7 +304,6 @@ static int RatePhysicalDevice( const PhysicalDeviceInfo& deviceInfo )
         swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
     }
 
-    LOG( "aniso supported: ", deviceInfo.deviceFeatures.samplerAnisotropy );
     if ( !deviceInfo.indices.IsComplete() || !extensionsSupported || !swapChainAdequate || !deviceInfo.deviceFeatures.samplerAnisotropy )
     {
         return 0;

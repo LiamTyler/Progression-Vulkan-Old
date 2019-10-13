@@ -23,6 +23,7 @@ static std::string GetContentFastFileName( const std::string& mtlFileName )
 AssetStatus MaterialConverter::CheckDependencies()
 {
     m_outputContentFile = GetContentFastFileName( inputFile );
+    IF_VERBOSE_MODE( LOG( "\nMTLFile '", inputFile, "' outputs FFI '", m_outputContentFile, "'" ) );
     if ( !std::filesystem::exists( m_outputContentFile ) )
     {
         LOG( "OUT OF DATE: FFI File for MTLFile '", inputFile, "' does not exist, convert required" );
@@ -31,6 +32,8 @@ AssetStatus MaterialConverter::CheckDependencies()
 
     Timestamp outTimestamp( m_outputContentFile );
     Timestamp newestFileTime( inputFile );
+    
+    IF_VERBOSE_MODE( LOG( "MTLFile timestamp: ", newestFileTime, ", FFI timestamp: ", outTimestamp ) );
 
     m_status = outTimestamp <= newestFileTime ? ASSET_OUT_OF_DATE : ASSET_UP_TO_DATE;
 
@@ -40,7 +43,15 @@ AssetStatus MaterialConverter::CheckDependencies()
     }
     else
     {
-        LOG( "UP TO DATE: MTLFile '", inputFile, "'" );
+        if ( force )
+        {
+            LOG( "UP TO DATE: MTLFile '", inputFile, "', but --force used, so converting anyways\n" );
+            m_status = ASSET_OUT_OF_DATE;
+        }
+        else
+        {
+            LOG( "UP TO DATE: MTLFile '", inputFile, "'" );
+        }
     }
 
     return m_status;
