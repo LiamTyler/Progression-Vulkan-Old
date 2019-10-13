@@ -100,29 +100,33 @@ namespace RenderSystem
         auto simpleVert = ResourceManager::Get< Shader >( "simpleVert" );
         auto simpleFrag = ResourceManager::Get< Shader >( "simpleFrag" );
 
-        s_image = ResourceManager::Get< Image >( "chaletTex" );
+        s_image = ResourceManager::Get< Image >( "cockatoo" );
 
-        VertexBindingDescriptor bindingDesc[2];
+        VertexBindingDescriptor bindingDesc[3];
         bindingDesc[0].binding   = 0;
         bindingDesc[0].stride    = sizeof( glm::vec3 );
         bindingDesc[0].inputRate = VertexInputRate::PER_VERTEX;
-        
         bindingDesc[1].binding   = 1;
-        bindingDesc[1].stride    = sizeof( glm::vec2 );
+        bindingDesc[1].stride    = sizeof( glm::vec3 );
         bindingDesc[1].inputRate = VertexInputRate::PER_VERTEX;
+        bindingDesc[2].binding   = 2;
+        bindingDesc[2].stride    = sizeof( glm::vec2 );
+        bindingDesc[2].inputRate = VertexInputRate::PER_VERTEX;
 
-        std::array< VertexAttributeDescriptor, 2 > attribDescs;
+        std::array< VertexAttributeDescriptor, 3 > attribDescs;
         attribDescs[0].binding  = 0;
         attribDescs[0].location = 0;
         attribDescs[0].format   = BufferDataType::FLOAT3;
         attribDescs[0].offset   = 0;
-
         attribDescs[1].binding  = 1;
         attribDescs[1].location = 1;
-        attribDescs[1].format   = BufferDataType::FLOAT2;
+        attribDescs[1].format   = BufferDataType::FLOAT3;
         attribDescs[1].offset   = 0;
+        attribDescs[2].binding  = 2;
+        attribDescs[2].location = 2;
+        attribDescs[2].format   = BufferDataType::FLOAT2;
+        attribDescs[2].offset   = 0;
         
-
         uint32_t numImages = static_cast< uint32_t >( g_renderState.swapChain.images.size() );
         ubos.resize( numImages );
         for ( auto& ubo : ubos )
@@ -184,9 +188,8 @@ namespace RenderSystem
 
         PipelineDescriptor pipelineDesc;
         pipelineDesc.renderPass             = &g_renderState.renderPass;
-        pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 2, bindingDesc, 2, attribDescs.data() );
+        pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 3, bindingDesc, 3, attribDescs.data() );
         pipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
-        // pipelineDesc.rasterizerInfo.winding = WindingOrder::CLOCKWISE;
 
         pipelineDesc.viewport = FullScreenViewport();
         pipelineDesc.scissor  = FullScreenScissor();
@@ -216,8 +219,8 @@ namespace RenderSystem
             cmdBuf.BindDescriptorSets( 1, &descriptorSets[i], s_pipeline );
 
             cmdBuf.BindVertexBuffer( model->meshes[0].vertexBuffer, 0, 0 );
-            // cmdBuf.BindVertexBuffer( model->meshes[0].vertexBuffer, model->meshes[0].GetNormalOffset(), 1 );
-            cmdBuf.BindVertexBuffer( model->meshes[0].vertexBuffer, model->meshes[0].GetUVOffset(), 1 );
+            cmdBuf.BindVertexBuffer( model->meshes[0].vertexBuffer, model->meshes[0].GetNormalOffset(), 1 );
+            cmdBuf.BindVertexBuffer( model->meshes[0].vertexBuffer, model->meshes[0].GetUVOffset(), 2 );
             cmdBuf.BindIndexBuffer(  model->meshes[0].indexBuffer,  model->meshes[0].GetIndexType() );
             cmdBuf.DrawIndexed( 0, model->meshes[0].GetNumIndices() );
 
@@ -263,18 +266,19 @@ namespace RenderSystem
         auto imageIndex = g_renderState.swapChain.AcquireNextImage( g_renderState.presentCompleteSemaphores[currentFrame] );
 
         glm::mat4 M( 1 );
-        M = glm::translate( M, glm::vec3( 0.0f, -0.7f, 0.0f ) );
-        M = glm::rotate( M, Time::Time() * glm::radians( 90.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
-        M = glm::rotate( M, glm::radians( -90.0f ), glm::vec3( 1.0f, 0.0f, 0.0f ) );
-        // M = glm::rotate( M, Time::Time() * glm::radians( 90.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) );
-        M = glm::scale( M, glm::vec3( 1.0 ) );
-        // auto N = glm::transpose( glm::inverse( M ) );
+        // M = glm::translate( M, glm::vec3( 0.0f, -0.7f, 0.0f ) );
+        // M = glm::rotate( M, Time::Time() * glm::radians( 90.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
+        // M = glm::rotate( M, glm::radians( -90.0f ), glm::vec3( 1.0f, 0.0f, 0.0f ) );
+        // M = glm::scale( M, glm::vec3( 1.0 ) );
+        M = glm::rotate( M, 0.5f * Time::Time() * glm::radians( 90.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
+        M = glm::scale( M, glm::vec3( 0.5 ) );
+        auto N = glm::transpose( glm::inverse( M ) );
         auto MVP        = scene->camera.GetVP() * M;
         void* data      = ubos[imageIndex].Map();
-        memcpy( data, &MVP, sizeof( glm::mat4 ) );
-        // memcpy( data, &M, sizeof( glm::mat4 ) );
-        //memcpy( (char*)data + sizeof( glm::mat4 ), &N, sizeof( glm::mat4 ) );
-        //memcpy( (char*)data + 2*sizeof(glm::mat4), &MVP, sizeof( glm::mat4 ) );
+        // memcpy( data, &MVP, sizeof( glm::mat4 ) );
+        memcpy( data, &M, sizeof( glm::mat4 ) );
+        memcpy( (char*)data + sizeof( glm::mat4 ), &N, sizeof( glm::mat4 ) );
+        memcpy( (char*)data + 2*sizeof(glm::mat4), &MVP, sizeof( glm::mat4 ) );
         ubos[imageIndex].UnMap();
 
         g_renderState.device.SubmitRenderCommands( 1, &g_renderState.commandBuffers[imageIndex] );
