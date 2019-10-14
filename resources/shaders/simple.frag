@@ -9,13 +9,18 @@ layout( location = 0 ) in vec3 posInWorldSpace;
 layout( location = 1 ) in vec3 normalInWorldSpace;
 layout( location = 2 ) in vec2 texCoord;
 
-layout( binding = 1 ) uniform sampler2D texSampler;
+layout( set = 0, binding = 0 ) uniform PerSceneConstantBuffer
+{
+    mat4 VP;
+    vec3 cameraPos;
+} perSceneConstantBuffer;
+
+layout( set = 2, binding = 1 ) uniform sampler2D texSampler;
 
 void main()
 {
-    vec3 cameraPos = vec3( 0, 0, 3 );
     vec3 n = normalize( normalInWorldSpace );
-    vec3 e = normalize( cameraPos - posInWorldSpace );
+    vec3 e = normalize( perSceneConstantBuffer.cameraPos - posInWorldSpace );
     
     vec3 lightDir   = normalize( vec3( 1, 0, -1 ) );
     // vec3 lightDir   = normalize( vec3( 1, -1, -1 ) );

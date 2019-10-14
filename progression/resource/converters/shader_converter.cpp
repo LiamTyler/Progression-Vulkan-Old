@@ -130,11 +130,21 @@ ConverterStatus ShaderConverter::Convert()
             serialize::Write( out, varLoc );
         }
         serialize::Write( out, reflectInfo.descriptorSetLayouts.size() );
+        LOG( "Num sets: ", reflectInfo.descriptorSetLayouts.size() );
         for ( const auto& set : reflectInfo.descriptorSetLayouts )
         {
             serialize::Write( out, set.setNumber );
             serialize::Write( out, set.createInfo );
+            std::string t = "motherfucker";
+            serialize::Write( out, t );
             serialize::Write( out, set.bindings );
+            LOG( "set number: ", set.setNumber );
+            LOG( "set bindings: ", set.setNumber );
+            for ( size_t b = 0; b < set.bindings.size(); ++b )
+            {
+                LOG( "\t", b, " binding = ", set.bindings[b].binding );
+                LOG( "\t", b, " type = ", set.bindings[b].descriptorType );
+            }
         }
         serialize::Write( out, buffer );
     }

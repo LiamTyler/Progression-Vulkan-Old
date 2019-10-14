@@ -53,13 +53,25 @@ namespace RenderSystem
 } // namespace RenderSystem
 } // namespace Progression
 
+struct PerObjectConstantBuffer
+{
+    glm::mat4 modelMatrix; 
+    glm::mat4 normalMatrix;
+    glm::mat4 MVP;
+};
+
+struct PerSceneConstantBuffer
+{
+    glm::mat4 VP;
+    glm::vec3 cameraPos;
+};
+
 static Window* s_window;
 static Pipeline s_pipeline;
 static DescriptorPool s_descriptorPool;
-VkDescriptorSetLayout descriptorSetLayout;
-std::vector< Progression::Gfx::Buffer > ubos;
-VkDescriptorPool descriptorPool;
-std::vector<VkDescriptorSet> descriptorSets;
+std::vector< VkDescriptorSetLayout > s_descriptorSetLayouts;
+std::vector< Progression::Gfx::Buffer > s_gpuPerSceneConstantBuffers;
+std::vector< Progression::Gfx::Buffer > s_gpuPerObjectConstantBuffers;
 static std::shared_ptr< Image > s_image;
 
 namespace Progression
@@ -128,55 +140,83 @@ namespace RenderSystem
         attribDescs[2].offset   = 0;
         
         uint32_t numImages = static_cast< uint32_t >( g_renderState.swapChain.images.size() );
-        ubos.resize( numImages );
-        for ( auto& ubo : ubos )
+        s_gpuPerSceneConstantBuffers.resize( numImages );
+        s_gpuPerObjectConstantBuffers.resize( numImages );
+        for ( uint32_t i = 0; i < numImages; ++i )
         {
-            ubo = g_renderState.device.NewBuffer( sizeof( glm::mat4 ), BUFFER_TYPE_UNIFORM,
-                                                  MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
+            s_gpuPerSceneConstantBuffers[i] = g_renderState.device.NewBuffer( sizeof( PerSceneConstantBuffer ),
+                    BUFFER_TYPE_UNIFORM, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
+            s_gpuPerObjectConstantBuffers[i] = g_renderState.device.NewBuffer( sizeof( PerObjectConstantBuffer ),
+                    BUFFER_TYPE_UNIFORM, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
         }
 
-        VkDescriptorPoolSize poolSize[2] = {};
+        VkDescriptorPoolSize poolSize[3] = {};
         poolSize[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSize[0].descriptorCount = numImages;
+        poolSize[0].descriptorCount = 2 * numImages;
         poolSize[1].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         poolSize[1].descriptorCount = numImages;
 
-        s_descriptorPool = g_renderState.device.NewDescriptorPool( 2, poolSize, numImages );
+        s_descriptorPool = g_renderState.device.NewDescriptorPool( 2, poolSize, 2 * numImages );
 
         std::vector< DescriptorSetLayoutData > descriptorSetData = simpleVert->reflectInfo.descriptorSetLayouts;
         descriptorSetData.insert( descriptorSetData.end(), simpleFrag->reflectInfo.descriptorSetLayouts.begin(), simpleFrag->reflectInfo.descriptorSetLayouts.end() );
         auto combined = CombineDescriptorSetLayouts( descriptorSetData );
-        PG_ASSERT( combined.size() == 1 );
-        const auto& layoutInfo = combined[0].createInfo;
-        VkResult ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(), &layoutInfo, nullptr, &descriptorSetLayout );
+        s_descriptorSetLayouts.resize( combined.size() );
+
+        for ( size_t i = 0; i < combined.size(); ++i )
+        {
+            LOG( "combined[", i, "].setNumber = ", combined[i].setNumber );
+            LOG( "combined[", i, "].bindings.size = ", combined[i].bindings.size() );
+            for ( size_t b = 0; b < combined[i].bindings.size(); ++b )
+            {
+                LOG( "combined[", i, "].bindings[", b, "].binding = ", combined[i].bindings[b].binding );
+                LOG( "combined[", i, "].bindings[", b, "].type= ", combined[i].bindings[b].descriptorType );
+            }
+            LOG( "" );
+        }
+
+        VkResult ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(),
+                &combined[0].createInfo, nullptr, &s_descriptorSetLayouts[0] );
+        PG_ASSERT( ret == VK_SUCCESS );
+        ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(),
+                &combined[1].createInfo, nullptr, &s_descriptorSetLayouts[1] );
         PG_ASSERT( ret == VK_SUCCESS );
 
-        std::vector< VkDescriptorSetLayout > layouts( numImages, descriptorSetLayout );
-        auto descriptorSets = s_descriptorPool.NewDescriptorSets( numImages, layouts.data() );
+        std::vector< VkDescriptorSetLayout > layouts( numImages, s_descriptorSetLayouts[0] );
+        std::vector< DescriptorSet > perSceneDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, layouts.data() );
+        layouts = std::vector< VkDescriptorSetLayout >( numImages, s_descriptorSetLayouts[1] );
+        std::vector< DescriptorSet > perObjectDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, layouts.data() );
 
         for ( size_t i = 0; i < numImages; i++ )
         {
             VkDescriptorBufferInfo bufferInfo = {};
-            bufferInfo.buffer = ubos[i].GetHandle();
+            bufferInfo.buffer = s_gpuPerSceneConstantBuffers[i].GetHandle();
             bufferInfo.offset = 0;
-            bufferInfo.range  = sizeof( glm::mat4 );
-
-            VkDescriptorImageInfo imageInfo = {};
-            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView   = s_image->GetTexture()->GetView();
-            imageInfo.sampler     = GetSampler( "nearest_clamped" )->GetHandle();
+            bufferInfo.range  = VK_WHOLE_SIZE;
 
             VkWriteDescriptorSet descriptorWrite[2] = {};
             descriptorWrite[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite[0].dstSet           = descriptorSets[i].GetHandle();
+            descriptorWrite[0].dstSet           = perSceneDescriptorSets[i].GetHandle();
             descriptorWrite[0].dstBinding       = 0;
             descriptorWrite[0].dstArrayElement  = 0;
             descriptorWrite[0].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             descriptorWrite[0].descriptorCount  = 1;
             descriptorWrite[0].pBufferInfo      = &bufferInfo;
 
+            vkUpdateDescriptorSets( g_renderState.device.GetHandle(), 1, descriptorWrite, 0, nullptr );
+
+            bufferInfo.buffer = s_gpuPerObjectConstantBuffers[i].GetHandle();
+
+            VkDescriptorImageInfo imageInfo = {};
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfo.imageView   = s_image->GetTexture()->GetView();
+            imageInfo.sampler     = GetSampler( "nearest_clamped" )->GetHandle();
+
+            descriptorWrite[0].dstSet           = perObjectDescriptorSets[i].GetHandle();
+            descriptorWrite[0].dstBinding       = 2;
+
             descriptorWrite[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite[1].dstSet           = descriptorSets[i].GetHandle();
+            descriptorWrite[1].dstSet           = perObjectDescriptorSets[i].GetHandle();
             descriptorWrite[1].dstBinding       = 1;
             descriptorWrite[1].dstArrayElement  = 0;
             descriptorWrite[1].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -216,7 +256,9 @@ namespace RenderSystem
             cmdBuf.BeginRecording();
             cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[i] );
             cmdBuf.BindRenderPipeline( s_pipeline );
-            cmdBuf.BindDescriptorSets( 1, &descriptorSets[i], s_pipeline );
+            // cmdBuf.BindDescriptorSets( 1, &pgDescriptorSets[i], s_pipeline );
+            cmdBuf.BindDescriptorSets( 1, &perSceneDescriptorSets[i], s_pipeline );
+            cmdBuf.BindDescriptorSets( 1, &perObjectDescriptorSets[i], s_pipeline, 2 );
 
             cmdBuf.BindVertexBuffer( model->meshes[0].vertexBuffer, 0, 0 );
             cmdBuf.BindVertexBuffer( model->meshes[0].vertexBuffer, model->meshes[0].GetNormalOffset(), 1 );
@@ -245,11 +287,11 @@ namespace RenderSystem
         if ( !g_converterMode )
         {
             s_descriptorPool.Free();
-            vkDestroyDescriptorSetLayout( g_renderState.device.GetHandle(), descriptorSetLayout, nullptr );
-            for ( auto& ubo : ubos )
-            {
-                ubo.Free();
-            }
+            // vkDestroyDescriptorSetLayout( g_renderState.device.GetHandle(), descriptorSetLayout, nullptr );
+            // for ( auto& ubo : ubos )
+            // {
+            //     ubo.Free();
+            // }
             s_pipeline.Free();
         }
 
@@ -265,6 +307,15 @@ namespace RenderSystem
 
         auto imageIndex = g_renderState.swapChain.AcquireNextImage( g_renderState.presentCompleteSemaphores[currentFrame] );
 
+        // perSceneConstantBuffer
+        void* data;
+        data = s_gpuPerSceneConstantBuffers[imageIndex].Map();
+        glm::mat4 VP = scene->camera.GetVP();
+        memcpy( (char*)data + offsetof( PerSceneConstantBuffer, VP ), &VP, sizeof( glm::mat4 ) );
+        memcpy( (char*)data + offsetof( PerSceneConstantBuffer, cameraPos ), &scene->camera.position, sizeof( glm::vec3 ) );
+        s_gpuPerSceneConstantBuffers[imageIndex].UnMap();
+
+
         glm::mat4 M( 1 );
         // M = glm::translate( M, glm::vec3( 0.0f, -0.7f, 0.0f ) );
         // M = glm::rotate( M, Time::Time() * glm::radians( 90.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
@@ -272,14 +323,14 @@ namespace RenderSystem
         // M = glm::scale( M, glm::vec3( 1.0 ) );
         M = glm::rotate( M, 0.5f * Time::Time() * glm::radians( 90.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
         M = glm::scale( M, glm::vec3( 0.5 ) );
-        auto N = glm::transpose( glm::inverse( M ) );
-        auto MVP        = scene->camera.GetVP() * M;
-        void* data      = ubos[imageIndex].Map();
-        // memcpy( data, &MVP, sizeof( glm::mat4 ) );
-        memcpy( data, &M, sizeof( glm::mat4 ) );
-        memcpy( (char*)data + sizeof( glm::mat4 ), &N, sizeof( glm::mat4 ) );
-        memcpy( (char*)data + 2*sizeof(glm::mat4), &MVP, sizeof( glm::mat4 ) );
-        ubos[imageIndex].UnMap();
+
+        auto N   = glm::transpose( glm::inverse( M ) );
+        auto MVP = scene->camera.GetVP() * M;
+        data     = s_gpuPerObjectConstantBuffers[imageIndex].Map();
+        memcpy( (char*)data + offsetof( PerObjectConstantBuffer, modelMatrix ), &M, sizeof( glm::mat4 ) );
+        memcpy( (char*)data + offsetof( PerObjectConstantBuffer, normalMatrix ), &N, sizeof( glm::mat4 ) );
+        memcpy( (char*)data + offsetof( PerObjectConstantBuffer, MVP ), &MVP, sizeof( glm::mat4 ) );
+        s_gpuPerObjectConstantBuffers[imageIndex].UnMap();
 
         g_renderState.device.SubmitRenderCommands( 1, &g_renderState.commandBuffers[imageIndex] );
 

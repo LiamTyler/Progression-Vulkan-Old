@@ -135,7 +135,17 @@ namespace Progression
         {
             serialize::Read( buffer, reflectInfo.descriptorSetLayouts[i].setNumber );
             serialize::Read( buffer, reflectInfo.descriptorSetLayouts[i].createInfo );
+            std::string t;
+            serialize::Read( buffer, t );
+            LOG( t );
             serialize::Read( buffer, reflectInfo.descriptorSetLayouts[i].bindings );
+
+            for ( size_t b = 0; b < reflectInfo.descriptorSetLayouts[i].bindings.size(); ++b )
+            {
+                LOG( "reflectInfo[", i, "].bindings[", b, "].binding = ", reflectInfo.descriptorSetLayouts[i].bindings[b].binding );
+                LOG( "reflectInfo[", i, "].bindings[", b, "].type= ", reflectInfo.descriptorSetLayouts[i].bindings[b].descriptorType );
+            }
+            LOG( "" );
 
             reflectInfo.descriptorSetLayouts[i].createInfo.pBindings = reflectInfo.descriptorSetLayouts[i].bindings.data();
         }
@@ -369,8 +379,33 @@ namespace Progression
     // std::vector< VkDescriptorSetLayoutBinding > bindings;
     std::vector< DescriptorSetLayoutData > CombineDescriptorSetLayouts( std::vector< DescriptorSetLayoutData >& layoutDatas )
     {
+        LOG( "Combing: " );
+        for ( size_t i = 0; i < layoutDatas.size(); ++i )
+        {
+            LOG( "layoutDatas[", i, "].setNumber = ", layoutDatas[i].setNumber );
+            LOG( "layoutDatas[", i, "].bindings.size = ", layoutDatas[i].bindings.size() );
+            for ( size_t b = 0; b < layoutDatas[i].bindings.size(); ++b )
+            {
+                LOG( "layoutDatas[", i, "].bindings[", b, "].binding = ", layoutDatas[i].bindings[b].binding );
+                LOG( "layoutDatas[", i, "].bindings[", b, "].type= ", layoutDatas[i].bindings[b].descriptorType );
+            }
+            LOG( "" );
+        }
         std::sort( layoutDatas.begin(), layoutDatas.end(),
                 []( const auto& lhs, const auto& rhs ) { return lhs.setNumber < rhs.setNumber; } );
+
+        LOG( "Combing: " );
+        for ( size_t i = 0; i < layoutDatas.size(); ++i )
+        {
+            LOG( "layoutDatas[", i, "].setNumber = ", layoutDatas[i].setNumber );
+            LOG( "layoutDatas[", i, "].bindings.size = ", layoutDatas[i].bindings.size() );
+            for ( size_t b = 0; b < layoutDatas[i].bindings.size(); ++b )
+            {
+                LOG( "layoutDatas[", i, "].bindings[", b, "].binding = ", layoutDatas[i].bindings[b].binding );
+                LOG( "layoutDatas[", i, "].bindings[", b, "].type= ", layoutDatas[i].bindings[b].descriptorType );
+            }
+            LOG( "" );
+        }
 
         std::vector< DescriptorSetLayoutData > combined;
         for ( size_t i = 0; i < layoutDatas.size(); )
@@ -381,6 +416,7 @@ namespace Progression
             newSet.bindings  = layoutDatas[i].bindings;
             // For all sets with the same number, add their bindings to the list, either as new entries in the list,
             // or just by |= the stageFlags if its the same binding + type as an existing entry
+            ++i;
             while ( i < layoutDatas.size() && layoutDatas[i].setNumber == newSet.setNumber )
             {
                 for ( const auto& newBinding : layoutDatas[i].bindings )

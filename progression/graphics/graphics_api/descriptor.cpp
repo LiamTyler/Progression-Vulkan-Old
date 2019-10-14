@@ -1,5 +1,6 @@
 #include "graphics/graphics_api/descriptor.hpp"
 #include "core/assert.hpp"
+#include "utils/logger.hpp"
 
 namespace Progression
 {
@@ -32,7 +33,6 @@ namespace Gfx
         allocInfo.descriptorPool     = m_handle;
         allocInfo.descriptorSetCount = numLayouts;
         allocInfo.pSetLayouts        = layouts;
-
 
         std::vector< DescriptorSet > descriptorSets( numLayouts );
         VkResult res = vkAllocateDescriptorSets( m_device, &allocInfo, (VkDescriptorSet*) descriptorSets.data() );
