@@ -15,7 +15,14 @@ layout( set = 0, binding = 0 ) uniform PerSceneConstantBuffer
     vec3 cameraPos;
 } perSceneConstantBuffer;
 
-layout( set = 2, binding = 1 ) uniform sampler2D texSampler;
+layout( set = 1, binding = 0 ) uniform MaterialConstantBuffer
+{
+    vec4 Ka;
+    vec4 Kd;
+    vec4 Ks;
+} material;
+
+layout( set = 1, binding = 1 ) uniform sampler2D texSampler;
 
 void main()
 {
@@ -28,18 +35,18 @@ void main()
     vec3 l = normalize( -lightDir );
     vec3 h = normalize( l + e );
 
-    vec3 Ka = vec3( 0.0 );
-    vec3 Kd = vec3( 1, 0, 0 );
-    vec3 Ks = vec3( 1, 1, 1 );
-    float specular = 200;
-    
-    vec3 color = Ka;
+    //vec3 Ka = vec3( 0.0 );
+    //vec3 Kd = vec3( 1, 0, 0 );
+    //vec3 Ks = vec3( 1, 1, 1 );
+    // float specular = 400;
+
+    vec3 color = material.Ka.xyz;
     // Kd *= texture( texSampler, texCoord ).xyz;
-    color += lightColor * Kd * max( 0.0, dot( l, n ) );
+    color += lightColor * material.Kd.xyz * max( 0.0, dot( l, n ) );
     if ( dot( l, n ) > EPSILON )
     {
         // color += lightColor * Ks * pow( max( dot( reflect( -l, n ), e ), 0.0 ), specular );
-        color += lightColor * Ks * pow( max( dot( h, n ), 0.0 ), 4*specular );
+        color += lightColor * material.Ks.xyz * pow( max( dot( h, n ), 0.0 ), 4*material.Ks.w );
     }
         
     // outColor = vec4( e, 1.0 );

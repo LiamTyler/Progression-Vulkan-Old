@@ -66,11 +66,19 @@ struct PerSceneConstantBuffer
     glm::vec3 cameraPos;
 };
 
+struct MaterialConstantBuffer
+{
+    glm::vec4 Ka;
+    glm::vec4 Kd;
+    glm::vec4 Ks;
+};
+
 static Window* s_window;
 static Pipeline s_pipeline;
 static DescriptorPool s_descriptorPool;
 std::vector< VkDescriptorSetLayout > s_descriptorSetLayouts;
 std::vector< Progression::Gfx::Buffer > s_gpuPerSceneConstantBuffers;
+std::vector< Progression::Gfx::Buffer > s_gpuMaterialConstantBuffers;
 std::vector< Progression::Gfx::Buffer > s_gpuPerObjectConstantBuffers;
 static std::shared_ptr< Image > s_image;
 
@@ -81,13 +89,6 @@ extern bool g_converterMode;
 
 namespace RenderSystem
 {
-
-    struct Vertex
-    {
-        glm::vec3 pos;
-        glm::vec3 color;
-    };
-
     void InitSamplers();
 
     bool Init()
@@ -141,10 +142,13 @@ namespace RenderSystem
         
         uint32_t numImages = static_cast< uint32_t >( g_renderState.swapChain.images.size() );
         s_gpuPerSceneConstantBuffers.resize( numImages );
+        s_gpuMaterialConstantBuffers.resize( numImages );
         s_gpuPerObjectConstantBuffers.resize( numImages );
         for ( uint32_t i = 0; i < numImages; ++i )
         {
             s_gpuPerSceneConstantBuffers[i] = g_renderState.device.NewBuffer( sizeof( PerSceneConstantBuffer ),
+                    BUFFER_TYPE_UNIFORM, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
+            s_gpuMaterialConstantBuffers[i] = g_renderState.device.NewBuffer( sizeof( MaterialConstantBuffer ),
                     BUFFER_TYPE_UNIFORM, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
             s_gpuPerObjectConstantBuffers[i] = g_renderState.device.NewBuffer( sizeof( PerObjectConstantBuffer ),
                     BUFFER_TYPE_UNIFORM, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
@@ -152,28 +156,20 @@ namespace RenderSystem
 
         VkDescriptorPoolSize poolSize[3] = {};
         poolSize[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSize[0].descriptorCount = 2 * numImages;
+        poolSize[0].descriptorCount = 3 * numImages;
         poolSize[1].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         poolSize[1].descriptorCount = numImages;
 
-        s_descriptorPool = g_renderState.device.NewDescriptorPool( 2, poolSize, 2 * numImages );
+        s_descriptorPool = g_renderState.device.NewDescriptorPool( 2, poolSize, 3 * numImages );
 
         std::vector< DescriptorSetLayoutData > descriptorSetData = simpleVert->reflectInfo.descriptorSetLayouts;
         descriptorSetData.insert( descriptorSetData.end(), simpleFrag->reflectInfo.descriptorSetLayouts.begin(), simpleFrag->reflectInfo.descriptorSetLayouts.end() );
         auto combined = CombineDescriptorSetLayouts( descriptorSetData );
-        s_descriptorSetLayouts.resize( combined.size() );
+        //combined.push_back( combined[1] );
+        //combined[1].createInfo.bindingCount = 0;
+        //combined[1].createInfo.pBindings    = nullptr;
 
-        for ( size_t i = 0; i < combined.size(); ++i )
-        {
-            LOG( "combined[", i, "].setNumber = ", combined[i].setNumber );
-            LOG( "combined[", i, "].bindings.size = ", combined[i].bindings.size() );
-            for ( size_t b = 0; b < combined[i].bindings.size(); ++b )
-            {
-                LOG( "combined[", i, "].bindings[", b, "].binding = ", combined[i].bindings[b].binding );
-                LOG( "combined[", i, "].bindings[", b, "].type= ", combined[i].bindings[b].descriptorType );
-            }
-            LOG( "" );
-        }
+       s_descriptorSetLayouts.resize( combined.size() );
 
         VkResult ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(),
                 &combined[0].createInfo, nullptr, &s_descriptorSetLayouts[0] );
@@ -181,10 +177,15 @@ namespace RenderSystem
         ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(),
                 &combined[1].createInfo, nullptr, &s_descriptorSetLayouts[1] );
         PG_ASSERT( ret == VK_SUCCESS );
+        ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(),
+                &combined[2].createInfo, nullptr, &s_descriptorSetLayouts[2] );
+        PG_ASSERT( ret == VK_SUCCESS );
 
         std::vector< VkDescriptorSetLayout > layouts( numImages, s_descriptorSetLayouts[0] );
         std::vector< DescriptorSet > perSceneDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, layouts.data() );
         layouts = std::vector< VkDescriptorSetLayout >( numImages, s_descriptorSetLayouts[1] );
+        std::vector< DescriptorSet > materialDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, layouts.data() );
+        layouts = std::vector< VkDescriptorSetLayout >( numImages, s_descriptorSetLayouts[2] );
         std::vector< DescriptorSet > perObjectDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, layouts.data() );
 
         for ( size_t i = 0; i < numImages; i++ )
@@ -205,18 +206,18 @@ namespace RenderSystem
 
             vkUpdateDescriptorSets( g_renderState.device.GetHandle(), 1, descriptorWrite, 0, nullptr );
 
-            bufferInfo.buffer = s_gpuPerObjectConstantBuffers[i].GetHandle();
+            bufferInfo.buffer = s_gpuMaterialConstantBuffers[i].GetHandle();
 
             VkDescriptorImageInfo imageInfo = {};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             imageInfo.imageView   = s_image->GetTexture()->GetView();
             imageInfo.sampler     = GetSampler( "nearest_clamped" )->GetHandle();
 
-            descriptorWrite[0].dstSet           = perObjectDescriptorSets[i].GetHandle();
-            descriptorWrite[0].dstBinding       = 2;
+            descriptorWrite[0].dstSet           = materialDescriptorSets[i].GetHandle();
+            descriptorWrite[0].dstBinding       = 0;
 
             descriptorWrite[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite[1].dstSet           = perObjectDescriptorSets[i].GetHandle();
+            descriptorWrite[1].dstSet           = materialDescriptorSets[i].GetHandle();
             descriptorWrite[1].dstBinding       = 1;
             descriptorWrite[1].dstArrayElement  = 0;
             descriptorWrite[1].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -224,6 +225,11 @@ namespace RenderSystem
             descriptorWrite[1].pImageInfo       = &imageInfo;
 
             vkUpdateDescriptorSets( g_renderState.device.GetHandle(), 2, descriptorWrite, 0, nullptr );
+
+            bufferInfo.buffer                   = s_gpuPerObjectConstantBuffers[i].GetHandle();
+            descriptorWrite[0].dstSet           = perObjectDescriptorSets[i].GetHandle();
+            descriptorWrite[0].dstBinding       = 0;
+            vkUpdateDescriptorSets( g_renderState.device.GetHandle(), 1, descriptorWrite, 0, nullptr );
         }
 
         PipelineDescriptor pipelineDesc;
@@ -258,6 +264,7 @@ namespace RenderSystem
             cmdBuf.BindRenderPipeline( s_pipeline );
             // cmdBuf.BindDescriptorSets( 1, &pgDescriptorSets[i], s_pipeline );
             cmdBuf.BindDescriptorSets( 1, &perSceneDescriptorSets[i], s_pipeline );
+            cmdBuf.BindDescriptorSets( 1, &materialDescriptorSets[i], s_pipeline, 1 );
             cmdBuf.BindDescriptorSets( 1, &perObjectDescriptorSets[i], s_pipeline, 2 );
 
             cmdBuf.BindVertexBuffer( model->meshes[0].vertexBuffer, 0, 0 );
@@ -315,6 +322,14 @@ namespace RenderSystem
         memcpy( (char*)data + offsetof( PerSceneConstantBuffer, cameraPos ), &scene->camera.position, sizeof( glm::vec3 ) );
         s_gpuPerSceneConstantBuffers[imageIndex].UnMap();
 
+        // MaterialConstantBuffer   
+        data = s_gpuMaterialConstantBuffers[imageIndex].Map();
+        MaterialConstantBuffer mat;
+        mat.Ka = glm::vec4( 0, 0, 0, 1 );
+        mat.Kd = glm::vec4( 0, 1, 0, 0 );
+        mat.Ks = glm::vec4( 1, 1, 1, 400 );
+        memcpy( data, &mat, sizeof( MaterialConstantBuffer ) );
+        s_gpuMaterialConstantBuffers[imageIndex].UnMap();
 
         glm::mat4 M( 1 );
         // M = glm::translate( M, glm::vec3( 0.0f, -0.7f, 0.0f ) );
