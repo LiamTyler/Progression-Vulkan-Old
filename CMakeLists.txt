@@ -23,7 +23,8 @@ endif()
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release;Ship")
 
 if (UNIX AND NOT APPLE)
-    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Werror -Wextra -Wno-implicit-fallthrough -Wshadow -Wno-unused-variable -Wno-unused-function")
+    #set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Werror -Wextra -Wno-implicit-fallthrough -Wshadow -Wno-unused-variable -Wno-unused-function")
+    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
     set(CMAKE_CXX_FLAGS_SHIP "${CMAKE_CXX_FLAGS_SHIP} -O3") # look up Ofast
@@ -80,6 +81,15 @@ set(GLFW_BUILD_TESTS     OFF CACHE BOOL " " FORCE)
 set(GLFW_BUILD_DOCS      OFF CACHE BOOL " " FORCE)
 
 add_subdirectory(ext/glfw)
+
+
+if (UNIX AND NOT APPLE)
+    add_definitions( -DLUA_USE_POSIX )
+endif()
+file(GLOB_RECURSE LUA_SRC ext/lua/*.c)
+list(REMOVE_ITEM LUA_SRC "ext/lua/lua.c")
+list(REMOVE_ITEM LUA_SRC "ext/lua/luac.c")
+add_library(lua ${LUA_SRC})
 
 add_subdirectory(ext/meshoptimizer)
 add_subdirectory(ext/lz4)

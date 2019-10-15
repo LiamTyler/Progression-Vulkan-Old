@@ -10,6 +10,7 @@
 #include "SPIRV-Reflect/common/output_stream.h"
 #include <sstream>
 
+/*
 static bool LoadBinaryFile( std::string& source, const std::string& filename )
 {
     std::ifstream in( filename, std::ios::binary );
@@ -27,6 +28,7 @@ static bool LoadBinaryFile( std::string& source, const std::string& filename )
 
     return true;
 }
+*/
 
 namespace Progression
 {
@@ -167,6 +169,7 @@ namespace Progression
         return true;
     }
 
+#if USING( DEBUG_BUILD )
     // From SPIRV-Reflect
     static void PrintDescriptorBinding( const SpvReflectDescriptorBinding& obj, bool write_set, const char* indent )
     {
@@ -226,6 +229,7 @@ namespace Progression
             }
         }
     }
+#endif // #if USING( DEBUG_BUILD )
 
     ShaderReflectInfo Shader::Reflect( const uint32_t* spirv, size_t spirvSizeInBytes )
     {

@@ -1,7 +1,10 @@
 #include "core/time.hpp"
-#define GLFW_INCLUDE_NONE
-#include "GLFW/glfw3.h"
 
+using namespace std::chrono;
+using Clock = high_resolution_clock;
+using TimePoint = time_point< Clock >;
+
+static TimePoint s_startTime = TimePoint();
 static float s_currentFrameStartTime = 0;
 static float s_lastFrameStartTime    = 0;
 static float s_deltaTime             = 0;
@@ -13,7 +16,7 @@ namespace Time
 {
     void Reset()
     {
-        glfwSetTime( 0 );
+        s_startTime             = Clock::now();
         s_currentFrameStartTime = 0;
         s_deltaTime             = 0;
         s_currentFrameStartTime = 0;
@@ -21,7 +24,7 @@ namespace Time
 
     float Time()
     {
-        return static_cast< float >( glfwGetTime() );
+        return static_cast< float >( GetDuration( s_startTime ) );
     }
 
     float DeltaTime()
@@ -32,7 +35,7 @@ namespace Time
     void StartFrame()
     {
         s_currentFrameStartTime = Time();
-        s_deltaTime             = s_currentFrameStartTime - s_lastFrameStartTime;
+        s_deltaTime             = 0.001f * ( s_currentFrameStartTime - s_lastFrameStartTime );
     }
 
     void EndFrame()
@@ -40,15 +43,15 @@ namespace Time
         s_lastFrameStartTime = s_currentFrameStartTime;
     }
 
-    std::chrono::high_resolution_clock::time_point GetTimePoint()
+    TimePoint GetTimePoint()
     {
-        return std::chrono::high_resolution_clock::now();
+        return Clock::now();
     }
 
-    double GetDuration( const std::chrono::high_resolution_clock::time_point& point )
+    double GetDuration( const TimePoint& point )
     {
-        auto now = std::chrono::high_resolution_clock::now();
-        return std::chrono::duration_cast< std::chrono::microseconds >( now - point ).count() / static_cast< float >( 1000 );
+        auto now = Clock::now();
+        return duration_cast< microseconds >( now - point ).count() / static_cast< float >( 1000 );
     }
 
 } // namespace Time
