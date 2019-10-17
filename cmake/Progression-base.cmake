@@ -1,4 +1,4 @@
-    set(SYSTEM_LIBS "")
+set(SYSTEM_LIBS "")
 if (UNIX AND NOT APPLE)
     set(SYSTEM_LIBS
         dl
@@ -21,6 +21,7 @@ set(PROGRESSION_INCLUDE_DIRS
     ${PROGRESSION_DIR}
     ${PROGRESSION_DIR}/ext
     ${PROGRESSION_DIR}/ext/lua
+    ${PROGRESSION_DIR}/ext/LuaBridge/Source
     ${PROGRESSION_DIR}/ext/getopt
     ${PROGRESSION_DIR}/ext/entt/src
     ${PROGRESSION_DIR}/ext/glfw/include
