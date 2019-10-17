@@ -18,11 +18,6 @@ struct position {
     float y;
 
     position( float a, float b ) : x(a), y(b) {}
-
-    position operator+( const position& p )
-    {
-        return { x + p.x, y + p.y };
-    }
 };
 
 struct velocity {
@@ -30,48 +25,6 @@ struct velocity {
     float dy;
 };
 
-struct player {
-public:
-	int bullets;
-	int speed;
-
-	player()
-		: player(3, 100) {
-
-	}
-
-	player(int ammo)
-		: player(ammo, 100) {
-
-	}
-
-	player(int ammo, int hitpoints)
-		: bullets(ammo), hp(hitpoints) {
-
-	}
-
-	void boost() {
-		speed += 10;
-	}
-
-	bool shoot() {
-		if (bullets < 1)
-			return false;
-		--bullets;
-		return true;
-	}
-
-	void set_hp(int value) {
-		hp = value;
-	}
-
-	int get_hp() const {
-		return hp;
-	}
-
-private:
-	int hp;
-};
 
 void update( float dt, entt::registry &registry) {
     registry.view<position, velocity>().each([dt](auto &pos, auto &vel) {
@@ -84,18 +37,9 @@ void update( float dt, entt::registry &registry) {
 
 int main( int argc, char* argv[] )
 {
-
     sol::state lua;
 
 	lua.open_libraries(sol::lib::base);
-
-	// note that you can set a 
-	// userdata before you register a usertype,
-	// and it will still carry 
-	// the right metatable if you register it later
-
-	// set a variable "p2" of type "player" with 0 ammo
-	lua["p2"] = player(0);
 
     sol::usertype<glm::vec2> vec2_type = lua.new_usertype<glm::vec2>("vec2", sol::constructors<glm::vec2(), glm::vec2( float ), glm::vec2( float, float )>());
     vec2_type["x"] = &glm::vec2::x;
@@ -158,12 +102,49 @@ int main( int argc, char* argv[] )
     mat4_type.set_function( sol::meta_function::division, (glm::mat4 (*)( const glm::mat4&, const float& )) &glm::operator/);
     mat4_type.set_function( sol::meta_function::unary_minus, (glm::mat4 (*)(const glm::mat4&)) &glm::operator-);
 
-	lua.script_file( PG_ROOT_DIR "script2.lua");
     
     
     entt::registry registry;
 
+    sol::usertype<entt::registry> reg_type = lua.new_usertype<entt::registry>("registry");
+    reg_type.set_function( "create", (entt::entity(entt::registry::*)() )&entt::registry::create );
+    reg_type.set_function( "assignPosition", &entt::registry::assign<glm::vec3, float, float, float> );
+    reg_type.set_function( "removePosition", &entt::registry::remove<glm::vec3> );
+    reg_type.set_function( "getPosition", static_cast<glm::vec3&(entt::registry::*)(entt::entity)>( &entt::registry::get<glm::vec3> ) );
+    reg_type.set_function( "tryGetPosition", static_cast<glm::vec3*(entt::registry::*)(entt::entity)>( &entt::registry::try_get<glm::vec3> ) );
+    // reg_type.set_function( "tryGetPosition", &entt::registry::try_get<glm::vec3> );
+    // reg_type.set_function( "tryGetPosition", &entt::registry::get<glm::vec3> );
 
+    lua["reg"] = &registry;
+    auto e = registry.create();
+    // registry.assign<glm::vec3( e, 1.0f );
+    lua.script_file( PG_ROOT_DIR "script.lua");
+
+    entt::entity e2 = lua["e2"];
+    if( registry.try_get<glm::vec3>( e2 ) )
+    {
+        std::cout << "yes: " << registry.get<glm::vec3>( e2 ) << std::endl;
+    }
+    else
+    {
+        std::cout << "no" << std::endl;
+    }
+
+
+    registry.view<glm::vec3>().each([](auto& pos)
+    {
+        std::cout << "entity " << pos << std::endl;
+    });
+    std::cout << std::endl;
+
+    lua.script_file( PG_ROOT_DIR "script2.lua");
+
+
+    registry.view<glm::vec3>().each([](auto& pos)
+    {
+        std::cout << "entity " << pos << std::endl;
+    });
+    std::cout << std::endl;
     /*
     for(auto i = 0; i < 4; ++i )
     {
@@ -174,25 +155,29 @@ int main( int argc, char* argv[] )
             registry.assign< velocity >( entity, 1.0f, 0.0f );
         }
     }
+    */
 
+    /*
     Time::Reset();
     while ( true )
     {
         Time::StartFrame();
-        cout << Time::DeltaTime() << endl;
+        std::cout << Time::DeltaTime() << std::endl;
         update( Time::DeltaTime(), registry );
         std::this_thread::sleep_for(std::chrono::milliseconds( 1000 ));
 
         int i = 0;
-        registry.view<position>().each([&i](auto& pos)
+        
+        registry.view<glm::vec3>().each([&i](auto& pos)
         {
-        cout << "entity " << i++ << " " << pos.x << " " << pos.y << endl;
+            std::cout << "entity " << i++ << " " << pos.x << " " << pos.y << std::endl;
         });
-        cout << endl;
+        std::cout << std::endl;
 
         Time::EndFrame();
     }
     */
+    
 
     return 0;
 }

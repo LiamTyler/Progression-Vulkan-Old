@@ -62,7 +62,7 @@ bool EngineInitialize( std::string config_name )
     Time::Reset();
     Input::Init();
     ResourceManager::Init();
-    ECS::init();
+    // ECS::init();
     if ( !RenderSystem::Init() )
     {
         LOG_ERR( "Could not initialize the rendering system" );
@@ -76,7 +76,7 @@ void EngineQuit()
 { 
     RenderSystem::Shutdown();
     ResourceManager::Shutdown();
-    ECS::shutdown();
+    // ECS::shutdown();
     Input::Free();
     ShutdownWindowSystem();
     g_Logger.Shutdown();

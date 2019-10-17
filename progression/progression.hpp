@@ -1,9 +1,10 @@
 #pragma once
 
+#include "core/assert.hpp"
 #include "core/camera.hpp"
 #include "core/config.hpp"
 #include "core/platform_defines.hpp"
-#include "core/ecs.hpp"
+// #include "core/ecs.hpp"
 #include "core/frustum.hpp"
 #include "core/input.hpp"
 #include "core/input_types.hpp"

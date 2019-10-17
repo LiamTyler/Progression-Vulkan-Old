@@ -1,6 +1,6 @@
 #include "core/scene.hpp"
 #include "core/assert.hpp"
-#include "core/ecs.hpp"
+// #include "core/ecs.hpp"
 #include "graphics/lights.hpp"
 #include "resource/image.hpp"
 #include "resource/resource_manager.hpp"
@@ -79,6 +79,7 @@ static bool ParseLight( Scene* scene, std::istream& in )
 
 static bool ParseEntity( std::istream& in )
 {
+    /*
     auto e                = ECS::entity::create();
     ECS::EntityData* data = ECS::entity::data( e );
     fileIO::ParseLineKeyValOptional( in, "name", data->name );
@@ -107,6 +108,7 @@ static bool ParseEntity( std::istream& in )
             LOG_WARN( "Unrecognized component: '", component, "'" );
         }
     }
+    */
 
     return !in.fail();
 }
