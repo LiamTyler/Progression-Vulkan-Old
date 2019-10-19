@@ -45,9 +45,11 @@ set(
 	core/bounding_box.cpp
     core/camera.cpp
     core/config.cpp
-    #core/ecs.cpp
+    core/ecs.cpp
     core/frustum.cpp
     core/input.cpp
+    core/lua.cpp
+    core/math.cpp
     core/scene.cpp
     core/time.cpp
     core/transform.cpp
@@ -58,11 +60,12 @@ set(
     core/camera.hpp
     core/config.hpp
     core/core_defines.hpp
-    #core/ecs.hpp
+    core/ecs.hpp
     core/frustum.hpp
     core/feature_defines.hpp
     core/input.hpp
     core/input_types.hpp
+    core/lua.hpp
     core/math.hpp
     core/platform_defines.hpp
     core/scene.hpp

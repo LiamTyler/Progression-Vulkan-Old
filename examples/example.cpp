@@ -37,7 +37,7 @@ int main( int argc, char* argv[] )
             window->StartFrame();
             PG::Input::PollEvents();
 
-            if ( PG::Input::GetKeyDown( PG::PG_K_ESC ) )
+            if ( PG::Input::GetKeyDown( PG::Key::ESC ) )
             {
                 PG::g_engineShutdown = true;
             }

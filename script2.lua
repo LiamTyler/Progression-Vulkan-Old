@@ -1,18 +1,22 @@
+e1 = reg:create()
+reg:assignPosition( e1, 1, 2 )
+reg:assignVelocity( e1, 1, 0 )
+e2 = reg:create()
+reg:assignPosition( e2, 4, 5 )
+reg:assignVelocity( e2, -1, 0 )
 e3 = reg:create()
-reg:assignPosition( e3, 7, 8, 9 )
-p = reg:try_getPosition( e2 )
-if p then
-    print("yos: ", p)
-else
-    print("nos")
+reg:assignPosition( e3, 7, 8 )
+reg:assignVelocity( e3, 0, 1 )
+
+function fn( p, v )
+    p.x = p.x + v.x;
+    p.y = p.y + v.y
 end
-reg:removePosition( e2 )
-p = reg:try_getPosition( e2 )
-if p then
-    print("yos: ", p)
-else
-    print("nos")
+
+function f( p )
+    p.x = p.x + 10;
 end
-p = reg:getPosition( e1 )
-print("P: ", p)
-p.x = 100
+
+v = reg:GetPosView( reg )
+
+--v.each(f)

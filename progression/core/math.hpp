@@ -1,7 +1,7 @@
 #pragma once
 
 #define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE_
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
@@ -45,3 +45,6 @@ inline std::istream& operator>>( std::istream& in, glm::vec4& v )
 {
     return in >> v.x >> v.y >> v.z >> v.w;
 }
+
+struct lua_State;
+void RegisterLuaFunctions_Math( lua_State* L );

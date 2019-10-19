@@ -1,10 +1,11 @@
 #pragma once
 
 #include "core/input_types.hpp"
-#include "core/math.hpp"
+#include "glm/vec2.hpp"
 
-// TODO: Separate this better from GLFW, add game controller support, and concept of multiple
-// controllers
+struct lua_State;
+void RegisterLuaFunctions_Input( lua_State* L );
+
 namespace Progression
 {
 namespace Input
@@ -17,9 +18,9 @@ namespace Input
     bool GetKeyUp( Key k );
     bool GetMouseButtonDown( MouseButton b );
     bool GetMouseButtonUp( MouseButton b );
-    glm::ivec2 GetMousePosition();
-    glm::ivec2 GetMouseChange();
-    glm::ivec2 GetScrollChange();
+    glm::vec2 GetMousePosition();
+    glm::vec2 GetMouseChange();
+    glm::vec2 GetScrollChange();
 
 } // namespace Input
 } // namespace Progression
