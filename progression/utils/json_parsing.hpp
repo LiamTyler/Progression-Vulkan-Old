@@ -1,0 +1,46 @@
+#pragma once
+
+#include "rapidjson/document.h"
+#include "core/assert.hpp"
+#include "glm/vec3.hpp"
+#include "glm/vec4.hpp"
+#include <functional>
+#include <string>
+#include <unordered_map>
+
+rapidjson::Document ParseJSONFile( const std::string& filename );
+
+template < typename T >
+T ParseNumber( rapidjson::Value& v )
+{
+    PG_ASSERT( v.IsNumber() );
+    return v.Get< T >();
+}
+
+glm::vec3 ParseVec3( rapidjson::Value& v );
+glm::vec4 ParseVec4( rapidjson::Value& v );
+
+template < typename RetType, typename ...Args >
+class FunctionMapper
+{
+    using function_type = std::function< RetType( rapidjson::Value&, Args... ) >;
+    using map_type = std::unordered_map< std::string, function_type >;
+public:
+    FunctionMapper( const map_type& m ) : mapping( m ) {}
+
+    function_type& operator[]( const std::string& name )
+    {
+        PG_ASSERT( mapping.find( name ) != mapping.end(), name + " not found in mapping" );
+        return mapping[name];
+    }
+
+    void ForEachMember( rapidjson::Value& v, Args&&... args )
+    {
+        for ( auto it = v.MemberBegin(); it != v.MemberEnd(); ++it )
+        {
+            mapping[it->name.GetString()]( it->value, std::forward<Args>( args )... );
+        }
+    }
+
+    map_type mapping;
+};  

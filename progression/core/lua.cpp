@@ -3,9 +3,16 @@
 #include "core/math.hpp"
 #include "core/ecs.hpp"
 
-void RegisterTypesAndFunctionsToLua( sol::state& lua )
+namespace Progression
 {
-    RegisterLuaFunctions_Math( lua );
-    RegisterLuaFunctions_Input( lua );
-    RegisterLuaFunctions_ECS( lua ); // This must come before registering any components with the ECS
-}
+
+    sol::state g_LuaState;
+
+    void RegisterTypesAndFunctionsToLua( sol::state& lua )
+    {
+        RegisterLuaFunctions_Math( lua );
+        RegisterLuaFunctions_Input( lua );
+        RegisterLuaFunctions_ECS( lua ); // This must come before registering any components with the ECS
+    }
+
+} // namespace Progression

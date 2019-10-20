@@ -8,21 +8,13 @@ namespace Progression
 class Camera
 {
 public:
-    Camera( const glm::vec3& pos = glm::vec3( 0 ),
-            const glm::vec3& rot = glm::vec3( 0 ),
-            float fovy           = glm::radians( 45.0f ),
-            float a              = 16.0f / 9.0f,
-            float np             = .1f,
-            float fp             = 100.0f );
+    Camera();
 
-    void UpdateFrustum( const glm::vec3& position, const glm::vec3& rotation );
+    void UpdateFrustum();
     void UpdateOrientationVectors();
     void UpdateViewMatrix();
+    void UpdateProjectionMatrix();
 
-    float     GetFOV() const;
-    float     GetAspectRatio() const;
-    float     GetNearPlane() const;
-    float     GetFarPlane() const;
     glm::mat4 GetV() const;
     glm::mat4 GetP() const;
     glm::mat4 GetVP() const;
@@ -31,20 +23,14 @@ public:
     glm::vec3 GetRightDir() const;
     Frustum   GetFrustum() const;
 
-    void SetFOV( float f );
-    void SetAspectRatio( float a );
-    void SetNearPlane( float p );
-    void SetFarPlane( float p );
-
-    glm::vec3 position;
-    glm::vec3 rotation;
+    glm::vec3 position = glm::vec3( 0 );
+    glm::vec3 rotation = glm::vec3( 0 );
+    float fov          = glm::radians( 45.0f );
+    float aspectRatio  = 16.0f / 9.0f;
+    float nearPlane    = 0.1f;
+    float farPlane     = 100.0f;
 
 protected:
-    void UpdateProjectionMatrix();
-    float m_fieldOfView;
-    float m_aspectRatio;
-    float m_nearPlane;
-    float m_farPlane;
     glm::mat4 m_viewMatrix;
     glm::mat4 m_projectionMatrix;
     glm::vec3 m_currDir;

@@ -59,7 +59,7 @@ bool Material::Deserialize( char*& buffer )
     if ( !map_Kd_name.empty() )
     {
         map_Kd = ResourceManager::Get< Image >( map_Kd_name );
-        PG_ASSERT( map_Kd, ( "No diffuse texture with name '" + map_Kd_name + "' found" ).c_str() );
+        PG_ASSERT( map_Kd, "No diffuse texture with name '" + map_Kd_name + "' found" );
     }
 
     return true;

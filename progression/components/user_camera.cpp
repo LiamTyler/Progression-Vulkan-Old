@@ -1,4 +1,4 @@
-#include "components/user_camera_component.hpp"
+#include "components/user_camera.hpp"
 #include "core/input.hpp"
 #include "core/time.hpp"
 

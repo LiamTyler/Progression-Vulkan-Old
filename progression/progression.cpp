@@ -40,6 +40,9 @@ bool EngineInitialize( std::string config_name )
         g_Logger.Init( filename, colors );
     }
 
+	g_LuaState.open_libraries( sol::lib::base );
+    RegisterTypesAndFunctionsToLua( g_LuaState );
+
     Random::SetSeed( time( NULL ) );
 
     // window
@@ -62,7 +65,6 @@ bool EngineInitialize( std::string config_name )
     Time::Reset();
     Input::Init();
     ResourceManager::Init();
-    // ECS::init();
     if ( !RenderSystem::Init() )
     {
         LOG_ERR( "Could not initialize the rendering system" );
@@ -76,7 +78,6 @@ void EngineQuit()
 { 
     RenderSystem::Shutdown();
     ResourceManager::Shutdown();
-    // ECS::shutdown();
     Input::Free();
     ShutdownWindowSystem();
     g_Logger.Shutdown();

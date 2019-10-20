@@ -12,7 +12,6 @@
 #include "core/math.hpp"
 #include "core/scene.hpp"
 #include "core/time.hpp"
-#include "core/transform.hpp"
 #include "core/window.hpp"
 
 #include "graphics/graphics_api.hpp"
@@ -29,7 +28,9 @@
 #include "utils/logger.hpp"
 #include "utils/random.hpp"
 
-#include "components/model_renderer_component.hpp"
+#include "components/entity_metadata.hpp"
+#include "components/model_renderer.hpp"
+#include "components/transform.hpp"
 
 namespace PG = Progression;
 

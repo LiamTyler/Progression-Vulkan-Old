@@ -13,7 +13,7 @@ if ( !( x ) )                                                                   
 #define _PG_ASSERT_WITH_MSG( x, msg )                                                                               \
 if ( !( x ) )                                                                                                       \
 {                                                                                                                   \
-    printf( "Failed assertion: (%s) at line %d in file %s: %s\n", #x, __LINE__, __FILE__, msg );                    \
+    printf( "Failed assertion: (%s) at line %d in file %s: %s\n", #x, __LINE__, __FILE__, std::string( msg ).c_str() ); \
     abort();                                                                                                        \
 }
 

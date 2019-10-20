@@ -31,7 +31,7 @@ namespace fileIO {
         std::getline( in, line );
         auto ss = std::istringstream( line );
         ss >> s;
-        PG_ASSERT( s == key, ( "Expecting key '" + std::string( key ) + "' while parsing file" ).c_str() );
+        PG_ASSERT( s == key, "Expecting key '" + std::string( key ) + "' while parsing file" );
         ss >> val;
         PG_ASSERT( !in.fail() && !ss.fail() );
     }
@@ -44,7 +44,7 @@ namespace fileIO {
         std::getline( in, line );
         auto ss = std::istringstream( line );
         ss >> s;
-        PG_ASSERT( s == key, ( "Expecting key '" + std::string( key ) + "' while parsing file" ).c_str() );
+        PG_ASSERT( s == key, "Expecting key '" + std::string( key ) + "' while parsing file" );
         ss >> std::boolalpha >> val;
         PG_ASSERT( !in.fail() && !ss.fail() );
     }
@@ -58,7 +58,7 @@ namespace fileIO {
         std::getline( in, line );
         auto ss = std::istringstream( line );
         ss >> s;
-        PG_ASSERT( s == key, ( "Expecting key '" + std::string( key ) + "' while parsing file" ).c_str() );
+        PG_ASSERT( s == key, "Expecting key '" + std::string( key ) + "' while parsing file" );
         T tmp;
         while ( ss >> tmp )
         {
@@ -77,7 +77,7 @@ namespace fileIO {
         std::getline( in, line );
         auto ss = std::istringstream( line );
         ss >> s;
-        PG_ASSERT( s == key, ( "Expecting key '" + std::string( key ) + "' while parsing file" ).c_str() );
+        PG_ASSERT( s == key, "Expecting key '" + std::string( key ) + "' while parsing file" );
         if ( !ss.eof() )
         {
             ss >> val;
@@ -99,7 +99,7 @@ namespace fileIO {
         std::getline( in, line );
         auto ss = std::istringstream( line );
         ss >> s;
-        PG_ASSERT( s == key, ( "Expecting key '" + std::string( key ) + "' while parsing file" ).c_str() );
+        PG_ASSERT( s == key, "Expecting key '" + std::string( key ) + "' while parsing file" );
         if ( !ss.eof() )
         {
             ss >> std::boolalpha >> val;
@@ -122,7 +122,7 @@ namespace fileIO {
         std::getline( in, line );
         auto ss = std::istringstream( line );
         ss >> s;
-        PG_ASSERT( s == key, ( "Expecting key '" + std::string( key ) + "' while parsing file" ).c_str() );
+        PG_ASSERT( s == key, "Expecting key '" + std::string( key ) + "' while parsing file" );
         ss >> s;
         PG_ASSERT( !in.fail() && !ss.fail() );
         auto it = map.find( s );

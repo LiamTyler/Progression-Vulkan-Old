@@ -52,7 +52,6 @@ set(
     core/math.cpp
     core/scene.cpp
     core/time.cpp
-    core/transform.cpp
     core/window.cpp
 	
 	core/assert.hpp
@@ -70,7 +69,6 @@ set(
     core/platform_defines.hpp
     core/scene.hpp
     core/time.hpp
-    core/transform.hpp
     core/window.hpp
 )
 
@@ -130,11 +128,13 @@ set(
 
 set(
 	UTILS
+	utils/json_parsing.cpp
 	utils/logger.cpp
     utils/random.cpp
     utils/timestamp.cpp
 	
 	utils/fileIO.hpp
+	utils/json_parsing.hpp
     utils/logger.hpp
     utils/noncopyable.hpp
     utils/random.hpp
@@ -144,9 +144,13 @@ set(
 
 set(
 	COMPONENTS
-	components/model_renderer_component.cpp
-	
-	components/model_renderer_component.hpp
+	components/entity_metadata.hpp
+	components/factory.cpp
+	components/factory.hpp
+	components/model_renderer.cpp
+	components/model_renderer.hpp
+	components/transform.cpp
+	components/transform.hpp
 )
 
 set(

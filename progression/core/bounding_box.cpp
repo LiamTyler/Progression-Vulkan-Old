@@ -53,7 +53,7 @@ void AABB::Encompass( const AABB& aabb, const Transform& transform )
                             glm::vec3( -he.x, he.y, he.z ),
                             glm::vec3( -he.x, he.y, -he.z ) };
 
-    glm::mat4 M = transform.getModelMatrix();
+    glm::mat4 M = transform.GetModelMatrix();
     min = max = glm::vec3( M * glm::vec4( points[0], 1 ) );
     for ( int i = 1; i < 8; ++i )
     {

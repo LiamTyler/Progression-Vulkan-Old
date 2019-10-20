@@ -1,14 +1,9 @@
-#include "core/transform.hpp"
+#include "components/transform.hpp"
 
 namespace Progression
 {
 
-Transform::Transform( const glm::vec3& pos, const glm::vec3& rot, const glm::vec3& sc ) :
-  position( pos ), rotation( rot ), scale( sc )
-{
-}
-
-glm::mat4 Transform::getModelMatrix() const
+glm::mat4 Transform::GetModelMatrix() const
 {
     glm::mat4 model( 1 );
     model = glm::translate( model, position );

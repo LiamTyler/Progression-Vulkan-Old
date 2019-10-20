@@ -1,4 +1,4 @@
-#include "components/model_renderer_component.hpp"
+#include "components/model_renderer.hpp"
 #include "resource/material.hpp"
 #include "resource/model.hpp"
 #include "resource/resource_manager.hpp"
@@ -13,7 +13,7 @@ void ParseModelRendererComponentFromFile( std::istream& in, ModelRenderComponent
     std::string tmp;
     fileIO::ParseLineKeyVal( in, "model", tmp );
     comp.model = ResourceManager::Get< Model >( tmp );
-    PG_ASSERT( comp.model, std::string( "No model with name '" + tmp + "'" ).c_str() );
+    PG_ASSERT( comp.model, "No model with name '" + tmp + "'" );
     comp.materials = comp.model->materials;
     int numMaterials;
     fileIO::ParseLineKeyVal( in, "CustomMaterials", numMaterials );

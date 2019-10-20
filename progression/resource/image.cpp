@@ -185,7 +185,7 @@ bool Image::Deserialize( char*& buffer )
     if ( !samplerName.empty() )
     {
         sampler = RenderSystem::GetSampler( samplerName );
-        PG_ASSERT( sampler != nullptr, ( "No sampler found with name '" + samplerName + "' found" ).c_str() );
+        PG_ASSERT( sampler != nullptr, "No sampler found with name '" + samplerName + "' found" );
     }
     else
     {

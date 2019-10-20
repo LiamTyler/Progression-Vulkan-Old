@@ -8,4 +8,11 @@
 
 #include "sol/sol.hpp"
 
-void RegisterTypesAndFunctionsToLua( sol::state& lua );
+namespace Progression
+{
+
+    extern sol::state g_LuaState;
+
+    void RegisterTypesAndFunctionsToLua( sol::state& lua );
+
+} // namespace Progresion

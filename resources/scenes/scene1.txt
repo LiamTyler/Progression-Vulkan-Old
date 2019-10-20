@@ -1,40 +1,56 @@
-Camera
-position 0 0 3
-rotation 0 0 0
-fov 45
-aspect 16:9
-near-plane .1
-far-plane 100
-
-#Resourcefile
-#filename resource.txt.ff
-
-BackgroundColor
-color 0 0 0
-
-#Skybox
-#name water
-
-Light
-name mainLight
-type directional
-enabled true
-color 1 1 1
-intensity 1
-position 0 0 0
-direction 0 0 -1
-radius 0
-innerCutoff 0
-outerCutoff 0
-
-#Entity
-#name chalet
-#parent
-#position 0 -0.5 0
-#rotation -90 90 0
-#scale 1 1 1
-#static false
-#numComponents 1
-#Component ModelRenderer
-#model chalet2
-#CustomMaterials 0
+{
+    "Camera": {
+        "position": [ 0, 0, 3 ],
+        "rotation": [ 0, 0, 0 ],
+        "fov": 45,
+        "aspectRatio": 1.777777777,
+        "nearPlane": 0.1,
+        "farPlane": 100
+    },
+    "BackgroundColor": {
+        "color": [ 0, 0, 0 ]
+    },
+    "AmbientColor": {
+        "color": [ 0, 0, 0 ]
+    },
+    "Light": {
+        "type": "Directional",
+        "colorAndIntensity": [ 0, 1, 1, 1 ],
+        "direction": [ 0, 0, -1 ]
+    },
+    "Entity": {
+        "Transform": {
+            "position": [ 0, 1, 0 ],
+            "rotation": [ 0, 0, 0 ],
+            "scale":    [ 2, 2, 2 ]
+        },
+        "name": "entity1",
+        "EntityMetaData": {
+            "isStatic": true
+        }
+    },
+    "Entity": {
+        "Transform": {
+            "position": [ 0, 2, 0 ],
+            "rotation": [ 0, 0, 0 ],
+            "scale":    [ 2, 2, 2 ]
+        },
+        "name": "entity2",
+        "EntityMetaData": {
+            "parent": "entity1",
+            "isStatic": false
+        }
+    },
+    "Entity": {
+        "Transform": {
+            "position": [ 0, 3, 0 ],
+            "rotation": [ 0, 0, 0 ],
+            "scale":    [ 2, 2, 2 ]
+        },
+        "name": "entity3",
+        "EntityMetaData": {
+            "parent": "entity1",
+            "isStatic": false
+        }
+    }
+}

@@ -1,30 +1,33 @@
 #pragma once
 
-#include "core/math.hpp"
+#include "glm/vec4.hpp"
 
 namespace Progression
 {
 
-    class Light
+    struct Light
     {
-    public:
-        enum Type
-        {
-            POINT = 0,
-            DIRECTIONAL,
-            SPOT
-        };
+        glm::vec4 colorAndIntensity = glm::vec4( 1 ); // x, y, z = color, w = intensity
+    };
 
-        std::string name    = "";
-        Type type           = POINT;
-        glm::vec3 color     = glm::vec3( 1, 1, 1 );
-        glm::vec3 position  = glm::vec3( 0, 0, 0 );
-        glm::vec3 direction = glm::vec3( 0, 0, 0 );
-        float intensity     = 1.0f;
+    struct DirectionalLight : public Light
+    {
+        glm::vec3 direction = glm::vec3( 0, 0, -1 );
+    };
+
+
+    struct PointLight : public Light
+    {
+        glm::vec3 position = glm::vec3( 0 );
+        float radius       = 10.0f;
+    };
+
+    struct SpotLight : public Light
+    {
+        glm::vec3 position  = glm::vec3( 0 );
         float radius        = 10.0f;
-        float innerCutoff   = glm::radians( 10.0f );
-        float outerCutoff   = glm::radians( 20.0f );
-        bool enabled        = true;
+        glm::vec3 direction = glm::vec3( 0, 0, -1 );
+        float cutoff        = glm::radians( 10.0f );
     };
 
 } // namespace Progression
