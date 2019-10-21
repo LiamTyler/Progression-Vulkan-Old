@@ -40,7 +40,6 @@ bool EngineInitialize( std::string config_name )
         g_Logger.Init( filename, colors );
     }
 
-	g_LuaState.open_libraries( sol::lib::base );
     RegisterTypesAndFunctionsToLua( g_LuaState );
 
     Random::SetSeed( time( NULL ) );

@@ -1,8 +1,12 @@
-function f( p )
-    p.x = p.x + 10;
+test = 5
+
+function update()
+    if entity == 0 then
+        test = 1
+    end
+    --v = vec3.new( 0, 1, 3)
+    --print( Time.dt )
+    --print( v )
+    print( entity, test )
 end
 
-reg:view_Position( reg ):each( f )
-
-v = vec3.new( 0, 1, 3)
-print( v )

@@ -7,7 +7,7 @@
 
 rapidjson::Document ParseJSONFile( const std::string& filename )
 {
-    FILE* fp = fopen( filename.c_str(), "r" );
+    FILE* fp = fopen( filename.c_str(), "rb" );
     if ( fp == NULL )
     {
         LOG_ERR( "Could not open json file '", filename, "'" );

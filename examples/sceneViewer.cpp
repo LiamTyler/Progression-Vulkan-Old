@@ -78,6 +78,27 @@ int main( int argc, char* argv[] )
         LOG( "\tmeta.isStatic = ", m.isStatic );
     });
 
+    ScriptCreateInfo info;
+    info.name = "updater";
+    info.filename = PG_ROOT_DIR "script.lua";
+
+    std::shared_ptr< Script > script = std::make_shared< Script >();
+    script->Load( &info );
+
+    std::shared_ptr< Script > script2 = std::make_shared< Script >();
+    info.name = "single";
+    info.filename = PG_ROOT_DIR "script2.lua";
+    //script2->Load( &info );
+
+    entt::entity e = GetEntityByName( scene->registry, "entity1" );
+    auto& comp = scene->registry.assign< ScriptComponent >( e );
+    comp.AddScript( script );
+
+    e = GetEntityByName( scene->registry, "entity2" );
+    auto& comp2 = scene->registry.assign< ScriptComponent >( e );
+    comp2.AddScript( script );
+    //comp2.AddScript( script2 );
+
 
     PG::Input::PollEvents();
 
@@ -92,9 +113,10 @@ int main( int argc, char* argv[] )
             PG::g_engineShutdown = true;
         }
 
+        scene->Update();
         // RenderSystem::Render( scene );
 
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
         window->EndFrame();
     }

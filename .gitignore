@@ -1,4 +1,5 @@
 build/
+build19/
 build_debug/
 build_ship/
 *.swp

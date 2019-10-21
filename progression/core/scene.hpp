@@ -15,6 +15,8 @@ namespace Progression
 
         static Scene* Load( const std::string& filename );
 
+        void Update();
+
         Camera camera;
         glm::vec3 backgroundColor = glm::vec3( 0, 0, 0 );
         glm::vec3 ambientColor    = glm::vec3( 0, 0, 0 );

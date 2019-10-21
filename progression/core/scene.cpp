@@ -1,6 +1,9 @@
 #include "core/scene.hpp"
 #include "core/assert.hpp"
+#include "core/lua.hpp"
+#include "core/time.hpp"
 #include "components/factory.hpp"
+#include "components/script_component.hpp"
 #include "graphics/lights.hpp"
 #include "resource/image.hpp"
 #include "resource/resource_manager.hpp"
@@ -127,6 +130,20 @@ Scene* Scene::Load( const std::string& filename )
     mapping.ForEachMember( document, std::move( scene ) );
 
     return scene;
+}
+
+void Scene::Update()
+{
+    auto luaTimeNamespace = g_LuaState["Time"].get_or_create< sol::table >();
+    luaTimeNamespace["dt"] = Time::DeltaTime();
+    registry.view< ScriptComponent >().each([]( const entt::entity e, ScriptComponent& comp )
+    {
+        for ( int i = 0; i < comp.numScripts; ++i )
+        {
+            comp.scripts[i].env["entity"] = e;
+            comp.scripts[i].env["update"]();
+        }
+    });
 }
 
 } // namespace Progression

@@ -131,23 +131,20 @@ namespace Progression
 
         size_t numDescriptorSets;
         serialize::Read( buffer, numDescriptorSets );
-        LOG( "num descs: ", numDescriptorSets );
+        // LOG( "num descs: ", numDescriptorSets );
         reflectInfo.descriptorSetLayouts.resize( numDescriptorSets );
         for ( size_t i = 0; i < numDescriptorSets; ++i )
         {
             serialize::Read( buffer, reflectInfo.descriptorSetLayouts[i].setNumber );
             serialize::Read( buffer, reflectInfo.descriptorSetLayouts[i].createInfo );
-            std::string t;
-            serialize::Read( buffer, t );
-            LOG( t );
             serialize::Read( buffer, reflectInfo.descriptorSetLayouts[i].bindings );
 
-            for ( size_t b = 0; b < reflectInfo.descriptorSetLayouts[i].bindings.size(); ++b )
+            /*for ( size_t b = 0; b < reflectInfo.descriptorSetLayouts[i].bindings.size(); ++b )
             {
                 LOG( "reflectInfo[", i, "].bindings[", b, "].binding = ", reflectInfo.descriptorSetLayouts[i].bindings[b].binding );
                 LOG( "reflectInfo[", i, "].bindings[", b, "].type= ", reflectInfo.descriptorSetLayouts[i].bindings[b].descriptorType );
             }
-            LOG( "" );
+            LOG( "" );*/
 
             reflectInfo.descriptorSetLayouts[i].createInfo.pBindings = reflectInfo.descriptorSetLayouts[i].bindings.data();
         }

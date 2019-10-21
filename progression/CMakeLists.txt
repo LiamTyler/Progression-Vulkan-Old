@@ -79,6 +79,7 @@ set(
     resource/mesh.cpp
     resource/model.cpp
     resource/resource_manager.cpp
+    resource/script.cpp
     resource/shader.cpp
 	
 	resource/resource_manager.hpp
@@ -87,6 +88,7 @@ set(
     resource/material.hpp
     resource/mesh.hpp
     resource/model.hpp
+    resource/script.hpp
     resource/shader.hpp
 )
 
@@ -149,6 +151,8 @@ set(
 	components/factory.hpp
 	components/model_renderer.cpp
 	components/model_renderer.hpp
+	components/script_component.cpp
+    components/script_component.hpp
 	components/transform.cpp
 	components/transform.hpp
 )
@@ -183,6 +187,10 @@ ENDFOREACH(f)
 set(ALL_FILES ${listVar})
 
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${ALL_FILES})
+
+if(MSVC)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+endif()
 
 add_library(progression STATIC ${ALL_FILES})
 

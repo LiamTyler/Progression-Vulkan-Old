@@ -24,12 +24,14 @@
 #include "resource/mesh.hpp"
 #include "resource/model.hpp"
 #include "resource/resource_manager.hpp"
+#include "resource/script.hpp"
 #include "resource/shader.hpp"
 #include "utils/logger.hpp"
 #include "utils/random.hpp"
 
 #include "components/entity_metadata.hpp"
 #include "components/model_renderer.hpp"
+#include "components/script_component.hpp"
 #include "components/transform.hpp"
 
 namespace PG = Progression;
