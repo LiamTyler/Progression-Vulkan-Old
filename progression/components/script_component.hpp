@@ -11,6 +11,7 @@ struct ScriptData
 {
     std::shared_ptr< Script > script;
     sol::environment env;
+    std::pair< bool, sol::function > updateFunc;
 };
 
 class ScriptComponent
@@ -24,8 +25,12 @@ public:
 
     void RemoveScript( const std::shared_ptr< Script >& script );
 
-    int numScripts = 0;
-    std::array< ScriptData, MAX_SCRIPTS_PER_COMPONENT > scripts;
+    sol::function GetFunction( const std::string& scriptName, const std::string& functionName ) const;
+
+    int numScripts           = 0;
+    int numScriptsWithUpdate = 0;
+    // std::array< ScriptData, MAX_SCRIPTS_PER_COMPONENT > scripts;
+    ScriptData scripts[MAX_SCRIPTS_PER_COMPONENT];
 };
 
 } // namespace Progression

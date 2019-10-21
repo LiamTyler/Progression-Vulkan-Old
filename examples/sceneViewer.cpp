@@ -20,6 +20,7 @@ int main( int argc, char* argv[] )
     Window* window = GetMainWindow();
     // window->setRelativeMouse(true);
     
+    /*
     Scene* scene = Scene::Load( argv[1] );
     if ( !scene )
     {
@@ -77,6 +78,7 @@ int main( int argc, char* argv[] )
         LOG( "\tmeta.parent   = ", (uint32_t) m.parent );
         LOG( "\tmeta.isStatic = ", m.isStatic );
     });
+    */
 
     ScriptCreateInfo info;
     info.name = "updater";
@@ -88,15 +90,21 @@ int main( int argc, char* argv[] )
     std::shared_ptr< Script > script2 = std::make_shared< Script >();
     info.name = "single";
     info.filename = PG_ROOT_DIR "script2.lua";
-    //script2->Load( &info );
+    // script2->Load( &info );
 
-    entt::entity e = GetEntityByName( scene->registry, "entity1" );
-    auto& comp = scene->registry.assign< ScriptComponent >( e );
+    // entt::entity e = GetEntityByName( scene->registry, "entity1" );
+    entt::registry reg;
+    entt::entity e = reg.create();
+    // auto& comp = reg.assign< ScriptComponent >( e );
+    ScriptComponent comp;
+    comp.AddScript( script2 );
+    LOG( "ASDASDASDA" );
     comp.AddScript( script );
+    LOG( "ASDASDASDA" );
 
-    e = GetEntityByName( scene->registry, "entity2" );
-    auto& comp2 = scene->registry.assign< ScriptComponent >( e );
-    comp2.AddScript( script );
+    // e = GetEntityByName( scene->registry, "entity2" );
+    // auto& comp2 = scene->registry.assign< ScriptComponent >( e );
+    // comp2.AddScript( script );
     //comp2.AddScript( script2 );
 
 
@@ -113,15 +121,15 @@ int main( int argc, char* argv[] )
             PG::g_engineShutdown = true;
         }
 
-        scene->Update();
+        // scene->Update();
         // RenderSystem::Render( scene );
 
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
 
         window->EndFrame();
     }
 
-    delete scene;
+    // delete scene;
 
     PG::EngineQuit();
 

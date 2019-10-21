@@ -12,7 +12,8 @@ bool Script::Load( ResourceCreateInfo* createInfo )
     PG_ASSERT( createInfo );
     ScriptCreateInfo* info = static_cast< ScriptCreateInfo* >( createInfo );
     name       = info->name;
-    std::ifstream in( info->filename, std::ios::binary );
+    // std::ifstream in( info->filename, std::ios::binary );
+    std::ifstream in( info->filename );
     if ( !in )
     {
         LOG_ERR( "Could not open script file '", info->filename, "'" );
@@ -22,7 +23,7 @@ bool Script::Load( ResourceCreateInfo* createInfo )
     in.seekg( 0, std::ios::end );
     size_t size = in.tellg();
     scriptText.resize( size );
-    in.seekg(0);
+    in.seekg( 0 );
     in.read( &scriptText[0], size ); 
 
     return true;

@@ -138,7 +138,7 @@ void Scene::Update()
     luaTimeNamespace["dt"] = Time::DeltaTime();
     registry.view< ScriptComponent >().each([]( const entt::entity e, ScriptComponent& comp )
     {
-        for ( int i = 0; i < comp.numScripts; ++i )
+        for ( int i = 0; i < comp.numScriptsWithUpdate; ++i )
         {
             comp.scripts[i].env["entity"] = e;
             comp.scripts[i].env["update"]();

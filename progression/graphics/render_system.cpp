@@ -294,11 +294,19 @@ namespace RenderSystem
         if ( !g_converterMode )
         {
             s_descriptorPool.Free();
+            for ( auto& b : s_gpuPerSceneConstantBuffers )
+            {
+                b.Free();
+            }
+            for ( auto& b : s_gpuMaterialConstantBuffers )
+            {
+                b.Free();
+            }
+            for ( auto& b : s_gpuPerObjectConstantBuffers )
+            {
+                b.Free();
+            }
             // vkDestroyDescriptorSetLayout( g_renderState.device.GetHandle(), descriptorSetLayout, nullptr );
-            // for ( auto& ubo : ubos )
-            // {
-            //     ubo.Free();
-            // }
             s_pipeline.Free();
         }
 
