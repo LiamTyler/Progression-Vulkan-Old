@@ -1,7 +1,7 @@
 #pragma once
 
 #include "resource/script.hpp"
-#include "sol/sol.hpp"
+#include "core/lua.hpp"
 #include <array>
 
 namespace Progression

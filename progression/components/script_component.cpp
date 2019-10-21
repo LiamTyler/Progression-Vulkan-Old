@@ -1,7 +1,5 @@
 #include "components/script_component.hpp"
 #include "core/assert.hpp"
-#include "core/lua.hpp"
-#include "sol/sol.hpp"
 #include <array>
 #include "utils/logger.hpp"
 
@@ -20,23 +18,24 @@ bool ScriptComponent::AddScript( const std::shared_ptr< Script >& script )
         s.updateFunc.second = s.env["update"];
         s.updateFunc.first  = s.updateFunc.second.valid();
         // LOG( "numScripts: ", numScripts, ", numScriptsWithUpdate: ", numScriptsWithUpdate );
-        // if ( s.updateFunc.first )
-        // {
-        //     if ( numScripts != numScriptsWithUpdate )
-        //     {
-        //         LOG( "numScripts: ", numScripts, ", numScriptsWithUpdate: ", numScriptsWithUpdate );
-        //         LOG( "yes" );
-        //         std::shared_ptr< Script > ptr = scripts[numScripts].script;
-        //         sol::environment env = scripts[numScripts].env;
-        //         std::pair< bool, sol::function > updateFunc = scripts[numScripts].updateFunc;
-        //         ScriptData tmp = scripts[numScripts];
-        //         // scripts[numScripts] = scripts[numScriptsWithUpdate];
-        //         // scripts[numScriptsWithUpdate] = tmp;
-        //         // std::swap( scripts[numScripts], scripts[numScriptsWithUpdate] );
-        //         LOG( "ah" );
-        //     }
-        //     ++numScriptsWithUpdate;
-        // }
+        if ( s.updateFunc.first )
+        {
+            if ( numScripts != numScriptsWithUpdate )
+            {
+                LOG( "numScripts: ", numScripts, ", numScriptsWithUpdate: ", numScriptsWithUpdate );
+                LOG( "yes" );
+                /*std::shared_ptr< Script > ptr = scripts[numScripts].script;
+                sol::environment env = scripts[numScripts].env;
+                std::pair< bool, sol::function > updateFunc = scripts[numScripts].updateFunc;
+                ScriptData tmp = scripts[numScripts];
+                scripts[numScripts] = scripts[numScriptsWithUpdate];
+                scripts[numScriptsWithUpdate] = tmp;
+                */
+                std::swap( scripts[numScripts], scripts[numScriptsWithUpdate] );
+                LOG( "ah" );
+            }
+            ++numScriptsWithUpdate;
+        }
         ++numScripts;
         return true;
     }

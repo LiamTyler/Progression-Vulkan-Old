@@ -12,8 +12,7 @@ bool Script::Load( ResourceCreateInfo* createInfo )
     PG_ASSERT( createInfo );
     ScriptCreateInfo* info = static_cast< ScriptCreateInfo* >( createInfo );
     name       = info->name;
-    // std::ifstream in( info->filename, std::ios::binary );
-    std::ifstream in( info->filename );
+    std::ifstream in( info->filename, std::ios::binary );
     if ( !in )
     {
         LOG_ERR( "Could not open script file '", info->filename, "'" );
