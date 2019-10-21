@@ -7,6 +7,7 @@
 #include "resource/material.hpp"
 #include "resource/model.hpp"
 #include "resource/resource_manager.hpp"
+#include "resource/script.hpp"
 #include "resource/shader.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
@@ -119,6 +120,7 @@ namespace ResourceManager
         LOAD_RESOURCES( Image );
         LOAD_RESOURCES( Material );
         LOAD_RESOURCES( Model );
+        LOAD_RESOURCES( Script );
 
         PG_MAYBE_UNUSED( start );
         LOG( "Loaded fastfile '", fname, "' in: ", Time::GetDuration( start ), " ms." );

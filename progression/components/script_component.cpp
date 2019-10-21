@@ -15,24 +15,13 @@ bool ScriptComponent::AddScript( const std::shared_ptr< Script >& script )
         s.script = script;
         s.env    = sol::environment( g_LuaState, sol::create, g_LuaState.globals() );
         g_LuaState.script( script->scriptText, s.env );
-        s.updateFunc.second = s.env["update"];
+        s.updateFunc.second = s.env["Update"];
         s.updateFunc.first  = s.updateFunc.second.valid();
-        // LOG( "numScripts: ", numScripts, ", numScriptsWithUpdate: ", numScriptsWithUpdate );
         if ( s.updateFunc.first )
         {
             if ( numScripts != numScriptsWithUpdate )
             {
-                LOG( "numScripts: ", numScripts, ", numScriptsWithUpdate: ", numScriptsWithUpdate );
-                LOG( "yes" );
-                /*std::shared_ptr< Script > ptr = scripts[numScripts].script;
-                sol::environment env = scripts[numScripts].env;
-                std::pair< bool, sol::function > updateFunc = scripts[numScripts].updateFunc;
-                ScriptData tmp = scripts[numScripts];
-                scripts[numScripts] = scripts[numScriptsWithUpdate];
-                scripts[numScriptsWithUpdate] = tmp;
-                */
                 std::swap( scripts[numScripts], scripts[numScriptsWithUpdate] );
-                LOG( "ah" );
             }
             ++numScriptsWithUpdate;
         }
@@ -79,7 +68,9 @@ sol::function ScriptComponent::GetFunction( const std::string& scriptName, const
         }
     }
     PG_ASSERT( scriptIndex != -1, "No script found on this component with name '" + scriptName + "'" );
-    return scripts[scriptIndex].env[scriptName];
+    sol::function ret = scripts[scriptIndex].env[functionName];
+    PG_ASSERT( ret.valid(), "No function '" + functionName + "' found in script '" + scriptName + "'" );
+    return ret;
 }
 
 } // namespace Progression

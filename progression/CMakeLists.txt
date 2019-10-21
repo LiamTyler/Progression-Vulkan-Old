@@ -95,18 +95,20 @@ set(
 set(
 	RESOURCE_CONVERTERS
     resource/converters/converter.cpp
+    resource/converters/fastfile_converter.cpp
+    resource/converters/image_converter.cpp
     resource/converters/material_converter.cpp
     resource/converters/model_converter.cpp
+    resource/converters/script_converter.cpp
     resource/converters/shader_converter.cpp
-    resource/converters/image_converter.cpp
-    resource/converters/fastfile_converter.cpp
 	
 	resource/converters/converter.hpp
+    resource/converters/fastfile_converter.hpp
+    resource/converters/image_converter.hpp
     resource/converters/material_converter.hpp
     resource/converters/model_converter.hpp
+    resource/converters/script_converter.hpp
     resource/converters/shader_converter.hpp
-    resource/converters/image_converter.hpp
-    resource/converters/fastfile_converter.hpp
 )	
 
 set(

@@ -24,9 +24,12 @@
             "rotation": [ 0, 0, 0 ],
             "scale":    [ 2, 2, 2 ]
         },
-        "name": "entity1",
+        "NameComponent": "entity1",
         "EntityMetaData": {
             "isStatic": true
+        },
+        "ScriptComponent": {
+            "script": "updater"
         }
     },
     "Entity": {
@@ -35,10 +38,14 @@
             "rotation": [ 0, 0, 0 ],
             "scale":    [ 2, 2, 2 ]
         },
-        "name": "entity2",
+        "NameComponent": "entity2",
         "EntityMetaData": {
             "parent": "entity1",
             "isStatic": false
+        },
+        "ScriptComponent": {
+            "script": "single",
+            "script": "updater"
         }
     },
     "Entity": {
@@ -47,7 +54,7 @@
             "rotation": [ 0, 0, 0 ],
             "scale":    [ 2, 2, 2 ]
         },
-        "name": "entity3",
+        "NameComponent": "entity3",
         "EntityMetaData": {
             "parent": "entity1",
             "isStatic": false

@@ -9,7 +9,9 @@ namespace Progression
     {
         sol::state_view lua( L );
         sol::usertype< entt::registry > reg_type = lua.new_usertype< entt::registry >( "registry" );
-        reg_type.set_function( "create", (entt::entity(entt::registry::*)() )&entt::registry::create );
+        reg_type.set_function( "create", static_cast< entt::entity( entt::registry::* )() >( &entt::registry::create ) );
+        reg_type.set_function( "destroy", static_cast< void( entt::registry::* )( entt::entity ) >( &entt::registry::destroy ) );
+        lua.set_function( "GetEntityByName", &GetEntityByName );
     }
 
     entt::entity GetEntityByName( entt::registry& registry, const std::string& name )

@@ -15,6 +15,7 @@ namespace Progression
 
         static Scene* Load( const std::string& filename );
 
+        void Start();
         void Update();
 
         Camera camera;

@@ -6,6 +6,14 @@ Shader
 name simpleFrag
 filename simple.frag
 
+Script
+name updater
+filename scripts/script1.lua
+
+Script
+name single
+filename scripts/script2.lua
+
 Image
 name chaletTex
 filenames textures/chalet.jpg

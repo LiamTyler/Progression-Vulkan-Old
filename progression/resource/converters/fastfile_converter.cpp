@@ -159,6 +159,14 @@ bool ParseModelFromFile( std::istream& in, ModelCreateInfo& createInfo )
     return true;
 }
 
+bool ParseScriptFileFromFile( std::istream& in, ScriptCreateInfo& createInfo )
+{
+    fileIO::ParseLineKeyVal( in, "name", createInfo.name );
+    fileIO::ParseLineKeyVal( in, "filename", createInfo.filename );
+    createInfo.filename = PG_RESOURCE_DIR + createInfo.filename;
+    return true;
+}
+
 AssetStatus FastfileConverter::CheckDependencies()
 {
     IF_VERBOSE_MODE( LOG( "Checking dependencies for fastfile '", inputFile, "'" ) );
@@ -285,6 +293,23 @@ AssetStatus FastfileConverter::CheckDependencies()
 
             m_modelConverters.emplace_back( std::move( converter ) );
         }
+        else if ( line == "Script")
+        {
+            ScriptConverter converter;
+            converter.force   = force;
+            converter.verbose = verbose;
+            ParseScriptFileFromFile( in, converter.createInfo );
+
+            auto status = converter.CheckDependencies();
+            if ( status == ASSET_CHECKING_ERROR )
+            {
+                LOG_ERR( "Error while checking dependencies on script file '", converter.createInfo.filename, "'" );
+                return ASSET_CHECKING_ERROR;
+            }
+            UpdateStatus( status );
+
+            m_scriptConverters.emplace_back( std::move( converter ) );
+        }
         else
         {
             LOG_WARN( "Unrecognized line: ", line );
@@ -348,6 +373,7 @@ ConverterStatus FastfileConverter::Convert()
     WRITE_RESOURCE( Image, m_imageConverters )
     WRITE_RESOURCE( MTLFile, m_materialFileConverters )
     WRITE_RESOURCE( Model, m_modelConverters )
+    WRITE_RESOURCE( Script, m_scriptConverters )
 
     out.close();
 

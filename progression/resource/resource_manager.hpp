@@ -36,6 +36,7 @@ enum ResourceTypes
     IMAGE,
     MATERIAL,
     MODEL,
+    SCRIPT,
     TOTAL_RESOURCE_TYPES
 };
 

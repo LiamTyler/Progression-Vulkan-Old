@@ -7,6 +7,22 @@
 #endif // #if USING( DEBUG_BUILD )
 
 #include "sol/sol.hpp"
+#include "utils/logger.hpp"
+
+#if USING( DEBUG_BUILD )
+#define CHECK_SOL_FUNCTION_CALL( statement ) \
+    { \
+        sol::function_result res = statement; \
+        if ( !res.valid() ) \
+        { \
+            sol::error err = res; \
+		    std::string what = err.what(); \
+            LOG_ERR( "Sol function failed with error: '", what, "'" ); \
+        } \
+    }    
+#else // #if USING( DEBUG_BUILD )
+    #define CHECK_SOL_FUNCTION_CALL( statement ) statement
+#endif // #if USING( DEBUG_BUILD )
 
 namespace Progression
 {

@@ -3,7 +3,6 @@
 #include "core/ecs.hpp"
 #include "utils/json_parsing.hpp"
 #include <string>
-#include <iostream>
 
 namespace Progression
 {

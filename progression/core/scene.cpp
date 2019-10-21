@@ -132,16 +132,34 @@ Scene* Scene::Load( const std::string& filename )
     return scene;
 }
 
+void Scene::Start()
+{
+    g_LuaState["registry"] = &registry;
+    registry.view< ScriptComponent >().each([]( const entt::entity e, ScriptComponent& comp )
+    {
+        for ( int i = 0; i < comp.numScripts; ++i )
+        {
+            auto startFn = comp.scripts[i].env["Start"];
+            if ( startFn.valid() )
+            {
+                comp.scripts[i].env["entity"] = e;
+                CHECK_SOL_FUNCTION_CALL( startFn() );
+            }
+        }
+    });
+}
+
 void Scene::Update()
 {
     auto luaTimeNamespace = g_LuaState["Time"].get_or_create< sol::table >();
     luaTimeNamespace["dt"] = Time::DeltaTime();
+    g_LuaState["registry"] = &registry;
     registry.view< ScriptComponent >().each([]( const entt::entity e, ScriptComponent& comp )
     {
         for ( int i = 0; i < comp.numScriptsWithUpdate; ++i )
         {
             comp.scripts[i].env["entity"] = e;
-            comp.scripts[i].env["update"]();
+            CHECK_SOL_FUNCTION_CALL( comp.scripts[i].updateFunc.second() );
         }
     });
 }
