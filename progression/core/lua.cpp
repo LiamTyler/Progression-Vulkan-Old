@@ -22,11 +22,13 @@ namespace Progression
 
         sol::usertype< ScriptComponent > scriptComponent_type = lua.new_usertype< ScriptComponent >( "ScriptComponent" );
         scriptComponent_type["GetFunction"] = &ScriptComponent::GetFunction;
-        REGISTER_COMPONENT_WITH_ECS( lua, ScriptComponent, &entt::registry::assign< ScriptComponent > );
+        REGISTER_COMPONENT_WITH_ECS( lua, ScriptComponent,
+            static_cast< ScriptComponent&( entt::registry::* )( const entt::entity ) >( &entt::registry::assign< ScriptComponent > ) );
 
         sol::usertype< NameComponent > nameComponent_type = lua.new_usertype< NameComponent >( "NameComponent" );
         nameComponent_type["name"] = &NameComponent::name;
-        REGISTER_COMPONENT_WITH_ECS( lua, NameComponent, &entt::registry::assign< NameComponent > );
+        REGISTER_COMPONENT_WITH_ECS( lua, NameComponent,
+            static_cast< NameComponent&( entt::registry::* )( const entt::entity )> ( &entt::registry::assign< NameComponent > ) );
     }
 
 } // namespace Progression
