@@ -165,11 +165,12 @@ namespace RenderSystem
         std::vector< DescriptorSetLayoutData > descriptorSetData = simpleVert->reflectInfo.descriptorSetLayouts;
         descriptorSetData.insert( descriptorSetData.end(), simpleFrag->reflectInfo.descriptorSetLayouts.begin(), simpleFrag->reflectInfo.descriptorSetLayouts.end() );
         auto combined = CombineDescriptorSetLayouts( descriptorSetData );
-        //combined.push_back( combined[1] );
-        //combined[1].createInfo.bindingCount = 0;
-        //combined[1].createInfo.pBindings    = nullptr;
 
-       s_descriptorSetLayouts.resize( combined.size() );
+        s_descriptorSetLayouts.resize( combined.size() + 3 );
+        VkDescriptorSetLayoutCreateInfo emptyInfo = {};
+        emptyInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        emptyInfo.bindingCount = 0;
+        emptyInfo.pBindings    = nullptr;
 
         VkResult ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(),
                 &combined[0].createInfo, nullptr, &s_descriptorSetLayouts[0] );
@@ -178,14 +179,23 @@ namespace RenderSystem
                 &combined[1].createInfo, nullptr, &s_descriptorSetLayouts[1] );
         PG_ASSERT( ret == VK_SUCCESS );
         ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(),
-                &combined[2].createInfo, nullptr, &s_descriptorSetLayouts[2] );
+                &emptyInfo, nullptr, &s_descriptorSetLayouts[2] );
+        PG_ASSERT( ret == VK_SUCCESS );
+        ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(),
+                &emptyInfo, nullptr, &s_descriptorSetLayouts[3] );
+        PG_ASSERT( ret == VK_SUCCESS );
+        ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(),
+                &emptyInfo, nullptr, &s_descriptorSetLayouts[4] );
+        PG_ASSERT( ret == VK_SUCCESS );
+        ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(),
+                &combined[2].createInfo, nullptr, &s_descriptorSetLayouts[5] );
         PG_ASSERT( ret == VK_SUCCESS );
 
         std::vector< VkDescriptorSetLayout > layouts( numImages, s_descriptorSetLayouts[0] );
         std::vector< DescriptorSet > perSceneDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, layouts.data() );
         layouts = std::vector< VkDescriptorSetLayout >( numImages, s_descriptorSetLayouts[1] );
         std::vector< DescriptorSet > materialDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, layouts.data() );
-        layouts = std::vector< VkDescriptorSetLayout >( numImages, s_descriptorSetLayouts[2] );
+        layouts = std::vector< VkDescriptorSetLayout >( numImages, s_descriptorSetLayouts[5] );
         std::vector< DescriptorSet > perObjectDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, layouts.data() );
 
         for ( size_t i = 0; i < numImages; i++ )
@@ -265,7 +275,7 @@ namespace RenderSystem
             // cmdBuf.BindDescriptorSets( 1, &pgDescriptorSets[i], s_pipeline );
             cmdBuf.BindDescriptorSets( 1, &perSceneDescriptorSets[i], s_pipeline );
             cmdBuf.BindDescriptorSets( 1, &materialDescriptorSets[i], s_pipeline, 1 );
-            cmdBuf.BindDescriptorSets( 1, &perObjectDescriptorSets[i], s_pipeline, 2 );
+            cmdBuf.BindDescriptorSets( 1, &perObjectDescriptorSets[i], s_pipeline, 5 );
 
             cmdBuf.BindVertexBuffer( model->meshes[0].vertexBuffer, 0, 0 );
             cmdBuf.BindVertexBuffer( model->meshes[0].vertexBuffer, model->meshes[0].GetNormalOffset(), 1 );

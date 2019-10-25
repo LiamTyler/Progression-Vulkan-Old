@@ -1,10 +1,10 @@
 Shader
 name simpleVert
-filename simple.vert
+filename shaders/simple.vert
 
 Shader
 name simpleFrag
-filename simple.frag
+filename shaders/simple.frag
 
 Script
 name updater

@@ -9,7 +9,7 @@ layout( location = 0 ) out vec3 posInWorldSpace;
 layout( location = 1 ) out vec3 normalInWorldSpace;
 layout( location = 2 ) out vec2 texCoord;
 
-layout( set = 2, binding = 0 ) uniform PerObjectConstantBuffer
+layout( set = 5, binding = 0 ) uniform PerObjectConstantBuffer
 {
     mat4 modelMatrix;
     mat4 normalMatrix;

@@ -663,6 +663,7 @@ bool VulkanInit()
         // uint32_t patch = VK_VERSION_PATCH( deviceProperties.apiVersion );
         // LOG( "Using Vulkan Version: ", major, ".", minor, ".", patch );
     }
+    LOG( "LIMITS maxPerStageDescriptorSampledImages: ", g_renderState.physicalDeviceInfo.deviceProperties.limits.maxPerStageDescriptorSampledImages );
 
     g_renderState.device = Device::CreateDefault();
     if ( !g_renderState.device )

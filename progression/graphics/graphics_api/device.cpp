@@ -353,10 +353,18 @@ namespace Gfx
         // pipeline layout where you specify uniforms (none currently)
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
         pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        VkDescriptorSetLayout layouts[6];
+        for ( int i = 0; i < 6; ++i )
+        {
+            layouts[i] = VK_NULL_HANDLE;
+        }
+        layouts[0] = s_descriptorSetLayouts[0];
+        layouts[1] = s_descriptorSetLayouts[1];
+        layouts[5] = s_descriptorSetLayouts[2];
         pipelineLayoutInfo.setLayoutCount         = static_cast< uint32_t >( s_descriptorSetLayouts.size() );
         pipelineLayoutInfo.pSetLayouts            = s_descriptorSetLayouts.data();
-        // pipelineLayoutInfo.setLayoutCount         = 1;
-        // pipelineLayoutInfo.pSetLayouts            = &descriptorSetLayout;
+        //pipelineLayoutInfo.setLayoutCount         = 6;
+        //pipelineLayoutInfo.pSetLayouts            = layouts;
         pipelineLayoutInfo.pushConstantRangeCount = 0;
         pipelineLayoutInfo.pPushConstantRanges    = nullptr;
 

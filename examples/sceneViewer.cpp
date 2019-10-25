@@ -94,7 +94,7 @@ int main( int argc, char* argv[] )
         }
 
         scene->Update();
-        // RenderSystem::Render( scene );
+        RenderSystem::Render( scene );
 
         std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
 
