@@ -1,6 +1,7 @@
 #pragma once
 
 #include "graphics/graphics_api/render_pass.hpp"
+#include "graphics/graphics_api/descriptor.hpp"
 #include "graphics/graphics_api/vertex_descriptor.hpp"
 #include <vulkan/vulkan.hpp>
 
@@ -154,6 +155,7 @@ namespace Gfx
         Viewport viewport;
         Scissor scissor;
         RenderPass* renderPass;
+        std::vector< DescriptorSetLayout > descriptorSetLayouts;
         RasterizerInfo rasterizerInfo;
         PrimitiveType primitiveType = PrimitiveType::TRIANGLES;
         PipelineDepthInfo depthInfo;

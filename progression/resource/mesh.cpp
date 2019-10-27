@@ -243,7 +243,7 @@ bool Mesh::Deserialize( char*& buffer, bool createGpuCopy, bool freeCpuCopy )
         serialize::Read( buffer, m_indexType );
         serialize::Read( buffer, buffSize );
         m_numIndices = static_cast< uint32_t >( buffSize );
-        indexBuffer  = Gfx::g_renderState.device.NewBuffer( totalIndexBytes,  buffer, BUFFER_TYPE_INDEX,  MEMORY_TYPE_DEVICE_LOCAL );
+        indexBuffer  = Gfx::g_renderState.device.NewBuffer( totalIndexBytes, buffer, BUFFER_TYPE_INDEX, MEMORY_TYPE_DEVICE_LOCAL );
         if ( !freeCpuCopy )
         {
             indices.resize( m_numIndices );

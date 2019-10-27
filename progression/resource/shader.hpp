@@ -28,15 +28,6 @@ struct ShaderCreateInfo : public ResourceCreateInfo
     std::string filename;
 };
 
-struct DescriptorSetLayoutData
-{
-    uint32_t setNumber;
-    VkDescriptorSetLayoutCreateInfo createInfo;
-    std::vector< VkDescriptorSetLayoutBinding > bindings;
-};
-
-std::vector< DescriptorSetLayoutData > CombineDescriptorSetLayouts( std::vector< DescriptorSetLayoutData >& layoutDatas );
-
 class ShaderReflectInfo
 {
 public:
@@ -46,7 +37,7 @@ public:
     Gfx::ShaderStage stage;
     std::unordered_map< std::string, uint32_t > inputLocations;
     std::unordered_map< std::string, uint32_t > outputLocations;
-    std::vector< DescriptorSetLayoutData > descriptorSetLayouts;
+    std::vector< Gfx::DescriptorSetLayoutData > descriptorSetLayouts;
 };
 
 class Shader : public Resource

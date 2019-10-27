@@ -37,26 +37,6 @@ inline void Write( std::ofstream& out, const std::vector< T >& vec )
         out.write( (char*)&vec[0], len * sizeof( T ) );
 }
 
-/*
-template < >
-inline void Write( std::ofstream& out, const std::vector< VkDescriptorSetLayoutBinding >& vec )
-{
-    size_t len = vec.size();
-    serialize::Write( out, len );
-    std::cout << "len: " << len << std::endl;
-    for ( size_t i = 0; i < len; ++i )
-    {
-        std::cout << "binding: " << vec[i].binding << std::endl;
-        std::cout << "desc type : " << vec[i].descriptorType << std::endl;
-        out.write( (char*)&vec[i].binding, sizeof( uint32_t ) );
-        uint32_t 
-        out.write( (char*)&vec[i].descriptorType, sizeof( VkDescriptorType ) );
-        // out.write( (char*)&vec[i].descriptorCount, sizeof( uint32_t ) );
-        // out.write( (char*)&vec[i].stageFlags, sizeof( VkShaderStageFlags ) );
-    }
-}
-*/
-
 inline void Write( std::ofstream& out, char* buff, size_t len )
 {
     out.write( buff, len );
@@ -131,22 +111,6 @@ inline void Read( char*& buff, std::vector< T >& vec )
     vec.resize( len );
     memcpy( vec.data(), buff, len * sizeof( T ) );
     buff += len * sizeof( T );
-}
-
-template <>
-inline void Read( char*& buff, std::vector< VkDescriptorSetLayoutBinding >& vec )
-{
-    size_t len = ( ( size_t* ) buff )[0];
-    buff += sizeof( size_t );
-    vec.resize( len );
-    std::cout << "VkDesc size: " << len << std::endl;
-    memcpy( vec.data(), buff, len * sizeof( VkDescriptorSetLayoutBinding ) );
-    for ( size_t i = 0; i < len; ++i )
-    {
-        LOG( "serialize binding: ", vec[i].binding );
-        LOG( "serializse tpye: ", vec[i].descriptorType );
-    }
-    buff += len * sizeof( VkDescriptorSetLayoutBinding );
 }
 
 inline void Read( char*& buff, char* dstBuff, size_t len )

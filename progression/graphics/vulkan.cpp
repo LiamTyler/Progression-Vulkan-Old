@@ -360,6 +360,7 @@ static bool CreateInstance()
 #else // #if !USING( SHIP_BUILD )
     createInfo.enabledLayerCount   = 0;
 #endif // #else // #if !USING( SHIP_BUILD )
+    createInfo.enabledLayerCount   = 0;
 
     auto ret = vkCreateInstance( &createInfo, nullptr, &g_renderState.instance );
     if ( ret == VK_ERROR_EXTENSION_NOT_PRESENT )
@@ -502,7 +503,7 @@ static bool CreateSwapChainFrameBuffers()
 
 static bool CreateCommandPoolAndBuffers()
 {
-    g_renderState.commandPool = g_renderState.device.NewCommandPool();
+    g_renderState.commandPool = g_renderState.device.NewCommandPool( COMMAND_POOL_RESET_COMMAND_BUFFER );
     if ( !g_renderState.commandPool )
     {
         return false;
@@ -664,6 +665,7 @@ bool VulkanInit()
         // LOG( "Using Vulkan Version: ", major, ".", minor, ".", patch );
     }
     LOG( "LIMITS maxPerStageDescriptorSampledImages: ", g_renderState.physicalDeviceInfo.deviceProperties.limits.maxPerStageDescriptorSampledImages );
+    LOG( "LIMITS maxPushConstantsSize: ", g_renderState.physicalDeviceInfo.deviceProperties.limits.maxPushConstantsSize );
 
     g_renderState.device = Device::CreateDefault();
     if ( !g_renderState.device )

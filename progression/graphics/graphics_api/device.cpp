@@ -6,8 +6,6 @@
 #include "utils/logger.hpp"
 #include <set>
 
-extern std::vector< VkDescriptorSetLayout > s_descriptorSetLayouts;
-
 namespace Progression
 {
 namespace Gfx
@@ -115,6 +113,39 @@ namespace Gfx
         PG_ASSERT( ret == VK_SUCCESS );
 
         return pool;
+    }
+
+    std::vector< DescriptorSetLayout > Device::NewDescriptorSetLayouts( const std::vector< DescriptorSetLayoutData >& layoutData ) const
+    {
+        uint32_t maxSetNumber = 0;
+        for ( const auto& layout : layoutData )
+        {
+            maxSetNumber = std::max( maxSetNumber, layout.setNumber );
+        }
+
+        std::vector< DescriptorSetLayout > layouts( maxSetNumber + 1 );
+        for ( const auto& layout : layoutData )
+        {
+            VkResult ret = vkCreateDescriptorSetLayout( m_handle, &layout.createInfo, nullptr, &layouts[layout.setNumber].m_handle );
+            PG_ASSERT( ret == VK_SUCCESS );
+        }
+
+        VkDescriptorSetLayoutCreateInfo emptyInfo = {};
+        emptyInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        emptyInfo.bindingCount = 0;
+        emptyInfo.pBindings    = nullptr;
+
+        for ( uint32_t i = 0; i < maxSetNumber + 1; ++i )
+        {
+            layouts[i].m_device = m_handle;
+            if ( layouts[i].m_handle == VK_NULL_HANDLE )
+            {
+                VkResult ret = vkCreateDescriptorSetLayout( m_handle, &emptyInfo, nullptr, &layouts[i].m_handle );
+                PG_ASSERT( ret == VK_SUCCESS );
+            }
+        }
+
+        return layouts; 
     }
 
     Fence Device::NewFence() const
@@ -353,18 +384,13 @@ namespace Gfx
         // pipeline layout where you specify uniforms (none currently)
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
         pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        VkDescriptorSetLayout layouts[6];
-        for ( int i = 0; i < 6; ++i )
+        std::vector< VkDescriptorSetLayout > layouts( desc.descriptorSetLayouts.size() );
+        for ( size_t i = 0; i < layouts.size(); ++i )
         {
-            layouts[i] = VK_NULL_HANDLE;
+            layouts[i] = desc.descriptorSetLayouts[i].GetHandle();
         }
-        layouts[0] = s_descriptorSetLayouts[0];
-        layouts[1] = s_descriptorSetLayouts[1];
-        layouts[5] = s_descriptorSetLayouts[2];
-        pipelineLayoutInfo.setLayoutCount         = static_cast< uint32_t >( s_descriptorSetLayouts.size() );
-        pipelineLayoutInfo.pSetLayouts            = s_descriptorSetLayouts.data();
-        //pipelineLayoutInfo.setLayoutCount         = 6;
-        //pipelineLayoutInfo.pSetLayouts            = layouts;
+        pipelineLayoutInfo.setLayoutCount         = static_cast< uint32_t >( layouts.size() );
+        pipelineLayoutInfo.pSetLayouts            = layouts.data();
         pipelineLayoutInfo.pushConstantRangeCount = 0;
         pipelineLayoutInfo.pPushConstantRanges    = nullptr;
 

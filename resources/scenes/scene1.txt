@@ -19,45 +19,23 @@
         "direction": [ 0, 0, -1 ]
     },
     "Entity": {
+        "NameComponent": "cube",
         "Transform": {
-            "position": [ 0, 1, 0 ],
-            "rotation": [ 0, 0, 0 ],
-            "scale":    [ 2, 2, 2 ]
+            "position": [ 1, 0, 0 ],
+            "scale": [ 0.4, 0.4, 0.4 ]
         },
-        "NameComponent": "entity1",
-        "EntityMetaData": {
-            "isStatic": true
-        },
-        "ScriptComponent": {
-            "script": "updater"
+        "ModelRenderer": {
+            "model": "cube"
         }
     },
     "Entity": {
+        "NameComponent": "cube2",
         "Transform": {
-            "position": [ 0, 2, 0 ],
-            "rotation": [ 0, 0, 0 ],
-            "scale":    [ 2, 2, 2 ]
+            "position": [ -1, 0, 0 ],
+            "scale": [ 0.4, 0.4, 0.4 ]
         },
-        "NameComponent": "entity2",
-        "EntityMetaData": {
-            "parent": "entity1",
-            "isStatic": false
-        },
-        "ScriptComponent": {
-            "script": "single",
-            "script": "updater"
-        }
-    },
-    "Entity": {
-        "Transform": {
-            "position": [ 0, 3, 0 ],
-            "rotation": [ 0, 0, 0 ],
-            "scale":    [ 2, 2, 2 ]
-        },
-        "NameComponent": "entity3",
-        "EntityMetaData": {
-            "parent": "entity1",
-            "isStatic": false
+        "ModelRenderer": {
+            "model": "cube"
         }
     }
 }

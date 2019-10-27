@@ -52,7 +52,8 @@ namespace Gfx
 
     typedef enum CommandPoolCreateFlagBits
     {
-        COMMAND_POOL_TRANSIENT = 1 << 0,
+        COMMAND_POOL_TRANSIENT            = 1 << 0,
+        COMMAND_POOL_RESET_COMMAND_BUFFER = 1 << 1,
     } CommandPoolCreateFlagBits;
 
     typedef uint32_t CommandPoolCreateFlags;

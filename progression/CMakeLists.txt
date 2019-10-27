@@ -151,7 +151,6 @@ set(
 	components/entity_metadata.hpp
 	components/factory.cpp
 	components/factory.hpp
-	components/model_renderer.cpp
 	components/model_renderer.hpp
 	components/script_component.cpp
     components/script_component.hpp

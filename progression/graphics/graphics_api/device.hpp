@@ -25,6 +25,7 @@ namespace Gfx
         void WaitForIdle() const;
         CommandPool NewCommandPool( CommandPoolCreateFlags flags = 0 ) const;
         DescriptorPool NewDescriptorPool( int numPoolSizes, VkDescriptorPoolSize* poolSizes, uint32_t maxSets = 1 ) const;
+        std::vector< DescriptorSetLayout > NewDescriptorSetLayouts( const std::vector< DescriptorSetLayoutData >& layoutData ) const;
         Buffer NewBuffer( size_t length, BufferType type, MemoryType memoryType ) const;
         Buffer NewBuffer( size_t length, void* data, BufferType type, MemoryType memoryType ) const;
         Texture NewTexture( const ImageDescriptor& desc ) const;

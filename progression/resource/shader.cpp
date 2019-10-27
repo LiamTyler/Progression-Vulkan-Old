@@ -131,20 +131,12 @@ namespace Progression
 
         size_t numDescriptorSets;
         serialize::Read( buffer, numDescriptorSets );
-        // LOG( "num descs: ", numDescriptorSets );
         reflectInfo.descriptorSetLayouts.resize( numDescriptorSets );
         for ( size_t i = 0; i < numDescriptorSets; ++i )
         {
             serialize::Read( buffer, reflectInfo.descriptorSetLayouts[i].setNumber );
             serialize::Read( buffer, reflectInfo.descriptorSetLayouts[i].createInfo );
             serialize::Read( buffer, reflectInfo.descriptorSetLayouts[i].bindings );
-
-            /*for ( size_t b = 0; b < reflectInfo.descriptorSetLayouts[i].bindings.size(); ++b )
-            {
-                LOG( "reflectInfo[", i, "].bindings[", b, "].binding = ", reflectInfo.descriptorSetLayouts[i].bindings[b].binding );
-                LOG( "reflectInfo[", i, "].bindings[", b, "].type= ", reflectInfo.descriptorSetLayouts[i].bindings[b].descriptorType );
-            }
-            LOG( "" );*/
 
             reflectInfo.descriptorSetLayouts[i].createInfo.pBindings = reflectInfo.descriptorSetLayouts[i].bindings.data();
         }
@@ -293,11 +285,11 @@ namespace Progression
         result = spvReflectEnumerateDescriptorSets( &module, &count, sets.data() );
         PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
 
-        info.descriptorSetLayouts.resize( sets.size(), DescriptorSetLayoutData{} );
+        info.descriptorSetLayouts.resize( sets.size(), Gfx::DescriptorSetLayoutData{} );
         for ( size_t i_set = 0; i_set < sets.size(); ++i_set )
         {
             const SpvReflectDescriptorSet& refl_set = *(sets[i_set]);
-            DescriptorSetLayoutData& layout         = info.descriptorSetLayouts[i_set];
+            Gfx::DescriptorSetLayoutData& layout         = info.descriptorSetLayouts[i_set];
             layout.bindings.resize( refl_set.binding_count );
             for ( uint32_t i_binding = 0; i_binding < refl_set.binding_count; ++i_binding )
             {
@@ -373,80 +365,6 @@ namespace Progression
     Shader::operator bool() const
     {
         return m_shaderModule != VK_NULL_HANDLE;
-    }
-
-    // uint32_t setNumber;
-    // VkDescriptorSetLayoutCreateInfo createInfo;
-    // std::vector< VkDescriptorSetLayoutBinding > bindings;
-    std::vector< DescriptorSetLayoutData > CombineDescriptorSetLayouts( std::vector< DescriptorSetLayoutData >& layoutDatas )
-    {
-        LOG( "Combing: " );
-        for ( size_t i = 0; i < layoutDatas.size(); ++i )
-        {
-            LOG( "layoutDatas[", i, "].setNumber = ", layoutDatas[i].setNumber );
-            LOG( "layoutDatas[", i, "].bindings.size = ", layoutDatas[i].bindings.size() );
-            for ( size_t b = 0; b < layoutDatas[i].bindings.size(); ++b )
-            {
-                LOG( "layoutDatas[", i, "].bindings[", b, "].binding = ", layoutDatas[i].bindings[b].binding );
-                LOG( "layoutDatas[", i, "].bindings[", b, "].type= ", layoutDatas[i].bindings[b].descriptorType );
-            }
-            LOG( "" );
-        }
-        std::sort( layoutDatas.begin(), layoutDatas.end(),
-                []( const auto& lhs, const auto& rhs ) { return lhs.setNumber < rhs.setNumber; } );
-
-        LOG( "Combing: " );
-        for ( size_t i = 0; i < layoutDatas.size(); ++i )
-        {
-            LOG( "layoutDatas[", i, "].setNumber = ", layoutDatas[i].setNumber );
-            LOG( "layoutDatas[", i, "].bindings.size = ", layoutDatas[i].bindings.size() );
-            for ( size_t b = 0; b < layoutDatas[i].bindings.size(); ++b )
-            {
-                LOG( "layoutDatas[", i, "].bindings[", b, "].binding = ", layoutDatas[i].bindings[b].binding );
-                LOG( "layoutDatas[", i, "].bindings[", b, "].type= ", layoutDatas[i].bindings[b].descriptorType );
-            }
-            LOG( "" );
-        }
-
-        std::vector< DescriptorSetLayoutData > combined;
-        for ( size_t i = 0; i < layoutDatas.size(); )
-        {
-            combined.push_back( {} );
-            auto& newSet = combined[combined.size() - 1];
-            newSet.setNumber = layoutDatas[i].setNumber;
-            newSet.bindings  = layoutDatas[i].bindings;
-            // For all sets with the same number, add their bindings to the list, either as new entries in the list,
-            // or just by |= the stageFlags if its the same binding + type as an existing entry
-            ++i;
-            while ( i < layoutDatas.size() && layoutDatas[i].setNumber == newSet.setNumber )
-            {
-                for ( const auto& newBinding : layoutDatas[i].bindings )
-                {
-                    bool found = false;
-                    for ( auto& existingBinding : newSet.bindings )
-                    {
-                        if ( newBinding.binding == existingBinding.binding )
-                        {
-                            PG_ASSERT( newBinding.descriptorCount == existingBinding.descriptorCount &&
-                                       newBinding.descriptorType == existingBinding.descriptorType,
-                                       "Descriptors have same binding number, but different types and/or counts" );
-                            existingBinding.stageFlags |= newBinding.stageFlags;
-                            found = true;
-                        }
-                    }
-                    if ( !found )
-                    {
-                        newSet.bindings.push_back( newBinding );
-                    }
-                }
-                ++i;
-            }
-            newSet.createInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-            newSet.createInfo.bindingCount = static_cast< uint32_t >( newSet.bindings.size() );
-            newSet.createInfo.pBindings    = newSet.bindings.data();
-        }
-
-        return combined;
     }
 
 } // namespace Progression

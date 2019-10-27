@@ -2,6 +2,7 @@
 
 #include "rapidjson/document.h"
 #include "core/assert.hpp"
+#include "utils/logger.hpp"
 #include "glm/vec3.hpp"
 #include "glm/vec4.hpp"
 #include <functional>
@@ -38,7 +39,15 @@ public:
     {
         for ( auto it = v.MemberBegin(); it != v.MemberEnd(); ++it )
         {
-            mapping[it->name.GetString()]( it->value, std::forward<Args>( args )... );
+            std::string name = it->name.GetString();
+            if ( mapping.find( name ) == mapping.end() )
+            {
+                LOG_WARN( "'", name, "' not found in mapping" );
+            }
+            else
+            {
+                mapping[name]( it->value, std::forward<Args>( args )... );
+            }
         }
     }
 

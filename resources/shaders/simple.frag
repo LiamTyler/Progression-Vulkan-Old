@@ -30,28 +30,17 @@ void main()
     vec3 e = normalize( perSceneConstantBuffer.cameraPos - posInWorldSpace );
     
     vec3 lightDir   = normalize( vec3( 1, 0, -1 ) );
-    // vec3 lightDir   = normalize( vec3( 1, -1, -1 ) );
     vec3 lightColor = vec3( 1, 1, 1 );
     vec3 l = normalize( -lightDir );
     vec3 h = normalize( l + e );
-
-    //vec3 Ka = vec3( 0.0 );
-    //vec3 Kd = vec3( 1, 0, 0 );
-    //vec3 Ks = vec3( 1, 1, 1 );
-    // float specular = 400;
 
     vec3 color = material.Ka.xyz;
     // Kd *= texture( texSampler, texCoord ).xyz;
     color += lightColor * material.Kd.xyz * max( 0.0, dot( l, n ) );
     if ( dot( l, n ) > EPSILON )
     {
-        // color += lightColor * Ks * pow( max( dot( reflect( -l, n ), e ), 0.0 ), specular );
         color += lightColor * material.Ks.xyz * pow( max( dot( h, n ), 0.0 ), 4*material.Ks.w );
     }
         
-    // outColor = vec4( e, 1.0 );
     outColor = vec4( color, 1.0 );
-    
-    // outColor = vec4( fragTexCoord, 0, 1.0 );
-    // outColor = texture( texSampler, texCoord );
 }

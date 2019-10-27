@@ -3,6 +3,7 @@
 #include "core/scene.hpp"
 #include "core/time.hpp"
 #include "core/window.hpp"
+#include "components/model_renderer.hpp"
 #include "graphics/graphics_api.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
 #include "resource/resource_manager.hpp"
@@ -76,11 +77,14 @@ struct MaterialConstantBuffer
 static Window* s_window;
 static Pipeline s_pipeline;
 static DescriptorPool s_descriptorPool;
-std::vector< VkDescriptorSetLayout > s_descriptorSetLayouts;
+std::vector< DescriptorSetLayout > s_descriptorSetLayouts;
 std::vector< Progression::Gfx::Buffer > s_gpuPerSceneConstantBuffers;
 std::vector< Progression::Gfx::Buffer > s_gpuMaterialConstantBuffers;
 std::vector< Progression::Gfx::Buffer > s_gpuPerObjectConstantBuffers;
 static std::shared_ptr< Image > s_image;
+std::vector< DescriptorSet > perSceneDescriptorSets;
+std::vector< DescriptorSet > materialDescriptorSets;
+std::vector< DescriptorSet > perObjectDescriptorSets;
 
 namespace Progression
 {
@@ -113,7 +117,7 @@ namespace RenderSystem
         auto simpleVert = ResourceManager::Get< Shader >( "simpleVert" );
         auto simpleFrag = ResourceManager::Get< Shader >( "simpleFrag" );
 
-        s_image = ResourceManager::Get< Image >( "cockatoo" );
+        s_image = ResourceManager::Get< Image >( "chaletTex" );
 
         VertexBindingDescriptor bindingDesc[3];
         bindingDesc[0].binding   = 0;
@@ -166,37 +170,10 @@ namespace RenderSystem
         descriptorSetData.insert( descriptorSetData.end(), simpleFrag->reflectInfo.descriptorSetLayouts.begin(), simpleFrag->reflectInfo.descriptorSetLayouts.end() );
         auto combined = CombineDescriptorSetLayouts( descriptorSetData );
 
-        s_descriptorSetLayouts.resize( combined.size() + 3 );
-        VkDescriptorSetLayoutCreateInfo emptyInfo = {};
-        emptyInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        emptyInfo.bindingCount = 0;
-        emptyInfo.pBindings    = nullptr;
-
-        VkResult ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(),
-                &combined[0].createInfo, nullptr, &s_descriptorSetLayouts[0] );
-        PG_ASSERT( ret == VK_SUCCESS );
-        ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(),
-                &combined[1].createInfo, nullptr, &s_descriptorSetLayouts[1] );
-        PG_ASSERT( ret == VK_SUCCESS );
-        ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(),
-                &emptyInfo, nullptr, &s_descriptorSetLayouts[2] );
-        PG_ASSERT( ret == VK_SUCCESS );
-        ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(),
-                &emptyInfo, nullptr, &s_descriptorSetLayouts[3] );
-        PG_ASSERT( ret == VK_SUCCESS );
-        ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(),
-                &emptyInfo, nullptr, &s_descriptorSetLayouts[4] );
-        PG_ASSERT( ret == VK_SUCCESS );
-        ret = vkCreateDescriptorSetLayout( g_renderState.device.GetHandle(),
-                &combined[2].createInfo, nullptr, &s_descriptorSetLayouts[5] );
-        PG_ASSERT( ret == VK_SUCCESS );
-
-        std::vector< VkDescriptorSetLayout > layouts( numImages, s_descriptorSetLayouts[0] );
-        std::vector< DescriptorSet > perSceneDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, layouts.data() );
-        layouts = std::vector< VkDescriptorSetLayout >( numImages, s_descriptorSetLayouts[1] );
-        std::vector< DescriptorSet > materialDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, layouts.data() );
-        layouts = std::vector< VkDescriptorSetLayout >( numImages, s_descriptorSetLayouts[5] );
-        std::vector< DescriptorSet > perObjectDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, layouts.data() );
+        s_descriptorSetLayouts = g_renderState.device.NewDescriptorSetLayouts( combined );
+        perSceneDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[0] );
+        materialDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[1] );
+        perObjectDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[2]);
 
         for ( size_t i = 0; i < numImages; i++ )
         {
@@ -244,6 +221,7 @@ namespace RenderSystem
 
         PipelineDescriptor pipelineDesc;
         pipelineDesc.renderPass             = &g_renderState.renderPass;
+        pipelineDesc.descriptorSetLayouts   = s_descriptorSetLayouts;
         pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 3, bindingDesc, 3, attribDescs.data() );
         pipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
 
@@ -263,29 +241,6 @@ namespace RenderSystem
 
         simpleVert->Free();
         simpleFrag->Free();
-
-        auto model = ResourceManager::Get< Model >( "cube" );
-
-        for ( size_t i = 0; i < g_renderState.commandBuffers.size(); ++i )
-        {
-            CommandBuffer& cmdBuf = g_renderState.commandBuffers[i];
-            cmdBuf.BeginRecording();
-            cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[i] );
-            cmdBuf.BindRenderPipeline( s_pipeline );
-            // cmdBuf.BindDescriptorSets( 1, &pgDescriptorSets[i], s_pipeline );
-            cmdBuf.BindDescriptorSets( 1, &perSceneDescriptorSets[i], s_pipeline );
-            cmdBuf.BindDescriptorSets( 1, &materialDescriptorSets[i], s_pipeline, 1 );
-            cmdBuf.BindDescriptorSets( 1, &perObjectDescriptorSets[i], s_pipeline, 5 );
-
-            cmdBuf.BindVertexBuffer( model->meshes[0].vertexBuffer, 0, 0 );
-            cmdBuf.BindVertexBuffer( model->meshes[0].vertexBuffer, model->meshes[0].GetNormalOffset(), 1 );
-            cmdBuf.BindVertexBuffer( model->meshes[0].vertexBuffer, model->meshes[0].GetUVOffset(), 2 );
-            cmdBuf.BindIndexBuffer(  model->meshes[0].indexBuffer,  model->meshes[0].GetIndexType() );
-            cmdBuf.DrawIndexed( 0, model->meshes[0].GetNumIndices() );
-
-            cmdBuf.EndRenderPass();
-            cmdBuf.EndRecording();
-        }
 
         return true;
     }
@@ -316,7 +271,10 @@ namespace RenderSystem
             {
                 b.Free();
             }
-            // vkDestroyDescriptorSetLayout( g_renderState.device.GetHandle(), descriptorSetLayout, nullptr );
+            for ( auto& layout : s_descriptorSetLayouts )
+            {
+                layout.Free();
+            }
             s_pipeline.Free();
         }
 
@@ -340,32 +298,50 @@ namespace RenderSystem
         memcpy( (char*)data + offsetof( PerSceneConstantBuffer, cameraPos ), &scene->camera.position, sizeof( glm::vec3 ) );
         s_gpuPerSceneConstantBuffers[imageIndex].UnMap();
 
-        // MaterialConstantBuffer   
-        data = s_gpuMaterialConstantBuffers[imageIndex].Map();
-        MaterialConstantBuffer mat;
-        mat.Ka = glm::vec4( 0, 0, 0, 1 );
-        mat.Kd = glm::vec4( 0, 1, 0, 0 );
-        mat.Ks = glm::vec4( 1, 1, 1, 400 );
-        memcpy( data, &mat, sizeof( MaterialConstantBuffer ) );
-        s_gpuMaterialConstantBuffers[imageIndex].UnMap();
+        auto& cmdBuf = g_renderState.commandBuffers[imageIndex];
+        cmdBuf.BeginRecording();
+        cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex] );
+        cmdBuf.BindRenderPipeline( s_pipeline );
+        cmdBuf.BindDescriptorSets( 1, &perSceneDescriptorSets[imageIndex], s_pipeline );
+        cmdBuf.BindDescriptorSets( 1, &materialDescriptorSets[imageIndex], s_pipeline, 1 );
+        cmdBuf.BindDescriptorSets( 1, &perObjectDescriptorSets[imageIndex], s_pipeline, 2 );
 
-        glm::mat4 M( 1 );
-        // M = glm::translate( M, glm::vec3( 0.0f, -0.7f, 0.0f ) );
-        // M = glm::rotate( M, Time::Time() * glm::radians( 90.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
-        // M = glm::rotate( M, glm::radians( -90.0f ), glm::vec3( 1.0f, 0.0f, 0.0f ) );
-        // M = glm::scale( M, glm::vec3( 1.0 ) );
-        M = glm::rotate( M, 0.5f * Time::Time() * glm::radians( 90.0f ), glm::vec3( 0.0f, 1.0f, 0.0f ) );
-        M = glm::scale( M, glm::vec3( 0.5 ) );
+        scene->registry.view< ModelRenderer, Transform >().each( [&]( auto& modelRenderer, auto& transform )
+        {
+            LOG( "TEST" );
+            auto M = transform.GetModelMatrix();
+            auto N   = glm::transpose( glm::inverse( M ) );
+            auto MVP = scene->camera.GetVP() * M;
+            data     = s_gpuPerObjectConstantBuffers[imageIndex].Map();
+            memcpy( (char*)data + offsetof( PerObjectConstantBuffer, modelMatrix ), &M, sizeof( glm::mat4 ) );
+            memcpy( (char*)data + offsetof( PerObjectConstantBuffer, normalMatrix ), &N, sizeof( glm::mat4 ) );
+            memcpy( (char*)data + offsetof( PerObjectConstantBuffer, MVP ), &MVP, sizeof( glm::mat4 ) );
+            s_gpuPerObjectConstantBuffers[imageIndex].UnMap();
 
-        auto N   = glm::transpose( glm::inverse( M ) );
-        auto MVP = scene->camera.GetVP() * M;
-        data     = s_gpuPerObjectConstantBuffers[imageIndex].Map();
-        memcpy( (char*)data + offsetof( PerObjectConstantBuffer, modelMatrix ), &M, sizeof( glm::mat4 ) );
-        memcpy( (char*)data + offsetof( PerObjectConstantBuffer, normalMatrix ), &N, sizeof( glm::mat4 ) );
-        memcpy( (char*)data + offsetof( PerObjectConstantBuffer, MVP ), &MVP, sizeof( glm::mat4 ) );
-        s_gpuPerObjectConstantBuffers[imageIndex].UnMap();
+            for ( size_t i = 0; i < modelRenderer.materials.size(); ++i )
+            {
+                const auto& mesh = modelRenderer.model->meshes[i];
+                const auto& mat  = modelRenderer.materials[i];
 
-        g_renderState.device.SubmitRenderCommands( 1, &g_renderState.commandBuffers[imageIndex] );
+                data = s_gpuMaterialConstantBuffers[imageIndex].Map();
+                MaterialConstantBuffer mcbuf{};
+                mcbuf.Ka = glm::vec4( mat->Ka, 0 );
+                mcbuf.Kd = glm::vec4( mat->Kd, 0 );
+                mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
+                memcpy( data, &mcbuf, sizeof( MaterialConstantBuffer ) );
+                s_gpuMaterialConstantBuffers[imageIndex].UnMap();
+
+                cmdBuf.BindVertexBuffer( mesh.vertexBuffer, 0, 0 );
+                cmdBuf.BindVertexBuffer( mesh.vertexBuffer, mesh.GetNormalOffset(), 1 );
+                cmdBuf.BindVertexBuffer( mesh.vertexBuffer, mesh.GetUVOffset(), 2 );
+                cmdBuf.BindIndexBuffer(  mesh.indexBuffer,  mesh.GetIndexType() );
+                cmdBuf.DrawIndexed( 0, mesh.GetNumIndices() );
+            }
+        });
+
+        cmdBuf.EndRenderPass();
+        cmdBuf.EndRecording();
+        g_renderState.device.SubmitRenderCommands( 1, &cmdBuf );
 
         g_renderState.device.SubmitFrame( imageIndex );
     }

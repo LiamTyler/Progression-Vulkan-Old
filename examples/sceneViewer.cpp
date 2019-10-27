@@ -28,6 +28,7 @@ int main( int argc, char* argv[] )
         return 0;
     }
 
+    /*
     LOG( "Scene backgroundColor: ", scene->backgroundColor );
     LOG( "Scene ambientColor: ", scene->ambientColor );
     LOG( "Scene Camera: " );
@@ -77,6 +78,7 @@ int main( int argc, char* argv[] )
         LOG( "\tmeta.parent   = ", (uint32_t) m.parent );
         LOG( "\tmeta.isStatic = ", m.isStatic );
     });
+    */
 
     scene->Start();
 

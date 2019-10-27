@@ -2,6 +2,7 @@
 
 #include "graphics/graphics_api/buffer.hpp"
 #include "graphics/graphics_api/command_buffer.hpp"
+#include "graphics/graphics_api/descriptor.hpp"
 #include "graphics/graphics_api/device.hpp"
 #include "graphics/graphics_api/fence.hpp"
 #include "graphics/graphics_api/pipeline.hpp"
