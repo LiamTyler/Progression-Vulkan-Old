@@ -15,9 +15,9 @@ layout( set = 0, binding = 0 ) uniform PerSceneConstantBuffer
     vec3 cameraPos;
 } perSceneConstantBuffer;
 
-layout( set = 1, binding = 0 ) uniform MaterialConstantBuffer
+layout( std430, push_constant ) uniform MaterialConstantBuffer
 {
-    vec4 Ka;
+    layout( offset = 128 ) vec4 Ka;
     vec4 Kd;
     vec4 Ks;
 } material;

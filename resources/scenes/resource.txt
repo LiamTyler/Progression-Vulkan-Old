@@ -14,6 +14,9 @@ Script
 name single
 filename scripts/script2.lua
 
+MTLFile
+filename materials/miscellaneous.mtl
+
 Image
 name chaletTex
 filenames textures/chalet.jpg

@@ -74,13 +74,15 @@ ConverterStatus MaterialConverter::Convert()
 
     std::ofstream out( m_outputContentFile, std::ios::binary );
 
+    serialize::Write( out, static_cast< uint32_t >( materials.size() ) );
     for ( const auto& material : materials )
     {
-        if (! material.Serialize( out ) )
+        if ( !material.Serialize( out ) )
         {
             LOG_ERR( "Could not save materials to FFI file: '", m_outputContentFile, "'" );
             return CONVERT_ERROR;
         }
+        ++numMaterials;
     }
 
     out.close();

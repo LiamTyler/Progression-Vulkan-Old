@@ -1,7 +1,4 @@
-build/
-build19/
-build_debug/
-build_ship/
+build*/
 *.swp
 a.out
 progression/core/platform_defines.hpp

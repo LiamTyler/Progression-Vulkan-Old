@@ -12,4 +12,5 @@ public:
     std::string GetName() const override;
 
     std::string inputFile;
+    uint32_t numMaterials;
 };

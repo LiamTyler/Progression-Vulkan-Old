@@ -83,9 +83,11 @@ namespace ResourceManager
     template < typename T >
     std::shared_ptr< T > Get( const std::string& name )
     {
+        static_assert( std::is_base_of< Resource, T >::value && !std::is_same< Resource, T >::value,
+                       "Can only add resources to manager that inherit from class Resource" );
         auto& group = f_resources[GetResourceTypeID< T >()];
         auto it     = group.find( name );
-        return it == group.end() ? nullptr : std::static_pointer_cast< T >( it->second );
+        return it == group.end() ? nullptr : std::dynamic_pointer_cast< T >( it->second );
     }
 
     template < typename T >

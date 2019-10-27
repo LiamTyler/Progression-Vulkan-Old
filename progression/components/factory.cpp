@@ -19,17 +19,17 @@ namespace Progression
     {
         PG_ASSERT( value.IsObject() );
         EntityMetaData& d = registry.assign< EntityMetaData >( e );
-        static FunctionMapper< void, EntityMetaData& > mapping(
+        static FunctionMapper< void, entt::registry&, EntityMetaData& > mapping(
         {
-            { "parent", [&registry]( rapidjson::Value& v, EntityMetaData& d )
+            { "parent", []( rapidjson::Value& v, entt::registry& reg, EntityMetaData& d )
                 {
                     PG_ASSERT( v.IsString() );
                     std::string parentName = v.GetString();
-                    d.parent = GetEntityByName( registry, parentName );
+                    d.parent = GetEntityByName( reg, parentName );
                     PG_ASSERT( d.parent != entt::null, "No entity found with name '" + parentName + "'" );
                 }
             },
-            { "isStatic", []( rapidjson::Value& v, EntityMetaData& d )
+            { "isStatic", []( rapidjson::Value& v, entt::registry& reg, EntityMetaData& d )
                 {
                     PG_ASSERT( v.IsBool() );
                     d.isStatic = v.GetBool();
@@ -37,7 +37,7 @@ namespace Progression
             }
         });
 
-        mapping.ForEachMember( value, d );
+        mapping.ForEachMember( value, registry, d );
     }
 
     static void ParseNameComponent( rapidjson::Value& value, const entt::entity e, entt::registry& registry )
@@ -77,11 +77,11 @@ namespace Progression
     }
 
     static void ParseModelRenderer( rapidjson::Value& value, const entt::entity e, entt::registry& registry )
-    {
-        ModelRenderer& comp = registry.assign< ModelRenderer >( e );
-        static FunctionMapper< void > mapping(
+    {   
+        auto& comp = registry.assign< ModelRenderer >( e );
+        static FunctionMapper< void, ModelRenderer& > mapping(
         {
-            { "model", [&comp]( rapidjson::Value& v )
+            { "model", []( rapidjson::Value& v, ModelRenderer& comp )
                 {
                     PG_ASSERT( v.IsString(), "Please provide a string of the model's name" );
                     comp.model = ResourceManager::Get< Model >( v.GetString() );
@@ -89,7 +89,7 @@ namespace Progression
                     comp.materials = comp.model->materials;
                 }
             },
-            { "material", [&comp]( rapidjson::Value& v )
+            { "material", []( rapidjson::Value& v, ModelRenderer& comp )
                 {
                     PG_ASSERT( v.IsString(), "Please provide a string of the material's name" );
                     auto mat = ResourceManager::Get< Material >( v.GetString() );
@@ -103,7 +103,7 @@ namespace Progression
             },
         });
 
-        mapping.ForEachMember( value );
+        mapping.ForEachMember( value, comp );
     }
 
     void ParseComponent( rapidjson::Value& value, const entt::entity e, entt::registry& registry, const std::string& typeName )

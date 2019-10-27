@@ -20,12 +20,11 @@ namespace Progression
 namespace ResourceManager
 {
 
-    ResourceDB f_resources;
+    ResourceDB f_resources = {};
 
     void Init()
     {
         f_resources.Clear();
-        // glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         auto defaultMat                                         = std::make_shared< Material >();
         defaultMat->Kd                                          = glm::vec3( 1, 1, 0 );
         f_resources[GetResourceTypeID< Material >()]["default"] = defaultMat;
@@ -115,10 +114,14 @@ namespace ResourceManager
             } \
         } \
 
-
         LOAD_RESOURCES( Shader );
         LOAD_RESOURCES( Image );
-        LOAD_RESOURCES( Material );
+        uint32_t numMaterialConvs;
+        serialize::Read( data, numMaterialConvs );
+        for ( uint32_t matConv = 0; matConv < numMaterialConvs; ++matConv )
+        {
+            LOAD_RESOURCES( Material );
+        }
         LOAD_RESOURCES( Model );
         LOAD_RESOURCES( Script );
 

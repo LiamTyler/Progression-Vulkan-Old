@@ -96,7 +96,7 @@ ConverterStatus ShaderConverter::Convert()
 
     if ( m_contentNeedsConverting || force )
     {
-        std::string command = "glslc " + createInfo.filename + " -o " + m_outputContentFile;
+        std::string command = "glslc \"" + createInfo.filename + "\" -o \"" + m_outputContentFile + "\"";
         LOG( "Compiling shader '", createInfo.name );
         LOG( command );
         int ret = system( command.c_str() );

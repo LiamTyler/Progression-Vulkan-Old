@@ -13,19 +13,19 @@
     "AmbientColor": {
         "color": [ 0, 0, 0 ]
     },
-    "Light": {
-        "type": "Directional",
+    "DirectionalLight": {
         "colorAndIntensity": [ 0, 1, 1, 1 ],
         "direction": [ 0, 0, -1 ]
     },
     "Entity": {
-        "NameComponent": "cube",
+        "NameComponent": "chalet",
         "Transform": {
-            "position": [ 1, 0, 0 ],
-            "scale": [ 0.4, 0.4, 0.4 ]
+            "position": [ 1, -0.7, 0 ],
+            "rotation": [ -90, 90, 0 ]
         },
         "ModelRenderer": {
-            "model": "cube"
+            "model": "chalet",
+            "material": "red"
         }
     },
     "Entity": {
@@ -35,7 +35,8 @@
             "scale": [ 0.4, 0.4, 0.4 ]
         },
         "ModelRenderer": {
-            "model": "cube"
+            "model": "cube",
+            "material": "green"
         }
     }
 }

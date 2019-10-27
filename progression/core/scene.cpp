@@ -44,45 +44,45 @@ static void ParseCamera( rapidjson::Value& v, Scene* scene )
     camera.UpdateProjectionMatrix();
 }
 
-static void ParseLight( rapidjson::Value& value, Scene* scene )
+static void ParseDirectionalLight( rapidjson::Value& value, Scene* scene )
 {
-    SpotLight light;
-    std::string type;
+    static FunctionMapper< void, DirectionalLight& > mapping(
+    {
+        { "colorAndIntensity", []( rapidjson::Value& v, DirectionalLight& l ) { l.colorAndIntensity = ParseVec4( v ); } },
+        { "direction",         []( rapidjson::Value& v, DirectionalLight& l ) { l.direction = glm::normalize( ParseVec3( v ) ); } },
+    });
+    mapping.ForEachMember( value, scene->directionalLight );
+}
+
+static void ParsePointLight( rapidjson::Value& value, Scene* scene )
+{
+    static FunctionMapper< void, PointLight& > mapping(
+    {
+        { "colorAndIntensity", []( rapidjson::Value& v, PointLight& l ) { l.colorAndIntensity = ParseVec4( v ); } },
+        { "position",          []( rapidjson::Value& v, PointLight& l ) { l.position = ParseVec3( v ); } },
+        { "radius",            []( rapidjson::Value& v, PointLight& l ) { l.radius = ParseNumber< float >( v ); } },
+    });
+    scene->pointLights.emplace_back();
+    mapping.ForEachMember( value, scene->pointLights[scene->pointLights.size() - 1] );
+}
+
+static void ParseSpotLight( rapidjson::Value& value, Scene* scene )
+{
     static FunctionMapper< void, SpotLight& > mapping(
     {
         { "colorAndIntensity", []( rapidjson::Value& v, SpotLight& l ) { l.colorAndIntensity = ParseVec4( v ); } },
-        { "type",             [&]( rapidjson::Value& v, SpotLight& l ) { type = v.GetString(); } },
         { "direction",         []( rapidjson::Value& v, SpotLight& l ) { l.direction = glm::normalize( ParseVec3( v ) ); } },
         { "position",          []( rapidjson::Value& v, SpotLight& l ) { l.position = ParseVec3( v ); } },
         { "radius",            []( rapidjson::Value& v, SpotLight& l ) { l.radius = ParseNumber< float >( v ); } },
         { "cutoff",            []( rapidjson::Value& v, SpotLight& l ) { l.cutoff = glm::radians( ParseNumber< float >( v ) ); } }
     });
-    mapping.ForEachMember( value, light );
-
-    PG_ASSERT( type == "Directional" || type == "Point" || type == "Spot" );
-    if ( type == "Directional" )
-    {
-        scene->directionalLight.colorAndIntensity = light.colorAndIntensity;
-        scene->directionalLight.direction         = light.direction;
-    }
-    else if ( type == "Point" )
-    {
-        PointLight l;
-        l.colorAndIntensity = light.colorAndIntensity;
-        l.position          = light.position;
-        l.radius            = light.radius;
-        scene->pointLights.push_back( l );
-    }
-    else
-    {
-        scene->spotLights.push_back( light );
-    }
+    scene->spotLights.emplace_back();
+    mapping.ForEachMember( value, scene->spotLights[scene->spotLights.size() - 1] );
 }
 
 static void ParseEntity( rapidjson::Value& v, Scene* scene )
 {
     auto e = scene->registry.create();
-
     for ( auto it = v.MemberBegin(); it != v.MemberEnd(); ++it )
     {
         ParseComponent( it->value, e, scene->registry, it->name.GetString() );
@@ -119,12 +119,14 @@ Scene* Scene::Load( const std::string& filename )
 
     static FunctionMapper< void, Scene* > mapping(
     {
-        { "AmbientColor",    ParseAmbientColor },
-        { "BackgroundColor", ParseBackgroundColor },
-        { "Camera",          ParseCamera },
-        { "Entity",          ParseEntity },
-        { "Light",           ParseLight },
-        { "Resourcefile",    ParseResourcefile },
+        { "AmbientColor",     ParseAmbientColor },
+        { "BackgroundColor",  ParseBackgroundColor },
+        { "Camera",           ParseCamera },
+        { "Entity",           ParseEntity },
+        { "DirectionalLight", ParseDirectionalLight },
+        { "PointLight",       ParsePointLight },
+        { "SpotLight",        ParseSpotLight },
+        { "Resourcefile",     ParseResourcefile },
     });
 
     mapping.ForEachMember( document, std::move( scene ) );

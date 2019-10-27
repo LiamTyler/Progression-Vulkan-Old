@@ -391,8 +391,18 @@ namespace Gfx
         }
         pipelineLayoutInfo.setLayoutCount         = static_cast< uint32_t >( layouts.size() );
         pipelineLayoutInfo.pSetLayouts            = layouts.data();
-        pipelineLayoutInfo.pushConstantRangeCount = 0;
-        pipelineLayoutInfo.pPushConstantRanges    = nullptr;
+        //pipelineLayoutInfo.pushConstantRangeCount = 0;
+        //pipelineLayoutInfo.pPushConstantRanges    = nullptr;
+
+        VkPushConstantRange pushConstantInfo[2] = { 0 };
+        pushConstantInfo[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        pushConstantInfo[0].offset = 0;
+        pushConstantInfo[0].size = 2*sizeof( glm::mat4 );
+        pushConstantInfo[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        pushConstantInfo[1].offset = 128;
+        pushConstantInfo[1].size = 3*sizeof( glm::vec4 );
+        pipelineLayoutInfo.pushConstantRangeCount = 2;
+        pipelineLayoutInfo.pPushConstantRanges = pushConstantInfo;
 
         if ( vkCreatePipelineLayout( m_handle, &pipelineLayoutInfo, nullptr, &p.m_pipelineLayout ) != VK_SUCCESS )
         {

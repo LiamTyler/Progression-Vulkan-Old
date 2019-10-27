@@ -54,7 +54,7 @@ bool Material::Deserialize( char*& buffer )
     serialize::Read( buffer, Ks );
     serialize::Read( buffer, Ke );
     serialize::Read( buffer, Ns );
-    std::string map_Kd_name = map_Kd ? map_Kd->name : "";
+    std::string map_Kd_name;
     serialize::Read( buffer, map_Kd_name );
     if ( !map_Kd_name.empty() )
     {
