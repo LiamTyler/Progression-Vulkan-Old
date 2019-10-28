@@ -172,7 +172,7 @@ namespace RenderSystem
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         imageInfo.sampler = s_image->sampler->GetHandle();
         imageInfo.imageView = s_image->GetTexture()->GetView();
-        std::vector< VkDescriptorImageInfo > imageInfos( PG_MAX_GFX_TEXTURE_SLOTS, imageInfo );
+        std::vector< VkDescriptorImageInfo > imageInfos( PG_MAX_NUM_TEXTURES, imageInfo );
 
         for ( size_t i = 0; i < numImages; i++ )
         {
@@ -281,12 +281,10 @@ namespace RenderSystem
         cmdBuf.BindDescriptorSets( 1, &perSceneDescriptorSets[imageIndex], s_pipeline );
         cmdBuf.BindDescriptorSets( 1, &textureDescriptorSets[imageIndex], s_pipeline, 2 );
 
-        int drawn = 0;
         scene->registry.view< ModelRenderer, Transform >().each( [&]( auto& modelRenderer, auto& transform )
         {
             auto M = transform.GetModelMatrix();
             auto N   = glm::transpose( glm::inverse( M ) );
-            auto MVP = scene->camera.GetVP() * M;
             PerObjectConstantBuffer b;
             b.modelMatrix = M;
             b.normalMatrix = N;
@@ -301,7 +299,7 @@ namespace RenderSystem
                 mcbuf.Ka = glm::vec4( mat->Ka, 0 );
                 mcbuf.Kd = glm::vec4( mat->Kd, 0 );
                 mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
-                mcbuf.diffuseTextureSlot = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : (uint16_t) ~0u;
+                mcbuf.diffuseTextureSlot = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
                 vkCmdPushConstants( cmdBuf.GetHandle(), s_pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof( MaterialConstantBuffer ), &mcbuf );
 
                 cmdBuf.BindVertexBuffer( mesh.vertexBuffer, 0, 0 );

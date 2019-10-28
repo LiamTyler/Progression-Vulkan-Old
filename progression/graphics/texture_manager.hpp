@@ -2,8 +2,7 @@
 #include <cstdint>
 #include <vector>
 #include "graphics_api/descriptor.hpp"
-
-#define PG_MAX_GFX_TEXTURE_SLOTS 8
+#include "graphics/shader_c_shared/texture_defines.h"
 
 namespace Progression
 {

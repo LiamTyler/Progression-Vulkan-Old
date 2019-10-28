@@ -5,6 +5,8 @@
 #include "utils/timestamp.hpp"
 #include <filesystem>
 #include <fstream>
+#include <array>
+#include <unordered_set>
 
 using namespace Progression;
 
@@ -21,6 +23,82 @@ static std::string GetContentFastFileName( struct ShaderCreateInfo& createInfo )
 static std::string GetSettingsFastFileName( const ShaderCreateInfo& createInfo )
 {
     return PG_RESOURCE_DIR "cache/shaders/settings_" + createInfo.name + ".ffi";
+}
+
+static bool PreprocessShader( const std::string& filename, std::string& text, std::unordered_set< std::string >& includedFiles )
+{
+    std::ifstream in( filename );
+    if ( !in )
+    {
+        LOG_ERR( "Could not open file '", filename, "'" );
+        return false;
+    }
+
+    static std::array< std::string, 3 > includeDirs =
+    {
+        PG_ROOT_DIR "progression/",
+        PG_RESOURCE_DIR "shaders/"
+        PG_RESOURCE_DIR,
+        PG_ROOT_DIR,
+    };
+
+    std::string line;
+    while ( std::getline( in, line ) )
+    {
+        if ( line.length() >= 8 && line.substr( 0, 8 ) == "#include" )
+        {
+            text += "// " + line + "\n";
+            auto firstParen  = line.find( '\"' );
+            auto secondParen = line.find( '\"', firstParen + 1 );
+            if ( firstParen == std::string::npos || secondParen == std::string::npos )
+            {
+                LOG_ERR( "line '", line, "' is not a valid #include \"some_filename\" line" );
+                return false;
+            }
+            std::string includeFilename = line.substr( firstParen + 1, secondParen - firstParen - 1 );
+
+            bool alreadyIncluded = false;
+            for ( const auto& dir : includeDirs )
+            {
+                if ( includedFiles.find( dir + includeFilename ) != includedFiles.end() )
+                {
+                    alreadyIncluded = true;
+                    break;
+                }
+            }
+            if ( alreadyIncluded )
+            {
+                continue;
+            }
+            std::string fullIncludePath;
+            for ( const auto& dir : includeDirs )
+            {
+                std::string fullpath = dir + includeFilename;
+                if ( std::filesystem::exists( fullpath ) )
+                {
+                    if ( !PreprocessShader( fullpath, text, includedFiles ) )
+                    {
+                        LOG_ERR( "Could not #include file '", fullpath, "'" );
+                        return false;
+                    }
+                    fullIncludePath = fullpath;
+                    break;
+                }
+            }
+            if ( fullIncludePath.empty() )
+            {
+                LOG_ERR( "From file '", filename, "' could not #include \"", includeFilename, "\"" );
+                return false;
+            }
+            includedFiles.insert( fullIncludePath );
+        }
+        else
+        {
+            text += line + "\n";
+        }
+    }
+
+    return true;
 }
 
 AssetStatus ShaderConverter::CheckDependencies()
@@ -96,7 +174,26 @@ ConverterStatus ShaderConverter::Convert()
 
     if ( m_contentNeedsConverting || force )
     {
-        std::string command = "glslc \"" + createInfo.filename + "\" -o \"" + m_outputContentFile + "\"";
+        std::string preprocessedShaderText;
+        std::unordered_set< std::string > includedFiles;
+        if ( !PreprocessShader( createInfo.filename, preprocessedShaderText, includedFiles ) )
+        {
+            LOG_ERR( "Could not preprocess the shader '", createInfo.filename, "'" );
+            return CONVERT_ERROR;
+        }
+
+        std::string originalExtension = std::filesystem::path( createInfo.filename ).extension();
+        std::string preprocessFilename = m_outputContentFile.substr( 0, m_outputContentFile.find_last_of( '.' ) ) + "_preprocess" + originalExtension;
+        std::ofstream preprocOut( preprocessFilename );
+        if ( !preprocOut )
+        {
+            LOG_ERR( "Could not open file preprocess shader file" );
+            return CONVERT_ERROR;
+        }
+        preprocOut << preprocessedShaderText;
+        preprocOut.close();
+
+        std::string command = "glslc \"" + preprocessFilename + "\" -o \"" + m_outputContentFile + "\"";
         LOG( "Compiling shader '", createInfo.name );
         LOG( command );
         int ret = system( command.c_str() );

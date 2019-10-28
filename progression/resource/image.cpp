@@ -160,8 +160,6 @@ bool Image::Serialize( std::ofstream& out ) const
 {
     PG_ASSERT( m_pixels, "Currently need CPU copy of image data to serialize" );
 
-    // serialize::Write( out, name );
-    // serialize::Write( out, m_flags );
     serialize::Write( out, m_texture.m_desc.type );
     serialize::Write( out, m_texture.m_desc.format );
     serialize::Write( out, m_texture.m_desc.mipLevels );

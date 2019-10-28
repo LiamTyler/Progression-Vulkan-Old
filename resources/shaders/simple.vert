@@ -12,7 +12,6 @@ layout( location = 2 ) out vec2 texCoord;
 layout( set = 0, binding = 0 ) uniform PerSceneConstantBuffer
 {
     mat4 VP;
-    vec3 cameraPos;
 } perSceneConstantBuffer;
 
 layout( std430, push_constant ) uniform PerObjectData

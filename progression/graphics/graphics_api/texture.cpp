@@ -249,10 +249,10 @@ namespace Gfx
         vkDestroyImage( m_device, m_image, nullptr );
         vkDestroyImageView( m_device, m_imageView, nullptr );
         vkFreeMemory( m_device, m_memory, nullptr );
-        if ( m_textureSlot != (uint16_t)~0u )
+        if ( m_textureSlot != PG_INVALID_TEXTURE_INDEX )
         {
             FreeTextureSlot( m_textureSlot );
-            m_textureSlot = (uint16_t) ~0u;
+            m_textureSlot = PG_INVALID_TEXTURE_INDEX;
         }
         m_image       = VK_NULL_HANDLE;
         m_imageView   = VK_NULL_HANDLE;

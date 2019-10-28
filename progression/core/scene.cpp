@@ -49,7 +49,9 @@ static void ParseDirectionalLight( rapidjson::Value& value, Scene* scene )
     static FunctionMapper< void, DirectionalLight& > mapping(
     {
         { "colorAndIntensity", []( rapidjson::Value& v, DirectionalLight& l ) { l.colorAndIntensity = ParseVec4( v ); } },
-        { "direction",         []( rapidjson::Value& v, DirectionalLight& l ) { l.direction = glm::normalize( ParseVec3( v ) ); } },
+        { "direction",         []( rapidjson::Value& v, DirectionalLight& l )
+            { l.direction = glm::vec4( glm::normalize( ParseVec3( v ) ), 0 ); }
+        }
     });
     mapping.ForEachMember( value, scene->directionalLight );
 }
@@ -59,8 +61,7 @@ static void ParsePointLight( rapidjson::Value& value, Scene* scene )
     static FunctionMapper< void, PointLight& > mapping(
     {
         { "colorAndIntensity", []( rapidjson::Value& v, PointLight& l ) { l.colorAndIntensity = ParseVec4( v ); } },
-        { "position",          []( rapidjson::Value& v, PointLight& l ) { l.position = ParseVec3( v ); } },
-        { "radius",            []( rapidjson::Value& v, PointLight& l ) { l.radius = ParseNumber< float >( v ); } },
+        { "positionAndRadius", []( rapidjson::Value& v, PointLight& l ) { l.positionAndRadius = ParseVec4( v ); } },
     });
     scene->pointLights.emplace_back();
     mapping.ForEachMember( value, scene->pointLights[scene->pointLights.size() - 1] );
@@ -70,11 +71,15 @@ static void ParseSpotLight( rapidjson::Value& value, Scene* scene )
 {
     static FunctionMapper< void, SpotLight& > mapping(
     {
-        { "colorAndIntensity", []( rapidjson::Value& v, SpotLight& l ) { l.colorAndIntensity = ParseVec4( v ); } },
-        { "direction",         []( rapidjson::Value& v, SpotLight& l ) { l.direction = glm::normalize( ParseVec3( v ) ); } },
-        { "position",          []( rapidjson::Value& v, SpotLight& l ) { l.position = ParseVec3( v ); } },
-        { "radius",            []( rapidjson::Value& v, SpotLight& l ) { l.radius = ParseNumber< float >( v ); } },
-        { "cutoff",            []( rapidjson::Value& v, SpotLight& l ) { l.cutoff = glm::radians( ParseNumber< float >( v ) ); } }
+        { "colorAndIntensity",  []( rapidjson::Value& v, SpotLight& l ) { l.colorAndIntensity = ParseVec4( v ); } },
+        { "positionAndRadius",  []( rapidjson::Value& v, SpotLight& l ) { l.positionAndRadius = ParseVec4( v ); } },
+        { "directionAndCutoff", []( rapidjson::Value& v, SpotLight& l )
+            {
+                l.directionAndCutoff = ParseVec4( v );
+                glm::vec3 d          = glm::normalize( glm::vec3( l.directionAndCutoff ) );
+                l.directionAndCutoff = glm::vec4( d, l.directionAndCutoff.w );
+            }
+        },
     });
     scene->spotLights.emplace_back();
     mapping.ForEachMember( value, scene->spotLights[scene->spotLights.size() - 1] );

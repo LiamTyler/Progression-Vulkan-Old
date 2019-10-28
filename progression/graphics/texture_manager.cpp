@@ -9,7 +9,7 @@
 #include <deque>
 
 static uint16_t s_currentSlot;
-static std::bitset< PG_MAX_GFX_TEXTURE_SLOTS > s_slotsInUse;
+static std::bitset< PG_MAX_NUM_TEXTURES > s_slotsInUse;
 static std::deque< uint16_t > s_freeSlots;
 static std::vector< VkWriteDescriptorSet > s_setWrites;
 static std::vector< VkDescriptorImageInfo > s_imageInfos;
@@ -43,7 +43,7 @@ namespace Gfx
             openSlot = s_freeSlots.back();
             s_freeSlots.pop_back();
         }
-        PG_ASSERT( openSlot < PG_MAX_GFX_TEXTURE_SLOTS && !s_slotsInUse[openSlot] );
+        PG_ASSERT( openSlot < PG_MAX_NUM_TEXTURES && !s_slotsInUse[openSlot] );
         s_slotsInUse[openSlot] = true;
         s_slotsAddedSinceLastUpdate.emplace_back( openSlot, texture->GetView() );
         return openSlot;

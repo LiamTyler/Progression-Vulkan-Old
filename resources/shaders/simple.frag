@@ -1,7 +1,7 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-#define EPSILON 0.00001
+#include "graphics/shader_c_shared/standard_defines.h"
 
 layout( location = 0 ) out vec4 outColor;
 
@@ -13,18 +13,18 @@ layout( set = 0, binding = 0 ) uniform PerSceneConstantBuffer
 {
     mat4 VP;
     vec3 cameraPos;
+
 } perSceneConstantBuffer;
 
-layout( set = 2, binding = 0 ) uniform sampler2D textures[8];
+layout( set = 2, binding = 0 ) uniform sampler2D textures[2048];
 
 layout( std430, push_constant ) uniform MaterialConstantBuffer
 {
     layout( offset = 128 ) vec4 Ka;
     layout( offset = 144 ) vec4 Kd;
     layout( offset = 160 ) vec4 Ks;
-    layout( offset = 176 )uint diffuseTexIndex;
+    layout( offset = 176 ) uint diffuseTexIndex;
 } material;
-
 
 void main()
 {
@@ -43,7 +43,7 @@ void main()
         Kd *= texture( textures[material.diffuseTexIndex], texCoord ).xyz;
     }
     color += lightColor * Kd * max( 0.0, dot( l, n ) );
-    if ( dot( l, n ) > EPSILON )
+    if ( dot( l, n ) > PG_SHADER_EPSILON )
     {
         color += lightColor * material.Ks.xyz * pow( max( dot( h, n ), 0.0 ), 4*material.Ks.w );
     }

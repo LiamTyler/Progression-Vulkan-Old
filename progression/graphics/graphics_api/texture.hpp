@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.hpp>
+#include "graphics/shader_c_shared/texture_defines.h"
 
 namespace Progression
 {
@@ -179,7 +180,7 @@ namespace Gfx
         VkImageView m_imageView = VK_NULL_HANDLE;
         VkDeviceMemory m_memory = VK_NULL_HANDLE;
         VkDevice m_device       = VK_NULL_HANDLE;
-        uint16_t m_textureSlot  = (uint16_t) ~0u;
+        uint16_t m_textureSlot  = PG_INVALID_TEXTURE_INDEX;
     };
 
 } // namespace Gfx
