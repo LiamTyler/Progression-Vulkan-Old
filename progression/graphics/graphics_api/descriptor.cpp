@@ -68,10 +68,7 @@ namespace Gfx
                     }
                     if ( !found )
                     {
-                        DescriptorSetLayoutData set;
-                        set.setNumber = newSet.setNumber;
-                        set.bindings.push_back( newBinding );
-                        combined.push_back( set );
+                        newSet.bindings.push_back( newBinding );
                     }
                 }
                 ++i;

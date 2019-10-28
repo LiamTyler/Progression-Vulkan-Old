@@ -61,10 +61,14 @@ struct PerObjectConstantBuffer
     glm::mat4 normalMatrix;
 };
 
-struct PerSceneConstantBuffer
+struct SceneConstantBuffer
 {
-    glm::mat4 VP;
-    glm::vec3 cameraPos;
+    alignas( 16 ) glm::mat4 VP;
+    alignas( 16 ) glm::vec3 cameraPos;
+    alignas( 16 ) glm::vec3 ambientColor;
+    alignas( 16 ) DirectionalLight dirLight;
+    uint32_t numPointLights;
+    uint32_t numSpotLights;
 };
 
 struct MaterialConstantBuffer
@@ -79,8 +83,9 @@ static Window* s_window;
 static Pipeline s_pipeline;
 static DescriptorPool s_descriptorPool;
 static std::vector< DescriptorSetLayout > s_descriptorSetLayouts;
-static std::vector< Progression::Gfx::Buffer > s_gpuPerSceneConstantBuffers;
-std::vector< DescriptorSet > perSceneDescriptorSets;
+static std::vector< Progression::Gfx::Buffer > s_gpuSceneConstantBuffers;
+static std::vector< Progression::Gfx::Buffer > s_gpuPointLightBuffers;
+std::vector< DescriptorSet > sceneDescriptorSets;
 std::vector< DescriptorSet > textureDescriptorSets;
 static std::shared_ptr< Image > s_image;
 
@@ -95,6 +100,12 @@ namespace RenderSystem
 
     bool Init()
     {
+        LOG( "SceneConstantBuffer.VP offset = ",             offsetof( SceneConstantBuffer, VP ) );
+        LOG( "SceneConstantBuffer.cameraPos offset = ",      offsetof( SceneConstantBuffer, cameraPos ) );
+        LOG( "SceneConstantBuffer.ambientColor offset = ",   offsetof( SceneConstantBuffer, ambientColor ) );
+        LOG( "SceneConstantBuffer.dirLight offset = ",       offsetof( SceneConstantBuffer, dirLight ) );
+        LOG( "SceneConstantBuffer.numPointLights offset = ", offsetof( SceneConstantBuffer, numPointLights ) );
+        LOG( "SceneConstantBuffer.numSpotLights offset = ",  offsetof( SceneConstantBuffer, numSpotLights ) );
         InitTextureManager();
         if ( !VulkanInit() )
         {
@@ -142,29 +153,43 @@ namespace RenderSystem
         attribDescs[2].offset   = 0;
         
         uint32_t numImages = static_cast< uint32_t >( g_renderState.swapChain.images.size() );
-        s_gpuPerSceneConstantBuffers.resize( numImages );
+        s_gpuSceneConstantBuffers.resize( numImages );
+        s_gpuPointLightBuffers.resize( numImages );
         for ( uint32_t i = 0; i < numImages; ++i )
         {
-            s_gpuPerSceneConstantBuffers[i] = g_renderState.device.NewBuffer( sizeof( PerSceneConstantBuffer ),
+            s_gpuSceneConstantBuffers[i] = g_renderState.device.NewBuffer( sizeof( SceneConstantBuffer ),
                     BUFFER_TYPE_UNIFORM, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
+            s_gpuPointLightBuffers[i] = g_renderState.device.NewBuffer( sizeof( PointLight ) * 1024,
+                    BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
         }
 
         VkDescriptorPoolSize poolSize[3] = {};
         poolSize[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSize[0].descriptorCount = 3 * numImages;
-        poolSize[1].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSize[0].descriptorCount = numImages;
+        poolSize[1].type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         poolSize[1].descriptorCount = numImages;
+        poolSize[2].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSize[2].descriptorCount = numImages;
 
-        s_descriptorPool = g_renderState.device.NewDescriptorPool( 2, poolSize, 3 * numImages );
+        s_descriptorPool = g_renderState.device.NewDescriptorPool( 3, poolSize, 3 * numImages );
 
         std::vector< DescriptorSetLayoutData > descriptorSetData = simpleVert->reflectInfo.descriptorSetLayouts;
         descriptorSetData.insert( descriptorSetData.end(), simpleFrag->reflectInfo.descriptorSetLayouts.begin(), simpleFrag->reflectInfo.descriptorSetLayouts.end() );
         auto combined = CombineDescriptorSetLayouts( descriptorSetData );
 
+        for ( size_t i = 0; i < combined.size(); ++i )
+        {
+            LOG( "combined[" , i, "].setNumber = ", combined[i].setNumber );
+            for ( size_t b = 0; b < combined[i].bindings.size(); ++b )
+            {
+                LOG( "combined[" , i, "].binding[", b, "].binding = ", combined[i].bindings[b].binding );
+                LOG( "combined[" , i, "].binding[", b, "].descriptorType = ", combined[i].bindings[b].descriptorType );
+            }
+        }
+
         s_descriptorSetLayouts = g_renderState.device.NewDescriptorSetLayouts( combined );
-        perSceneDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[0] );
+        sceneDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[0] );
         textureDescriptorSets  = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[2] );
-        
 
         s_image = ResourceManager::Get< Image >( "RENDER_SYSTEM_DUMMY_TEXTURE" );
         PG_ASSERT( s_image );
@@ -177,13 +202,13 @@ namespace RenderSystem
         for ( size_t i = 0; i < numImages; i++ )
         {
             VkDescriptorBufferInfo bufferInfo = {};
-            bufferInfo.buffer = s_gpuPerSceneConstantBuffers[i].GetHandle();
+            bufferInfo.buffer = s_gpuSceneConstantBuffers[i].GetHandle();
             bufferInfo.offset = 0;
             bufferInfo.range  = VK_WHOLE_SIZE;
 
-            VkWriteDescriptorSet descriptorWrite[2] = {};
+            VkWriteDescriptorSet descriptorWrite[3] = {};
             descriptorWrite[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite[0].dstSet           = perSceneDescriptorSets[i].GetHandle();
+            descriptorWrite[0].dstSet           = sceneDescriptorSets[i].GetHandle();
             descriptorWrite[0].dstBinding       = 0;
             descriptorWrite[0].dstArrayElement  = 0;
             descriptorWrite[0].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -198,7 +223,19 @@ namespace RenderSystem
             descriptorWrite[1].descriptorCount  = static_cast< uint32_t >( imageInfos.size() );
             descriptorWrite[1].pImageInfo       = imageInfos.data();
 
-            vkUpdateDescriptorSets( g_renderState.device.GetHandle(), 2, descriptorWrite, 0, nullptr );
+            VkDescriptorBufferInfo bufferInfo2= {};
+            bufferInfo2.buffer = s_gpuPointLightBuffers[i].GetHandle();
+            bufferInfo2.offset = 0;
+            bufferInfo2.range  = VK_WHOLE_SIZE;
+            descriptorWrite[2].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite[2].dstSet           = sceneDescriptorSets[i].GetHandle();
+            descriptorWrite[2].dstBinding       = 1;
+            descriptorWrite[2].dstArrayElement  = 0;
+            descriptorWrite[2].descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrite[2].descriptorCount  = 1;
+            descriptorWrite[2].pBufferInfo      = &bufferInfo2;
+
+            vkUpdateDescriptorSets( g_renderState.device.GetHandle(), 3, descriptorWrite, 0, nullptr );
         }
 
         PipelineDescriptor pipelineDesc;
@@ -241,9 +278,10 @@ namespace RenderSystem
         if ( !g_converterMode )
         {
             s_descriptorPool.Free();
-            for ( auto& b : s_gpuPerSceneConstantBuffers )
+            for ( size_t i = 0; i < g_renderState.swapChain.images.size(); ++i )
             {
-                b.Free();
+                s_gpuSceneConstantBuffers[i].Free();
+                s_gpuPointLightBuffers[i].Free();
             }
             for ( auto& layout : s_descriptorSetLayouts )
             {
@@ -266,19 +304,27 @@ namespace RenderSystem
 
         UpdateTextureDescriptors( textureDescriptorSets );
 
-        // perSceneConstantBuffer
-        void* data;
-        data = s_gpuPerSceneConstantBuffers[imageIndex].Map();
-        glm::mat4 VP = scene->camera.GetVP();
-        memcpy( (char*)data + offsetof( PerSceneConstantBuffer, VP ), &VP, sizeof( glm::mat4 ) );
-        memcpy( (char*)data + offsetof( PerSceneConstantBuffer, cameraPos ), &scene->camera.position, sizeof( glm::vec3 ) );
-        s_gpuPerSceneConstantBuffers[imageIndex].UnMap();
+        // sceneConstantBuffer
+        void* data = s_gpuSceneConstantBuffers[imageIndex].Map();
+        SceneConstantBuffer scbuf;
+        scbuf.VP             = scene->camera.GetVP();
+        scbuf.cameraPos      = scene->camera.position;
+        scbuf.ambientColor   = scene->ambientColor;
+        scbuf.dirLight       = scene->directionalLight;
+        scbuf.numPointLights = static_cast< uint32_t >( scene->pointLights.size() );
+        scbuf.numSpotLights  = static_cast< uint32_t >( scene->spotLights.size() );
+        memcpy( (char*)data, &scbuf, sizeof( SceneConstantBuffer ) );
+        s_gpuSceneConstantBuffers[imageIndex].UnMap();
+
+        data = s_gpuPointLightBuffers[imageIndex].Map();
+        memcpy( (char*)data, scene->pointLights.data(), scene->pointLights.size() * sizeof( PointLight ) );
+        s_gpuPointLightBuffers[imageIndex].UnMap();
 
         auto& cmdBuf = g_renderState.commandBuffers[imageIndex];
         cmdBuf.BeginRecording();
         cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex] );
         cmdBuf.BindRenderPipeline( s_pipeline );
-        cmdBuf.BindDescriptorSets( 1, &perSceneDescriptorSets[imageIndex], s_pipeline );
+        cmdBuf.BindDescriptorSets( 1, &sceneDescriptorSets[imageIndex], s_pipeline );
         cmdBuf.BindDescriptorSets( 1, &textureDescriptorSets[imageIndex], s_pipeline, 2 );
 
         scene->registry.view< ModelRenderer, Transform >().each( [&]( auto& modelRenderer, auto& transform )

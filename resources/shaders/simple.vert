@@ -9,10 +9,10 @@ layout( location = 0 ) out vec3 posInWorldSpace;
 layout( location = 1 ) out vec3 normalInWorldSpace;
 layout( location = 2 ) out vec2 texCoord;
 
-layout( set = 0, binding = 0 ) uniform PerSceneConstantBuffer
+layout( set = 0, binding = 0 ) uniform SceneConstantBuffer
 {
     mat4 VP;
-} perSceneConstantBuffer;
+} sceneConstantBuffer;
 
 layout( std430, push_constant ) uniform PerObjectData
 {
@@ -26,5 +26,5 @@ void main()
     normalInWorldSpace = ( perObjectData.normalMatrix * vec4( inNormal,   0 ) ).xyz;
     texCoord           = inTexCoord;
 
-    gl_Position         = perSceneConstantBuffer.VP * perObjectData.modelMatrix * vec4( inPosition, 1.0 );
+    gl_Position         = sceneConstantBuffer.VP * perObjectData.modelMatrix * vec4( inPosition, 1.0 );
 }

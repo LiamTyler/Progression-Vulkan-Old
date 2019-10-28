@@ -53,6 +53,8 @@ static void ParseDirectionalLight( rapidjson::Value& value, Scene* scene )
             { l.direction = glm::vec4( glm::normalize( ParseVec3( v ) ), 0 ); }
         }
     });
+    scene->directionalLight.colorAndIntensity = glm::vec4( 1 );
+    scene->directionalLight.direction         = glm::vec4( 0, 0, -1, 0 );
     mapping.ForEachMember( value, scene->directionalLight );
 }
 
@@ -63,7 +65,10 @@ static void ParsePointLight( rapidjson::Value& value, Scene* scene )
         { "colorAndIntensity", []( rapidjson::Value& v, PointLight& l ) { l.colorAndIntensity = ParseVec4( v ); } },
         { "positionAndRadius", []( rapidjson::Value& v, PointLight& l ) { l.positionAndRadius = ParseVec4( v ); } },
     });
-    scene->pointLights.emplace_back();
+    PointLight p;
+    p.colorAndIntensity = glm::vec4( 1 );
+    p.positionAndRadius = glm::vec4( 0, 0, 0, 10 );
+    scene->pointLights.emplace_back( p );
     mapping.ForEachMember( value, scene->pointLights[scene->pointLights.size() - 1] );
 }
 
@@ -77,11 +82,15 @@ static void ParseSpotLight( rapidjson::Value& value, Scene* scene )
             {
                 l.directionAndCutoff = ParseVec4( v );
                 glm::vec3 d          = glm::normalize( glm::vec3( l.directionAndCutoff ) );
-                l.directionAndCutoff = glm::vec4( d, l.directionAndCutoff.w );
+                l.directionAndCutoff = glm::vec4( d, glm::radians( l.directionAndCutoff.w ) );
             }
         },
     });
-    scene->spotLights.emplace_back();
+    SpotLight p;
+    p.colorAndIntensity  = glm::vec4( 1 );
+    p.positionAndRadius  = glm::vec4( 0, 0, 0, 10 );
+    p.directionAndCutoff = glm::vec4( 0, 0, -1, glm::radians( 20.0f ) );
+    scene->spotLights.emplace_back( p );
     mapping.ForEachMember( value, scene->spotLights[scene->spotLights.size() - 1] );
 }
 
@@ -114,6 +123,7 @@ namespace Progression
 Scene* Scene::Load( const std::string& filename )
 {
     Scene* scene = new Scene;
+    scene->directionalLight.colorAndIntensity.w = 0; // turn off the directional light to start
 
     auto document = ParseJSONFile( filename );
     if ( document.IsNull() )
