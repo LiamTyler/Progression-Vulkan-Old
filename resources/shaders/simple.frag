@@ -25,6 +25,11 @@ layout( std140, binding = 1 ) buffer PointLights
    PointLight pointLights[];
 };
 
+layout( std140, binding = 2 ) buffer SpotLights
+{
+   SpotLight spotLights[];
+};
+
 layout( set = 2, binding = 0 ) uniform sampler2D textures[PG_MAX_NUM_TEXTURES];
 
 layout( std430, push_constant ) uniform MaterialConstantBuffer
@@ -47,9 +52,9 @@ void main()
     // outColor.xyz = pointLights[0].colorAndIntensity.w * pointLights[0].colorAndIntensity.xyz;
     // outColor.w = 1; 
     // return;
-    // outColor.xyz = vec3( sceneConstantBuffer.numPointLights - 1 );
-    // outColor.w = 1; 
-    // return;
+    //outColor.xyz = vec3( sceneConstantBuffer.numSpotLights );
+    //outColor.w = 1; 
+    //return;
     vec3 n = normalize( normalInWorldSpace );
     vec3 e = normalize( sceneConstantBuffer.cameraPos - posInWorldSpace );
 
@@ -86,6 +91,28 @@ void main()
         if ( dot( l, n ) > PG_SHADER_EPSILON )
         {
             color += attenuation * lightColor * material.Ks.xyz * pow( max( dot( h, n ), 0.0 ), 4 * material.Ks.w );
+        }
+    }
+    
+    // spotlights
+    //for ( uint i = 0; i < sceneConstantBuffer.numSpotLights; ++i )
+    for ( uint i = 0; i < 1; ++i )
+    {
+        vec3 l = normalize( spotLights[i].positionAndRadius.xyz - posInWorldSpace );
+        float theta = dot( -l, spotLights[i].directionAndCutoff.xyz );
+        if ( theta > cos( spotLights[i].directionAndCutoff.w ) )
+        {
+            vec3 lightColor = spotLights[i].colorAndIntensity.w * spotLights[i].colorAndIntensity.xyz;
+            vec3 d = spotLights[i].positionAndRadius.xyz - posInWorldSpace;
+            vec3 l = normalize( d );
+            vec3 h = normalize( l + e );
+            float attenuation = Attenuate( dot( d, d ), spotLights[i].positionAndRadius.w * spotLights[i].positionAndRadius.w );
+
+            color += attenuation * lightColor * Kd * max( 0.0, dot( l, n ) );
+            if ( dot( l, n ) > PG_SHADER_EPSILON )
+            {
+                color += attenuation * lightColor * material.Ks.xyz * pow( max( dot( h, n ), 0.0 ), 4 * material.Ks.w );
+            }
         }
     }
         

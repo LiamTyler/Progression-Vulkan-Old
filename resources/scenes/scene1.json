@@ -17,9 +17,14 @@
         "colorAndIntensity": [ 1, 1, 1, 0 ],
         "direction": [ 0, -1, 0 ]
     },
-    "PointLight": {
+    "_PointLight": {
         "colorAndIntensity": [ 1, 1, 1, 1 ],
         "positionAndRadius": [ -2, 0, -4, 20 ]
+    },
+    "SpotLight": {
+        "colorAndIntensity": [ 1, 1, 1, 1 ],
+        "positionAndRadius": [ 0, 0, 0, 20 ],
+        "directionAndCutoff": [ 0, 0, -1, 25 ]
     },
     "_Entity": {
         "NameComponent": "chalet",

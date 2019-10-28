@@ -85,9 +85,13 @@ static DescriptorPool s_descriptorPool;
 static std::vector< DescriptorSetLayout > s_descriptorSetLayouts;
 static std::vector< Progression::Gfx::Buffer > s_gpuSceneConstantBuffers;
 static std::vector< Progression::Gfx::Buffer > s_gpuPointLightBuffers;
+static std::vector< Progression::Gfx::Buffer > s_gpuSpotLightBuffers;
 std::vector< DescriptorSet > sceneDescriptorSets;
 std::vector< DescriptorSet > textureDescriptorSets;
 static std::shared_ptr< Image > s_image;
+
+#define MAX_NUM_POINT_LIGHTS 1024
+#define MAX_NUM_SPOT_LIGHTS 256
 
 namespace Progression
 {
@@ -155,11 +159,14 @@ namespace RenderSystem
         uint32_t numImages = static_cast< uint32_t >( g_renderState.swapChain.images.size() );
         s_gpuSceneConstantBuffers.resize( numImages );
         s_gpuPointLightBuffers.resize( numImages );
+        s_gpuSpotLightBuffers.resize( numImages );
         for ( uint32_t i = 0; i < numImages; ++i )
         {
             s_gpuSceneConstantBuffers[i] = g_renderState.device.NewBuffer( sizeof( SceneConstantBuffer ),
                     BUFFER_TYPE_UNIFORM, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
-            s_gpuPointLightBuffers[i] = g_renderState.device.NewBuffer( sizeof( PointLight ) * 1024,
+            s_gpuPointLightBuffers[i] = g_renderState.device.NewBuffer( sizeof( PointLight ) * MAX_NUM_POINT_LIGHTS,
+                    BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
+            s_gpuSpotLightBuffers[i] = g_renderState.device.NewBuffer( sizeof( SpotLight ) * MAX_NUM_SPOT_LIGHTS,
                     BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
         }
 
@@ -167,7 +174,7 @@ namespace RenderSystem
         poolSize[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSize[0].descriptorCount = numImages;
         poolSize[1].type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        poolSize[1].descriptorCount = numImages;
+        poolSize[1].descriptorCount = 2 * numImages;
         poolSize[2].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         poolSize[2].descriptorCount = numImages;
 
@@ -206,7 +213,7 @@ namespace RenderSystem
             bufferInfo.offset = 0;
             bufferInfo.range  = VK_WHOLE_SIZE;
 
-            VkWriteDescriptorSet descriptorWrite[3] = {};
+            VkWriteDescriptorSet descriptorWrite[4] = {};
             descriptorWrite[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrite[0].dstSet           = sceneDescriptorSets[i].GetHandle();
             descriptorWrite[0].dstBinding       = 0;
@@ -223,7 +230,7 @@ namespace RenderSystem
             descriptorWrite[1].descriptorCount  = static_cast< uint32_t >( imageInfos.size() );
             descriptorWrite[1].pImageInfo       = imageInfos.data();
 
-            VkDescriptorBufferInfo bufferInfo2= {};
+            VkDescriptorBufferInfo bufferInfo2 = {};
             bufferInfo2.buffer = s_gpuPointLightBuffers[i].GetHandle();
             bufferInfo2.offset = 0;
             bufferInfo2.range  = VK_WHOLE_SIZE;
@@ -235,7 +242,19 @@ namespace RenderSystem
             descriptorWrite[2].descriptorCount  = 1;
             descriptorWrite[2].pBufferInfo      = &bufferInfo2;
 
-            vkUpdateDescriptorSets( g_renderState.device.GetHandle(), 3, descriptorWrite, 0, nullptr );
+            VkDescriptorBufferInfo bufferInfo3 = {};
+            bufferInfo3.buffer = s_gpuSpotLightBuffers[i].GetHandle();
+            bufferInfo3.offset = 0;
+            bufferInfo3.range  = VK_WHOLE_SIZE;
+            descriptorWrite[3].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite[3].dstSet           = sceneDescriptorSets[i].GetHandle();
+            descriptorWrite[3].dstBinding       = 2;
+            descriptorWrite[3].dstArrayElement  = 0;
+            descriptorWrite[3].descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrite[3].descriptorCount  = 1;
+            descriptorWrite[3].pBufferInfo      = &bufferInfo3;
+
+            vkUpdateDescriptorSets( g_renderState.device.GetHandle(), 4, descriptorWrite, 0, nullptr );
         }
 
         PipelineDescriptor pipelineDesc;
@@ -282,6 +301,7 @@ namespace RenderSystem
             {
                 s_gpuSceneConstantBuffers[i].Free();
                 s_gpuPointLightBuffers[i].Free();
+                s_gpuSpotLightBuffers[i].Free();
             }
             for ( auto& layout : s_descriptorSetLayouts )
             {
@@ -294,7 +314,9 @@ namespace RenderSystem
     }
 
     void Render( Scene* scene )
-    {  
+    {
+        PG_ASSERT( scene != nullptr );
+        PG_ASSERT( scene->pointLights.size() < MAX_NUM_POINT_LIGHTS && scene->spotLights.size() < MAX_NUM_SPOT_LIGHTS );
         size_t currentFrame = g_renderState.currentFrame;
         VkDevice dev = g_renderState.device.GetHandle();
         vkWaitForFences( dev, 1, &g_renderState.inFlightFences[currentFrame], VK_TRUE, UINT64_MAX );
@@ -319,6 +341,10 @@ namespace RenderSystem
         data = s_gpuPointLightBuffers[imageIndex].Map();
         memcpy( (char*)data, scene->pointLights.data(), scene->pointLights.size() * sizeof( PointLight ) );
         s_gpuPointLightBuffers[imageIndex].UnMap();
+
+        data = s_gpuSpotLightBuffers[imageIndex].Map();
+        memcpy( (char*)data, scene->spotLights.data(), scene->spotLights.size() * sizeof( SpotLight ) );
+        s_gpuSpotLightBuffers[imageIndex].UnMap();
 
         auto& cmdBuf = g_renderState.commandBuffers[imageIndex];
         cmdBuf.BeginRecording();
@@ -361,7 +387,7 @@ namespace RenderSystem
         g_renderState.device.SubmitRenderCommands( 1, &cmdBuf );
 
         g_renderState.device.SubmitFrame( imageIndex );
-    }
+    } 
 
     void InitSamplers()
     {

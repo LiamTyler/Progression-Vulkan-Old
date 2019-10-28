@@ -182,7 +182,7 @@ ConverterStatus ShaderConverter::Convert()
             return CONVERT_ERROR;
         }
 
-        std::string originalExtension = std::filesystem::path( createInfo.filename ).extension();
+        std::string originalExtension = std::filesystem::path( createInfo.filename ).extension().string();
         std::string preprocessFilename = m_outputContentFile.substr( 0, m_outputContentFile.find_last_of( '.' ) ) + "_preprocess" + originalExtension;
         std::ofstream preprocOut( preprocessFilename );
         if ( !preprocOut )
