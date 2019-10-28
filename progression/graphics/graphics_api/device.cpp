@@ -2,6 +2,7 @@
 #include "core/assert.hpp"
 #include "core/platform_defines.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
+#include "graphics/texture_manager.hpp"
 #include "graphics/vulkan.hpp"
 #include "utils/logger.hpp"
 #include <set>
@@ -223,7 +224,7 @@ namespace Gfx
         return dstBuffer;
     }
 
-    Texture Device::NewTexture( const ImageDescriptor& desc ) const
+    Texture Device::NewTexture( const ImageDescriptor& desc, bool managed ) const
     {
         bool isDepth = PixelFormatIsDepthFormat( desc.format );
         VkImageCreateInfo imageInfo = {};
@@ -267,11 +268,15 @@ namespace Gfx
         VkFormatFeatureFlags features = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
         if ( isDepth )
         {
-            features = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+            features |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
         }
         VkFormat vkFormat = PGToVulkanPixelFormat( desc.format );
         PG_ASSERT( FormatSupported( vkFormat, features ) );
-        tex.m_imageView = CreateImageView( tex.m_image, vkFormat, isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT );
+        tex.m_imageView   = CreateImageView( tex.m_image, vkFormat, isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT );
+        if ( managed )
+        {
+            tex.m_textureSlot = GetOpenTextureSlot( &tex );
+        }
 
         return tex;
     }
@@ -400,7 +405,7 @@ namespace Gfx
         pushConstantInfo[0].size = 2*sizeof( glm::mat4 );
         pushConstantInfo[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
         pushConstantInfo[1].offset = 128;
-        pushConstantInfo[1].size = 3*sizeof( glm::vec4 );
+        pushConstantInfo[1].size = 3*sizeof( glm::vec4 ) + 4;
         pipelineLayoutInfo.pushConstantRangeCount = 2;
         pipelineLayoutInfo.pPushConstantRanges = pushConstantInfo;
 

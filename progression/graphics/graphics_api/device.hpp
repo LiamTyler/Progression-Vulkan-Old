@@ -28,7 +28,7 @@ namespace Gfx
         std::vector< DescriptorSetLayout > NewDescriptorSetLayouts( const std::vector< DescriptorSetLayoutData >& layoutData ) const;
         Buffer NewBuffer( size_t length, BufferType type, MemoryType memoryType ) const;
         Buffer NewBuffer( size_t length, void* data, BufferType type, MemoryType memoryType ) const;
-        Texture NewTexture( const ImageDescriptor& desc ) const;
+        Texture NewTexture( const ImageDescriptor& desc, bool managed = true ) const;
         Sampler NewSampler( const SamplerDescriptor& desc ) const;
         Fence NewFence() const;
         Pipeline NewPipeline( const PipelineDescriptor& desc ) const;

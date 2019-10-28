@@ -149,7 +149,7 @@ void Scene::Start()
             }
         }
     });
-}
+    }
 
 void Scene::Update()
 {

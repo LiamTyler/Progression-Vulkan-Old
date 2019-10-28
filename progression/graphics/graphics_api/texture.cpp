@@ -1,6 +1,7 @@
 #include "graphics/graphics_api/texture.hpp"
 #include "core/assert.hpp"
 #include "graphics/vulkan.hpp"
+#include "graphics/texture_manager.hpp"
 
 namespace Progression
 {
@@ -248,9 +249,14 @@ namespace Gfx
         vkDestroyImage( m_device, m_image, nullptr );
         vkDestroyImageView( m_device, m_imageView, nullptr );
         vkFreeMemory( m_device, m_memory, nullptr );
-        m_image     = VK_NULL_HANDLE;
-        m_imageView = VK_NULL_HANDLE;
-        m_memory    = VK_NULL_HANDLE;
+        if ( m_textureSlot != (uint16_t)~0u )
+        {
+            FreeTextureSlot( m_textureSlot );
+            m_textureSlot = (uint16_t) ~0u;
+        }
+        m_image       = VK_NULL_HANDLE;
+        m_imageView   = VK_NULL_HANDLE;
+        m_memory      = VK_NULL_HANDLE;
     }
 
     unsigned char* Texture::GetPixelData() const
@@ -302,6 +308,11 @@ namespace Gfx
     VkImageView Texture::GetView() const
     {
         return m_imageView;
+    }
+
+    uint16_t Texture::GetShaderSlot() const
+    {
+        return m_textureSlot;
     }
 
     Texture::operator bool() const

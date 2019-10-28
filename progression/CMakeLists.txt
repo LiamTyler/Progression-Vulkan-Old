@@ -10,12 +10,14 @@ set(
     GRAPHICS
     #graphics/graphics_api.cpp
     graphics/render_system.cpp
+    graphics/texture_manager.cpp
     graphics/vulkan.cpp
 
     graphics/graphics_api.hpp
     graphics/lights.hpp
     graphics/pg_to_vulkan_types.hpp
     graphics/render_system.hpp
+    graphics/texture_manager.hpp
     graphics/vulkan.hpp
     
     graphics/graphics_api/buffer.cpp

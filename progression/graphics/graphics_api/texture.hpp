@@ -169,6 +169,7 @@ namespace Gfx
 
         VkImage GetHandle() const;
         VkImageView GetView() const;
+        uint16_t GetShaderSlot() const;
 
         operator bool() const;
 
@@ -178,6 +179,7 @@ namespace Gfx
         VkImageView m_imageView = VK_NULL_HANDLE;
         VkDeviceMemory m_memory = VK_NULL_HANDLE;
         VkDevice m_device       = VK_NULL_HANDLE;
+        uint16_t m_textureSlot  = (uint16_t) ~0u;
     };
 
 } // namespace Gfx

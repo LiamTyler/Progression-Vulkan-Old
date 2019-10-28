@@ -15,14 +15,16 @@ layout( set = 0, binding = 0 ) uniform PerSceneConstantBuffer
     vec3 cameraPos;
 } perSceneConstantBuffer;
 
+layout( set = 2, binding = 0 ) uniform sampler2D textures[8];
+
 layout( std430, push_constant ) uniform MaterialConstantBuffer
 {
     layout( offset = 128 ) vec4 Ka;
-    vec4 Kd;
-    vec4 Ks;
+    layout( offset = 144 ) vec4 Kd;
+    layout( offset = 160 ) vec4 Ks;
+    layout( offset = 176 )uint diffuseTexIndex;
 } material;
 
-layout( set = 1, binding = 1 ) uniform sampler2D texSampler;
 
 void main()
 {
@@ -35,8 +37,12 @@ void main()
     vec3 h = normalize( l + e );
 
     vec3 color = material.Ka.xyz;
-    // Kd *= texture( texSampler, texCoord ).xyz;
-    color += lightColor * material.Kd.xyz * max( 0.0, dot( l, n ) );
+    vec3 Kd    = material.Kd.xyz;
+    if ( material.diffuseTexIndex != 65535 )
+    {
+        Kd *= texture( textures[material.diffuseTexIndex], texCoord ).xyz;
+    }
+    color += lightColor * Kd * max( 0.0, dot( l, n ) );
     if ( dot( l, n ) > EPSILON )
     {
         color += lightColor * material.Ks.xyz * pow( max( dot( h, n ), 0.0 ), 4*material.Ks.w );

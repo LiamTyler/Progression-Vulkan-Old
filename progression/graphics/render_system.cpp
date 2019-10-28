@@ -6,6 +6,7 @@
 #include "components/model_renderer.hpp"
 #include "graphics/graphics_api.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
+#include "graphics/texture_manager.hpp"
 #include "resource/resource_manager.hpp"
 #include "resource/image.hpp"
 #include "resource/model.hpp"
@@ -71,19 +72,17 @@ struct MaterialConstantBuffer
     glm::vec4 Ka;
     glm::vec4 Kd;
     glm::vec4 Ks;
+    uint32_t diffuseTextureSlot;
 };
 
 static Window* s_window;
 static Pipeline s_pipeline;
 static DescriptorPool s_descriptorPool;
-std::vector< DescriptorSetLayout > s_descriptorSetLayouts;
-std::vector< Progression::Gfx::Buffer > s_gpuPerSceneConstantBuffers;
-std::vector< Progression::Gfx::Buffer > s_gpuMaterialConstantBuffers;
-std::vector< Progression::Gfx::Buffer > s_gpuPerObjectConstantBuffers;
-static std::shared_ptr< Image > s_image;
+static std::vector< DescriptorSetLayout > s_descriptorSetLayouts;
+static std::vector< Progression::Gfx::Buffer > s_gpuPerSceneConstantBuffers;
 std::vector< DescriptorSet > perSceneDescriptorSets;
-std::vector< DescriptorSet > materialDescriptorSets;
-std::vector< DescriptorSet > perObjectDescriptorSets;
+std::vector< DescriptorSet > textureDescriptorSets;
+static std::shared_ptr< Image > s_image;
 
 namespace Progression
 {
@@ -96,6 +95,7 @@ namespace RenderSystem
 
     bool Init()
     {
+        InitTextureManager();
         if ( !VulkanInit() )
         {
             LOG_ERR( "Could not initialize vulkan" );
@@ -115,8 +115,6 @@ namespace RenderSystem
         ResourceManager::LoadFastFile( PG_RESOURCE_DIR "cache/fastfiles/resource.txt.ff" );
         auto simpleVert = ResourceManager::Get< Shader >( "simpleVert" );
         auto simpleFrag = ResourceManager::Get< Shader >( "simpleFrag" );
-
-        s_image = ResourceManager::Get< Image >( "chaletTex" );
 
         VertexBindingDescriptor bindingDesc[3];
         bindingDesc[0].binding   = 0;
@@ -145,16 +143,10 @@ namespace RenderSystem
         
         uint32_t numImages = static_cast< uint32_t >( g_renderState.swapChain.images.size() );
         s_gpuPerSceneConstantBuffers.resize( numImages );
-        //s_gpuMaterialConstantBuffers.resize( numImages );
-        // s_gpuPerObjectConstantBuffers.resize( numImages );
         for ( uint32_t i = 0; i < numImages; ++i )
         {
             s_gpuPerSceneConstantBuffers[i] = g_renderState.device.NewBuffer( sizeof( PerSceneConstantBuffer ),
                     BUFFER_TYPE_UNIFORM, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
-            /*s_gpuMaterialConstantBuffers[i] = g_renderState.device.NewBuffer( sizeof( MaterialConstantBuffer ),
-                    BUFFER_TYPE_UNIFORM, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
-            s_gpuPerObjectConstantBuffers[i] = g_renderState.device.NewBuffer( sizeof( PerObjectConstantBuffer ),
-                    BUFFER_TYPE_UNIFORM, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );*/
         }
 
         VkDescriptorPoolSize poolSize[3] = {};
@@ -171,8 +163,16 @@ namespace RenderSystem
 
         s_descriptorSetLayouts = g_renderState.device.NewDescriptorSetLayouts( combined );
         perSceneDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[0] );
-        materialDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[1] );
-        //perObjectDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[2]);
+        textureDescriptorSets  = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[2] );
+        
+
+        s_image = ResourceManager::Get< Image >( "RENDER_SYSTEM_DUMMY_TEXTURE" );
+        PG_ASSERT( s_image );
+        VkDescriptorImageInfo imageInfo;
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageInfo.sampler = s_image->sampler->GetHandle();
+        imageInfo.imageView = s_image->GetTexture()->GetView();
+        std::vector< VkDescriptorImageInfo > imageInfos( PG_MAX_GFX_TEXTURE_SLOTS, imageInfo );
 
         for ( size_t i = 0; i < numImages; i++ )
         {
@@ -181,7 +181,7 @@ namespace RenderSystem
             bufferInfo.offset = 0;
             bufferInfo.range  = VK_WHOLE_SIZE;
 
-            VkWriteDescriptorSet descriptorWrite[1] = {};
+            VkWriteDescriptorSet descriptorWrite[2] = {};
             descriptorWrite[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrite[0].dstSet           = perSceneDescriptorSets[i].GetHandle();
             descriptorWrite[0].dstBinding       = 0;
@@ -190,21 +190,15 @@ namespace RenderSystem
             descriptorWrite[0].descriptorCount  = 1;
             descriptorWrite[0].pBufferInfo      = &bufferInfo;
 
-            vkUpdateDescriptorSets( g_renderState.device.GetHandle(), 1, descriptorWrite, 0, nullptr );
+            descriptorWrite[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite[1].dstSet           = textureDescriptorSets[i].GetHandle();
+            descriptorWrite[1].dstBinding       = 0;
+            descriptorWrite[1].dstArrayElement  = 0;
+            descriptorWrite[1].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrite[1].descriptorCount  = static_cast< uint32_t >( imageInfos.size() );
+            descriptorWrite[1].pImageInfo       = imageInfos.data();
 
-            VkDescriptorImageInfo imageInfo = {};
-            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView   = s_image->GetTexture()->GetView();
-            imageInfo.sampler     = GetSampler( "nearest_clamped" )->GetHandle();
-
-            descriptorWrite[0].dstSet           = materialDescriptorSets[i].GetHandle();
-            descriptorWrite[0].dstBinding       = 1;
-            descriptorWrite[0].dstArrayElement  = 0;
-            descriptorWrite[0].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrite[0].descriptorCount  = 1;
-            descriptorWrite[0].pImageInfo       = &imageInfo;
-
-            vkUpdateDescriptorSets( g_renderState.device.GetHandle(), 1, descriptorWrite, 0, nullptr );
+            vkUpdateDescriptorSets( g_renderState.device.GetHandle(), 2, descriptorWrite, 0, nullptr );
         }
 
         PipelineDescriptor pipelineDesc;
@@ -251,14 +245,6 @@ namespace RenderSystem
             {
                 b.Free();
             }
-            for ( auto& b : s_gpuMaterialConstantBuffers )
-            {
-                b.Free();
-            }
-            for ( auto& b : s_gpuPerObjectConstantBuffers )
-            {
-                b.Free();
-            }
             for ( auto& layout : s_descriptorSetLayouts )
             {
                 layout.Free();
@@ -278,6 +264,8 @@ namespace RenderSystem
 
         auto imageIndex = g_renderState.swapChain.AcquireNextImage( g_renderState.presentCompleteSemaphores[currentFrame] );
 
+        UpdateTextureDescriptors( textureDescriptorSets );
+
         // perSceneConstantBuffer
         void* data;
         data = s_gpuPerSceneConstantBuffers[imageIndex].Map();
@@ -291,9 +279,9 @@ namespace RenderSystem
         cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex] );
         cmdBuf.BindRenderPipeline( s_pipeline );
         cmdBuf.BindDescriptorSets( 1, &perSceneDescriptorSets[imageIndex], s_pipeline );
-        cmdBuf.BindDescriptorSets( 1, &materialDescriptorSets[imageIndex], s_pipeline, 1 );
-        // cmdBuf.BindDescriptorSets( 1, &perObjectDescriptorSets[imageIndex], s_pipeline, 2 );
+        cmdBuf.BindDescriptorSets( 1, &textureDescriptorSets[imageIndex], s_pipeline, 2 );
 
+        int drawn = 0;
         scene->registry.view< ModelRenderer, Transform >().each( [&]( auto& modelRenderer, auto& transform )
         {
             auto M = transform.GetModelMatrix();
@@ -313,6 +301,7 @@ namespace RenderSystem
                 mcbuf.Ka = glm::vec4( mat->Ka, 0 );
                 mcbuf.Kd = glm::vec4( mat->Kd, 0 );
                 mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
+                mcbuf.diffuseTextureSlot = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : (uint16_t) ~0u;
                 vkCmdPushConstants( cmdBuf.GetHandle(), s_pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof( MaterialConstantBuffer ), &mcbuf );
 
                 cmdBuf.BindVertexBuffer( mesh.vertexBuffer, 0, 0 );

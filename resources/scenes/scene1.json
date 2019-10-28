@@ -24,8 +24,7 @@
             "rotation": [ -90, 90, 0 ]
         },
         "ModelRenderer": {
-            "model": "chalet",
-            "material": "red"
+            "model": "chalet"
         }
     },
     "Entity": {

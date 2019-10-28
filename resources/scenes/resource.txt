@@ -18,6 +18,15 @@ MTLFile
 filename materials/miscellaneous.mtl
 
 Image
+name RENDER_SYSTEM_DUMMY_TEXTURE
+filenames textures/render_system_dummy_texture.png
+sampler nearest_clamped
+flipVertically false
+generateMipmaps false
+createTexture true
+freeCpuCopy true
+
+Image
 name chaletTex
 filenames textures/chalet.jpg
 sampler linear_clamped

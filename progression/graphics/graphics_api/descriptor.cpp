@@ -68,14 +68,21 @@ namespace Gfx
                     }
                     if ( !found )
                     {
-                        newSet.bindings.push_back( newBinding );
+                        DescriptorSetLayoutData set;
+                        set.setNumber = newSet.setNumber;
+                        set.bindings.push_back( newBinding );
+                        combined.push_back( set );
                     }
                 }
                 ++i;
             }
-            newSet.createInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-            newSet.createInfo.bindingCount = static_cast< uint32_t >( newSet.bindings.size() );
-            newSet.createInfo.pBindings    = newSet.bindings.data();
+        }
+
+        for ( auto& set : combined )
+        {
+            set.createInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            set.createInfo.bindingCount = static_cast< uint32_t >( set.bindings.size() );
+            set.createInfo.pBindings    = set.bindings.data();
         }
 
         return combined;

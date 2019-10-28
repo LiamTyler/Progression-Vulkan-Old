@@ -360,7 +360,6 @@ static bool CreateInstance()
 #else // #if !USING( SHIP_BUILD )
     createInfo.enabledLayerCount   = 0;
 #endif // #else // #if !USING( SHIP_BUILD )
-    createInfo.enabledLayerCount   = 0;
 
     auto ret = vkCreateInstance( &createInfo, nullptr, &g_renderState.instance );
     if ( ret == VK_ERROR_EXTENSION_NOT_PRESENT )
@@ -470,7 +469,7 @@ static bool CreateDepthTexture()
     info.format = PixelFormat::DEPTH_32_FLOAT;
     info.width  = g_renderState.swapChain.extent.width;
     info.height = g_renderState.swapChain.extent.height;
-    g_renderState.depthTex = g_renderState.device.NewTexture( info );
+    g_renderState.depthTex = g_renderState.device.NewTexture( info, false );
     return g_renderState.depthTex;
 }
 
