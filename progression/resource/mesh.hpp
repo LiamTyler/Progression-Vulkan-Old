@@ -20,6 +20,7 @@ public:
 
     void UploadToGpu( bool freeCPUCopy = true );
     void RecalculateBB();
+    void RecalculateNormals();
     void Free( bool gpuCopy = true, bool cpuCopy = true );
     void Optimize();
     bool Serialize( std::ofstream& out ) const;

@@ -49,9 +49,9 @@ float Attenuate( in const float distSquared, in const float radiusSquared )
 
 void main()
 {
-    // outColor.xyz = pointLights[0].colorAndIntensity.w * pointLights[0].colorAndIntensity.xyz;
-    // outColor.w = 1; 
-    // return;
+    //outColor.xyz = vec3( 1, 0, 0 );
+    //outColor.w = 1; 
+    //return;
     //outColor.xyz = vec3( sceneConstantBuffer.numSpotLights );
     //outColor.w = 1; 
     //return;

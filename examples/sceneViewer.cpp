@@ -28,57 +28,42 @@ int main( int argc, char* argv[] )
         return 0;
     }
 
-    /*
-    LOG( "Scene backgroundColor: ", scene->backgroundColor );
-    LOG( "Scene ambientColor: ", scene->ambientColor );
-    LOG( "Scene Camera: " );
-    LOG( "\tposition: ", scene->camera.position );
-    LOG( "\trotation: ", scene->camera.rotation );
-    LOG( "\tfov: ", scene->camera.fov );
-    LOG( "\taspectRatio: ", scene->camera.aspectRatio );
-    LOG( "\tnearPlane: ", scene->camera.nearPlane );
-    LOG( "\tfarPlane: ", scene->camera.farPlane );
-    LOG( "Scene Directional Light: " );
-    LOG( "\tcolorAndIntensity: ", scene->directionalLight.colorAndIntensity );
-    LOG( "\tdirection: ", scene->directionalLight.direction );
-    LOG( "Num PointLights: ", scene->pointLights.size() );
-    for ( size_t i = 0; i < scene->pointLights.size(); ++i )
+    std::string fbxFile = PG_RESOURCE_DIR "dragon/Dragon_Baked_Actions_fbx_7.4_binary.fbx";
+
+    std::vector< std::shared_ptr< SkinnedModel > > skinnedModels;
+    if ( !SkinnedModel::LoadFBX( fbxFile, skinnedModels ) )
     {
-        const auto& l = scene->pointLights[i];
-        LOG( "\tPointLight[", i, "].colorAndIntensity = ", l.colorAndIntensity );
-        LOG( "\tPointLight[", i, "].position = ", l.position );
-        LOG( "\tPointLight[", i, "].radius = ", l.radius );
-    }
-    LOG( "Num SpotLights: ", scene->spotLights.size() );
-    for ( size_t i = 0; i < scene->spotLights.size(); ++i )
-    {
-        const auto& l = scene->spotLights[i];
-        LOG( "\tspotLight[", i, "].colorAndIntensity = ", l.colorAndIntensity );
-        LOG( "\tspotLight[", i, "].position = ", l.position );
-        LOG( "\tspotLight[", i, "].radius = ", l.radius );
-        LOG( "\tspotLight[", i, "].direction = ", l.direction );
-        LOG( "\tspotLight[", i, "].cutoff = ", l.cutoff );
+        LOG_ERR( "Could not load the fbx file '", fbxFile, "'" );
+        PG::EngineQuit();
+        return 0;
     }
 
-    LOG( "All entities: " );
-    scene->registry.each([]( const auto& e )
+    for ( const auto& m : skinnedModels )
     {
-        LOG( "Entity ", (uint32_t) e );
-    });
+        auto entity             = scene->registry.create();
+        auto& transform         = scene->registry.assign< Transform >( entity );
+        // transform.position      = -0.25f * ( pgModel->aabb.min + pgModel->aabb.max );
+        transform.position      = glm::vec3( 0, -20, -70 );
+        LOG( "transform position = ", transform.position );
+        transform.rotation      = glm::vec3( glm::radians( -50.0f ), glm::radians( 20.0f ), 0 );
+        transform.scale         = glm::vec3( 1 );
+        auto& skinned_renderer  = scene->registry.assign< SkinnedRenderer >( entity );
+        skinned_renderer.model  = m;
+    }
 
-    LOG( "Components: " );
-    scene->registry.view< Transform, NameComponent, EntityMetaData >().each([]( const auto& e, auto& t, auto& n, auto& m  )
-    {
-        LOG( "Entity ", (uint32_t) e );
-        LOG( "\tTransform.position = ", t.position );
-        LOG( "\tTransform.rotation = ", t.rotation );
-        LOG( "\tTransform.scale    = ", t.scale );
-        LOG( "\tTransform.scale    = ", t.scale );
-        LOG( "\tname = ", n.name );
-        LOG( "\tmeta.parent   = ", (uint32_t) m.parent );
-        LOG( "\tmeta.isStatic = ", m.isStatic );
-    });
-    */
+    //LOG( "Model AABB min = ", pgModel->aabb.min );
+    //LOG( "Model AABB max = ", pgModel->aabb.max );
+    //auto entity             = scene->registry.create();
+    //auto& transform         = scene->registry.assign< Transform >( entity );
+    //// transform.position      = -0.25f * ( pgModel->aabb.min + pgModel->aabb.max );
+    //transform.position      = glm::vec3( 0, -20, -70 );
+    //LOG( "transform position = ", transform.position );
+    //transform.rotation      = glm::vec3( glm::radians( -50.0f ), glm::radians( 20.0f ), 0 );
+    //transform.scale         = glm::vec3( 1 );
+    //auto& modelRenderer     = scene->registry.assign< ModelRenderer >( entity );
+    //modelRenderer.model     = pgModel;
+    //modelRenderer.materials = pgModel->materials;
+    //ResourceManager::Add< Model >( pgModel );
 
     scene->Start();
 

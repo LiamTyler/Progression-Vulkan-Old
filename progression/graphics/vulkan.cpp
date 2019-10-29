@@ -226,8 +226,11 @@ static VkPresentModeKHR ChooseSwapPresentMode( const std::vector< VkPresentModeK
 
     for (const auto& availablePresentMode : availablePresentModes)
     {
+#if USING( WINDOWS_PROGRAM )
+        if ( availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR  )
+#else // #if USING( WINDOWS_PROGRAM )
         if ( availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR )
-        // if ( availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR )
+#endif // #else // #if USING( WINDOWS_PROGRAM )
         {
             return availablePresentMode;
         }

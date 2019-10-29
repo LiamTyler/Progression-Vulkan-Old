@@ -83,6 +83,7 @@ set(
     resource/resource_manager.cpp
     resource/script.cpp
     resource/shader.cpp
+    resource/skinned_model.cpp
 	
 	resource/resource_manager.hpp
     resource/resource.hpp
@@ -92,6 +93,7 @@ set(
     resource/model.hpp
     resource/script.hpp
     resource/shader.hpp
+    resource/skinned_model.hpp
 )
 
 set(
@@ -130,6 +132,11 @@ set(
     ../ext/SPIRV-Reflect/spirv_reflect.c
     ../ext/SPIRV-Reflect/common/output_stream.cpp
     ../ext/SPIRV-Reflect/common/output_stream.h
+
+    ../ext/openFBX/miniz.c
+    ../ext/openFBX/miniz.h
+    ../ext/openFBX/ofbx.cpp
+    ../ext/openFBX/ofbx.h
 )
 
 set(
@@ -156,6 +163,7 @@ set(
 	components/model_renderer.hpp
 	components/script_component.cpp
     components/script_component.hpp
+    components/skinned_renderer.hpp
 	components/transform.cpp
 	components/transform.hpp
 )

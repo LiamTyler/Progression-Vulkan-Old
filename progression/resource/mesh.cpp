@@ -113,35 +113,31 @@ void Mesh::Optimize()
 // TODO: dynamic meshes + usage
 void Mesh::UploadToGpu( bool freeCPUCopy )
 {
-    PG_UNUSED( freeCPUCopy);
-    PG_ASSERT( false );
-    /*
-    PG_ASSERT( vertices.size() == normals.size() );
-    if ( !m_gpuDataCreated )
+    using namespace Gfx;
+    PG_ASSERT( indices.size() != 0 && vertices.size() == normals.size() );
+    if ( m_gpuDataCreated )
     {
-        m_gpuDataCreated = true;
-        size_t vertsSize = sizeof( glm::vec3 ) * vertices.size() +
-                           sizeof( glm::vec3 ) * normals.size() + sizeof( glm::vec2 ) * uvs.size();
-        vertexBuffer =
-          Gfx::Buffer::Create( NULL, vertsSize, Gfx::BufferType::VERTEX, Gfx::BufferUsage::STATIC );
-
-        indexBuffer = Gfx::Buffer::Create( NULL, indices.size() * sizeof( unsigned int ),
-                                           Gfx::BufferType::INDEX, Gfx::BufferUsage::STATIC );
+        vertexBuffer.Free();
+        indexBuffer.Free();
     }
+    m_gpuDataCreated = true;
+    std::vector< float > vertexData( 3 * vertices.size() + 3 * normals.size() + 2 * uvs.size() );
+    char* dst = (char*) vertexData.data();
+    memcpy( dst, vertices.data(), vertices.size() * sizeof( glm::vec3 ) );
+    dst += vertices.size() * sizeof( glm::vec3 );
+    memcpy( dst, normals.data(), normals.size() * sizeof( glm::vec3 ) );
+    dst += normals.size() * sizeof( glm::vec3 );
+    memcpy( dst, uvs.data(), uvs.size() * sizeof( glm::vec2 ) );
+
+    vertexBuffer = Gfx::g_renderState.device.NewBuffer( vertexData.size() * sizeof( float ), vertexData.data(), BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL );
+    indexBuffer  = Gfx::g_renderState.device.NewBuffer( indices.size() * sizeof ( uint32_t ), indices.data(), BUFFER_TYPE_INDEX, MEMORY_TYPE_DEVICE_LOCAL );
 
     m_numVertices  = static_cast< uint32_t >( vertices.size() );
     m_numIndices   = static_cast< uint32_t >( indices.size() );
     m_normalOffset = m_numVertices * sizeof( glm::vec3 );
     m_uvOffset     = m_normalOffset + m_numVertices * sizeof( glm::vec3 );
 
-    vertexBuffer.SetData( vertices.data(), 0,              m_numVertices * sizeof( glm::vec3 ) );
-    vertexBuffer.SetData( normals.data(),  m_normalOffset, m_numVertices * sizeof( glm::vec3 ) );
-    vertexBuffer.SetData( uvs.data(),      m_uvOffset,     static_cast< uint32_t >( uvs.size() ) * sizeof( glm::vec2 ) );
-
-    indexBuffer.SetData( indices.data(),   m_numIndices * sizeof( uint32_t ) );
-
     Free( false, freeCPUCopy );
-    */
 }
 
 void Mesh::RecalculateBB()
@@ -156,6 +152,27 @@ void Mesh::RecalculateBB()
     }
 
     aabb = AABB( min, max );
+}
+
+void Mesh::RecalculateNormals()
+{
+    normals.resize( vertices.size(), glm::vec3( 0 ) );
+
+    for ( size_t i = 0; i < indices.size(); i += 3 )
+    {
+        glm::vec3 v1 = vertices[indices[i + 0]];
+        glm::vec3 v2 = vertices[indices[i + 1]];
+        glm::vec3 v3 = vertices[indices[i + 2]];
+        glm::vec3 n = glm::cross( v2 - v1, v3 - v1 );
+        normals[indices[i + 0]] += n;
+        normals[indices[i + 1]] += n;
+        normals[indices[i + 2]] += n;
+    }
+
+    for ( auto& normal : normals )
+    {
+        normal = glm::normalize( normal );
+    }
 }
 
 void Mesh::Free( bool gpuCopy, bool cpuCopy )

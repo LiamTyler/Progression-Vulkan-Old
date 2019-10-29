@@ -4,6 +4,7 @@
 #include "core/time.hpp"
 #include "core/window.hpp"
 #include "components/model_renderer.hpp"
+#include "components/skinned_renderer.hpp"
 #include "graphics/graphics_api.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
 #include "graphics/texture_manager.hpp"
@@ -353,8 +354,9 @@ namespace RenderSystem
         cmdBuf.BindDescriptorSets( 1, &sceneDescriptorSets[imageIndex], s_pipeline );
         cmdBuf.BindDescriptorSets( 1, &textureDescriptorSets[imageIndex], s_pipeline, 2 );
 
-        scene->registry.view< ModelRenderer, Transform >().each( [&]( auto& modelRenderer, auto& transform )
+        scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& modelRenderer, Transform& transform )
         {
+            // LOG( "Drawing model: ", modelRenderer.model->name );
             auto M = transform.GetModelMatrix();
             auto N   = glm::transpose( glm::inverse( M ) );
             PerObjectConstantBuffer b;
@@ -379,6 +381,36 @@ namespace RenderSystem
                 cmdBuf.BindVertexBuffer( mesh.vertexBuffer, mesh.GetUVOffset(), 2 );
                 cmdBuf.BindIndexBuffer(  mesh.indexBuffer,  mesh.GetIndexType() );
                 cmdBuf.DrawIndexed( 0, mesh.GetNumIndices() );
+            }
+        });
+
+        scene->registry.view< SkinnedRenderer, Transform >().each( [&]( SkinnedRenderer& renderer, Transform& transform )
+        {
+            auto M = transform.GetModelMatrix();
+            auto N   = glm::transpose( glm::inverse( M ) );
+            PerObjectConstantBuffer b;
+            b.modelMatrix = M;
+            b.normalMatrix = N;
+            vkCmdPushConstants( cmdBuf.GetHandle(), s_pipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PerObjectConstantBuffer ), &b );
+
+            for ( size_t i = 0; i < renderer.model->meshes.size(); ++i )
+            {
+                const auto& model = renderer.model;
+                const auto& mesh = model->meshes[i];
+                const auto& mat  = model->meshes[i].material;
+
+                MaterialConstantBuffer mcbuf{};
+                mcbuf.Ka = glm::vec4( mat->Ka, 0 );
+                mcbuf.Kd = glm::vec4( mat->Kd, 0 );
+                mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
+                mcbuf.diffuseTextureSlot = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
+                vkCmdPushConstants( cmdBuf.GetHandle(), s_pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof( MaterialConstantBuffer ), &mcbuf );
+
+                cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
+                cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
+                cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetUVOffset(), 2 );
+                cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
+                cmdBuf.DrawIndexed( mesh.GetStartIndex(), mesh.GetNumIndices() );
             }
         });
 

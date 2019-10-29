@@ -33,6 +33,7 @@ public:
     
     bool LoadFromObj( ModelCreateInfo* createInfo );
     void RecalculateBB( bool recursive = false );
+    void UploadToGpu( bool freeCPUCopy = true );
     void Optimize();
 
     AABB aabb;

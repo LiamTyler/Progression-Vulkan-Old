@@ -238,26 +238,7 @@ bool Model::LoadFromObj( ModelCreateInfo* createInfo )
 
             if ( currentMesh.normals.empty() )
             {
-                const auto& verts   = currentMesh.vertices;
-                const auto& indices = currentMesh.indices;
-                auto& normals       = currentMesh.normals;
-                normals.resize( verts.size(), glm::vec3( 0 ) );
-
-                for ( size_t i = 0; i < indices.size(); i += 3 )
-                {
-                    glm::vec3 v1 = verts[indices[i + 0]];
-                    glm::vec3 v2 = verts[indices[i + 1]];
-                    glm::vec3 v3 = verts[indices[i + 2]];
-                    glm::vec3 n = glm::cross( v2 - v1, v3 - v1 );
-                    normals[indices[i + 0]] += n;
-                    normals[indices[i + 1]] += n;
-                    normals[indices[i + 2]] += n;
-                }
-
-                for ( auto& normal : normals )
-                {
-                    normal = glm::normalize( normal );
-                }
+                currentMesh.RecalculateNormals();
             }
 
             currentMesh.aabb = AABB( min, max );
@@ -291,7 +272,6 @@ void Model::RecalculateBB( bool recursive )
         return;
     }
     
-    
     if ( recursive )
     {
         for ( auto& mesh : meshes )
@@ -303,13 +283,21 @@ void Model::RecalculateBB( bool recursive )
     glm::vec3 min = meshes[0].aabb.min;
     glm::vec3 max = meshes[0].aabb.max;
 
-    for ( size_t i = 1; meshes.size(); ++i )
+    for ( size_t i = 1; i < meshes.size(); ++i )
     {
         min = glm::min( min, meshes[i].aabb.min );
-        max = glm::min( max, meshes[i].aabb.min );
+        max = glm::max( max, meshes[i].aabb.max );
     }
 
     aabb = AABB( min, max );
+}
+
+void Model::UploadToGpu( bool freeCPUCopy )
+{
+    for ( Mesh& mesh : meshes )
+    {
+        mesh.UploadToGpu( freeCPUCopy );
+    }
 }
 
 void Model::Optimize()
