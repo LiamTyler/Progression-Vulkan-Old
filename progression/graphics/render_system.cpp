@@ -428,7 +428,12 @@ namespace RenderSystem
             vkCmdPushConstants( cmdBuf.GetHandle(), s_pipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PerObjectConstantBuffer ), &b );
 
             // NOTE: This wont work for more than one model, would to copy all transforms to a big buffer and then do all the draws
-            std::vector< glm::mat4 > boneTransforms( model->skeleton.size(), glm::mat4( 1 ) );
+            std::vector< glm::mat4 > boneTransforms;
+            model->TransformBones( boneTransforms );
+            for ( size_t i = 0; i < boneTransforms.size(); ++i )
+            {
+                boneTransforms[i] = M * boneTransforms[i];
+            }
             data = s_gpuBoneBuffers[imageIndex].Map();
             memcpy( (char*)data, boneTransforms.data(), boneTransforms.size() * sizeof( glm::mat4 ) );
             s_gpuBoneBuffers[imageIndex].UnMap();
@@ -449,7 +454,6 @@ namespace RenderSystem
                 cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
                 cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetUVOffset(), 2 );
                 cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetVertexBoneDataOffset(), 3 );
-                // cmdBuf.BindVertexBuffer( model->vertexBuffer, model->jointoffset, 4 );
                 cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
                 cmdBuf.DrawIndexed( mesh.GetStartIndex(), mesh.GetNumIndices() );
             }

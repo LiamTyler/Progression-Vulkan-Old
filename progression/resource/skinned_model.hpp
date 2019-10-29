@@ -10,14 +10,16 @@ namespace Progression
 
     struct VertexBoneData
     {
-        glm::vec4 weights;
-        glm::uvec4 joints;
+        glm::vec4 weights = glm::vec4( 0 );
+        glm::uvec4 joints = glm::uvec4( 0 );
     };
 
     struct BoneData
     {
-        glm::mat4 offset;
-        glm::mat4 finalTransformation;
+        glm::mat4 offset              = glm::mat4( 1 );
+        glm::mat4 finalTransformation = glm::mat4( 1 );
+        uint32_t parentIndex          = ~0u;
+        std::vector< uint32_t > children;
     };
 
     class SkinnedMesh
@@ -55,6 +57,8 @@ namespace Progression
         void UploadToGpu();
         void Free( bool cpuCopy = true, bool gpuCopy = false );
 
+        void TransformBones( std::vector< glm::mat4 >& finalTransforms );
+
         uint32_t GetNumVertices() const;
         uint32_t GetVertexOffset() const;
         uint32_t GetNormalOffset() const;
@@ -62,7 +66,8 @@ namespace Progression
         uint32_t GetVertexBoneDataOffset() const;
         Gfx::IndexType GetIndexType() const;
 
-        uint32_t jointoffset = 0;
+        glm::mat4 globalMatrix;
+        BoneData rootBone;
 
     private:
         uint32_t m_numVertices          = 0;

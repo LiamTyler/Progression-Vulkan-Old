@@ -57,6 +57,11 @@ static glm::mat4 OfbxToGlmMat4( const ofbx::Matrix& m )
     return ret;
 }
 
+static glm::vec3 OfbxToGlmVec3( const ofbx::Vec3& v )
+{
+    return { v.x, v.y, v.z };
+}
+
 namespace Progression
 {
 
@@ -149,7 +154,6 @@ namespace Progression
         m_normalOffset          = m_numVertices * sizeof( glm::vec3 );
         m_uvOffset              = m_normalOffset + m_numVertices * sizeof( glm::vec3 );
         m_vertexBoneDataOffset  = static_cast< uint32_t >( m_uvOffset + uvs.size() * sizeof( glm::vec2 ) );
-        //jointoffset             = static_cast< uint32_t >( m_vertexBoneDataOffset + joints.size() * sizeof( glm::vec4 ) );
 
         LOG( "m_numVertices = ",    m_numVertices );
         LOG( "m_normalOffset = ",   m_normalOffset );
@@ -182,6 +186,17 @@ namespace Progression
             m_numVertices = 0;
             m_normalOffset = m_uvOffset = m_vertexBoneDataOffset = ~0u;
         }
+    }
+
+    void TransformChildren( const glm::mat4& parentMatrix, std::vector< glm::mat4 >& finalTransforms, const std::vector< BoneData >& bones )
+    {
+
+    }
+
+    void SkinnedModel::TransformBones( std::vector< glm::mat4 >& finalTransforms )
+    {
+        finalTransforms.resize( skeleton.size(), glm::mat4( 1 ) );
+        TransformChildren( rootBone.offset, finalTransforms, skeleton );
     }
 
     bool SkinnedModel::LoadFBX( const std::string& filename, std::vector< std::shared_ptr< SkinnedModel > >& models )
@@ -244,8 +259,8 @@ namespace Progression
                     // LOG( "Cluster[", clusterIdx, "]: ", cluster->getWeightsCount(), " = ", cluster->getIndicesCount() );
 				    InsertHierarchy( bones, cluster->getLink() );
 			    }
-
-                /*for (int i = 0, n = fbxScene->getAnimationStackCount(); i < n; ++i )
+                LOG( "Num bones before considering animations: ", bones.size() );
+                for (int i = 0, n = fbxScene->getAnimationStackCount(); i < n; ++i )
 	            {
 		            const ofbx::AnimationStack* stack = fbxScene->getAnimationStack( i );
 		            for ( int j = 0; stack->getLayer(j); ++j )
@@ -260,18 +275,20 @@ namespace Progression
                             }
 			            }
 		            }
-	            }*/
+	            }
+                LOG( "Num bones after considering animations: ", bones.size() );
 
                 std::sort( bones.begin(), bones.end() );
                 bones.erase( std::unique( bones.begin(), bones.end() ), bones.end() );
                 SortBones( bones );
+                LOG( "num bones: ", bones.size() );
 
                 skinnedModel->skeleton.resize( bones.size() );
-                VertexBoneData defaultBone;
-                defaultBone.weights = glm::vec4( 0 );
-                defaultBone.joints  = glm::uvec4( 0 );
-                skinnedModel->vertexBoneData = std::vector< VertexBoneData >( vertex_count, defaultBone );
+                skinnedModel->vertexBoneData = std::vector< VertexBoneData >( vertex_count );
                 std::vector< uint8_t > vertexBoneCounts( vertex_count, 0 );
+                LOG( "Geometry local transform:\n", OfbxToGlmMat4( geom.getLocalTransform() ) );
+                LOG( "Geometry global transform:\n", OfbxToGlmMat4( geom.getGlobalTransform() ) );
+                skinnedModel->globalMatrix = OfbxToGlmMat4( geom.getGlobalTransform() );
                 for (int i = 0, c = skin->getClusterCount(); i < c; ++i)
 	            {
 		            const ofbx::Cluster* cluster = skin->getCluster( i );
@@ -280,11 +297,14 @@ namespace Progression
                         continue;
                     }
 		            auto it = std::find( bones.begin(), bones.end(), cluster->getLink() );
-		            PG_ASSERT( it != bones.end() );
+		            
                     int joint = static_cast< int >( it - bones.begin() );
-
+                    PG_ASSERT( joint < bones.size() );
                     skinnedModel->skeleton[joint].offset              = OfbxToGlmMat4( bones[joint]->getLocalTransform() );
                     skinnedModel->skeleton[joint].finalTransformation = OfbxToGlmMat4( bones[joint]->getGlobalTransform() );
+                    it = std::find( bones.begin(), bones.end(), bones[joint]->getParent() );
+                    skinnedModel->skeleton[joint].parentIndex = static_cast< uint32_t >( it - bones.begin() );
+                    PG_ASSERT( skinnedModel->skeleton[joint].parentIndex < bones.size() );
 
 		            const int* cp_indices = cluster->getIndices();
 		            const double* weights = cluster->getWeights();
@@ -333,11 +353,59 @@ namespace Progression
                     //LOG( "vertexBoneData[", vertex, "]: weights = ", vertexBoneData.weights, ", joints[", (int)vertexBoneCounts[vertex], "] = ", vertexBoneData.joints.x, " ", vertexBoneData.joints.y, " ", vertexBoneData.joints.z, " ", vertexBoneData.joints.w );
                 }
 
-                /*for ( size_t boneIdx = 0; boneIdx < skinnedModel->skeleton.size(); ++boneIdx )
+                for ( size_t boneIdx = 0; boneIdx < skinnedModel->skeleton.size(); ++boneIdx )
+                {
+                    for ( size_t boneIdx2 = 0; boneIdx2 < skinnedModel->skeleton.size(); ++boneIdx2 )
+                    {
+                        if ( boneIdx == boneIdx2 )
+                        {
+                            continue;
+                        }
+                        if ( skinnedModel->skeleton[boneIdx2].parentIndex == boneIdx )
+                        {
+                            skinnedModel->skeleton[boneIdx].children.push_back( (uint32_t) boneIdx2 );
+                        }
+                    }
+                }
+                skinnedModel->rootBone.offset = skinnedModel->rootBone.finalTransformation = glm::mat4( 1 );
+                skinnedModel->rootBone.parentIndex = ~0u;
+                for ( size_t boneIdx = 0; boneIdx < skinnedModel->skeleton.size(); ++boneIdx )
+                {
+                    if ( skinnedModel->skeleton[boneIdx].parentIndex == ~0u )
+                    {
+                        skinnedModel->rootBone.children.push_back( (uint32_t) boneIdx );
+                    }
+                }
+                std::string children;
+                for ( size_t childIdx = 0; childIdx < skinnedModel->rootBone.children.size(); ++childIdx )
+                {
+                    children += " " + std::to_string( skinnedModel->rootBone.children[childIdx] );
+                }
+                LOG( "ROOT Bone parent: ", skinnedModel->rootBone.parentIndex );
+                LOG( "ROOT Bone children: ", children, "\n" );
+                //auto it = std::find( bones.begin(), bones.end(), bones[0 );
+                //int joint = static_cast< int >( it - bones.begin() );
+                for ( size_t boneIdx = 0; boneIdx < skinnedModel->skeleton.size() - 1; ++boneIdx )
                 {
                     const auto& bone = skinnedModel->skeleton[boneIdx];
-                    LOG( "bone[", boneIdx, "] = ", bone.offset );
-                }*/
+                    LOG( "Bone[", boneIdx, "] local transform:\n", bone.offset );
+                    LOG( "Bone[", boneIdx, "] global transform:\n", bone.finalTransformation );
+                    /*if ( bone.finalTransformation == glm::mat4( 0 ) )
+                    {*/
+                        glm::vec3 p = OfbxToGlmVec3( bones[boneIdx]->getLocalTranslation() );
+                        glm::vec3 r = OfbxToGlmVec3( bones[boneIdx]->getLocalRotation() );
+                        glm::vec3 s = OfbxToGlmVec3( bones[boneIdx]->getLocalScaling() );
+
+                        LOG( "Bone[", boneIdx, "]: position: ", p, ", rotation = ", r, ", scaling = ", s );
+                    // }
+                    std::string children;
+                    for ( size_t childIdx = 0; childIdx < skinnedModel->skeleton[boneIdx].children.size(); ++childIdx )
+                    {
+                        children += " " + std::to_string( skinnedModel->skeleton[boneIdx].children[childIdx] );
+                    }
+                    LOG( "Bone[", boneIdx, "] parent: ", skinnedModel->skeleton[boneIdx].parentIndex );
+                    LOG( "Bone[", boneIdx, "] children: ", children, "\n" );
+                }
 		    }
 
             skinnedModel->meshes.resize( mesh.getMaterialCount() );
@@ -494,108 +562,3 @@ namespace Progression
     }
 
 } // namespace Progression
-
-
-
-
-
-
-/*
-pgModel->meshes.resize( mesh.getMaterialCount() );
-        pgModel->materials.resize( mesh.getMaterialCount() );
-        for ( int mtlIdx = 0; mtlIdx < mesh.getMaterialCount(); ++mtlIdx )
-        {
-            const ofbx::Material* fbxMat = mesh.getMaterial( mtlIdx );
-            pgModel->materials[mtlIdx] = std::make_shared< Material >();
-            pgModel->materials[mtlIdx]->Ka = glm::vec3( 0 );
-            //pgModel->materials[mtlIdx]->Kd = glm::vec3( 0, 1, 0 );
-            pgModel->materials[mtlIdx]->Kd = glm::vec3( fbxMat->getDiffuseColor().r, fbxMat->getDiffuseColor().g, fbxMat->getDiffuseColor().b );
-            pgModel->materials[mtlIdx]->Ks = glm::vec3( fbxMat->getSpecularColor().r, fbxMat->getSpecularColor().g, fbxMat->getSpecularColor().b );
-            pgModel->materials[mtlIdx]->Ke = glm::vec3( 0 );
-            pgModel->materials[mtlIdx]->Ns = 50;
-            char tmp[256];
-            if ( fbxMat->getTexture( ofbx::Texture::TextureType::DIFFUSE ) != nullptr )
-            {
-                fbxMat->getTexture( ofbx::Texture::TextureType::DIFFUSE )->getRelativeFileName().toString( tmp );
-                LOG( "Material DIFFUSE texture name: '", tmp, "'" );
-            }
-            if ( fbxMat->getTexture( ofbx::Texture::TextureType::NORMAL ) != nullptr )
-            {
-                fbxMat->getTexture( ofbx::Texture::TextureType::NORMAL )->getRelativeFileName().toString( tmp );
-                LOG( "Material NORMAL texture name: '", tmp, "'" );
-            }
-            if ( fbxMat->getTexture( ofbx::Texture::TextureType::SPECULAR ) != nullptr )
-            {
-                fbxMat->getTexture( ofbx::Texture::TextureType::SPECULAR )->getRelativeFileName().toString( tmp );
-                LOG( "Material SPECULAR texture name: '", tmp, "'" );
-            }
-        }
-
-		const ofbx::Vec3* normals = geom.getNormals();
-		const ofbx::Vec2* uvs     = geom.getUVs();
-		const int* faceIndices    = geom.getFaceIndices();
-        const int* materials      = geom.getMaterials();
-		int index_count           = geom.getIndexCount();
-		for ( int i = 0; i < index_count - 3; i += 3 ) // - 3 because the last vertex is -infinity on this dragon model
-		{
-            PG_ASSERT( faceIndices[i + 2] < 0 ); // triangulated
-
-			int idx1 = faceIndices[i + 0] + 1;
-			int idx2 = faceIndices[i + 1] + 1;
-			int idx3 = -faceIndices[i + 2];
-			int vertex_idx1 = indices_offset + idx1;
-			int vertex_idx2 = indices_offset + idx2;
-			int vertex_idx3 = indices_offset + idx3;
-
-            Mesh& pgMesh = pgModel->meshes[materials[i / 3]];
-            pgMesh.vertices.emplace_back( vertices[vertex_idx1].x, vertices[vertex_idx1].y, vertices[vertex_idx1].z );
-            pgMesh.vertices.emplace_back( vertices[vertex_idx2].x, vertices[vertex_idx2].y, vertices[vertex_idx2].z );
-            pgMesh.vertices.emplace_back( vertices[vertex_idx3].x, vertices[vertex_idx3].y, vertices[vertex_idx3].z );
-
-            if ( uvs )
-			{
-				int uv_idx1 = normals_offset + ( i + 0 ) + 1;
-				int uv_idx2 = normals_offset + ( i + 1 ) + 1;
-				int uv_idx3 = normals_offset + ( i + 2 ) + 1;
-                pgMesh.uvs.emplace_back( uvs[uv_idx1].x, uvs[uv_idx1].y );
-                pgMesh.uvs.emplace_back( uvs[uv_idx2].x, uvs[uv_idx2].y );
-                pgMesh.uvs.emplace_back( uvs[uv_idx3].x, uvs[uv_idx3].y );
-			}
-
-			if ( normals )
-			{
-				int normal_idx1 = normals_offset + ( i + 0 ) + 1;
-				int normal_idx2 = normals_offset + ( i + 1 ) + 1;
-				int normal_idx3 = normals_offset + ( i + 2 ) + 1;
-                pgMesh.normals.emplace_back( normals[normal_idx1].x, normals[normal_idx1].y, normals[normal_idx1].z );
-                pgMesh.normals.emplace_back( normals[normal_idx2].x, normals[normal_idx2].y, normals[normal_idx2].z );
-                pgMesh.normals.emplace_back( normals[normal_idx3].x, normals[normal_idx3].y, normals[normal_idx3].z );
-			}
-
-            pgMesh.indices.push_back( static_cast< uint32_t >( pgMesh.indices.size() - 1 ) );
-            pgMesh.indices.push_back( static_cast< uint32_t >( pgMesh.indices.size() - 1 ) );
-            pgMesh.indices.push_back( static_cast< uint32_t >( pgMesh.indices.size() - 1 ) );
-		}
-
-        indices_offset += vertex_count;
-		normals_offset += index_count;
-		++obj_idx;
-
-        for ( size_t meshIdx = 0; meshIdx < pgModel->meshes.size(); ++meshIdx )
-        {
-            auto& pgMesh = pgModel->meshes[meshIdx];
-            if ( pgMesh.indices.empty() )
-            {
-                pgModel->meshes.erase( pgModel->meshes.begin() + meshIdx );
-                pgModel->materials.erase( pgModel->materials.begin() + meshIdx );
-                --meshIdx;
-            }
-            else
-            {
-                if ( pgMesh.normals.empty() )
-                {
-                    pgMesh.RecalculateNormals();
-                }
-            }
-        }
-*/
