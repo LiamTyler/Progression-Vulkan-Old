@@ -57,7 +57,7 @@ namespace Progression
         void UploadToGpu();
         void Free( bool cpuCopy = true, bool gpuCopy = false );
 
-        void TransformBones( std::vector< glm::mat4 >& finalTransforms );
+        void TransformBones( std::vector< glm::mat4 >& finalTransforms, glm::mat4 modelMatrix = glm::mat4( 1 ) );
 
         uint32_t GetNumVertices() const;
         uint32_t GetVertexOffset() const;
@@ -66,10 +66,11 @@ namespace Progression
         uint32_t GetVertexBoneDataOffset() const;
         Gfx::IndexType GetIndexType() const;
 
-        glm::mat4 globalMatrix;
         BoneData rootBone;
 
     private:
+        void TransformChildren( uint32_t boneIdx, const glm::mat4& parentMatrix, std::vector< glm::mat4 >& finalTransforms );
+        
         uint32_t m_numVertices          = 0;
         uint32_t m_normalOffset         = ~0u;
         uint32_t m_uvOffset             = ~0u;

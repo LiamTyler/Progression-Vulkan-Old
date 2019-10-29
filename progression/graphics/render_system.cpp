@@ -429,11 +429,7 @@ namespace RenderSystem
 
             // NOTE: This wont work for more than one model, would to copy all transforms to a big buffer and then do all the draws
             std::vector< glm::mat4 > boneTransforms;
-            model->TransformBones( boneTransforms );
-            for ( size_t i = 0; i < boneTransforms.size(); ++i )
-            {
-                boneTransforms[i] = M * boneTransforms[i];
-            }
+            model->TransformBones( boneTransforms, M );
             data = s_gpuBoneBuffers[imageIndex].Map();
             memcpy( (char*)data, boneTransforms.data(), boneTransforms.size() * sizeof( glm::mat4 ) );
             s_gpuBoneBuffers[imageIndex].UnMap();

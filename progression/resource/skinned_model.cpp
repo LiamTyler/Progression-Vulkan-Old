@@ -188,15 +188,28 @@ namespace Progression
         }
     }
 
-    void TransformChildren( const glm::mat4& parentMatrix, std::vector< glm::mat4 >& finalTransforms, const std::vector< BoneData >& bones )
+    void SkinnedModel::TransformChildren( uint32_t boneIdx, const glm::mat4& parentMatrix, std::vector< glm::mat4 >& finalTransforms )
     {
-
+        auto transform = parentMatrix * skeleton[boneIdx].offset;
+        finalTransforms[boneIdx] = transform;
+        for ( const auto& child : skeleton[boneIdx].children )
+        {
+            TransformChildren( child, transform, finalTransforms );
+        }
     }
 
-    void SkinnedModel::TransformBones( std::vector< glm::mat4 >& finalTransforms )
+    void SkinnedModel::TransformBones( std::vector< glm::mat4 >& finalTransforms, glm::mat4 modelMatrix )
     {
-        finalTransforms.resize( skeleton.size(), glm::mat4( 1 ) );
-        TransformChildren( rootBone.offset, finalTransforms, skeleton );
+        finalTransforms.resize( skeleton.size() );
+        for ( const auto& child : rootBone.children )
+        {
+            TransformChildren( child, glm::mat4( 1 ), finalTransforms );
+        }
+        for ( auto& transform : finalTransforms )
+        {
+            // transform = modelMatrix * glm::inverse( rootBone.finalTransformation ) * transform;
+            transform = modelMatrix * transform;
+        }
     }
 
     bool SkinnedModel::LoadFBX( const std::string& filename, std::vector< std::shared_ptr< SkinnedModel > >& models )
@@ -286,9 +299,6 @@ namespace Progression
                 skinnedModel->skeleton.resize( bones.size() );
                 skinnedModel->vertexBoneData = std::vector< VertexBoneData >( vertex_count );
                 std::vector< uint8_t > vertexBoneCounts( vertex_count, 0 );
-                LOG( "Geometry local transform:\n", OfbxToGlmMat4( geom.getLocalTransform() ) );
-                LOG( "Geometry global transform:\n", OfbxToGlmMat4( geom.getGlobalTransform() ) );
-                skinnedModel->globalMatrix = OfbxToGlmMat4( geom.getGlobalTransform() );
                 for (int i = 0, c = skin->getClusterCount(); i < c; ++i)
 	            {
 		            const ofbx::Cluster* cluster = skin->getCluster( i );
@@ -367,8 +377,12 @@ namespace Progression
                         }
                     }
                 }
-                skinnedModel->rootBone.offset = skinnedModel->rootBone.finalTransformation = glm::mat4( 1 );
-                skinnedModel->rootBone.parentIndex = ~0u;
+
+                skinnedModel->rootBone.offset               = OfbxToGlmMat4( geom.getLocalTransform() );
+                skinnedModel->rootBone.finalTransformation  = OfbxToGlmMat4( geom.getGlobalTransform() );
+                skinnedModel->rootBone.parentIndex          = ~0u;
+                LOG( "Geometry local transform:\n", OfbxToGlmMat4( geom.getLocalTransform() ) );
+                LOG( "Geometry global transform:\n", OfbxToGlmMat4( geom.getGlobalTransform() ) );
                 for ( size_t boneIdx = 0; boneIdx < skinnedModel->skeleton.size(); ++boneIdx )
                 {
                     if ( skinnedModel->skeleton[boneIdx].parentIndex == ~0u )
