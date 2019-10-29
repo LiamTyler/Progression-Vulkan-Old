@@ -88,6 +88,9 @@ int main( int argc, char* argv[] )
         window->EndFrame();
     }
 
+    vkDeviceWaitIdle( PG::Gfx::g_renderState.device.GetHandle() );
+    scene->registry.view< SkinnedRenderer >().each([]( SkinnedRenderer& renderer ) { renderer.model->Free( false, true ); } );
+
     delete scene;
 
     PG::EngineQuit();

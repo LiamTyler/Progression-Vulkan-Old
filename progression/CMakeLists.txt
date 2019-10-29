@@ -171,6 +171,7 @@ set(
 set(
 	OTHER
     progression.cpp
+    progression.hpp
 )
 
 set(

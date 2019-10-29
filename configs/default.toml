@@ -6,5 +6,5 @@
     visible = true
 
 [logger]
-    file = ""
+    file = "logs/test.txt"
     useColors = true

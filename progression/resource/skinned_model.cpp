@@ -4,7 +4,7 @@
 #include "utils/logger.hpp"
 #include "graphics/vulkan.hpp"
 
-void InsertHierarchy( std::vector< const ofbx::Object* >& bones, const ofbx::Object* node )
+static void InsertHierarchy( std::vector< const ofbx::Object* >& bones, const ofbx::Object* node )
 {
 	if ( !node || std::find( bones.begin(), bones.end(), node ) != bones.end() )
     {
@@ -15,14 +15,14 @@ void InsertHierarchy( std::vector< const ofbx::Object* >& bones, const ofbx::Obj
 	bones.push_back( node );
 }
 
-void SortBones( std::vector< const ofbx::Object* >& bones )
+static void SortBones( std::vector< const ofbx::Object* >& bones )
 {
 	int count = (int) bones.size();
-	for (int i = 0; i < count; ++i)
+	for ( int i = 0; i < count; ++i )
 	{
-		for (int j = i + 1; j < count; ++j)
+		for ( int j = i + 1; j < count; ++j )
 		{
-			if (bones[i]->getParent() == bones[j])
+			if ( bones[i]->getParent() == bones[j] )
 			{
 				const ofbx::Object* bone = bones[j];
                 std::swap( bones[j], bones[bones.size() - 1] );
@@ -44,6 +44,17 @@ void SortBones( std::vector< const ofbx::Object* >& bones )
 			meshes[idx].bone_idx = int(&bone - bones.begin());
 		}
 	}*/
+}
+
+static glm::mat4 OfbxToGlmMat4( const ofbx::Matrix& m )
+{
+    glm::mat4 ret;
+    ret[0] = { m.m[0],  m.m[1],  m.m[2],  m.m[3] };
+    ret[1] = { m.m[4],  m.m[5],  m.m[6],  m.m[7] };
+    ret[2] = { m.m[8],  m.m[9],  m.m[10], m.m[11] };
+    ret[3] = { m.m[12], m.m[13], m.m[14], m.m[15] };
+
+    return ret;
 }
 
 namespace Progression
@@ -85,15 +96,34 @@ namespace Progression
 
     void SkinnedModel::UploadToGpu()
     {
-        PG_ASSERT( !vertexBuffer && !indexBuffer );
         using namespace Gfx;
-        std::vector< float > vertexData( 3 * vertices.size() + 3 * normals.size() + 2 * uvs.size() );
+
+        if ( m_gpuDataCreated )
+        {
+            vertexBuffer.Free();
+            indexBuffer.Free();
+        }
+        m_gpuDataCreated = true;
+        std::vector< float > vertexData( 3 * vertices.size() + 3 * normals.size() + 2 * uvs.size() + 8 * vertexBoneData.size() );
         char* dst = (char*) vertexData.data();
         memcpy( dst, vertices.data(), vertices.size() * sizeof( glm::vec3 ) );
         dst += vertices.size() * sizeof( glm::vec3 );
         memcpy( dst, normals.data(), normals.size() * sizeof( glm::vec3 ) );
         dst += normals.size() * sizeof( glm::vec3 );
         memcpy( dst, uvs.data(), uvs.size() * sizeof( glm::vec2 ) );
+        dst += uvs.size() * sizeof( glm::vec2 );
+        // std::vector< glm::vec4 > weights( vertexBoneData.size() );
+        // std::vector< glm::uvec4 > joints( vertexBoneData.size() );
+        // for ( size_t i = 0; i < weights.size(); ++i )
+        // {
+        //     weights[i] = vertexBoneData[i].weights;
+        //     joints[i] = vertexBoneData[i].joints;
+        //     // LOG( "weight[", i, "] = ", weights[i].x + weights[i].y + weights[i].z + weights[i].w );
+        // }
+        // memcpy( dst, weights.data(), weights.size() * sizeof( glm::vec4 ) );
+        // dst += weights.size() * sizeof( glm::vec4 );
+        // memcpy( dst, joints.data(), joints.size() * sizeof( glm::uvec4 ) );
+        memcpy( dst, vertexBoneData.data(), vertexBoneData.size() * 2 * sizeof( glm::vec4 ) );
         LOG( "Num floats = ", vertexData.size() );
         vertexBuffer = Gfx::g_renderState.device.NewBuffer( vertexData.size() * sizeof( float ), vertexData.data(), BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL );
 
@@ -115,15 +145,18 @@ namespace Progression
         }
         indexBuffer  = Gfx::g_renderState.device.NewBuffer( indices.size() * sizeof ( uint32_t ), indices.data(), BUFFER_TYPE_INDEX, MEMORY_TYPE_DEVICE_LOCAL );
 
-        m_numVertices  = static_cast< uint32_t >( vertices.size() );
-        m_normalOffset = m_numVertices * sizeof( glm::vec3 );
-        m_uvOffset     = m_normalOffset + m_numVertices * sizeof( glm::vec3 );
+        m_numVertices           = static_cast< uint32_t >( vertices.size() );
+        m_normalOffset          = m_numVertices * sizeof( glm::vec3 );
+        m_uvOffset              = m_normalOffset + m_numVertices * sizeof( glm::vec3 );
+        m_vertexBoneDataOffset  = static_cast< uint32_t >( m_uvOffset + uvs.size() * sizeof( glm::vec2 ) );
+        //jointoffset             = static_cast< uint32_t >( m_vertexBoneDataOffset + joints.size() * sizeof( glm::vec4 ) );
 
-        LOG( "m_numVertices = ", m_numVertices );
-        LOG( "m_normalOffset = ", m_normalOffset );
-        LOG( "m_uvOffset = ", m_uvOffset );
-        LOG( "normals.size() = ", normals.size() );
-        LOG( "uvs.size() = ", uvs.size() );
+        LOG( "m_numVertices = ",    m_numVertices );
+        LOG( "m_normalOffset = ",   m_normalOffset );
+        LOG( "m_uvOffset = ",       m_uvOffset );
+        LOG( "m_vertexBoneDataOffset = ", m_vertexBoneDataOffset );
+        LOG( "normals.size() = ",   normals.size() );
+        LOG( "uvs.size() = ",       uvs.size() );
 
         // Free();
     }
@@ -147,7 +180,7 @@ namespace Progression
             vertexBuffer.Free();
             indexBuffer.Free();
             m_numVertices = 0;
-            m_normalOffset = m_uvOffset = ~0u;
+            m_normalOffset = m_uvOffset = m_vertexBoneDataOffset = ~0u;
         }
     }
 
@@ -202,7 +235,6 @@ namespace Progression
             const ofbx::Skin* skin = geom.getSkin();
 		    if ( skin )
 		    {
-                skinnedModel->vertexBoneData = std::vector< VertexBoneData >( vertex_count );
                 std::vector< const ofbx::Object* > bones;
                 bones.reserve( 256 );
                 LOG( "Skin cluster count = ", skin->getClusterCount() );
@@ -234,6 +266,12 @@ namespace Progression
                 bones.erase( std::unique( bones.begin(), bones.end() ), bones.end() );
                 SortBones( bones );
 
+                skinnedModel->skeleton.resize( bones.size() );
+                VertexBoneData defaultBone;
+                defaultBone.weights = glm::vec4( 0 );
+                defaultBone.joints  = glm::uvec4( 0 );
+                skinnedModel->vertexBoneData = std::vector< VertexBoneData >( vertex_count, defaultBone );
+                std::vector< uint8_t > vertexBoneCounts( vertex_count, 0 );
                 for (int i = 0, c = skin->getClusterCount(); i < c; ++i)
 	            {
 		            const ofbx::Cluster* cluster = skin->getCluster( i );
@@ -244,6 +282,10 @@ namespace Progression
 		            auto it = std::find( bones.begin(), bones.end(), cluster->getLink() );
 		            PG_ASSERT( it != bones.end() );
                     int joint = static_cast< int >( it - bones.begin() );
+
+                    skinnedModel->skeleton[joint].offset              = OfbxToGlmMat4( bones[joint]->getLocalTransform() );
+                    skinnedModel->skeleton[joint].finalTransformation = OfbxToGlmMat4( bones[joint]->getGlobalTransform() );
+
 		            const int* cp_indices = cluster->getIndices();
 		            const double* weights = cluster->getWeights();
 		            for (int j = 0; j < cluster->getIndicesCount(); ++j )
@@ -251,11 +293,12 @@ namespace Progression
 			            int idx             = cp_indices[j];
 			            float weight        = (float)weights[j];
 			            VertexBoneData& s   = skinnedModel->vertexBoneData[idx];
-			            if ( s.count < 4 )
+                        auto& count = vertexBoneCounts[idx];
+			            if ( count < 4 )
 			            {
-				            s.weights[s.count] = weight;
-				            s.joints[s.count] = joint;
-				            ++s.count;
+				            s.weights[count] = weight;
+				            s.joints[count] = joint;
+				            ++count;
 			            }
 			            else
 			            {
@@ -279,10 +322,22 @@ namespace Progression
 
 	            for ( VertexBoneData& s : skinnedModel->vertexBoneData )
 	            {
-		            float sum = 0;
-		            for ( float w : s.weights ) sum += w;
-		            for ( float& w : s.weights ) w /= sum;
+		            float sum = s.weights.x + s.weights.y + s.weights.z + s.weights.w;
+                    PG_ASSERT( sum > 0 );
+		            s.weights /= sum;
 	            }
+
+                for ( size_t vertex = 0; vertex < skinnedModel->vertexBoneData.size(); ++vertex )
+                {
+                    const auto& vertexBoneData = skinnedModel->vertexBoneData[vertex];
+                    //LOG( "vertexBoneData[", vertex, "]: weights = ", vertexBoneData.weights, ", joints[", (int)vertexBoneCounts[vertex], "] = ", vertexBoneData.joints.x, " ", vertexBoneData.joints.y, " ", vertexBoneData.joints.z, " ", vertexBoneData.joints.w );
+                }
+
+                /*for ( size_t boneIdx = 0; boneIdx < skinnedModel->skeleton.size(); ++boneIdx )
+                {
+                    const auto& bone = skinnedModel->skeleton[boneIdx];
+                    LOG( "bone[", boneIdx, "] = ", bone.offset );
+                }*/
 		    }
 
             skinnedModel->meshes.resize( mesh.getMaterialCount() );
@@ -426,6 +481,11 @@ namespace Progression
     uint32_t SkinnedModel::GetUVOffset() const
     {
         return m_uvOffset;
+    }
+
+    uint32_t SkinnedModel::GetVertexBoneDataOffset() const
+    {
+        return m_vertexBoneDataOffset;
     }
 
     Gfx::IndexType SkinnedModel::GetIndexType() const
