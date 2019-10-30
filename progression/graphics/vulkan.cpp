@@ -454,6 +454,7 @@ static bool CreateRenderPass()
 {
     RenderPassDescriptor renderPassDesc;
     renderPassDesc.colorAttachmentDescriptors[0].format  = VulkanToPGPixelFormat( g_renderState.swapChain.imageFormat );
+    renderPassDesc.colorAttachmentDescriptors[0].clearColor  = glm::vec4( .2, .2, .2, 1 );
     renderPassDesc.depthAttachmentDescriptor.format      = PixelFormat::DEPTH_32_FLOAT;
     renderPassDesc.depthAttachmentDescriptor.loadAction  = LoadAction::CLEAR;
     renderPassDesc.depthAttachmentDescriptor.storeAction = StoreAction::DONT_CARE;

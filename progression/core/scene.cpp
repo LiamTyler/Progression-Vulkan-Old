@@ -152,6 +152,7 @@ Scene* Scene::Load( const std::string& filename )
 void Scene::Start()
 {
     g_LuaState["registry"] = &registry;
+    g_LuaState["scene"] = this;
     registry.view< ScriptComponent >().each([]( const entt::entity e, ScriptComponent& comp )
     {
         for ( int i = 0; i < comp.numScripts; ++i )
@@ -164,7 +165,7 @@ void Scene::Start()
             }
         }
     });
-    }
+}
 
 void Scene::Update()
 {

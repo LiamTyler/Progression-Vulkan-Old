@@ -1,6 +1,8 @@
 build*/
+logs/
 *.swp
 a.out
+ext/assimp
 progression/core/platform_defines.hpp
 resources/sponza
 resources/cache

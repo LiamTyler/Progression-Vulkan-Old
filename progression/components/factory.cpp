@@ -55,7 +55,15 @@ namespace Progression
             { "script", []( rapidjson::Value& v, ScriptComponent& s )
                 {
                     PG_ASSERT( v.IsString(), "Please provide a string with the script name" );
-                    s.AddScript( ResourceManager::Get< Script >( v.GetString() ) );
+                    auto ptr = ResourceManager::Get< Script >( v.GetString() );
+                    if ( !ptr )
+                    {
+                        LOG_ERR( "Could not find script with name '", v.GetString(), "'" );
+                    }
+                    else
+                    {
+                        s.AddScript( ptr );
+                    }
                 }
             },
         });

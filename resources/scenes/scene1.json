@@ -13,59 +13,80 @@
     "AmbientColor": {
         "color": [ 1, 1, 1 ]
     },
-    "_DirectionalLight": {
-        "colorAndIntensity": [ 1, 1, 1, 0 ],
-        "direction": [ 0, -1, 0 ]
+    "DirectionalLight": {
+        "colorAndIntensity": [ 1, 1, 1, 1 ],
+        "direction": [ 0, -1, -1 ]
     },
     "_PointLight": {
         "colorAndIntensity": [ 1, 1, 1, 1 ],
         "positionAndRadius": [ -2, 0, -4, 20 ]
     },
-    "SpotLight": {
-        "colorAndIntensity": [ 1, 1, 1, 1 ],
-        "positionAndRadius": [ 0, 0, 0, 20 ],
-        "directionAndCutoff": [ 0, 0, -1, 25 ]
-    },
-    "_Entity": {
-        "NameComponent": "chalet",
+    "Entity": {
+        "NameComponent": "chalet1",
         "Transform": {
-            "position": [ 2.0, -0.7, -5 ],
+            "position": [ -3, -0.7, -3 ],
             "rotation": [ -90, 90, 0 ]
         },
         "ModelRenderer": {
             "model": "chalet"
+        },
+        "ScriptComponent": {
+            "script": "spinner"
         }
     },
-    "_Entity": {
+    "Entity": {
         "NameComponent": "chalet2",
         "Transform": {
-            "position": [ -2.0, -0.7, -5.0 ],
+            "position": [ 3, -0.7, -3 ],
             "rotation": [ -90, 90, 0 ]
         },
         "ModelRenderer": {
             "model": "chalet"
+        },
+        "ScriptComponent": {
+            "script": "spinner"
         }
     },
     "Entity": {
-        "NameComponent": "cube2",
+        "NameComponent": "chalet3",
         "Transform": {
-            "position": [ -2.0, 0, -5 ],
-            "scale": [ 0.5, 0.5, 0.5 ]
+            "position": [ -3, -0.7, 3 ],
+            "rotation": [ -90, 90, 0 ]
         },
         "ModelRenderer": {
-            "model": "cube",
-            "material": "green"
+            "model": "chalet"
+        },
+        "ScriptComponent": {
+            "script": "spinner"
         }
     },
     "Entity": {
-        "NameComponent": "cube2",
+        "NameComponent": "chalet4",
         "Transform": {
-            "position": [ 2.0, 0, -5 ],
-            "scale": [ 0.5, 0.5, 0.5 ]
+            "position": [ 3, -0.7, 3 ],
+            "rotation": [ -90, 90, 0 ]
         },
         "ModelRenderer": {
-            "model": "cube",
-            "material": "green"
+            "model": "chalet"
+        },
+        "ScriptComponent": {
+            "script": "spinner"
+        }
+    },
+    "Entity": {
+        "NameComponent": "floor",
+        "Transform": {
+            "position": [ 0, -1, 0 ],
+            "scale": [ 10, 1, 10 ]
+        },
+        "ModelRenderer": {
+            "model": "floor",
+            "material": "floor"
+        }
+    },
+    "Entity": {
+        "ScriptComponent": {
+            "script": "cameraController"
         }
     }
 }

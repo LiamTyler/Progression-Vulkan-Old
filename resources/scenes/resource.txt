@@ -7,15 +7,21 @@ name simpleFrag
 filename shaders/simple.frag
 
 Script
-name updater
-filename scripts/script1.lua
+name spinner
+filename scripts/spinner.lua
 
 Script
-name single
-filename scripts/script2.lua
+name cameraController
+filename scripts/cameraController.lua
 
-MTLFile
-filename materials/miscellaneous.mtl
+Image
+name chaletTex
+filenames textures/chalet.jpg
+sampler linear_clamped
+flipVertically true
+generateMipmaps false
+createTexture true
+freeCpuCopy true
 
 Image
 name RENDER_SYSTEM_DUMMY_TEXTURE
@@ -26,21 +32,31 @@ generateMipmaps false
 createTexture true
 freeCpuCopy true
 
-#Model
-#name sponza 
-#filename sponza/sponza.obj
-#optimize true
-#freeCpuCopy true
-#createGpuCopy true
-
 Image
-name chaletTex
-filenames textures/chalet.jpg
+name floor
+filenames textures/metal2.jpg
 sampler linear_clamped
 flipVertically true
 generateMipmaps false
 createTexture true
 freeCpuCopy true
+
+MTLFile
+filename materials/miscellaneous.mtl
+
+Model
+name chalet
+filename models/chalet2.obj
+optimize true
+freeCpuCopy true
+createGpuCopy true
+
+Model
+name floor
+filename models/plane.obj
+optimize true
+freeCpuCopy true
+createGpuCopy true
 
 Model
 name chalet

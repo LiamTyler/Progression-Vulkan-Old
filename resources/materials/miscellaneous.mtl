@@ -21,3 +21,10 @@ Ka 0 0 0
 Kd 1 1 1
 Ks 0.3 0.3 0.3
 Ns 50
+
+newmtl floor 
+Ka 0 0 0
+Kd 1 1 1
+Ks 0.1 0.1 0.1
+Ns 50
+map_Kd floor

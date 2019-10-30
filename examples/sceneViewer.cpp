@@ -18,7 +18,7 @@ int main( int argc, char* argv[] )
     }
 
     Window* window = GetMainWindow();
-    // window->setRelativeMouse(true);
+    window->SetRelativeMouse(true);
     
     Scene* scene = Scene::Load( argv[1] );
     if ( !scene )
@@ -95,7 +95,7 @@ int main( int argc, char* argv[] )
             PG::g_engineShutdown = true;
         }
 
-        // scene->Update();
+        scene->Update();
         RenderSystem::Render( scene );
 
         // std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
