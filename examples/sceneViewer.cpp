@@ -28,42 +28,35 @@ int main( int argc, char* argv[] )
         return 0;
     }
 
-    std::string fbxFile = PG_RESOURCE_DIR "dragon/Dragon_Baked_Actions_fbx_7.4_binary.fbx";
-
-    std::vector< std::shared_ptr< SkinnedModel > > skinnedModels;
-    if ( !SkinnedModel::LoadFBX( fbxFile, skinnedModels ) )
+    //std::string fbxFile = PG_RESOURCE_DIR "dragon/Dragon_Baked_Actions_fbx_7.4_binary.fbx";
+    std::string fbxFile = PG_RESOURCE_DIR "primitive.fbx";
+    //std::string fbxFile = PG_RESOURCE_DIR "boblampclean.md5mesh";
+    
+    std::shared_ptr< SkinnedModel > skinnedModel = std::make_shared< SkinnedModel >();
+    if ( !SkinnedModel::LoadFBX( fbxFile, skinnedModel ) )
     {
         LOG_ERR( "Could not load the fbx file '", fbxFile, "'" );
         PG::EngineQuit();
         return 0;
     }
 
-    for ( const auto& m : skinnedModels )
-    {
-        auto entity             = scene->registry.create();
-        auto& transform         = scene->registry.assign< Transform >( entity );
-        // transform.position      = -0.25f * ( pgModel->aabb.min + pgModel->aabb.max );
-        transform.position      = glm::vec3( 0, -20, -70 );
-        LOG( "transform position = ", transform.position );
-        transform.rotation      = glm::vec3( glm::radians( -50.0f ), glm::radians( 20.0f ), 0 );
-        transform.scale         = glm::vec3( 1 );
-        auto& skinned_renderer  = scene->registry.assign< SkinnedRenderer >( entity );
-        skinned_renderer.model  = m;
-    }
-
-    //LOG( "Model AABB min = ", pgModel->aabb.min );
-    //LOG( "Model AABB max = ", pgModel->aabb.max );
-    //auto entity             = scene->registry.create();
-    //auto& transform         = scene->registry.assign< Transform >( entity );
-    //// transform.position      = -0.25f * ( pgModel->aabb.min + pgModel->aabb.max );
+    auto entity             = scene->registry.create();
+    auto& transform         = scene->registry.assign< Transform >( entity );
     //transform.position      = glm::vec3( 0, -20, -70 );
-    //LOG( "transform position = ", transform.position );
-    //transform.rotation      = glm::vec3( glm::radians( -50.0f ), glm::radians( 20.0f ), 0 );
+    //transform.rotation      = glm::vec3( glm::radians( -90.0f ), glm::radians( 0.0f ), 0 );
     //transform.scale         = glm::vec3( 1 );
-    //auto& modelRenderer     = scene->registry.assign< ModelRenderer >( entity );
-    //modelRenderer.model     = pgModel;
-    //modelRenderer.materials = pgModel->materials;
-    //ResourceManager::Add< Model >( pgModel );
+
+    transform.position      = glm::vec3( 0, -1, 0 );
+    // transform.rotation      = glm::vec3( glm::radians( 90.0f ), glm::radians( 0.0f ), 0 );
+    transform.scale         = glm::vec3( 1 );
+    auto& skinned_renderer  = scene->registry.assign< SkinnedRenderer >( entity );
+    skinned_renderer.model  = skinnedModel;
+    LOG( "AABB min = ", skinnedModel->aabb.min );
+    LOG( "AABB max = ", skinnedModel->aabb.max );
+    for ( auto& mat : skinnedModel->materials )
+    {
+        mat->Kd = glm::vec3( 0, 1, 0 );
+    }
 
     scene->Start();
 

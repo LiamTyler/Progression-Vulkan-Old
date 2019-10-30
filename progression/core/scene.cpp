@@ -31,7 +31,7 @@ static void ParseCamera( rapidjson::Value& v, Scene* scene )
     static FunctionMapper< void, Camera& > mapping(
     {
         { "position",    []( rapidjson::Value& v, Camera& camera ) { camera.position    = ParseVec3( v ); } },
-        { "rotation",    []( rapidjson::Value& v, Camera& camera ) { camera.rotation    = ParseVec3( v ); } },
+        { "rotation",    []( rapidjson::Value& v, Camera& camera ) { camera.rotation    = glm::radians( ParseVec3( v ) ); } },
         { "fov",         []( rapidjson::Value& v, Camera& camera ) { camera.fov         = glm::radians( ParseNumber< float >( v ) ); } },
         { "aspectRatio", []( rapidjson::Value& v, Camera& camera ) { camera.aspectRatio = ParseNumber< float >( v ); } },
         { "nearPlane",   []( rapidjson::Value& v, Camera& camera ) { camera.nearPlane   = ParseNumber< float >( v ); } },

@@ -40,17 +40,15 @@ void main()
     vec4 localNormal = BoneTransform * vec4( inNormal, 0 );
 
     texCoord           = inTexCoord;
-    //posInWorldSpace    = ( perObjectData.modelMatrix  * localPos ).xyz;
-    //normalInWorldSpace = ( perObjectData.normalMatrix * localNormal ).xyz;
-    posInWorldSpace    = localPos.xyz;
-    normalInWorldSpace = localNormal.xyz;
+    // posInWorldSpace    = localPos.xyz;
+    // normalInWorldSpace = localNormal.xyz;
+    // gl_Position         = sceneConstantBuffer.VP * localPos;
+    gl_Position         = sceneConstantBuffer.VP * perObjectData.modelMatrix * localPos;
+    posInWorldSpace     = ( perObjectData.modelMatrix * localPos ).xyz;
+    normalInWorldSpace  = ( perObjectData.normalMatrix * localNormal ).xyz;
     
-
-    //gl_Position         = sceneConstantBuffer.VP * perObjectData.modelMatrix * localPos;
-    gl_Position         = sceneConstantBuffer.VP * localPos;
-    
-    //posInWorldSpace    = ( perObjectData.modelMatrix  * vec4( inPosition, 1 ) ).xyz;
-    //normalInWorldSpace = ( perObjectData.normalMatrix * vec4( inNormal,   0 ) ).xyz;
-    //texCoord           = inTexCoord;
-    //gl_Position         = sceneConstantBuffer.VP * perObjectData.modelMatrix * vec4( inPosition, 1.0 );
+    // posInWorldSpace    = ( perObjectData.modelMatrix  * vec4( inPosition, 1 ) ).xyz;
+    // normalInWorldSpace = ( perObjectData.normalMatrix * vec4( inNormal,   0 ) ).xyz;
+    // texCoord           = inTexCoord;
+    // gl_Position         = sceneConstantBuffer.VP * perObjectData.modelMatrix * vec4( inPosition, 1.0 );
 }

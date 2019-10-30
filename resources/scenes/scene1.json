@@ -1,7 +1,7 @@
 {
     "Camera": {
-        "position": [ 0, 0, 0 ],
-        "rotation": [ 0, 0, 0 ],
+        "position": [ 6, 0, 6 ],
+        "rotation": [ 0, 45, 0 ],
         "fov": 90,
         "aspectRatio": 1.777777777,
         "nearPlane": 0.1,
