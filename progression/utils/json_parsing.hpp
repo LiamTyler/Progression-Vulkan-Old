@@ -35,6 +35,18 @@ public:
         return mapping[name];
     }
 
+    void Evaluate( const std::string& name, rapidjson::Value& v, Args&&... args )
+    {
+        if ( mapping.find( name ) == mapping.end() )
+        {
+            LOG_WARN( "'", name, "' not found in mapping" );
+        }
+        else
+        {
+            mapping[name]( v, std::forward<Args>( args )... );
+        }
+    }
+
     void ForEachMember( rapidjson::Value& v, Args&&... args )
     {
         for ( auto it = v.MemberBegin(); it != v.MemberEnd(); ++it )

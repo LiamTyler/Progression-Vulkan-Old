@@ -9,7 +9,6 @@ layout( location = 0 ) out vec4 outColor;
 layout( location = 0 ) in vec3 posInWorldSpace;
 layout( location = 1 ) in vec3 normalInWorldSpace;
 layout( location = 2 ) in vec2 texCoord;
-layout( location = 3 ) in float boneSum;
 
 layout( set = 0, binding = 0 ) uniform SceneConstantBuffer
 {
@@ -51,9 +50,6 @@ float Attenuate( in const float distSquared, in const float radiusSquared )
 void main()
 {
     //outColor.xyz = vec3( 1, 0, 0 );
-    //outColor.w = 1; 
-    //return;
-    //outColor.xyz = vec3( boneSum );
     //outColor.w = 1; 
     //return;
     vec3 n = normalize( normalInWorldSpace );

@@ -15,7 +15,7 @@
 namespace Progression
 {
 
-    static void ParseEntityMetaData( rapidjson::Value& value, const entt::entity e, entt::registry& registry )
+    static void ParseEntityMetaData( rapidjson::Value& value, entt::entity e, entt::registry& registry )
     {
         PG_ASSERT( value.IsObject() );
         EntityMetaData& d = registry.assign< EntityMetaData >( e );
@@ -40,14 +40,14 @@ namespace Progression
         mapping.ForEachMember( value, registry, d );
     }
 
-    static void ParseNameComponent( rapidjson::Value& value, const entt::entity e, entt::registry& registry )
+    static void ParseNameComponent( rapidjson::Value& value, entt::entity e, entt::registry& registry )
     {
         PG_ASSERT( value.IsString() );
         NameComponent& comp = registry.assign< NameComponent >( e );
         comp.name = value.GetString();
     }
 
-    static void ParseScriptComponent( rapidjson::Value& value, const entt::entity e, entt::registry& registry )
+    static void ParseScriptComponent( rapidjson::Value& value, entt::entity e, entt::registry& registry )
     {
         ScriptComponent& s = registry.assign< ScriptComponent >( e );
         static FunctionMapper< void, ScriptComponent& > mapping(
@@ -55,7 +55,15 @@ namespace Progression
             { "script", []( rapidjson::Value& v, ScriptComponent& s )
                 {
                     PG_ASSERT( v.IsString(), "Please provide a string with the script name" );
-                    s.AddScript( ResourceManager::Get< Script >( v.GetString() ) );
+                    auto ptr = ResourceManager::Get< Script >( v.GetString() );
+                    if ( !ptr )
+                    {
+                        LOG_ERR( "Could not find script with name '", v.GetString(), "'" );
+                    }
+                    else
+                    {
+                        s.AddScript( ptr );
+                    }
                 }
             },
         });
@@ -63,7 +71,7 @@ namespace Progression
         mapping.ForEachMember( value, s );
     }
 
-    static void ParseTransform( rapidjson::Value& value, const entt::entity e, entt::registry& registry )
+    static void ParseTransform( rapidjson::Value& value, entt::entity e, entt::registry& registry )
     {
         Transform& t = registry.assign< Transform >( e );
         static FunctionMapper< void, Transform& > mapping(
@@ -76,7 +84,7 @@ namespace Progression
         mapping.ForEachMember( value, t );
     }
 
-    static void ParseModelRenderer( rapidjson::Value& value, const entt::entity e, entt::registry& registry )
+    static void ParseModelRenderer( rapidjson::Value& value, entt::entity e, entt::registry& registry )
     {   
         auto& comp = registry.assign< ModelRenderer >( e );
         static FunctionMapper< void, ModelRenderer& > mapping(
@@ -106,9 +114,9 @@ namespace Progression
         mapping.ForEachMember( value, comp );
     }
 
-    void ParseComponent( rapidjson::Value& value, const entt::entity e, entt::registry& registry, const std::string& typeName )
+    void ParseComponent( rapidjson::Value& value, entt::entity e, entt::registry& registry, const std::string& typeName )
     {
-        static FunctionMapper< void, const entt::entity, entt::registry& > mapping(
+        static FunctionMapper< void, entt::entity, entt::registry& > mapping(
         {
             { "EntityMetaData",  ParseEntityMetaData },
             { "NameComponent",   ParseNameComponent },
@@ -117,7 +125,8 @@ namespace Progression
             { "ModelRenderer",   ParseModelRenderer },
         });
 
-        mapping[typeName]( value, e, registry );
+        //mapping[typeName]( value, e, registry );
+        mapping.Evaluate( typeName, value, std::move( e ), registry );
     }
 
 } // namespace Progression

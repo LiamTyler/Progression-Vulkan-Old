@@ -81,7 +81,8 @@ struct MaterialConstantBuffer
 };
 
 static Window* s_window;
-static Pipeline s_pipeline;
+static Pipeline s_rigidModelPipeline;
+static Pipeline s_animatedModelPipeline;
 static DescriptorPool s_descriptorPool;
 static std::vector< DescriptorSetLayout > s_descriptorSetLayouts;
 static std::vector< Progression::Gfx::Buffer > s_gpuSceneConstantBuffers;
@@ -106,12 +107,6 @@ namespace RenderSystem
 
     bool Init()
     {
-        LOG( "SceneConstantBuffer.VP offset = ",             offsetof( SceneConstantBuffer, VP ) );
-        LOG( "SceneConstantBuffer.cameraPos offset = ",      offsetof( SceneConstantBuffer, cameraPos ) );
-        LOG( "SceneConstantBuffer.ambientColor offset = ",   offsetof( SceneConstantBuffer, ambientColor ) );
-        LOG( "SceneConstantBuffer.dirLight offset = ",       offsetof( SceneConstantBuffer, dirLight ) );
-        LOG( "SceneConstantBuffer.numPointLights offset = ", offsetof( SceneConstantBuffer, numPointLights ) );
-        LOG( "SceneConstantBuffer.numSpotLights offset = ",  offsetof( SceneConstantBuffer, numSpotLights ) );
         InitTextureManager();
         if ( !VulkanInit() )
         {
@@ -128,50 +123,6 @@ namespace RenderSystem
         {
             return true;
         }
-
-        ResourceManager::LoadFastFile( PG_RESOURCE_DIR "cache/fastfiles/resource.txt.ff" );
-        auto simpleVert = ResourceManager::Get< Shader >( "simpleVert" );
-        auto simpleFrag = ResourceManager::Get< Shader >( "simpleFrag" );
-
-        VertexBindingDescriptor bindingDesc[5];
-        bindingDesc[0].binding   = 0;
-        bindingDesc[0].stride    = sizeof( glm::vec3 );
-        bindingDesc[0].inputRate = VertexInputRate::PER_VERTEX;
-        bindingDesc[1].binding   = 1;
-        bindingDesc[1].stride    = sizeof( glm::vec3 );
-        bindingDesc[1].inputRate = VertexInputRate::PER_VERTEX;
-        bindingDesc[2].binding   = 2;
-        bindingDesc[2].stride    = sizeof( glm::vec2 );
-        bindingDesc[2].inputRate = VertexInputRate::PER_VERTEX;
-        bindingDesc[3].binding   = 3;
-        bindingDesc[3].stride    = 2 * sizeof( glm::vec4 );
-        bindingDesc[3].inputRate = VertexInputRate::PER_VERTEX;
-        bindingDesc[4].binding   = 4;
-        bindingDesc[4].stride    = 1 * sizeof( glm::uvec4 );
-        bindingDesc[4].inputRate = VertexInputRate::PER_VERTEX;
-
-        std::array< VertexAttributeDescriptor, 5 > attribDescs;
-        attribDescs[0].binding  = 0;
-        attribDescs[0].location = 0;
-        attribDescs[0].format   = BufferDataType::FLOAT3;
-        attribDescs[0].offset   = 0;
-        attribDescs[1].binding  = 1;
-        attribDescs[1].location = 1;
-        attribDescs[1].format   = BufferDataType::FLOAT3;
-        attribDescs[1].offset   = 0;
-        attribDescs[2].binding  = 2;
-        attribDescs[2].location = 2;
-        attribDescs[2].format   = BufferDataType::FLOAT2;
-        attribDescs[2].offset   = 0;
-        attribDescs[3].binding  = 3;
-        attribDescs[3].location = 3;
-        attribDescs[3].format   = BufferDataType::FLOAT4;
-        attribDescs[3].offset   = 0;
-        attribDescs[4].binding  = 3;
-        attribDescs[4].location = 4;
-        attribDescs[4].format   = BufferDataType::UINT4;
-        attribDescs[4].offset   = sizeof( glm::vec4 );
-
         
         uint32_t numImages = static_cast< uint32_t >( g_renderState.swapChain.images.size() );
         s_gpuSceneConstantBuffers.resize( numImages );
@@ -199,9 +150,14 @@ namespace RenderSystem
         poolSize[2].descriptorCount = numImages;
 
         s_descriptorPool = g_renderState.device.NewDescriptorPool( 3, poolSize, 3 * numImages );
+        
+        ResourceManager::LoadFastFile( PG_RESOURCE_DIR "cache/fastfiles/resource.txt.ff" );
+        auto rigidModelsVert       = ResourceManager::Get< Shader >( "rigidModelsVert" );
+        auto animatedModelsVert    = ResourceManager::Get< Shader >( "animatedModelsVert" );
+        auto forwardBlinnPhongFrag = ResourceManager::Get< Shader >( "forwardBlinnPhongFrag" );
 
-        std::vector< DescriptorSetLayoutData > descriptorSetData = simpleVert->reflectInfo.descriptorSetLayouts;
-        descriptorSetData.insert( descriptorSetData.end(), simpleFrag->reflectInfo.descriptorSetLayouts.begin(), simpleFrag->reflectInfo.descriptorSetLayouts.end() );
+        std::vector< DescriptorSetLayoutData > descriptorSetData = animatedModelsVert->reflectInfo.descriptorSetLayouts;
+        descriptorSetData.insert( descriptorSetData.end(), forwardBlinnPhongFrag->reflectInfo.descriptorSetLayouts.begin(), forwardBlinnPhongFrag->reflectInfo.descriptorSetLayouts.end() );
         auto combined = CombineDescriptorSetLayouts( descriptorSetData );
 
         for ( size_t i = 0; i < combined.size(); ++i )
@@ -288,29 +244,75 @@ namespace RenderSystem
 
             vkUpdateDescriptorSets( g_renderState.device.GetHandle(), 5, descriptorWrite, 0, nullptr );
         }
+ 
+        VertexBindingDescriptor bindingDesc[5];
+        bindingDesc[0].binding   = 0;
+        bindingDesc[0].stride    = sizeof( glm::vec3 );
+        bindingDesc[0].inputRate = VertexInputRate::PER_VERTEX;
+        bindingDesc[1].binding   = 1;
+        bindingDesc[1].stride    = sizeof( glm::vec3 );
+        bindingDesc[1].inputRate = VertexInputRate::PER_VERTEX;
+        bindingDesc[2].binding   = 2;
+        bindingDesc[2].stride    = sizeof( glm::vec2 );
+        bindingDesc[2].inputRate = VertexInputRate::PER_VERTEX;
+        bindingDesc[3].binding   = 3;
+        bindingDesc[3].stride    = 2 * sizeof( glm::vec4 );
+        bindingDesc[3].inputRate = VertexInputRate::PER_VERTEX;
+        bindingDesc[4].binding   = 4;
+        bindingDesc[4].stride    = 1 * sizeof( glm::uvec4 );
+        bindingDesc[4].inputRate = VertexInputRate::PER_VERTEX;
+
+        std::array< VertexAttributeDescriptor, 5 > attribDescs;
+        attribDescs[0].binding  = 0;
+        attribDescs[0].location = 0;
+        attribDescs[0].format   = BufferDataType::FLOAT3;
+        attribDescs[0].offset   = 0;
+        attribDescs[1].binding  = 1;
+        attribDescs[1].location = 1;
+        attribDescs[1].format   = BufferDataType::FLOAT3;
+        attribDescs[1].offset   = 0;
+        attribDescs[2].binding  = 2;
+        attribDescs[2].location = 2;
+        attribDescs[2].format   = BufferDataType::FLOAT2;
+        attribDescs[2].offset   = 0;
+        attribDescs[3].binding  = 3;
+        attribDescs[3].location = 3;
+        attribDescs[3].format   = BufferDataType::FLOAT4;
+        attribDescs[3].offset   = 0;
+        attribDescs[4].binding  = 3;
+        attribDescs[4].location = 4;
+        attribDescs[4].format   = BufferDataType::UINT4;
+        attribDescs[4].offset   = sizeof( glm::vec4 );
 
         PipelineDescriptor pipelineDesc;
         pipelineDesc.renderPass             = &g_renderState.renderPass;
         pipelineDesc.descriptorSetLayouts   = s_descriptorSetLayouts;
-        pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 4, bindingDesc, 5, attribDescs.data() );
+        pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 3, bindingDesc, 3, attribDescs.data() );
         pipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
+        pipelineDesc.viewport               = FullScreenViewport();
+        pipelineDesc.scissor                = FullScreenScissor();
+        pipelineDesc.shaders[0]             = rigidModelsVert.get();
+        pipelineDesc.shaders[1]             = forwardBlinnPhongFrag.get();
+        pipelineDesc.numShaders             = 2;
 
-        pipelineDesc.viewport = FullScreenViewport();
-        pipelineDesc.scissor  = FullScreenScissor();
-
-        pipelineDesc.shaders[0] = simpleVert.get();
-        pipelineDesc.shaders[1] = simpleFrag.get();
-        pipelineDesc.numShaders = 2;
-
-        s_pipeline = g_renderState.device.NewPipeline( pipelineDesc );
-        if ( !s_pipeline )
+        s_rigidModelPipeline = g_renderState.device.NewPipeline( pipelineDesc );
+        if ( !s_rigidModelPipeline )
         {
-            LOG_ERR( "Could not create pipeline" );
+            LOG_ERR( "Could not create rigid model pipeline" );
             return false;
         }
 
-        simpleVert->Free();
-        simpleFrag->Free();
+        pipelineDesc.descriptorSetLayouts   = s_descriptorSetLayouts;
+        pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 4, bindingDesc, 5, attribDescs.data() );
+        pipelineDesc.shaders[0]             = animatedModelsVert.get();
+        pipelineDesc.numShaders             = 2;
+
+        s_animatedModelPipeline = g_renderState.device.NewPipeline( pipelineDesc );
+        if ( !s_animatedModelPipeline )
+        {
+            LOG_ERR( "Could not create animated model pipeline" );
+            return false;
+        }
 
         return true;
     }
@@ -340,7 +342,8 @@ namespace RenderSystem
             {
                 layout.Free();
             }
-            s_pipeline.Free();
+            s_rigidModelPipeline.Free();
+            s_animatedModelPipeline.Free();
         }
 
         VulkanShutdown();
@@ -428,8 +431,8 @@ namespace RenderSystem
             vkCmdPushConstants( cmdBuf.GetHandle(), s_pipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PerObjectConstantBuffer ), &b );
 
             // NOTE: This wont work for more than one model, would to copy all transforms to a big buffer and then do all the draws
-            std::vector< glm::mat4 > boneTransforms; //( model->bones.size(), M );
-            model->TransformBones( boneTransforms );
+            std::vector< glm::mat4 > boneTransforms( model->joints.size(), M );
+            // model->TransformBones( boneTransforms );
             data = s_gpuBoneBuffers[imageIndex].Map();
             memcpy( (char*)data, boneTransforms.data(), boneTransforms.size() * sizeof( glm::mat4 ) );
             s_gpuBoneBuffers[imageIndex].UnMap();
@@ -449,7 +452,7 @@ namespace RenderSystem
                 cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
                 cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
                 cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetUVOffset(), 2 );
-                cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetVertexBoneDataOffset(), 3 );
+                cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetBlendWeightOffset(), 3 );
                 cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
                 cmdBuf.DrawIndexed( mesh.GetStartIndex(), mesh.GetNumIndices(), mesh.GetStartVertex() );
             }

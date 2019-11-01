@@ -10,7 +10,6 @@ layout( location = 4 ) in uvec4 inBoneJoints;
 layout( location = 0 ) out vec3 posInWorldSpace;
 layout( location = 1 ) out vec3 normalInWorldSpace;
 layout( location = 2 ) out vec2 texCoord;
-layout( location = 3 ) out float boneSum;
 
 layout( set = 0, binding = 0 ) uniform SceneConstantBuffer
 {
@@ -30,7 +29,6 @@ layout( std430, push_constant ) uniform PerObjectData
 
 void main()
 {
-    boneSum = inBoneWeights[0] + inBoneWeights[1] + inBoneWeights[2] + inBoneWeights[3];
     mat4 BoneTransform = boneTransforms[inBoneJoints[0]] * inBoneWeights[0];
     BoneTransform     += boneTransforms[inBoneJoints[1]] * inBoneWeights[1];
     BoneTransform     += boneTransforms[inBoneJoints[2]] * inBoneWeights[2];

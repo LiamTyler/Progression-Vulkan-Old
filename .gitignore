@@ -1,4 +1,5 @@
 build*/
+logs/
 *.swp
 a.out
 logs/

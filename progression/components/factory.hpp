@@ -7,6 +7,6 @@
 namespace Progression
 {
 
-    void ParseComponent( rapidjson::Value& value, const entt::entity e, entt::registry& registry, const std::string& typeName );
+    void ParseComponent( rapidjson::Value& value, entt::entity e, entt::registry& registry, const std::string& typeName );
 
 } // namespace Progression
