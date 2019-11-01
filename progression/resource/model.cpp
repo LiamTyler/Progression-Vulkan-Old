@@ -18,6 +18,10 @@ Model::Model( Model&& model )
 Model& Model::operator=( Model&& model )
 {
     name      = std::move( model.name );
+    for ( auto& mesh : meshes )
+    {
+        mesh.Free( true, false );
+    }
     meshes    = std::move( model.meshes );
     materials = std::move( model.materials );
 

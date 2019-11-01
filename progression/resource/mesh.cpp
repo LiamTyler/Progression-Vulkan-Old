@@ -32,6 +32,40 @@ public:
 namespace Progression
 {
 
+Mesh::Mesh( Mesh&& mesh ) noexcept
+{
+    *this = std::move( mesh );
+}
+
+Mesh& Mesh::operator=( Mesh&& mesh ) noexcept
+{
+    aabb        = std::move( mesh.aabb );
+    vertices    = std::move( mesh.vertices );
+    normals     = std::move( mesh.normals );
+    uvs         = std::move( mesh.uvs );
+    indices     = std::move( mesh.indices );
+
+    if ( vertexBuffer )
+    {
+        vertexBuffer.Free();
+    }
+    if ( indexBuffer )
+    {
+        indexBuffer.Free();
+    }
+    vertexBuffer = std::move( mesh.vertexBuffer );
+    indexBuffer  = std::move( mesh.indexBuffer );
+
+    m_indexType      = std::move( mesh.m_indexType );
+    m_numVertices    = std::move( mesh.m_numVertices );
+    m_numIndices     = std::move( mesh.m_numIndices );
+    m_normalOffset   = std::move( mesh.m_normalOffset );
+    m_uvOffset       = std::move( mesh.m_uvOffset );
+    m_gpuDataCreated = std::move( mesh.m_gpuDataCreated );
+
+    return *this;
+}
+
 void Mesh::Optimize()
 {
     if ( vertices.size() == 0 )

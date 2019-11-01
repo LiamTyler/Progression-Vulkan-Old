@@ -1,8 +1,8 @@
 {
     "Camera": {
-        "position": [ 6, 0, 6 ],
-        "rotation": [ 0, 45, 0 ],
-        "fov": 90,
+        "position": [ 0, 2, 10 ],
+        "rotation": [ 0, 0, 0 ],
+        "fov": 60,
         "aspectRatio": 1.777777777,
         "nearPlane": 0.1,
         "farPlane": 100
@@ -15,7 +15,7 @@
     },
     "DirectionalLight": {
         "colorAndIntensity": [ 1, 1, 1, 1 ],
-        "direction": [ 0, 0, -1 ]
+        "direction": [ 0.5, -1.5, -1 ]
     },
     "_PointLight": {
         "colorAndIntensity": [ 1, 1, 1, 1 ],
@@ -24,7 +24,7 @@
     "Entity": {
         "NameComponent": "chalet1",
         "Transform": {
-            "position": [ -3, -0.7, -3 ],
+            "position": [ -2, -0.7, 0 ],
             "rotation": [ -90, 90, 0 ]
         },
         "ModelRenderer": {

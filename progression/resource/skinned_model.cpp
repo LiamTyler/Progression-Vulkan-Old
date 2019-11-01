@@ -165,51 +165,6 @@ namespace Progression
         }
     }
 
-    uint32_t FindPosition( float animationTime, const aiNodeAnim* pNodeAnim )
-    {
-        PG_ASSERT( pNodeAnim->mNumPositionKeys > 0 );
-        for ( uint32_t i = 0; i < pNodeAnim->mNumPositionKeys - 1; ++i )
-        {
-            if ( animationTime <= (float)pNodeAnim->mPositionKeys[i + 1].mTime )
-            {
-                return i;
-            }
-        }
-    
-        PG_ASSERT( false, "Could not find the position for animationTime = " + std::to_string( animationTime ) );
-
-        return 0;
-    }
-
-    uint32_t FindRotation( float animationTime, const aiNodeAnim* pNodeAnim )
-    {
-        PG_ASSERT( pNodeAnim->mNumRotationKeys > 0 );
-        for ( uint32_t i = 0; i < pNodeAnim->mNumRotationKeys - 1; ++i )
-        {
-            if ( animationTime <= (float)pNodeAnim->mRotationKeys[i + 1].mTime )
-            {
-                return i;
-            }
-        }
-    
-        PG_ASSERT( false, "Could not find the rotation for animationTime = " + std::to_string( animationTime ) );
-        return 0;
-    }
-
-    uint32_t FindScaling( float animationTime, const aiNodeAnim* pNodeAnim )
-    {
-        for ( uint32_t i = 0; i < pNodeAnim->mNumScalingKeys - 1; ++i )
-        {
-            if ( animationTime <= (float)pNodeAnim->mScalingKeys[i + 1].mTime )
-            {
-                return i;
-            }
-        }
-    
-        PG_ASSERT( false, "Could not find the scale for animationTime = " + std::to_string( animationTime ) );
-        return 0;
-    }
-
     glm::mat4 JointTransform::GetLocalTransformMatrix() const
     {
         glm::mat4 T = glm::translate( glm::mat4( 1 ), position );
@@ -242,71 +197,6 @@ namespace Progression
 
         return ret;
     }
-
-    /*
-    void SkinnedModel::ReadNodeHeirarchy( float AnimationTime, const aiNode* pNode, const glm::mat4& ParentTransform )
-    {    
-        std::string NodeName( pNode->mName.data );
-    
-        const aiAnimation* pAnimation = m_scene->mAnimations[0];
-        
-        glm::mat4 NodeTransformation( AssimpToGlmMat4( pNode->mTransformation ) );
-     
-        const aiNodeAnim* pNodeAnim = FindNodeAnim( pAnimation, NodeName );
-    
-        if ( pNodeAnim )
-        {
-            // Interpolate scaling and generate scaling transformation matrix
-            aiVector3D Scaling;
-            CalcInterpolatedScaling( Scaling, AnimationTime, pNodeAnim );
-            glm::mat4 ScalingM( 1 );
-            glm::scale( ScalingM, glm::vec3( Scaling.x, Scaling.y, Scaling.z ) );
-        
-            // Interpolate rotation and generate rotation transformation matrix
-            aiQuaternion RotationQ;
-            CalcInterpolatedRotation( RotationQ, AnimationTime, pNodeAnim );        
-            glm::mat4 RotationM = Assimp3x3ToGlmMat4( RotationQ.GetMatrix() );
-
-            // Interpolate translation and generate translation transformation matrix
-            aiVector3D Translation;
-            CalcInterpolatedPosition(Translation, AnimationTime, pNodeAnim);
-            glm::mat4 TranslationM( 1 );
-            glm::translate( TranslationM, glm::vec3( Translation.x, Translation.y, Translation.z ) );
-        
-            // Combine the above transformations
-            NodeTransformation = TranslationM * RotationM * ScalingM;
-        }
-       
-        glm::mat4 GlobalTransformation = ParentTransform * NodeTransformation;
-    
-        if ( m_boneMapping.find( NodeName ) != m_boneMapping.end() )
-        {
-            uint32_t boneIndex = m_boneMapping[NodeName];
-            bones[boneIndex].finalTransformation = globalInverseTransform * GlobalTransformation * bones[boneIndex].offset;
-        }
-    
-        for ( uint32_t i = 0; i < pNode->mNumChildren; i++ )
-        {
-            ReadNodeHeirarchy( AnimationTime, pNode->mChildren[i], GlobalTransformation );
-        }
-    }
-
-    void SkinnedModel::TransformBones( std::vector< glm::mat4 >& finalTransforms, glm::mat4 modelMatrix )
-    {
-        finalTransforms.resize( bones.size(), glm::mat4( 1 ) );
-
-        glm::mat4 startTransform( 1 );
-        float ticksPerSecond = m_scene->mAnimations[0]->mTicksPerSecond != 0 ? (float) m_scene->mAnimations[0]->mTicksPerSecond : 25.0f;
-        float timeInTicks = Time::Time() / 1000.0f * ticksPerSecond;
-        float animationTime = fmod( timeInTicks, (float) m_scene->mAnimations[0]->mDuration );
-        
-        ReadNodeHeirarchy( animationTime, m_scene->mRootNode, startTransform );
-        for ( size_t i = 0 ; i < bones.size() ; i++ )
-        {
-            finalTransforms[i] = modelMatrix * bones[i].finalTransformation;
-        }
-    }
-    */
 
     static void ReadNodeHeirarchy( aiNode* pNode, uint32_t numAnimations, aiAnimation** animations, int depth = 0 )
     {

@@ -20,17 +20,17 @@ layout( set = 0, binding = 0 ) uniform SceneConstantBuffer
     uint numSpotLights;
 } sceneConstantBuffer;
 
-layout( std140, binding = 1 ) buffer PointLights
+layout( std140, set = 0, binding = 1 ) buffer PointLights
 {
    PointLight pointLights[];
 };
 
-layout( std140, binding = 2 ) buffer SpotLights
+layout( std140, set = 0, binding = 2 ) buffer SpotLights
 {
    SpotLight spotLights[];
 };
 
-layout( set = 2, binding = 0 ) uniform sampler2D textures[PG_MAX_NUM_TEXTURES];
+layout( set = 1, binding = 0 ) uniform sampler2D textures[PG_MAX_NUM_TEXTURES];
 
 layout( std430, push_constant ) uniform MaterialConstantBuffer
 {

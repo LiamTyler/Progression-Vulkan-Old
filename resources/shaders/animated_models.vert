@@ -16,7 +16,7 @@ layout( set = 0, binding = 0 ) uniform SceneConstantBuffer
     mat4 VP;
 } sceneConstantBuffer;
 
-layout( std140, binding = 3 ) buffer BoneTransforms
+layout( set = 2, binding = 0 ) buffer BoneTransforms
 {
    mat4 boneTransforms[];
 };

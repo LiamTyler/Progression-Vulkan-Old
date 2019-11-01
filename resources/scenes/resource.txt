@@ -64,13 +64,6 @@ freeCpuCopy true
 createGpuCopy true
 
 Model
-name chalet
-filename models/chalet2.obj
-optimize true
-freeCpuCopy true
-createGpuCopy true
-
-Model
 name cube 
 filename models/cube.obj
 optimize true

@@ -15,8 +15,8 @@ public:
     Mesh()  = default;
     ~Mesh() = default;
 
-    Mesh( Mesh&& mesh ) = default;
-    Mesh& operator=( Mesh&& mesh ) = default;
+    Mesh( Mesh&& mesh ) noexcept;
+    Mesh& operator=( Mesh&& mesh ) noexcept;
 
     void UploadToGpu( bool freeCPUCopy = true );
     void RecalculateBB();

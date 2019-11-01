@@ -91,6 +91,7 @@ static std::vector< Progression::Gfx::Buffer > s_gpuSpotLightBuffers;
 static std::vector< Progression::Gfx::Buffer > s_gpuBoneBuffers;
 std::vector< DescriptorSet > sceneDescriptorSets;
 std::vector< DescriptorSet > textureDescriptorSets;
+std::vector< DescriptorSet > animationBonesDescriptorSets;
 static std::shared_ptr< Image > s_image;
 
 #define MAX_NUM_POINT_LIGHTS 1024
@@ -170,16 +171,17 @@ namespace RenderSystem
             }
         }
 
-        s_descriptorSetLayouts = g_renderState.device.NewDescriptorSetLayouts( combined );
-        sceneDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[0] );
-        textureDescriptorSets  = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[2] );
+        s_descriptorSetLayouts       = g_renderState.device.NewDescriptorSetLayouts( combined );
+        sceneDescriptorSets          = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[0] );
+        textureDescriptorSets        = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[1] );
+        animationBonesDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[2] );
 
         s_image = ResourceManager::Get< Image >( "RENDER_SYSTEM_DUMMY_TEXTURE" );
         PG_ASSERT( s_image );
         VkDescriptorImageInfo imageInfo;
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.sampler = s_image->sampler->GetHandle();
-        imageInfo.imageView = s_image->GetTexture()->GetView();
+        imageInfo.sampler     = s_image->sampler->GetHandle();
+        imageInfo.imageView   = s_image->GetTexture()->GetView();
         std::vector< VkDescriptorImageInfo > imageInfos( PG_MAX_NUM_TEXTURES, imageInfo );
 
         for ( size_t i = 0; i < numImages; i++ )
@@ -235,8 +237,8 @@ namespace RenderSystem
             boneDataBufferInfo.offset = 0;
             boneDataBufferInfo.range  = VK_WHOLE_SIZE;
             descriptorWrite[4].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite[4].dstSet           = sceneDescriptorSets[i].GetHandle();
-            descriptorWrite[4].dstBinding       = 3;
+            descriptorWrite[4].dstSet           = animationBonesDescriptorSets[i].GetHandle();
+            descriptorWrite[4].dstBinding       = 0;
             descriptorWrite[4].dstArrayElement  = 0;
             descriptorWrite[4].descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             descriptorWrite[4].descriptorCount  = 1;
@@ -385,9 +387,9 @@ namespace RenderSystem
         auto& cmdBuf = g_renderState.commandBuffers[imageIndex];
         cmdBuf.BeginRecording();
         cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex] );
-        cmdBuf.BindRenderPipeline( s_pipeline );
-        cmdBuf.BindDescriptorSets( 1, &sceneDescriptorSets[imageIndex], s_pipeline );
-        cmdBuf.BindDescriptorSets( 1, &textureDescriptorSets[imageIndex], s_pipeline, 2 );
+        cmdBuf.BindRenderPipeline( s_rigidModelPipeline );
+        cmdBuf.BindDescriptorSets( 1, &sceneDescriptorSets[imageIndex], s_rigidModelPipeline, 0 );
+        cmdBuf.BindDescriptorSets( 1, &textureDescriptorSets[imageIndex], s_rigidModelPipeline, 1 );
 
         scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& modelRenderer, Transform& transform )
         {
@@ -397,7 +399,7 @@ namespace RenderSystem
             PerObjectConstantBuffer b;
             b.modelMatrix = M;
             b.normalMatrix = N;
-            vkCmdPushConstants( cmdBuf.GetHandle(), s_pipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PerObjectConstantBuffer ), &b );
+            vkCmdPushConstants( cmdBuf.GetHandle(), s_rigidModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PerObjectConstantBuffer ), &b );
 
             for ( size_t i = 0; i < modelRenderer.materials.size(); ++i )
             {
@@ -409,7 +411,7 @@ namespace RenderSystem
                 mcbuf.Kd = glm::vec4( mat->Kd, 0 );
                 mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
                 mcbuf.diffuseTextureSlot = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
-                vkCmdPushConstants( cmdBuf.GetHandle(), s_pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof( MaterialConstantBuffer ), &mcbuf );
+                vkCmdPushConstants( cmdBuf.GetHandle(), s_rigidModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof( MaterialConstantBuffer ), &mcbuf );
 
                 cmdBuf.BindVertexBuffer( mesh.vertexBuffer, 0, 0 );
                 cmdBuf.BindVertexBuffer( mesh.vertexBuffer, mesh.GetNormalOffset(), 1 );
@@ -419,6 +421,10 @@ namespace RenderSystem
             }
         });
 
+        cmdBuf.BindRenderPipeline( s_animatedModelPipeline );
+        //cmdBuf.BindDescriptorSets( 1, &sceneDescriptorSets[imageIndex], s_animatedModelPipeline, 0 );
+        //cmdBuf.BindDescriptorSets( 1, &textureDescriptorSets[imageIndex], s_animatedModelPipeline, 1 );
+        cmdBuf.BindDescriptorSets( 1, &animationBonesDescriptorSets[imageIndex], s_animatedModelPipeline, 2 );
         scene->registry.view< SkinnedRenderer, Transform >().each( [&]( SkinnedRenderer& renderer, Transform& transform )
         {
             const auto& model = renderer.model;
@@ -428,7 +434,7 @@ namespace RenderSystem
             PerObjectConstantBuffer b;
             b.modelMatrix  = M;
             b.normalMatrix = N;
-            vkCmdPushConstants( cmdBuf.GetHandle(), s_pipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PerObjectConstantBuffer ), &b );
+            vkCmdPushConstants( cmdBuf.GetHandle(), s_animatedModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PerObjectConstantBuffer ), &b );
 
             // NOTE: This wont work for more than one model, would to copy all transforms to a big buffer and then do all the draws
             std::vector< glm::mat4 > boneTransforms( model->joints.size(), M );
@@ -447,7 +453,7 @@ namespace RenderSystem
                 mcbuf.Kd = glm::vec4( mat->Kd, 0 );
                 mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
                 mcbuf.diffuseTextureSlot = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
-                vkCmdPushConstants( cmdBuf.GetHandle(), s_pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof( MaterialConstantBuffer ), &mcbuf );
+                vkCmdPushConstants( cmdBuf.GetHandle(), s_animatedModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof( MaterialConstantBuffer ), &mcbuf );
 
                 cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
                 cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );

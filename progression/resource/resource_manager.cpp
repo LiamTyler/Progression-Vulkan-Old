@@ -105,6 +105,7 @@ namespace ResourceManager
                 } \
                 if ( resources.find( res->name ) != resources.end() ) \
                 { \
+                    LOG_WARN( "Resource of type " #type " and name '", res->name, "' is already in resource manager, overwritting" ); \
                     res->Move( resources[res->name] ); \
                 } \
                 else \

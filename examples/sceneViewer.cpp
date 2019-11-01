@@ -46,7 +46,7 @@ int main( int argc, char* argv[] )
     //transform.rotation      = glm::vec3( glm::radians( -90.0f ), glm::radians( 0.0f ), 0 );
     //transform.scale         = glm::vec3( 1 );
 
-    transform.position      = glm::vec3( 0, -1, 0 );
+    transform.position      = glm::vec3( 0, 0, 0 );
     // transform.rotation      = glm::vec3( glm::radians( 90.0f ), glm::radians( 0.0f ), 0 );
     transform.scale         = glm::vec3( 1 );
     auto& skinned_renderer  = scene->registry.assign< SkinnedRenderer >( entity );
