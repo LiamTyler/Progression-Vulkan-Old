@@ -3,9 +3,11 @@
 #include "core/lua.hpp"
 #include "core/time.hpp"
 #include "components/factory.hpp"
+#include "components/animation_component.hpp"
 #include "components/script_component.hpp"
 #include "graphics/lights.hpp"
 #include "resource/image.hpp"
+#include "resource/skinned_model.hpp"
 #include "resource/resource_manager.hpp"
 #include "utils/logger.hpp"
 #include "utils/json_parsing.hpp"
@@ -179,6 +181,47 @@ void Scene::Update()
             comp.scripts[i].env["entity"] = e;
             CHECK_SOL_FUNCTION_CALL( comp.scripts[i].updateFunc.second() );
         }
+    });
+
+    registry.view< Animator >().each([]( const entt::entity e, Animator& comp )
+    {
+        if ( comp.animation && comp.animationTime < comp.animation->duration )
+        {
+            comp.animationTime = comp.animationTime + Time::DeltaTime();            
+            if ( comp.loop && comp.animationTime >= comp.animation->duration / comp.animation->ticksPerSecond )
+            {
+                comp.animationTime   = std::fmodf( comp.animationTime, comp.animation->duration / comp.animation->ticksPerSecond );
+                comp.currentKeyFrame = 0;
+            }
+
+            // calculate current pose
+            for ( ; comp.currentKeyFrame < comp.animation->keyFrames.size() - 1; ++comp.currentKeyFrame )
+            {
+                if ( comp.animationTime <= comp.animation->keyFrames[comp.currentKeyFrame].time / comp.animation->ticksPerSecond )
+                {
+                    break;
+                }
+            }
+            uint32_t nextFrame     = comp.currentKeyFrame + 1;
+            auto& prevKeyFrame     = comp.animation->keyFrames[comp.currentKeyFrame];
+            /*auto& nextKeyFrame     = comp.animation->keyFrames[nextFrame];
+            float keyFrameDuration = nextKeyFrame.time - prevKeyFrame.time;
+            float progress         = ( comp.animationTime - prevKeyFrame.time ) / keyFrameDuration;
+            for ( uint32_t i = 0; i < comp.model->joints.size(); ++i )
+            {
+                const JointTransform interpolatedTransform = prevKeyFrame.jointSpaceTransforms[i].Interpolate( nextKeyFrame.jointSpaceTransforms[i], progress );
+                comp.model->joints[i].modelSpaceTransform = interpolatedTransform.GetLocalTransformMatrix();
+            }*/
+            for ( uint32_t i = 0; i < comp.model->joints.size(); ++i )
+            {
+                auto t = prevKeyFrame.jointSpaceTransforms[i];
+                t.rotation = glm::quat( glm::vec3( 0, 0, glm::radians( 180.0f ) ) ) * t.rotation;
+                comp.model->joints[i].modelSpaceTransform = t.GetLocalTransformMatrix();
+            }
+
+            comp.model->ApplyPoseToJoints( 0, glm::mat4( 1 ) );
+        }
+        
     });
 }
 

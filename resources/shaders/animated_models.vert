@@ -29,24 +29,27 @@ layout( std430, push_constant ) uniform PerObjectData
 
 void main()
 {
-    mat4 BoneTransform = boneTransforms[inBoneJoints[0]] * inBoneWeights[0];
-    BoneTransform     += boneTransforms[inBoneJoints[1]] * inBoneWeights[1];
-    BoneTransform     += boneTransforms[inBoneJoints[2]] * inBoneWeights[2];
-    BoneTransform     += boneTransforms[inBoneJoints[3]] * inBoneWeights[3];
+    // mat4 BoneTransform = boneTransforms[inBoneJoints[0]] * inBoneWeights[0];
+    // BoneTransform     += boneTransforms[inBoneJoints[1]] * inBoneWeights[1];
+    // BoneTransform     += boneTransforms[inBoneJoints[2]] * inBoneWeights[2];
+    // BoneTransform     += boneTransforms[inBoneJoints[3]] * inBoneWeights[3];
+    // vec4 localPos    = BoneTransform * vec4( inPosition, 1 );
+    // vec4 localNormal = BoneTransform * vec4( inNormal, 0 );
     
-    vec4 localPos    = BoneTransform * vec4( inPosition, 1 );
-    vec4 localNormal = BoneTransform * vec4( inNormal, 0 );
+    vec4 localPos    = vec4( 0 );
+    localPos += inBoneWeights[0] * boneTransforms[inBoneJoints[0]] * vec4( inPosition, 1 );
+    localPos += inBoneWeights[1] * boneTransforms[inBoneJoints[1]] * vec4( inPosition, 1 );
+    localPos += inBoneWeights[2] * boneTransforms[inBoneJoints[2]] * vec4( inPosition, 1 );
+    localPos += inBoneWeights[3] * boneTransforms[inBoneJoints[3]] * vec4( inPosition, 1 );
+    
+    vec4 localNormal = vec4( 0 );
+    localNormal += inBoneWeights[0] * boneTransforms[inBoneJoints[0]] * vec4( inNormal, 0 );
+    localNormal += inBoneWeights[1] * boneTransforms[inBoneJoints[1]] * vec4( inNormal, 0 );
+    localNormal += inBoneWeights[2] * boneTransforms[inBoneJoints[2]] * vec4( inNormal, 0 );
+    localNormal += inBoneWeights[3] * boneTransforms[inBoneJoints[3]] * vec4( inNormal, 0 );
 
     texCoord           = inTexCoord;
-    // posInWorldSpace    = localPos.xyz;
-    // normalInWorldSpace = localNormal.xyz;
-    // gl_Position         = sceneConstantBuffer.VP * localPos;
     gl_Position         = sceneConstantBuffer.VP * perObjectData.modelMatrix * localPos;
     posInWorldSpace     = ( perObjectData.modelMatrix * localPos ).xyz;
     normalInWorldSpace  = ( perObjectData.normalMatrix * localNormal ).xyz;
-    
-    // posInWorldSpace    = ( perObjectData.modelMatrix  * vec4( inPosition, 1 ) ).xyz;
-    // normalInWorldSpace = ( perObjectData.normalMatrix * vec4( inNormal,   0 ) ).xyz;
-    // texCoord           = inTexCoord;
-    // gl_Position         = sceneConstantBuffer.VP * perObjectData.modelMatrix * vec4( inPosition, 1.0 );
 }

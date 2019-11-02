@@ -157,6 +157,7 @@ set(
 
 set(
 	COMPONENTS
+	components/animation_component.hpp
 	components/entity_metadata.hpp
 	components/factory.cpp
 	components/factory.hpp

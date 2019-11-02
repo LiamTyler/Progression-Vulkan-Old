@@ -7,7 +7,6 @@ camera = nil
 
 function Start()
     camera = scene.camera
-    print( camera.position )
     velocity = vec3.new( 0 )
 end
 

@@ -32,8 +32,9 @@ namespace Progression
     struct Joint
     {
         std::string name;
+        glm::mat4 parentTransform;
         glm::mat4 modelSpaceTransform;
-        glm::mat4 boneToMeshSpaceBindTransform;
+        glm::mat4 inverseBindTransform;
         std::vector< uint32_t > children;
     };
 
@@ -44,6 +45,7 @@ namespace Progression
         glm::vec3 scale;
 
         glm::mat4 GetLocalTransformMatrix() const;
+        JointTransform Interpolate( const JointTransform& end, float progress );
     };
 
     struct KeyFrame
@@ -54,6 +56,7 @@ namespace Progression
 
     struct Animation
     {
+        std::string name;
         float duration;
         float ticksPerSecond;
         std::vector< KeyFrame > keyFrames;
@@ -92,18 +95,15 @@ namespace Progression
         std::vector< std::shared_ptr< Material > > materials;
 
         std::vector< Joint > joints;
-        std::vector< Animation > animations;
-        Animation* currentAnimation  = nullptr;
-        float currentTimeInAnimation = 0;
 
-        static bool LoadFBX( const std::string& filename, std::shared_ptr< SkinnedModel >& model );
+        static bool LoadFBX( const std::string& filename, std::shared_ptr< SkinnedModel >& model, std::vector< Animation >& animations );
         void RecalculateNormals();
         void RecalculateAABB();
         void UploadToGpu();
         void Free( bool cpuCopy = true, bool gpuCopy = false );
 
-        // void TransformBones( std::vector< glm::mat4 >& finalTransforms, glm::mat4 modelMatrix = glm::mat4( 1 ) );
-        // void ReadNodeHeirarchy( float AnimationTime, const aiNode* pNode, const glm::mat4& ParentTransform );
+        void GetCurrentPose( std::vector< glm::mat4 >& finalTransforms );
+        void ApplyPoseToJoints( uint32_t jointIdx, const glm::mat4& parentTransform );
 
         uint32_t GetNumVertices() const;
         uint32_t GetVertexOffset() const;
