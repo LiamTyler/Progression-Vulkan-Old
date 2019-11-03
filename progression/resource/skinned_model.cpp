@@ -51,7 +51,13 @@ static glm::vec3 AiToGLMVec3( const aiVector3D& v )
 
 static glm::quat AiToGLMQuat( const aiQuaternion& q )
 {
-    return { q.x, q.y, q.z, q.w };
+    // glm::quat g;
+    // g.x = q.x;
+    // g.y = q.y;
+    // g.z = q.z;
+    // g.w = q.w;
+    // return g;
+    return { q.w, q.x, q.y, q.z };
 }
 
 namespace Progression
@@ -168,6 +174,9 @@ namespace Progression
     {
         glm::mat4 T = glm::translate( glm::mat4( 1 ), position );
         glm::mat4 R = glm::toMat4( rotation );
+        // aiQuaternion RotationQ;
+        // CalcInterpolatedRotation(RotationQ, AnimationTime, pNodeAnim);
+        // glm::mat4 RotationM = Matrix4fToGLMMat4( Matrix4f(RotationQ.GetMatrix()) );
         glm::mat4 S = glm::scale( glm::mat4( 1 ), scale );
         return T * R * S;
     }

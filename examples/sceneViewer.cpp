@@ -30,7 +30,7 @@ int main( int argc, char* argv[] )
     }
 
     std::string fbxFile = PG_RESOURCE_DIR "dragon/Dragon_Baked_Actions_fbx_7.4_binary.fbx";
-    //std::string fbxFile = PG_RESOURCE_DIR "primitive.fbx";
+    // std::string fbxFile = PG_RESOURCE_DIR "primitive.fbx";
     //std::string fbxFile = PG_RESOURCE_DIR "boblampclean.md5mesh";
     
     std::vector< Animation > animations;
@@ -45,7 +45,7 @@ int main( int argc, char* argv[] )
     auto entity             = scene->registry.create();
     auto& transform         = scene->registry.assign< Transform >( entity );
     transform.position      = glm::vec3( 0, 0, 0 );
-    transform.rotation      = glm::vec3( glm::radians( -90.0f ), glm::radians( 90.0f ), 0 );
+    // transform.rotation      = glm::vec3( glm::radians( -90.0f ), glm::radians( 90.0f ), 0 );
     transform.scale         = glm::vec3( .001f );
 
     //transform.position      = glm::vec3( 0, 0, 0 );
@@ -55,10 +55,10 @@ int main( int argc, char* argv[] )
     skinned_renderer.model  = skinnedModel;
     LOG( "AABB min = ", skinnedModel->aabb.min );
     LOG( "AABB max = ", skinnedModel->aabb.max );
-    /*for ( auto& mat : skinnedModel->materials )
-    {
-        mat->Kd = glm::vec3( 0, 1, 0 );
-    }*/
+    // for ( auto& mat : skinnedModel->materials )
+    // {
+    //     mat->Kd = glm::vec3( 0, 1, 0 );
+    // }
 
     auto& animator = scene->registry.assign< Animator >( entity );
     animator.animation = &animations[0];

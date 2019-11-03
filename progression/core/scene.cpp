@@ -190,7 +190,7 @@ void Scene::Update()
             comp.animationTime = comp.animationTime + Time::DeltaTime();            
             if ( comp.loop && comp.animationTime >= comp.animation->duration / comp.animation->ticksPerSecond )
             {
-                comp.animationTime   = std::fmodf( comp.animationTime, comp.animation->duration / comp.animation->ticksPerSecond );
+                comp.animationTime   = std::fmod( comp.animationTime, comp.animation->duration / comp.animation->ticksPerSecond );
                 comp.currentKeyFrame = 0;
             }
 
@@ -215,7 +215,7 @@ void Scene::Update()
             for ( uint32_t i = 0; i < comp.model->joints.size(); ++i )
             {
                 auto t = prevKeyFrame.jointSpaceTransforms[i];
-                t.rotation = glm::quat( glm::vec3( 0, 0, glm::radians( 180.0f ) ) ) * t.rotation;
+                // t.rotation = glm::quat( glm::vec3( 0, 0, glm::radians( 180.0f ) ) ) * t.rotation;
                 comp.model->joints[i].modelSpaceTransform = t.GetLocalTransformMatrix();
             }
 
