@@ -437,7 +437,7 @@ namespace RenderSystem
             vkCmdPushConstants( cmdBuf.GetHandle(), s_animatedModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PerObjectConstantBuffer ), &b );
 
             // NOTE: This wont work for more than one model, would to copy all transforms to a big buffer and then do all the draws
-            std::vector< glm::mat4 > boneTransforms; //( model->joints.size(), M );
+            std::vector< glm::mat4 > boneTransforms;
             model->GetCurrentPose( boneTransforms );
             data = s_gpuBoneBuffers[imageIndex].Map();
             memcpy( (char*)data, boneTransforms.data(), boneTransforms.size() * sizeof( glm::mat4 ) );

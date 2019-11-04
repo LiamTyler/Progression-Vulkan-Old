@@ -26,13 +26,26 @@ namespace Progression
                     return;
                 }        
             }
+            int min = 0;
+			for ( int m = 1; m < 4; ++m )
+			{
+				if ( weights[m] < weights[min] )
+                {
+                    min = m;
+                }
+			}
+
+			if ( weights[min] < w )
+			{
+				weights[min] = w;
+				joints[min] = id;
+			}
         }
     };
 
     struct Joint
     {
         std::string name;
-        glm::mat4 parentTransform;
         glm::mat4 modelSpaceTransform;
         glm::mat4 inverseBindTransform;
         std::vector< uint32_t > children;

@@ -174,9 +174,6 @@ namespace Progression
     {
         glm::mat4 T = glm::translate( glm::mat4( 1 ), position );
         glm::mat4 R = glm::toMat4( rotation );
-        // aiQuaternion RotationQ;
-        // CalcInterpolatedRotation(RotationQ, AnimationTime, pNodeAnim);
-        // glm::mat4 RotationM = Matrix4fToGLMMat4( Matrix4f(RotationQ.GetMatrix()) );
         glm::mat4 S = glm::scale( glm::mat4( 1 ), scale );
         return T * R * S;
     }
@@ -185,7 +182,7 @@ namespace Progression
     {
         JointTransform ret;
         ret.position = ( 1.0f - t ) * position + t * end.position;
-        ret.rotation = glm::normalize( glm::mix( rotation, end.rotation, t ) );
+        ret.rotation = glm::normalize( glm::slerp( rotation, end.rotation, t ) );
         ret.scale    = ( 1.0f - t ) * scale + t * end.scale;
 
         return ret;
@@ -428,14 +425,11 @@ namespace Progression
             return false;
         }
 
-        // model->globalInverseTransform = glm::inverse( AssimpToGlmMat4( scene->mRootNode->mTransformation ) );
-
         model->meshes.resize( scene->mNumMeshes );       
         uint32_t numVertices = 0;
         uint32_t numIndices = 0;
         LOG( "Num animations: ", scene->mNumAnimations );
     
-        // Count the number of vertices and indices
         for ( size_t i = 0 ; i < model->meshes.size(); i++ )
         {
             model->meshes[i].materialIndex = scene->mMeshes[i]->mMaterialIndex;
@@ -452,8 +446,6 @@ namespace Progression
         model->uvs.reserve( numVertices );
         model->indices.reserve( numIndices );
         model->blendWeights.resize( numVertices );
-        LOG( "Num vertices = ", numVertices );
-        LOG( "Num indices = ", numIndices );
 
         std::unordered_map< std::string, uint32_t > jointNameToIndexMap;
         
@@ -468,7 +460,6 @@ namespace Progression
             const aiMesh* paiMesh = scene->mMeshes[meshIdx];
             const aiVector3D Zero3D( 0.0f, 0.0f, 0.0f );
     
-            // Populate the vertex attribute vectors
             for ( uint32_t vIdx = 0; vIdx < paiMesh->mNumVertices ; ++vIdx )
             {
                 const aiVector3D* pPos      = &( paiMesh->mVertices[vIdx] );
@@ -480,7 +471,6 @@ namespace Progression
                 model->uvs.emplace_back( pTexCoord->x, pTexCoord->y );
             }
 
-            LOG( "Mesh[", meshIdx, "] Num joints: ", paiMesh->mNumBones );
             for ( uint32_t boneIdx = 0; boneIdx < paiMesh->mNumBones; ++boneIdx )
             {
                 uint32_t jointIndex = 0;
@@ -492,7 +482,6 @@ namespace Progression
                     Joint newJoint;
                     newJoint.name                 = jointName;
                     newJoint.inverseBindTransform = AiToGLMMat4( paiMesh->mBones[boneIdx]->mOffsetMatrix );
-                    newJoint.parentTransform = AiToGLMMat4( aiNodeMap[jointName]->mTransformation );
                     model->joints.push_back( newJoint );
                     jointNameToIndexMap[jointName] = jointIndex;
                 }
@@ -530,10 +519,9 @@ namespace Progression
                 Joint& rootBone = model->joints[0];
                 rootBone.name = parentName;
                 rootBone.inverseBindTransform = glm::mat4( 1 );
-                rootBone.parentTransform = glm::mat4( 1 );
                 while ( parent != NULL )
                 {
-                    rootBone.parentTransform = AiToGLMMat4( parent->mTransformation ) * rootBone.parentTransform;
+                    rootBone.inverseBindTransform = AiToGLMMat4( parent->mTransformation ) * rootBone.inverseBindTransform;
                     parent = parent->mParent;
                 }
                 for ( uint32_t i = 1; i < (uint32_t) model->joints.size(); ++i )
@@ -544,19 +532,13 @@ namespace Progression
                         rootBone.children.push_back( i );
                     }
                 }
-                //rootBone.inverseBindTransform = glm::inverse( rootBone.inverseBindTransform );
+                rootBone.inverseBindTransform = glm::inverse( rootBone.inverseBindTransform );
                 break;
             }
         }
-        LOG( "Parent bone = ", model->joints[0].name );
-        LOG( "Parent children: " );
-        for ( const auto& child : model->joints[0].children )
-        {
-            LOG( "\t", model->joints[child].name );
-        }
 
-        ReadNodeHeirarchy( scene->mRootNode, scene->mNumAnimations, scene->mAnimations );
-        LOG( "" );
+        //ReadNodeHeirarchy( scene->mRootNode, scene->mNumAnimations, scene->mAnimations );
+        //LOG( "" );
 
         FindJointChildren( scene->mRootNode, jointNameToIndexMap, model->joints );
         jointNameToIndexMap[model->joints[0].name] = 0;
@@ -582,24 +564,6 @@ namespace Progression
             std::unordered_map< std::string, aiNodeAnim* > aiAnimNodeMap;
             BuildAIAnimNodeMap( scene->mRootNode, aiAnim, aiAnimNodeMap );
             PG_ASSERT( aiAnimNodeMap.size() == model->joints.size(), "Animation does not have the same skeleton as model" );
-
-            /*LOG( "Assimp animation data: " );
-            for ( uint32_t i = 0; i < aiAnim->mNumChannels; ++i )
-            {
-                LOG( "Channel: ", i, " = ", aiAnim->mChannels[i]->mNodeName.data );
-                for ( uint32_t p = 0; p < aiAnim->mChannels[i]->mNumPositionKeys; ++p )
-                {
-                    LOG( "\tpos[", p, "]: time = ", aiAnim->mChannels[i]->mPositionKeys[p].mTime, ", val = ", AiToGLMVec3( aiAnim->mChannels[i]->mPositionKeys[p].mValue ) );
-                }
-                for ( uint32_t p = 0; p < aiAnim->mChannels[i]->mNumRotationKeys; ++p )
-                {
-                    LOG( "\trot[", p, "]: time = ", aiAnim->mChannels[i]->mRotationKeys[p].mTime, ", val = ", glm::eulerAngles( AiToGLMQuat( aiAnim->mChannels[i]->mRotationKeys[p].mValue ) ) );
-                }
-                for ( uint32_t p = 0; p < aiAnim->mChannels[i]->mNumScalingKeys; ++p )
-                {
-                    LOG( "\tscl[", p, "]: time = ", aiAnim->mChannels[i]->mScalingKeys[p].mTime, ", val = ", AiToGLMVec3( aiAnim->mChannels[i]->mScalingKeys[p].mValue ) );
-                }
-            }*/
 
             pgAnim.keyFrames.resize( keyFrameTimes.size() );
             int frameIdx = 0;
@@ -634,10 +598,10 @@ namespace Progression
                     }
                     else
                     {
-                        glm::quat currentRot = AiToGLMQuat( animNode->mRotationKeys[i].mValue );
-                        glm::quat nextRot    = AiToGLMQuat( animNode->mRotationKeys[i + 1].mValue );
+                        glm::quat currentRot = glm::normalize( AiToGLMQuat( animNode->mRotationKeys[i].mValue ) );
+                        glm::quat nextRot    = glm::normalize( AiToGLMQuat( animNode->mRotationKeys[i + 1].mValue ) );
                         dt                   = ( time - (float) animNode->mRotationKeys[i].mTime ) / ( (float) animNode->mRotationKeys[i + 1].mTime - (float) animNode->mRotationKeys[i].mTime );
-                        jTransform.rotation  = glm::normalize( glm::mix( currentRot, nextRot, dt ) );
+                        jTransform.rotation  = glm::normalize( glm::slerp( currentRot, nextRot, dt ) );
                     }
                     
 
@@ -657,48 +621,9 @@ namespace Progression
                 }
                 ++frameIdx;
             }
-
-            /*LOG( "\tKeyFrames:" );
-            for ( const auto& keyframe : pgAnim.keyFrames )
-            {
-                LOG( "\tTime = ", keyframe.time );
-                LOG( "\tTransformations:" );
-                for ( size_t i = 0; i < keyframe.jointSpaceTransforms.size(); ++i )
-                {
-                    LOG( "\tJoint: ", model->joints[i].name );
-                    LOG( "\t\tPosition = ", keyframe.jointSpaceTransforms[i].position );
-                    LOG( "\t\tRotation = ", glm::eulerAngles( keyframe.jointSpaceTransforms[i].rotation ) );
-                    LOG( "\t\tScale    = ", keyframe.jointSpaceTransforms[i].scale );
-                }
-            }*/
-            /*for ( size_t i = 0; i < model->joints.size(); ++i )
-            {
-                LOG( "\tJoint: ", model->joints[i].name );
-                for ( size_t kf = 0; kf < pgAnim.keyFrames.size(); ++kf )
-                {
-                    LOG( "\t\tpos[", kf, "]: time = ", pgAnim.keyFrames[kf].time, ", val = ", pgAnim.keyFrames[kf].jointSpaceTransforms[i].position );
-                }
-                for ( size_t kf = 0; kf < pgAnim.keyFrames.size(); ++kf )
-                {
-                    LOG( "\t\trot[", kf, "]: time = ", pgAnim.keyFrames[kf].time, ", val = ", glm::eulerAngles( pgAnim.keyFrames[kf].jointSpaceTransforms[i].rotation ) );
-                }
-                for ( size_t kf = 0; kf < pgAnim.keyFrames.size(); ++kf )
-                {
-                    LOG( "\t\tscl[", kf, "]: time = ", pgAnim.keyFrames[kf].time, ", val = ", pgAnim.keyFrames[kf].jointSpaceTransforms[i].scale );
-                }
-            }*/
         }
 
         ParseMaterials( filename, model, scene );
-
-        LOG( "Num joints: ", model->joints.size() );
-        LOG( "Num blendWeights: ", model->blendWeights.size() );
-        for ( size_t meshIdx = 0; meshIdx < model->meshes.size(); ++meshIdx )
-        {
-            LOG( "Mesh[", meshIdx, "].m_startIndex = ", model->meshes[meshIdx].m_startIndex );
-            LOG( "Mesh[", meshIdx, "].m_startVertex = ", model->meshes[meshIdx].m_startVertex );
-            LOG( "Mesh[", meshIdx, "].m_numIndices = ", model->meshes[meshIdx].m_numIndices );
-        }
 
         for ( size_t i = 0; i < model->blendWeights.size(); ++i )
         {
@@ -706,7 +631,6 @@ namespace Progression
             float sum = data.weights[0] + data.weights[1] + data.weights[2] + data.weights[3];
             PG_ASSERT( sum > 0 );
             data.weights /= sum;
-            // LOG( "Bone Vertex[", i, "]: joints = ", data.joints.x, " ", data.joints.y, " ", data.joints.z, " ", data.joints.w, ", weights = ", data.weights );
         }
         model->RecalculateAABB();
         model->UploadToGpu();

@@ -188,35 +188,35 @@ void Scene::Update()
         if ( comp.animation && comp.animationTime < comp.animation->duration )
         {
             comp.animationTime = comp.animationTime + Time::DeltaTime();            
+            //comp.animationTime = comp.animationTime + 1.0f/165;            
             if ( comp.loop && comp.animationTime >= comp.animation->duration / comp.animation->ticksPerSecond )
             {
                 comp.animationTime   = std::fmod( comp.animationTime, comp.animation->duration / comp.animation->ticksPerSecond );
                 comp.currentKeyFrame = 0;
             }
 
-            // calculate current pose
-            for ( ; comp.currentKeyFrame < comp.animation->keyFrames.size() - 1; ++comp.currentKeyFrame )
+            for ( ; comp.currentKeyFrame < comp.animation->keyFrames.size(); ++comp.currentKeyFrame )
             {
-                if ( comp.animationTime <= comp.animation->keyFrames[comp.currentKeyFrame].time / comp.animation->ticksPerSecond )
+                if ( comp.animationTime < comp.animation->keyFrames[comp.currentKeyFrame].time / comp.animation->ticksPerSecond )
                 {
                     break;
                 }
             }
-            uint32_t nextFrame     = comp.currentKeyFrame + 1;
-            auto& prevKeyFrame     = comp.animation->keyFrames[comp.currentKeyFrame];
-            /*auto& nextKeyFrame     = comp.animation->keyFrames[nextFrame];
-            float keyFrameDuration = nextKeyFrame.time - prevKeyFrame.time;
-            float progress         = ( comp.animationTime - prevKeyFrame.time ) / keyFrameDuration;
+            uint32_t nextFrameIndex = comp.currentKeyFrame % (uint32_t) comp.animation->keyFrames.size();
+            uint32_t prevFrameIndex = comp.currentKeyFrame - 1;
+            if ( comp.currentKeyFrame == 0 )
+            {
+               prevFrameIndex = comp.animation->keyFrames.size();
+            }
+
+            auto& prevKeyFrame     = comp.animation->keyFrames[prevFrameIndex];
+            auto& nextKeyFrame     = comp.animation->keyFrames[nextFrameIndex];
+            float keyFrameDuration = ( nextKeyFrame.time - prevKeyFrame.time ) / comp.animation->ticksPerSecond;
+            float progress         = ( comp.animationTime - prevKeyFrame.time / comp.animation->ticksPerSecond ) / keyFrameDuration;
             for ( uint32_t i = 0; i < comp.model->joints.size(); ++i )
             {
                 const JointTransform interpolatedTransform = prevKeyFrame.jointSpaceTransforms[i].Interpolate( nextKeyFrame.jointSpaceTransforms[i], progress );
                 comp.model->joints[i].modelSpaceTransform = interpolatedTransform.GetLocalTransformMatrix();
-            }*/
-            for ( uint32_t i = 0; i < comp.model->joints.size(); ++i )
-            {
-                auto t = prevKeyFrame.jointSpaceTransforms[i];
-                // t.rotation = glm::quat( glm::vec3( 0, 0, glm::radians( 180.0f ) ) ) * t.rotation;
-                comp.model->joints[i].modelSpaceTransform = t.GetLocalTransformMatrix();
             }
 
             comp.model->ApplyPoseToJoints( 0, glm::mat4( 1 ) );
