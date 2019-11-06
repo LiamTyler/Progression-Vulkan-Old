@@ -2,6 +2,7 @@
 #include "core/scene.hpp"
 #include "core/time.hpp"
 #include "components/animation_component.hpp"
+#include "components/skinned_renderer.hpp"
 #include "graphics/vulkan.hpp"
 #include "resource/resource_manager.hpp"
 #include "resource/shader.hpp"
@@ -10,23 +11,19 @@
 
 using namespace Progression::Gfx;
 
-static std::vector< Buffer > s_gpuBoneBuffers;
-static Pipeline s_animatedPipeline;
-static std::vector< DescriptorSetLayout > s_descriptorSetLayouts;
-std::vector< DescriptorSet > animationBonesDescriptorSets;
-static DescriptorPool s_descriptorPool;
-
 namespace Progression
 {
 
 namespace AnimationSystem
 {
 
+RenderData renderData;
+
 bool Init()
 {
     uint32_t numFrames = Gfx::MAX_FRAMES_IN_FLIGHT + 1;
-    s_gpuBoneBuffers.resize( numFrames );
-    for ( auto& buf : s_gpuBoneBuffers )
+    renderData.gpuBoneBuffers.resize( numFrames );
+    for ( auto& buf : renderData.gpuBoneBuffers )
     {
         buf = g_renderState.device.NewBuffer( sizeof( glm::mat4 ) * 1000,
             BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
@@ -36,7 +33,7 @@ bool Init()
     poolSize[1].type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     poolSize[1].descriptorCount = 1 * numFrames;
 
-    s_descriptorPool = g_renderState.device.NewDescriptorPool( 1, poolSize, numFrames );
+    renderData.descriptorPool = g_renderState.device.NewDescriptorPool( 1, poolSize, numFrames );
 
     auto animatedModelsVert    = ResourceManager::Get< Shader >( "animatedModelsVert" );
     auto forwardBlinnPhongFrag = ResourceManager::Get< Shader >( "forwardBlinnPhongFrag" );
@@ -45,18 +42,18 @@ bool Init()
     descriptorSetData.insert( descriptorSetData.end(), forwardBlinnPhongFrag->reflectInfo.descriptorSetLayouts.begin(), forwardBlinnPhongFrag->reflectInfo.descriptorSetLayouts.end() );
     auto combined = CombineDescriptorSetLayouts( descriptorSetData );
 
-    s_descriptorSetLayouts       = g_renderState.device.NewDescriptorSetLayouts( combined );
-    animationBonesDescriptorSets = s_descriptorPool.NewDescriptorSets( numFrames, s_descriptorSetLayouts[2] );
+    renderData.descriptorSetLayouts         = g_renderState.device.NewDescriptorSetLayouts( combined );
+    renderData.animationBonesDescriptorSets = renderData.descriptorPool.NewDescriptorSets( numFrames, renderData.descriptorSetLayouts[2] );
 
     for ( uint32_t i = 0; i < numFrames; i++ )
     {
         VkWriteDescriptorSet descriptorWrite = {};
         VkDescriptorBufferInfo boneDataBufferInfo = {};
-        boneDataBufferInfo.buffer = s_gpuBoneBuffers[i].GetHandle();
+        boneDataBufferInfo.buffer = renderData.gpuBoneBuffers[i].GetHandle();
         boneDataBufferInfo.offset = 0;
         boneDataBufferInfo.range  = VK_WHOLE_SIZE;
         descriptorWrite.sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet           = animationBonesDescriptorSets[i].GetHandle();
+        descriptorWrite.dstSet           = renderData.animationBonesDescriptorSets[i].GetHandle();
         descriptorWrite.dstBinding       = 0;
         descriptorWrite.dstArrayElement  = 0;
         descriptorWrite.descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -104,7 +101,7 @@ bool Init()
 
     PipelineDescriptor pipelineDesc;
     pipelineDesc.renderPass             = &g_renderState.renderPass;
-    pipelineDesc.descriptorSetLayouts   = s_descriptorSetLayouts;
+    pipelineDesc.descriptorSetLayouts   = renderData.descriptorSetLayouts;
     pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 4, bindingDesc, 5, attribDescs.data() );
     pipelineDesc.viewport               = FullScreenViewport();
     pipelineDesc.scissor                = FullScreenScissor();
@@ -112,8 +109,8 @@ bool Init()
     pipelineDesc.shaders[1]             = forwardBlinnPhongFrag.get();
     pipelineDesc.numShaders             = 2;
 
-    s_animatedPipeline = g_renderState.device.NewPipeline( pipelineDesc );
-    if ( !s_animatedPipeline )
+    renderData.animatedPipeline = g_renderState.device.NewPipeline( pipelineDesc );
+    if ( !renderData.animatedPipeline )
     {
         LOG_ERR( "Could not create animated model pipeline" );
         return false;
@@ -125,18 +122,18 @@ bool Init()
 void Shutdown()
 {
     g_renderState.device.WaitForIdle();
-    for ( auto& buf : s_gpuBoneBuffers )
+    for ( auto& buf : renderData.gpuBoneBuffers )
     {
         buf.Free();
     }
-    for ( auto& layout : s_descriptorSetLayouts )
+    for ( auto& layout : renderData.descriptorSetLayouts )
     {
         layout.Free();
     }
-    s_animatedPipeline.Free();
+    renderData.animatedPipeline.Free();
 }
 
-void Update( Scene* scene, uint32_t frameIndex )
+void Update( Scene* scene )
 {
     scene->registry.view< Animator >().each([&]( const entt::entity e, Animator& comp )
     {
@@ -175,17 +172,65 @@ void Update( Scene* scene, uint32_t frameIndex )
             }
 
             comp.model->ApplyPoseToJoints( 0, glm::mat4( 1 ) );
-
-            std::vector< glm::mat4 > boneTransforms;
-            comp.model->GetCurrentPose( boneTransforms );
-            void* data = s_gpuBoneBuffers[frameIndex].Map();
-            memcpy( (char*)data, boneTransforms.data(), boneTransforms.size() * sizeof( glm::mat4 ) );
-            s_gpuBoneBuffers[frameIndex].UnMap();
         }
     });
-
-    
 }
+
+void UploadToGpu( Scene* scene, uint32_t frameIndex )
+{
+    scene->registry.view< Animator >().each([&]( const entt::entity e, Animator& comp )
+    {
+        if ( comp.animation && comp.animationTime < comp.animation->duration )
+        {
+            std::vector< glm::mat4 > boneTransforms;
+            comp.model->GetCurrentPose( boneTransforms );
+            void* data = renderData.gpuBoneBuffers[frameIndex].Map();
+            memcpy( (char*)data, boneTransforms.data(), boneTransforms.size() * sizeof( glm::mat4 ) );
+            renderData.gpuBoneBuffers[frameIndex].UnMap();
+        }
+    });
+}
+
+/*
+void Render( Scene* scene, CommandBuffer& cmdBuf, uint32_t frameIndex )
+{
+    UploadToGpu( scene, frameIndex );
+
+    cmdBuf.BindRenderPipeline( s_animatedPipeline );
+    cmdBuf.BindDescriptorSets( 1, &animationBonesDescriptorSets[frameIndex], s_animatedPipeline, 2 );
+    scene->registry.view< SkinnedRenderer, Transform >().each( [&]( SkinnedRenderer& renderer, Transform& transform )
+    {
+        const auto& model = renderer.model;
+        auto M            = transform.GetModelMatrix();
+        auto N            = glm::transpose( glm::inverse( M ) );
+
+        PerObjectConstantBuffer b;
+        b.modelMatrix  = M;
+        b.normalMatrix = N;
+        vkCmdPushConstants( cmdBuf.GetHandle(), s_animatedModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PerObjectConstantBuffer ), &b );            
+
+        for ( size_t i = 0; i < renderer.model->meshes.size(); ++i )
+        {
+            const auto& mesh = model->meshes[i];
+            const auto& mat  = model->materials[mesh.materialIndex];
+
+            MaterialConstantBuffer mcbuf{};
+            mcbuf.Ka = glm::vec4( mat->Ka, 0 );
+            mcbuf.Kd = glm::vec4( mat->Kd, 0 );
+            mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
+            mcbuf.diffuseTextureSlot = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
+            vkCmdPushConstants( cmdBuf.GetHandle(), s_animatedModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof( MaterialConstantBuffer ), &mcbuf );
+
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetUVOffset(), 2 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetBlendWeightOffset(), 3 );
+            cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
+            cmdBuf.DrawIndexed( mesh.GetStartIndex(), mesh.GetNumIndices(), mesh.GetStartVertex() );
+        }
+    });
+}
+*/
 
 } // namespace AnimationSystem
 } // namespace Progression

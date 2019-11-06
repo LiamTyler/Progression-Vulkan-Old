@@ -1,4 +1,5 @@
 #include "graphics/render_system.hpp"
+#include "core/animation_system.hpp"
 #include "core/assert.hpp"
 #include "core/scene.hpp"
 #include "core/time.hpp"
@@ -82,7 +83,6 @@ struct MaterialConstantBuffer
 
 static Window* s_window;
 static Pipeline s_rigidModelPipeline;
-static Pipeline s_animatedModelPipeline;
 static DescriptorPool s_descriptorPool;
 static std::vector< DescriptorSetLayout > s_descriptorSetLayouts;
 static std::vector< Progression::Gfx::Buffer > s_gpuSceneConstantBuffers;
@@ -90,7 +90,6 @@ static std::vector< Progression::Gfx::Buffer > s_gpuPointLightBuffers;
 static std::vector< Progression::Gfx::Buffer > s_gpuSpotLightBuffers;
 std::vector< DescriptorSet > sceneDescriptorSets;
 std::vector< DescriptorSet > textureDescriptorSets;
-std::vector< DescriptorSet > animationBonesDescriptorSets;
 static std::shared_ptr< Image > s_image;
 
 #define MAX_NUM_POINT_LIGHTS 1024
@@ -368,8 +367,8 @@ namespace RenderSystem
             }
         });
 
-        cmdBuf.BindRenderPipeline( s_animatedModelPipeline );
-        cmdBuf.BindDescriptorSets( 1, &animationBonesDescriptorSets[imageIndex], s_animatedModelPipeline, 2 );
+        cmdBuf.BindRenderPipeline( AnimationSystem::renderData.animatedPipeline );
+        cmdBuf.BindDescriptorSets( 1, &AnimationSystem::renderData.animationBonesDescriptorSets[imageIndex], AnimationSystem::renderData.animatedPipeline, 2 );
         scene->registry.view< SkinnedRenderer, Transform >().each( [&]( SkinnedRenderer& renderer, Transform& transform )
         {
             const auto& model = renderer.model;
@@ -379,7 +378,7 @@ namespace RenderSystem
             PerObjectConstantBuffer b;
             b.modelMatrix  = M;
             b.normalMatrix = N;
-            vkCmdPushConstants( cmdBuf.GetHandle(), s_animatedModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PerObjectConstantBuffer ), &b );            
+            vkCmdPushConstants( cmdBuf.GetHandle(), AnimationSystem::renderData.animatedPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PerObjectConstantBuffer ), &b );            
 
             for ( size_t i = 0; i < renderer.model->meshes.size(); ++i )
             {
@@ -391,7 +390,7 @@ namespace RenderSystem
                 mcbuf.Kd = glm::vec4( mat->Kd, 0 );
                 mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
                 mcbuf.diffuseTextureSlot = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
-                vkCmdPushConstants( cmdBuf.GetHandle(), s_animatedModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof( MaterialConstantBuffer ), &mcbuf );
+                vkCmdPushConstants( cmdBuf.GetHandle(), AnimationSystem::renderData.animatedPipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof( MaterialConstantBuffer ), &mcbuf );
 
                 cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
                 cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
