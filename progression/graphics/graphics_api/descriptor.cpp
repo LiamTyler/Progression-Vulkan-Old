@@ -81,6 +81,16 @@ namespace Gfx
             set.createInfo.bindingCount = static_cast< uint32_t >( set.bindings.size() );
             set.createInfo.pBindings    = set.bindings.data();
         }
+        
+        // for ( size_t i = 0; i < combined.size(); ++i )
+        // {
+        //     LOG( "combined[" , i, "].setNumber = ", combined[i].setNumber );
+        //     for ( size_t b = 0; b < combined[i].bindings.size(); ++b )
+        //     {
+        //         LOG( "combined[" , i, "].binding[", b, "].binding = ", combined[i].bindings[b].binding );
+        //         LOG( "combined[" , i, "].binding[", b, "].descriptorType = ", combined[i].bindings[b].descriptorType );
+        //     }
+        // }
 
         return combined;
     }

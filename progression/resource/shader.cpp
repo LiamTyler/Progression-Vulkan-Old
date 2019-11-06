@@ -312,6 +312,13 @@ namespace Progression
             layout.createInfo.pBindings    = layout.bindings.data();
         }
 
+        std::sort( info.descriptorSetLayouts.begin(), info.descriptorSetLayouts.end(),
+                []( const auto& lhs, const auto& rhs ) { return lhs.setNumber < rhs.setNumber; } );
+        for ( size_t i_set = 0; i_set < sets.size(); ++i_set )
+        {
+            info.descriptorSetLayouts[i_set].createInfo.pBindings = info.descriptorSetLayouts[i_set].bindings.data();
+        }
+
 #if USING( DEBUG_BUILD )
         const char* t  = "  ";
         const char* tt = "    ";

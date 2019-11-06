@@ -1,13 +1,12 @@
 #include "core/scene.hpp"
+#include "core/animation_system.hpp"
 #include "core/assert.hpp"
 #include "core/lua.hpp"
 #include "core/time.hpp"
 #include "components/factory.hpp"
-#include "components/animation_component.hpp"
 #include "components/script_component.hpp"
 #include "graphics/lights.hpp"
 #include "resource/image.hpp"
-#include "resource/skinned_model.hpp"
 #include "resource/resource_manager.hpp"
 #include "utils/logger.hpp"
 #include "utils/json_parsing.hpp"
@@ -183,46 +182,7 @@ void Scene::Update()
         }
     });
 
-    registry.view< Animator >().each([]( const entt::entity e, Animator& comp )
-    {
-        if ( comp.animation && comp.animationTime < comp.animation->duration )
-        {
-            comp.animationTime = comp.animationTime + Time::DeltaTime();            
-            //comp.animationTime = comp.animationTime + 1.0f/165;            
-            if ( comp.loop && comp.animationTime >= comp.animation->duration / comp.animation->ticksPerSecond )
-            {
-                comp.animationTime   = std::fmod( comp.animationTime, comp.animation->duration / comp.animation->ticksPerSecond );
-                comp.currentKeyFrame = 0;
-            }
-
-            for ( ; comp.currentKeyFrame < comp.animation->keyFrames.size(); ++comp.currentKeyFrame )
-            {
-                if ( comp.animationTime < comp.animation->keyFrames[comp.currentKeyFrame].time / comp.animation->ticksPerSecond )
-                {
-                    break;
-                }
-            }
-            uint32_t nextFrameIndex = comp.currentKeyFrame % (uint32_t) comp.animation->keyFrames.size();
-            uint32_t prevFrameIndex = comp.currentKeyFrame - 1;
-            if ( comp.currentKeyFrame == 0 )
-            {
-               prevFrameIndex = comp.animation->keyFrames.size();
-            }
-
-            auto& prevKeyFrame     = comp.animation->keyFrames[prevFrameIndex];
-            auto& nextKeyFrame     = comp.animation->keyFrames[nextFrameIndex];
-            float keyFrameDuration = ( nextKeyFrame.time - prevKeyFrame.time ) / comp.animation->ticksPerSecond;
-            float progress         = ( comp.animationTime - prevKeyFrame.time / comp.animation->ticksPerSecond ) / keyFrameDuration;
-            for ( uint32_t i = 0; i < comp.model->joints.size(); ++i )
-            {
-                const JointTransform interpolatedTransform = prevKeyFrame.jointSpaceTransforms[i].Interpolate( nextKeyFrame.jointSpaceTransforms[i], progress );
-                comp.model->joints[i].modelSpaceTransform = interpolatedTransform.GetLocalTransformMatrix();
-            }
-
-            comp.model->ApplyPoseToJoints( 0, glm::mat4( 1 ) );
-        }
-        
-    });
+    AnimationSystem::Update( this );
 }
 
 } // namespace Progression

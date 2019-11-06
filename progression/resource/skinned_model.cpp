@@ -1,5 +1,4 @@
 #include "resource/skinned_model.hpp"
-#include "openFBX/ofbx.h"
 #include "core/assert.hpp"
 #include "core/time.hpp"
 #include "utils/logger.hpp"
@@ -51,12 +50,6 @@ static glm::vec3 AiToGLMVec3( const aiVector3D& v )
 
 static glm::quat AiToGLMQuat( const aiQuaternion& q )
 {
-    // glm::quat g;
-    // g.x = q.x;
-    // g.y = q.y;
-    // g.z = q.z;
-    // g.w = q.w;
-    // return g;
     return { q.w, q.x, q.y, q.z };
 }
 
@@ -536,6 +529,8 @@ namespace Progression
                 break;
             }
         }
+
+        LOG( "Num joints = ", model->joints.size() );
 
         //ReadNodeHeirarchy( scene->mRootNode, scene->mNumAnimations, scene->mAnimations );
         //LOG( "" );

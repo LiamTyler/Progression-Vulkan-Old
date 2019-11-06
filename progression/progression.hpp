@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/animation_system.hpp"
 #include "core/assert.hpp"
 #include "core/camera.hpp"
 #include "core/config.hpp"

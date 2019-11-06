@@ -149,6 +149,11 @@ namespace Gfx
         return layouts; 
     }
 
+    void Device::UpdateDescriptorSets( uint32_t count, const VkWriteDescriptorSet* writes ) const
+    {
+        vkUpdateDescriptorSets( m_handle, count, writes, 0, nullptr );
+    }
+
     Fence Device::NewFence() const
     {
         Fence fence;

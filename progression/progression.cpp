@@ -69,12 +69,14 @@ bool EngineInitialize( std::string config_name )
         LOG_ERR( "Could not initialize the rendering system" );
         return false;
     }
+    AnimationSystem::Init();
 
     return true;
 }
 
 void EngineQuit()
-{ 
+{
+    AnimationSystem::Shutdown();
     RenderSystem::Shutdown();
     ResourceManager::Shutdown();
     Input::Free();

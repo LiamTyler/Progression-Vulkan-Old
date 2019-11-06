@@ -44,6 +44,7 @@ set(
 
 set(
 	CORE
+	core/animation_system.cpp
 	core/bounding_box.cpp
     core/camera.cpp
     core/config.cpp
@@ -56,6 +57,7 @@ set(
     core/time.cpp
     core/window.cpp
 	
+    core/animation_system.hpp
 	core/assert.hpp
 	core/bounding_box.hpp
     core/camera.hpp
@@ -132,11 +134,6 @@ set(
     ../ext/SPIRV-Reflect/spirv_reflect.c
     ../ext/SPIRV-Reflect/common/output_stream.cpp
     ../ext/SPIRV-Reflect/common/output_stream.h
-
-    ../ext/openFBX/miniz.c
-    ../ext/openFBX/miniz.h
-    ../ext/openFBX/ofbx.cpp
-    ../ext/openFBX/ofbx.h
 )
 
 set(

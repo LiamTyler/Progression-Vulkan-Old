@@ -88,7 +88,6 @@ static std::vector< DescriptorSetLayout > s_descriptorSetLayouts;
 static std::vector< Progression::Gfx::Buffer > s_gpuSceneConstantBuffers;
 static std::vector< Progression::Gfx::Buffer > s_gpuPointLightBuffers;
 static std::vector< Progression::Gfx::Buffer > s_gpuSpotLightBuffers;
-static std::vector< Progression::Gfx::Buffer > s_gpuBoneBuffers;
 std::vector< DescriptorSet > sceneDescriptorSets;
 std::vector< DescriptorSet > textureDescriptorSets;
 std::vector< DescriptorSet > animationBonesDescriptorSets;
@@ -129,7 +128,6 @@ namespace RenderSystem
         s_gpuSceneConstantBuffers.resize( numImages );
         s_gpuPointLightBuffers.resize( numImages );
         s_gpuSpotLightBuffers.resize( numImages );
-        s_gpuBoneBuffers.resize( numImages );
         for ( uint32_t i = 0; i < numImages; ++i )
         {
             s_gpuSceneConstantBuffers[i] = g_renderState.device.NewBuffer( sizeof( SceneConstantBuffer ),
@@ -137,8 +135,6 @@ namespace RenderSystem
             s_gpuPointLightBuffers[i] = g_renderState.device.NewBuffer( sizeof( PointLight ) * MAX_NUM_POINT_LIGHTS,
                     BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
             s_gpuSpotLightBuffers[i] = g_renderState.device.NewBuffer( sizeof( SpotLight ) * MAX_NUM_SPOT_LIGHTS,
-                    BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
-            s_gpuBoneBuffers[i] = g_renderState.device.NewBuffer( sizeof( glm::mat4 ) * 1000,
                     BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
         }
 
@@ -154,27 +150,15 @@ namespace RenderSystem
         
         ResourceManager::LoadFastFile( PG_RESOURCE_DIR "cache/fastfiles/resource.txt.ff" );
         auto rigidModelsVert       = ResourceManager::Get< Shader >( "rigidModelsVert" );
-        auto animatedModelsVert    = ResourceManager::Get< Shader >( "animatedModelsVert" );
         auto forwardBlinnPhongFrag = ResourceManager::Get< Shader >( "forwardBlinnPhongFrag" );
 
-        std::vector< DescriptorSetLayoutData > descriptorSetData = animatedModelsVert->reflectInfo.descriptorSetLayouts;
+        std::vector< DescriptorSetLayoutData > descriptorSetData = rigidModelsVert->reflectInfo.descriptorSetLayouts;
         descriptorSetData.insert( descriptorSetData.end(), forwardBlinnPhongFrag->reflectInfo.descriptorSetLayouts.begin(), forwardBlinnPhongFrag->reflectInfo.descriptorSetLayouts.end() );
         auto combined = CombineDescriptorSetLayouts( descriptorSetData );
-
-        for ( size_t i = 0; i < combined.size(); ++i )
-        {
-            LOG( "combined[" , i, "].setNumber = ", combined[i].setNumber );
-            for ( size_t b = 0; b < combined[i].bindings.size(); ++b )
-            {
-                LOG( "combined[" , i, "].binding[", b, "].binding = ", combined[i].bindings[b].binding );
-                LOG( "combined[" , i, "].binding[", b, "].descriptorType = ", combined[i].bindings[b].descriptorType );
-            }
-        }
 
         s_descriptorSetLayouts       = g_renderState.device.NewDescriptorSetLayouts( combined );
         sceneDescriptorSets          = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[0] );
         textureDescriptorSets        = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[1] );
-        animationBonesDescriptorSets = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[2] );
 
         s_image = ResourceManager::Get< Image >( "RENDER_SYSTEM_DUMMY_TEXTURE" );
         PG_ASSERT( s_image );
@@ -191,7 +175,7 @@ namespace RenderSystem
             bufferInfo.offset = 0;
             bufferInfo.range  = VK_WHOLE_SIZE;
 
-            VkWriteDescriptorSet descriptorWrite[5] = {};
+            VkWriteDescriptorSet descriptorWrite[4] = {};
             descriptorWrite[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrite[0].dstSet           = sceneDescriptorSets[i].GetHandle();
             descriptorWrite[0].dstBinding       = 0;
@@ -232,19 +216,7 @@ namespace RenderSystem
             descriptorWrite[3].descriptorCount  = 1;
             descriptorWrite[3].pBufferInfo      = &bufferInfo3;
 
-            VkDescriptorBufferInfo boneDataBufferInfo = {};
-            boneDataBufferInfo.buffer = s_gpuBoneBuffers[i].GetHandle();
-            boneDataBufferInfo.offset = 0;
-            boneDataBufferInfo.range  = VK_WHOLE_SIZE;
-            descriptorWrite[4].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite[4].dstSet           = animationBonesDescriptorSets[i].GetHandle();
-            descriptorWrite[4].dstBinding       = 0;
-            descriptorWrite[4].dstArrayElement  = 0;
-            descriptorWrite[4].descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            descriptorWrite[4].descriptorCount  = 1;
-            descriptorWrite[4].pBufferInfo      = &boneDataBufferInfo;
-
-            vkUpdateDescriptorSets( g_renderState.device.GetHandle(), 5, descriptorWrite, 0, nullptr );
+            g_renderState.device.UpdateDescriptorSets( 4, descriptorWrite );
         }
  
         VertexBindingDescriptor bindingDesc[5];
@@ -260,9 +232,6 @@ namespace RenderSystem
         bindingDesc[3].binding   = 3;
         bindingDesc[3].stride    = 2 * sizeof( glm::vec4 );
         bindingDesc[3].inputRate = VertexInputRate::PER_VERTEX;
-        bindingDesc[4].binding   = 4;
-        bindingDesc[4].stride    = 1 * sizeof( glm::uvec4 );
-        bindingDesc[4].inputRate = VertexInputRate::PER_VERTEX;
 
         std::array< VertexAttributeDescriptor, 5 > attribDescs;
         attribDescs[0].binding  = 0;
@@ -277,14 +246,6 @@ namespace RenderSystem
         attribDescs[2].location = 2;
         attribDescs[2].format   = BufferDataType::FLOAT2;
         attribDescs[2].offset   = 0;
-        attribDescs[3].binding  = 3;
-        attribDescs[3].location = 3;
-        attribDescs[3].format   = BufferDataType::FLOAT4;
-        attribDescs[3].offset   = 0;
-        attribDescs[4].binding  = 3;
-        attribDescs[4].location = 4;
-        attribDescs[4].format   = BufferDataType::UINT4;
-        attribDescs[4].offset   = sizeof( glm::vec4 );
 
         PipelineDescriptor pipelineDesc;
         pipelineDesc.renderPass             = &g_renderState.renderPass;
@@ -304,24 +265,12 @@ namespace RenderSystem
             return false;
         }
 
-        pipelineDesc.descriptorSetLayouts   = s_descriptorSetLayouts;
-        pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 4, bindingDesc, 5, attribDescs.data() );
-        pipelineDesc.shaders[0]             = animatedModelsVert.get();
-        pipelineDesc.numShaders             = 2;
-
-        s_animatedModelPipeline = g_renderState.device.NewPipeline( pipelineDesc );
-        if ( !s_animatedModelPipeline )
-        {
-            LOG_ERR( "Could not create animated model pipeline" );
-            return false;
-        }
-
         return true;
     }
 
     void Shutdown()
     {
-        vkDeviceWaitIdle( g_renderState.device.GetHandle() );
+        g_renderState.device.WaitForIdle();
         for ( auto& [name, sampler] : s_samplers )
         {
             sampler.Free();
@@ -338,14 +287,12 @@ namespace RenderSystem
                 s_gpuSceneConstantBuffers[i].Free();
                 s_gpuPointLightBuffers[i].Free();
                 s_gpuSpotLightBuffers[i].Free();
-                s_gpuBoneBuffers[i].Free();
             }
             for ( auto& layout : s_descriptorSetLayouts )
             {
                 layout.Free();
             }
             s_rigidModelPipeline.Free();
-            s_animatedModelPipeline.Free();
         }
 
         VulkanShutdown();
@@ -422,8 +369,6 @@ namespace RenderSystem
         });
 
         cmdBuf.BindRenderPipeline( s_animatedModelPipeline );
-        //cmdBuf.BindDescriptorSets( 1, &sceneDescriptorSets[imageIndex], s_animatedModelPipeline, 0 );
-        //cmdBuf.BindDescriptorSets( 1, &textureDescriptorSets[imageIndex], s_animatedModelPipeline, 1 );
         cmdBuf.BindDescriptorSets( 1, &animationBonesDescriptorSets[imageIndex], s_animatedModelPipeline, 2 );
         scene->registry.view< SkinnedRenderer, Transform >().each( [&]( SkinnedRenderer& renderer, Transform& transform )
         {
@@ -434,14 +379,7 @@ namespace RenderSystem
             PerObjectConstantBuffer b;
             b.modelMatrix  = M;
             b.normalMatrix = N;
-            vkCmdPushConstants( cmdBuf.GetHandle(), s_animatedModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PerObjectConstantBuffer ), &b );
-
-            // NOTE: This wont work for more than one model, would to copy all transforms to a big buffer and then do all the draws
-            std::vector< glm::mat4 > boneTransforms;
-            model->GetCurrentPose( boneTransforms );
-            data = s_gpuBoneBuffers[imageIndex].Map();
-            memcpy( (char*)data, boneTransforms.data(), boneTransforms.size() * sizeof( glm::mat4 ) );
-            s_gpuBoneBuffers[imageIndex].UnMap();
+            vkCmdPushConstants( cmdBuf.GetHandle(), s_animatedModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PerObjectConstantBuffer ), &b );            
 
             for ( size_t i = 0; i < renderer.model->meshes.size(); ++i )
             {
