@@ -147,6 +147,8 @@ Scene* Scene::Load( const std::string& filename )
 
     mapping.ForEachMember( document, std::move( scene ) );
 
+    // scene->registry.on_construct<position>().connect<&my_free_function>();
+
     return scene;
 }
 

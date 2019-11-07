@@ -367,6 +367,8 @@ namespace RenderSystem
             }
         });
 
+        AnimationSystem::UploadToGpu( scene, imageIndex );
+
         cmdBuf.BindRenderPipeline( AnimationSystem::renderData.animatedPipeline );
         cmdBuf.BindDescriptorSets( 1, &AnimationSystem::renderData.animationBonesDescriptorSets[imageIndex], AnimationSystem::renderData.animatedPipeline, 2 );
         scene->registry.view< SkinnedRenderer, Transform >().each( [&]( SkinnedRenderer& renderer, Transform& transform )

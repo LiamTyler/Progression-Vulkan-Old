@@ -1,4 +1,5 @@
 #include "core/animation_system.hpp"
+#include "core/assert.hpp"
 #include "core/scene.hpp"
 #include "core/time.hpp"
 #include "components/animation_component.hpp"
@@ -8,8 +9,12 @@
 #include "resource/shader.hpp"
 #include "resource/skinned_model.hpp"
 #include "utils/logger.hpp"
+#include <list>
 
 using namespace Progression::Gfx;
+
+#define MAX_NUM_TRANSFORMS 1000
+static std::list< std::pair< uint32_t, uint32_t > > s_freeList;
 
 namespace Progression
 {
@@ -21,17 +26,18 @@ RenderData renderData;
 
 bool Init()
 {
+    s_freeList = { { 0, MAX_NUM_TRANSFORMS } };
     uint32_t numFrames = Gfx::MAX_FRAMES_IN_FLIGHT + 1;
     renderData.gpuBoneBuffers.resize( numFrames );
     for ( auto& buf : renderData.gpuBoneBuffers )
     {
-        buf = g_renderState.device.NewBuffer( sizeof( glm::mat4 ) * 1000,
+        buf = g_renderState.device.NewBuffer( sizeof( glm::mat4 ) * MAX_NUM_TRANSFORMS,
             BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
     }
 
-    VkDescriptorPoolSize poolSize[3] = {};
-    poolSize[1].type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    poolSize[1].descriptorCount = 1 * numFrames;
+    VkDescriptorPoolSize poolSize[1] = {};
+    poolSize[0].type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    poolSize[0].descriptorCount = 1 * numFrames;
 
     renderData.descriptorPool = g_renderState.device.NewDescriptorPool( 1, poolSize, numFrames );
 
@@ -74,7 +80,7 @@ bool Init()
     bindingDesc[2].stride    = sizeof( glm::vec2 );
     bindingDesc[2].inputRate = VertexInputRate::PER_VERTEX;
     bindingDesc[3].binding   = 3;
-    bindingDesc[3].stride    = 1 * sizeof( glm::vec4 ); // 2?
+    bindingDesc[3].stride    = 2 * sizeof( glm::vec4 );
     bindingDesc[3].inputRate = VertexInputRate::PER_VERTEX;
     
     std::array< VertexAttributeDescriptor, 5 > attribDescs;
@@ -130,6 +136,7 @@ void Shutdown()
     {
         layout.Free();
     }
+    renderData.descriptorPool.Free();
     renderData.animatedPipeline.Free();
 }
 
@@ -191,46 +198,32 @@ void UploadToGpu( Scene* scene, uint32_t frameIndex )
     });
 }
 
-/*
-void Render( Scene* scene, CommandBuffer& cmdBuf, uint32_t frameIndex )
+uint32_t AllocateGPUTransforms( uint32_t numTransforms )
 {
-    UploadToGpu( scene, frameIndex );
-
-    cmdBuf.BindRenderPipeline( s_animatedPipeline );
-    cmdBuf.BindDescriptorSets( 1, &animationBonesDescriptorSets[frameIndex], s_animatedPipeline, 2 );
-    scene->registry.view< SkinnedRenderer, Transform >().each( [&]( SkinnedRenderer& renderer, Transform& transform )
+    for ( auto it = s_freeList.begin(); it != s_freeList.end(); ++it )
     {
-        const auto& model = renderer.model;
-        auto M            = transform.GetModelMatrix();
-        auto N            = glm::transpose( glm::inverse( M ) );
-
-        PerObjectConstantBuffer b;
-        b.modelMatrix  = M;
-        b.normalMatrix = N;
-        vkCmdPushConstants( cmdBuf.GetHandle(), s_animatedModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PerObjectConstantBuffer ), &b );            
-
-        for ( size_t i = 0; i < renderer.model->meshes.size(); ++i )
+        uint32_t slot         = it->first;
+        uint32_t numFreeSlots = it->second;
+        if ( numTransforms <= numFreeSlots )
         {
-            const auto& mesh = model->meshes[i];
-            const auto& mat  = model->materials[mesh.materialIndex];
-
-            MaterialConstantBuffer mcbuf{};
-            mcbuf.Ka = glm::vec4( mat->Ka, 0 );
-            mcbuf.Kd = glm::vec4( mat->Kd, 0 );
-            mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
-            mcbuf.diffuseTextureSlot = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
-            vkCmdPushConstants( cmdBuf.GetHandle(), s_animatedModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof( MaterialConstantBuffer ), &mcbuf );
-
-            cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
-            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
-            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetUVOffset(), 2 );
-            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetBlendWeightOffset(), 3 );
-            cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
-            cmdBuf.DrawIndexed( mesh.GetStartIndex(), mesh.GetNumIndices(), mesh.GetStartVertex() );
+            s_freeList.erase( it );
+            if ( numTransforms < numFreeSlots )
+            {
+                it->first  = slot + numTransforms;
+                it->second = numFreeSlots - numTransforms;
+            }
+            return slot;
         }
-    });
+    }
+
+    PG_ASSERT( false, "Not enough contiguous memory available for animation transforms!" );
+    return ~0u;
 }
-*/
+
+void FreeGPUTransforms( uint32_t id )
+{
+    
+}
 
 } // namespace AnimationSystem
 } // namespace Progression
