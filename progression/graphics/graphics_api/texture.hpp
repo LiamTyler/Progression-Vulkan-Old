@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.hpp>
-#include "graphics/shader_c_shared/texture_defines.h"
+#include "graphics/shader_c_shared/defines.h"
 
 namespace Progression
 {

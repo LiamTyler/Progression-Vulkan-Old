@@ -14,7 +14,6 @@ set(
     graphics/vulkan.cpp
 
     graphics/graphics_api.hpp
-    graphics/lights.hpp
     graphics/pg_to_vulkan_types.hpp
     graphics/render_system.hpp
     graphics/texture_manager.hpp
@@ -40,6 +39,10 @@ set(
     graphics/graphics_api/texture.hpp
     graphics/graphics_api/vertex_descriptor.cpp
     graphics/graphics_api/vertex_descriptor.hpp
+    
+    graphics/shader_c_shared/defines.h
+    graphics/shader_c_shared/lights.h
+    graphics/shader_c_shared/structs.h
 )
 
 set(
@@ -154,6 +157,7 @@ set(
 
 set(
 	COMPONENTS
+	components/animation_component.cpp
 	components/animation_component.hpp
 	components/entity_metadata.hpp
 	components/factory.cpp

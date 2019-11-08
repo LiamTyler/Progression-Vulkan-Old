@@ -230,23 +230,14 @@ namespace Progression
         }
     }
 
-    void SkinnedModel::GetCurrentPose( std::vector< glm::mat4 >& finalTransforms )
+    void SkinnedModel::ApplyPoseToJoints( uint32_t jointIdx, const glm::mat4& parentTransform, std::vector< glm::mat4 >& transformBuffer )
     {
-        finalTransforms.resize( joints.size() );
-        for ( size_t i = 0; i < joints.size(); ++i )
-        {
-            finalTransforms[i] = joints[i].modelSpaceTransform;
-        }
-    }
-
-    void SkinnedModel::ApplyPoseToJoints( uint32_t jointIdx, const glm::mat4& parentTransform )
-    {
-        glm::mat4 currentTransform = parentTransform * joints[jointIdx].modelSpaceTransform;
+        glm::mat4 currentTransform = parentTransform * transformBuffer[jointIdx];
         for ( const auto& child : joints[jointIdx].children )
         {
-            ApplyPoseToJoints( child, currentTransform );
+            ApplyPoseToJoints( child, currentTransform, transformBuffer );
         }
-        joints[jointIdx].modelSpaceTransform = currentTransform * joints[jointIdx].inverseBindTransform;
+        transformBuffer[jointIdx] = currentTransform * joints[jointIdx].inverseBindTransform;
     }
 
     static void FindJointChildren( aiNode* node, std::unordered_map< std::string, uint32_t >& jointMapping, std::vector< Joint >& joints )

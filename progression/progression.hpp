@@ -16,8 +16,8 @@
 #include "core/window.hpp"
 
 #include "graphics/graphics_api.hpp"
-#include "graphics/lights.hpp"
 #include "graphics/render_system.hpp"
+#include "graphics/shader_c_shared/lights.h"
 #include "graphics/texture_manager.hpp"
 #include "graphics/vulkan.hpp"
 

@@ -289,8 +289,8 @@ void Image::UploadToGpu()
     auto& device = g_renderState.device;
     size_t imSize = GetTotalImageBytes();
     Buffer stagingBuffer = device.NewBuffer( imSize, BUFFER_TYPE_TRANSFER_SRC, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
-    void* stagingBufferData = stagingBuffer.Map();
-    memcpy( stagingBufferData, m_pixels, imSize );
+    stagingBuffer.Map();
+    memcpy( stagingBuffer.MappedPtr(), m_pixels, imSize );
     stagingBuffer.UnMap();
 
     VkFormat vkFormat = PGToVulkanPixelFormat( m_texture.GetPixelFormat() );

@@ -3,6 +3,7 @@
 #include "graphics/graphics_api/sampler.hpp"
 #include "graphics/graphics_api/texture.hpp"
 #include "graphics/render_system.hpp"
+#include "graphics/shader_c_shared/defines.h"
 #include "graphics/vulkan.hpp"
 #include "utils/logger.hpp"
 #include <bitset>
@@ -19,18 +20,29 @@ namespace Progression
 {
 namespace Gfx
 {
-
-    void InitTextureManager()
+namespace TextureManager
+{
+    void Init()
     {
-        s_setWrites.reserve( 128 );
-        s_imageInfos.reserve( 128 );
-        s_slotsAddedSinceLastUpdate.reserve( 128 );
+        s_setWrites.reserve( 256 );
+        s_imageInfos.reserve( 256 );
+        s_slotsAddedSinceLastUpdate.reserve( 256 );
         s_slotsInUse.reset();
         s_currentSlot = 0;
         s_freeSlots.clear();
     }
 
-    uint16_t GetOpenTextureSlot( Texture* texture )
+    void Shutdown()
+    {
+        s_setWrites.clear();
+        s_imageInfos.clear();
+        s_slotsAddedSinceLastUpdate.clear();
+        s_slotsInUse.reset();
+        s_currentSlot = 0;
+        s_freeSlots.clear();
+    }
+
+    uint16_t GetOpenSlot( Texture* texture )
     {
         uint16_t openSlot;
         if ( s_freeSlots.empty() )
@@ -49,14 +61,14 @@ namespace Gfx
         return openSlot;
     }
 
-    void FreeTextureSlot( uint16_t slot )
+    void FreeSlot( uint16_t slot )
     {
         PG_ASSERT( s_slotsInUse[slot] );
         s_slotsInUse[slot] = false;
         s_freeSlots.push_front( slot );
     }
 
-    void UpdateTextureDescriptors( const std::vector< DescriptorSet >& textureDescriptorSets )
+    void UpdateDescriptors( const std::vector< DescriptorSet >& textureDescriptorSets )
     {
         if ( s_slotsAddedSinceLastUpdate.empty() )
         {
@@ -90,5 +102,6 @@ namespace Gfx
         s_slotsAddedSinceLastUpdate.clear();
     }
 
+} // namespace TextureManager
 } // namespace Gfx
 } // namespace Progression

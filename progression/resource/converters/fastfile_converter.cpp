@@ -19,7 +19,7 @@ using namespace Progression;
 bool ParseShaderCreateInfoFromFile( std::istream& in, ShaderCreateInfo& info )
 {
     fileIO::ParseLineKeyVal( in, "name", info.name );
-    fileIO::ParseLineKeyValOptional( in, "filename", info.filename);
+    fileIO::ParseLineKeyValOptional( in, "filename", info.filename );
     info.filename = PG_RESOURCE_DIR + info.filename;
 
     return true;
@@ -180,7 +180,7 @@ AssetStatus FastfileConverter::CheckDependencies()
     m_status = ASSET_UP_TO_DATE;
 
     m_outputContentFile = PG_RESOURCE_DIR "cache/fastfiles/" +
-                          std::filesystem::path( inputFile ).filename().string() + ".ff";
+                          std::filesystem::path( inputFile ).stem().string() + ".ff";
     IF_VERBOSE_MODE( LOG( "Resource file '", inputFile, "' outputs fastfile '", m_outputContentFile, "'" ) );
     if ( !std::filesystem::exists( m_outputContentFile ) )
     {

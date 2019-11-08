@@ -8,6 +8,7 @@
 #include "components/skinned_renderer.hpp"
 #include "graphics/graphics_api.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
+#include "graphics/shader_c_shared/defines.h"
 #include "graphics/texture_manager.hpp"
 #include "resource/resource_manager.hpp"
 #include "resource/image.hpp"
@@ -17,6 +18,7 @@
 #include <array>
 #include <unordered_map>
 #include "graphics/vulkan.hpp"
+#include "graphics/shader_c_shared/structs.h"
 
 using namespace Progression;
 using namespace Gfx;
@@ -57,30 +59,6 @@ namespace RenderSystem
 } // namespace RenderSystem
 } // namespace Progression
 
-struct PerObjectConstantBuffer
-{
-    glm::mat4 modelMatrix; 
-    glm::mat4 normalMatrix;
-};
-
-struct SceneConstantBuffer
-{
-    alignas( 16 ) glm::mat4 VP;
-    alignas( 16 ) glm::vec3 cameraPos;
-    alignas( 16 ) glm::vec3 ambientColor;
-    alignas( 16 ) DirectionalLight dirLight;
-    uint32_t numPointLights;
-    uint32_t numSpotLights;
-};
-
-struct MaterialConstantBuffer
-{
-    glm::vec4 Ka;
-    glm::vec4 Kd;
-    glm::vec4 Ks;
-    uint32_t diffuseTextureSlot;
-};
-
 static Window* s_window;
 static Pipeline s_rigidModelPipeline;
 static DescriptorPool s_descriptorPool;
@@ -97,39 +75,20 @@ static std::shared_ptr< Image > s_image;
 
 namespace Progression
 {
-
-extern bool g_converterMode;
-
 namespace RenderSystem
 {
-    void InitSamplers();
 
     bool Init()
     {
-        InitTextureManager();
-        if ( !VulkanInit() )
-        {
-            LOG_ERR( "Could not initialize vulkan" );
-            return false;
-        }
-
-        g_renderState.transientCommandPool = g_renderState.device.NewCommandPool( COMMAND_POOL_TRANSIENT );
-
-        InitSamplers();
         s_window = GetMainWindow();
 
-        if ( g_converterMode )
-        {
-            return true;
-        }
-        
         uint32_t numImages = static_cast< uint32_t >( g_renderState.swapChain.images.size() );
         s_gpuSceneConstantBuffers.resize( numImages );
         s_gpuPointLightBuffers.resize( numImages );
         s_gpuSpotLightBuffers.resize( numImages );
         for ( uint32_t i = 0; i < numImages; ++i )
         {
-            s_gpuSceneConstantBuffers[i] = g_renderState.device.NewBuffer( sizeof( SceneConstantBuffer ),
+            s_gpuSceneConstantBuffers[i] = g_renderState.device.NewBuffer( sizeof( SceneConstantBufferData ),
                     BUFFER_TYPE_UNIFORM, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
             s_gpuPointLightBuffers[i] = g_renderState.device.NewBuffer( sizeof( PointLight ) * MAX_NUM_POINT_LIGHTS,
                     BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
@@ -147,7 +106,6 @@ namespace RenderSystem
 
         s_descriptorPool = g_renderState.device.NewDescriptorPool( 3, poolSize, 3 * numImages );
         
-        ResourceManager::LoadFastFile( PG_RESOURCE_DIR "cache/fastfiles/resource.txt.ff" );
         auto rigidModelsVert       = ResourceManager::Get< Shader >( "rigidModelsVert" );
         auto forwardBlinnPhongFrag = ResourceManager::Get< Shader >( "forwardBlinnPhongFrag" );
 
@@ -155,9 +113,9 @@ namespace RenderSystem
         descriptorSetData.insert( descriptorSetData.end(), forwardBlinnPhongFrag->reflectInfo.descriptorSetLayouts.begin(), forwardBlinnPhongFrag->reflectInfo.descriptorSetLayouts.end() );
         auto combined = CombineDescriptorSetLayouts( descriptorSetData );
 
-        s_descriptorSetLayouts       = g_renderState.device.NewDescriptorSetLayouts( combined );
-        sceneDescriptorSets          = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[0] );
-        textureDescriptorSets        = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[1] );
+        s_descriptorSetLayouts = g_renderState.device.NewDescriptorSetLayouts( combined );
+        sceneDescriptorSets    = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[0] );
+        textureDescriptorSets  = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[1] );
 
         s_image = ResourceManager::Get< Image >( "RENDER_SYSTEM_DUMMY_TEXTURE" );
         PG_ASSERT( s_image );
@@ -274,27 +232,19 @@ namespace RenderSystem
         {
             sampler.Free();
         }
-        g_renderState.transientCommandPool.Free();
 
-        ResourceManager::FreeGPUResources();
-
-        if ( !g_converterMode )
+        s_descriptorPool.Free();
+        for ( size_t i = 0; i < g_renderState.swapChain.images.size(); ++i )
         {
-            s_descriptorPool.Free();
-            for ( size_t i = 0; i < g_renderState.swapChain.images.size(); ++i )
-            {
-                s_gpuSceneConstantBuffers[i].Free();
-                s_gpuPointLightBuffers[i].Free();
-                s_gpuSpotLightBuffers[i].Free();
-            }
-            for ( auto& layout : s_descriptorSetLayouts )
-            {
-                layout.Free();
-            }
-            s_rigidModelPipeline.Free();
+            s_gpuSceneConstantBuffers[i].Free();
+            s_gpuPointLightBuffers[i].Free();
+            s_gpuSpotLightBuffers[i].Free();
         }
-
-        VulkanShutdown();
+        for ( auto& layout : s_descriptorSetLayouts )
+        {
+            layout.Free();
+        }
+        s_rigidModelPipeline.Free();
     }
 
     void Render( Scene* scene )
@@ -308,56 +258,57 @@ namespace RenderSystem
 
         auto imageIndex = g_renderState.swapChain.AcquireNextImage( g_renderState.presentCompleteSemaphores[currentFrame] );
 
-        UpdateTextureDescriptors( textureDescriptorSets );
+        TextureManager::UpdateDescriptors( textureDescriptorSets );
 
         // sceneConstantBuffer
-        void* data = s_gpuSceneConstantBuffers[imageIndex].Map();
-        SceneConstantBuffer scbuf;
+        SceneConstantBufferData scbuf;
+        scbuf.V              = scene->camera.GetV();
+        scbuf.P              = scene->camera.GetP();
         scbuf.VP             = scene->camera.GetVP();
-        scbuf.cameraPos      = scene->camera.position;
-        scbuf.ambientColor   = scene->ambientColor;
+        scbuf.cameraPos      = glm::vec4( scene->camera.position, 0 );
+        scbuf.ambientColor   = glm::vec4( scene->ambientColor, 0 );
         scbuf.dirLight       = scene->directionalLight;
         scbuf.numPointLights = static_cast< uint32_t >( scene->pointLights.size() );
         scbuf.numSpotLights  = static_cast< uint32_t >( scene->spotLights.size() );
-        memcpy( (char*)data, &scbuf, sizeof( SceneConstantBuffer ) );
+        s_gpuSceneConstantBuffers[imageIndex].Map();
+        memcpy( s_gpuSceneConstantBuffers[imageIndex].MappedPtr(), &scbuf, sizeof( SceneConstantBufferData ) );
         s_gpuSceneConstantBuffers[imageIndex].UnMap();
 
-        data = s_gpuPointLightBuffers[imageIndex].Map();
-        memcpy( (char*)data, scene->pointLights.data(), scene->pointLights.size() * sizeof( PointLight ) );
+        s_gpuPointLightBuffers[imageIndex].Map();
+        memcpy( s_gpuPointLightBuffers[imageIndex].MappedPtr(), scene->pointLights.data(), scene->pointLights.size() * sizeof( PointLight ) );
         s_gpuPointLightBuffers[imageIndex].UnMap();
 
-        data = s_gpuSpotLightBuffers[imageIndex].Map();
-        memcpy( (char*)data, scene->spotLights.data(), scene->spotLights.size() * sizeof( SpotLight ) );
+        s_gpuSpotLightBuffers[imageIndex].Map();
+        memcpy( s_gpuSpotLightBuffers[imageIndex].MappedPtr(), scene->spotLights.data(), scene->spotLights.size() * sizeof( SpotLight ) );
         s_gpuSpotLightBuffers[imageIndex].UnMap();
 
         auto& cmdBuf = g_renderState.commandBuffers[imageIndex];
         cmdBuf.BeginRecording();
         cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex] );
         cmdBuf.BindRenderPipeline( s_rigidModelPipeline );
-        cmdBuf.BindDescriptorSets( 1, &sceneDescriptorSets[imageIndex], s_rigidModelPipeline, 0 );
-        cmdBuf.BindDescriptorSets( 1, &textureDescriptorSets[imageIndex], s_rigidModelPipeline, 1 );
+        cmdBuf.BindDescriptorSets( 1, &sceneDescriptorSets[imageIndex], s_rigidModelPipeline, PG_SCENE_CONSTANT_BUFFER_SET );
+        cmdBuf.BindDescriptorSets( 1, &textureDescriptorSets[imageIndex], s_rigidModelPipeline, PG_2D_TEXTURES_SET );
 
         scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& modelRenderer, Transform& transform )
         {
-            // LOG( "Drawing model: ", modelRenderer.model->name );
             auto M = transform.GetModelMatrix();
-            auto N   = glm::transpose( glm::inverse( M ) );
-            PerObjectConstantBuffer b;
-            b.modelMatrix = M;
-            b.normalMatrix = N;
-            vkCmdPushConstants( cmdBuf.GetHandle(), s_rigidModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PerObjectConstantBuffer ), &b );
+            auto N = glm::transpose( glm::inverse( M ) );
+            ObjectConstantBufferData b;
+            b.M = M;
+            b.N = N;
+            vkCmdPushConstants( cmdBuf.GetHandle(), s_rigidModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( ObjectConstantBufferData ), &b );
 
             for ( size_t i = 0; i < modelRenderer.materials.size(); ++i )
             {
                 const auto& mesh = modelRenderer.model->meshes[i];
                 const auto& mat  = modelRenderer.materials[i];
 
-                MaterialConstantBuffer mcbuf{};
+                MaterialConstantBufferData mcbuf{};
                 mcbuf.Ka = glm::vec4( mat->Ka, 0 );
                 mcbuf.Kd = glm::vec4( mat->Kd, 0 );
                 mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
-                mcbuf.diffuseTextureSlot = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
-                vkCmdPushConstants( cmdBuf.GetHandle(), s_rigidModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof( MaterialConstantBuffer ), &mcbuf );
+                mcbuf.diffuseTexIndex = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
+                vkCmdPushConstants( cmdBuf.GetHandle(), s_rigidModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
 
                 cmdBuf.BindVertexBuffer( mesh.vertexBuffer, 0, 0 );
                 cmdBuf.BindVertexBuffer( mesh.vertexBuffer, mesh.GetNormalOffset(), 1 );
@@ -369,30 +320,34 @@ namespace RenderSystem
 
         AnimationSystem::UploadToGpu( scene, imageIndex );
 
-        cmdBuf.BindRenderPipeline( AnimationSystem::renderData.animatedPipeline );
-        cmdBuf.BindDescriptorSets( 1, &AnimationSystem::renderData.animationBonesDescriptorSets[imageIndex], AnimationSystem::renderData.animatedPipeline, 2 );
-        scene->registry.view< SkinnedRenderer, Transform >().each( [&]( SkinnedRenderer& renderer, Transform& transform )
+        auto& animPipeline = AnimationSystem::renderData.animatedPipeline;
+        cmdBuf.BindRenderPipeline( animPipeline );
+        cmdBuf.BindDescriptorSets( 1, &sceneDescriptorSets[imageIndex], animPipeline, PG_SCENE_CONSTANT_BUFFER_SET );
+        cmdBuf.BindDescriptorSets( 1, &textureDescriptorSets[imageIndex], animPipeline, PG_2D_TEXTURES_SET );
+        cmdBuf.BindDescriptorSets( 1, &AnimationSystem::renderData.animationBonesDescriptorSets[imageIndex], animPipeline, PG_BONE_TRANSFORMS_SET );
+        scene->registry.view< Animator, SkinnedRenderer, Transform >().each( [&]( Animator& animator, SkinnedRenderer& renderer, Transform& transform )
         {
             const auto& model = renderer.model;
             auto M            = transform.GetModelMatrix();
             auto N            = glm::transpose( glm::inverse( M ) );
 
-            PerObjectConstantBuffer b;
-            b.modelMatrix  = M;
-            b.normalMatrix = N;
-            vkCmdPushConstants( cmdBuf.GetHandle(), AnimationSystem::renderData.animatedPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PerObjectConstantBuffer ), &b );            
+            AnimatedObjectConstantBufferData b;
+            b.M = M;
+            b.N = N;
+            b.boneTransformIdx = animator.GetTransformSlot();
+            vkCmdPushConstants( cmdBuf.GetHandle(), animPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( AnimatedObjectConstantBufferData ), &b );            
 
             for ( size_t i = 0; i < renderer.model->meshes.size(); ++i )
             {
                 const auto& mesh = model->meshes[i];
                 const auto& mat  = model->materials[mesh.materialIndex];
 
-                MaterialConstantBuffer mcbuf{};
+                MaterialConstantBufferData mcbuf{};
                 mcbuf.Ka = glm::vec4( mat->Ka, 0 );
                 mcbuf.Kd = glm::vec4( mat->Kd, 0 );
                 mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
-                mcbuf.diffuseTextureSlot = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
-                vkCmdPushConstants( cmdBuf.GetHandle(), AnimationSystem::renderData.animatedPipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 128, sizeof( MaterialConstantBuffer ), &mcbuf );
+                mcbuf.diffuseTexIndex = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
+                vkCmdPushConstants( cmdBuf.GetHandle(), animPipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
 
                 cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
                 cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
@@ -428,7 +383,6 @@ namespace RenderSystem
         samplerDesc.wrapModeW = WrapMode::REPEAT;
         AddSampler( "linear_clamped", samplerDesc );
     }
-
 
 } // namespace RenderSystem
 } // namespace Progression

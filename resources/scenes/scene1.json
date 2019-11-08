@@ -1,4 +1,7 @@
 {
+    "Fastfile": {
+        "filename": "scene1.ff"
+    },
     "Camera": {
         "position": [ 0, 2, 10 ],
         "rotation": [ 0, 0, 0 ],

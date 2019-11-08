@@ -46,7 +46,6 @@ namespace Progression
     struct Joint
     {
         std::string name;
-        glm::mat4 modelSpaceTransform;
         glm::mat4 inverseBindTransform;
         std::vector< uint32_t > children;
     };
@@ -115,8 +114,7 @@ namespace Progression
         void UploadToGpu();
         void Free( bool cpuCopy = true, bool gpuCopy = false );
 
-        void GetCurrentPose( std::vector< glm::mat4 >& finalTransforms );
-        void ApplyPoseToJoints( uint32_t jointIdx, const glm::mat4& parentTransform );
+        void ApplyPoseToJoints( uint32_t jointIdx, const glm::mat4& parentTransform, std::vector< glm::mat4 >& transformBuffer );
 
         uint32_t GetNumVertices() const;
         uint32_t GetVertexOffset() const;

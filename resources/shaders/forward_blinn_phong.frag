@@ -1,8 +1,9 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-#include "graphics/shader_c_shared/standard_defines.h"
+#include "graphics/shader_c_shared/defines.h"
 #include "graphics/shader_c_shared/lights.h"
+#include "graphics/shader_c_shared/structs.h"
 
 layout( location = 0 ) out vec4 outColor;
 
@@ -10,35 +11,27 @@ layout( location = 0 ) in vec3 posInWorldSpace;
 layout( location = 1 ) in vec3 normalInWorldSpace;
 layout( location = 2 ) in vec2 texCoord;
 
-layout( set = 0, binding = 0 ) uniform SceneConstantBuffer
+layout( set = PG_SCENE_CONSTANT_BUFFER_SET, binding = 0 ) uniform SceneConstantBufferUniform
 {
-    mat4 VP;
-    vec3 cameraPos;
-    vec3 ambientColor;
-    DirectionalLight dirLight;
-    uint numPointLights;
-    uint numSpotLights;
-} sceneConstantBuffer;
+    SceneConstantBufferData sceneConstantBuffer;
+};
 
-layout( std140, set = 0, binding = 1 ) buffer PointLights
+layout( std140, set = PG_SCENE_CONSTANT_BUFFER_SET, binding = 1 ) buffer PointLights
 {
    PointLight pointLights[];
 };
 
-layout( std140, set = 0, binding = 2 ) buffer SpotLights
+layout( std140, set = PG_SCENE_CONSTANT_BUFFER_SET, binding = 2 ) buffer SpotLights
 {
    SpotLight spotLights[];
 };
 
-layout( set = 1, binding = 0 ) uniform sampler2D textures[PG_MAX_NUM_TEXTURES];
+layout( set = PG_2D_TEXTURES_SET, binding = 0 ) uniform sampler2D textures[PG_MAX_NUM_TEXTURES];
 
-layout( std430, push_constant ) uniform MaterialConstantBuffer
+layout( std430, push_constant ) uniform MaterialConstantBufferUniform
 {
-    layout( offset = 128 ) vec4 Ka;
-    vec4 Kd;
-    vec4 Ks;
-    uint diffuseTexIndex;
-} material;
+    layout( offset = PG_MATERIAL_PUSH_CONSTANT_OFFSET ) MaterialConstantBufferData material;
+};
 
 float Attenuate( in const float distSquared, in const float radiusSquared )
 {
@@ -53,9 +46,9 @@ void main()
     //outColor.w = 1; 
     //return;
     vec3 n = normalize( normalInWorldSpace );
-    vec3 e = normalize( sceneConstantBuffer.cameraPos - posInWorldSpace );
+    vec3 e = normalize( sceneConstantBuffer.cameraPos.xyz - posInWorldSpace );
 
-    vec3 color = material.Ka.xyz * sceneConstantBuffer.ambientColor;
+    vec3 color = material.Ka.xyz * sceneConstantBuffer.ambientColor.xyz;
     vec3 Kd    = material.Kd.xyz;
     if ( material.diffuseTexIndex != PG_INVALID_TEXTURE_INDEX )
     {

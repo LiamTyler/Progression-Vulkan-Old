@@ -140,6 +140,8 @@ namespace Progression
 
             reflectInfo.descriptorSetLayouts[i].createInfo.pBindings = reflectInfo.descriptorSetLayouts[i].bindings.data();
         }
+        
+        serialize::Read( buffer, reflectInfo.pushConstants );
 
         size_t spirvSize;
         serialize::Read( buffer, spirvSize );
@@ -220,6 +222,15 @@ namespace Progression
     }
 #endif // #if USING( DEBUG_BUILD )
 
+    static void PrintSpvBlockVariable( SpvReflectBlockVariable* var, const std::string& indent = "" )
+    {
+        LOG( indent + "Variable = ", var->name, ", size = ", var->size, ", offset = ", var->offset, ", abs offset = ", var->absolute_offset );
+        for ( uint32_t m = 0; m < var->member_count; ++m )
+        {
+            PrintSpvBlockVariable( &var->members[m], indent + "\t" );
+        }
+    }
+
     ShaderReflectInfo Shader::Reflect( const uint32_t* spirv, size_t spirvSizeInBytes )
     {
         ShaderReflectInfo info;
@@ -277,7 +288,51 @@ namespace Progression
         LOG( "Source lang       = ", spvReflectSourceLanguage( module.source_language ) );
         LOG( "Source lang ver   = ", module.source_language_version );
         LOG( "Spirv size        = ", spirvSizeInBytes );
-        
+
+        result = spvReflectEnumeratePushConstantBlocks( &module, &count, NULL );
+        PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
+
+        std::vector< SpvReflectBlockVariable* > pushConstants( count );
+        result = spvReflectEnumeratePushConstantBlocks( &module, &count, pushConstants.data() );
+        PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
+        for ( size_t i = 0; i < pushConstants.size(); ++i )
+        {
+            LOG( "Push constant[", i, "]: " );
+            PrintSpvBlockVariable( pushConstants[i], "\t" );
+        }
+
+        for ( size_t i = 0; i < pushConstants.size(); ++i )
+        {
+            for ( uint32_t m = 0; m < pushConstants[i]->member_count; ++m )
+            {
+                VkPushConstantRange r;
+                r.stageFlags = static_cast< VkShaderStageFlagBits >( module.shader_stage );
+                r.offset     = pushConstants[i]->members[m].absolute_offset;
+                r.size       = pushConstants[i]->members[m].size;
+                info.pushConstants.push_back( r );
+            }
+        }
+
+        std::sort( info.pushConstants.begin(), info.pushConstants.end(), []( const auto& lhs, const auto& rhs ) { return lhs.offset < rhs.offset; } );
+        for ( size_t i = 1; i < info.pushConstants.size(); ++i )
+        {
+            if ( info.pushConstants[i].offset == info.pushConstants[i-1].offset + info.pushConstants[i-1].size )
+            {
+                info.pushConstants[i-1].size += info.pushConstants[i].size;
+                info.pushConstants[i-1].stageFlags |= info.pushConstants[i].stageFlags;
+                info.pushConstants.erase( info.pushConstants.begin() + i );
+                --i;
+            }
+        }
+
+        uint32_t maxPushConstantSize = Gfx::g_renderState.physicalDeviceInfo.deviceProperties.limits.maxPushConstantsSize;
+        for ( size_t i = 0; i < info.pushConstants.size(); ++i )
+        {
+            LOG( "Range[", i, "] offset = ", info.pushConstants[i].offset, ", size = ", info.pushConstants[i].size );
+            PG_ASSERT( info.pushConstants[i].offset + info.pushConstants[i].size <= maxPushConstantSize,
+                "The push constants specified in this shader exceed the size limit for this gpu: " + std::to_string( maxPushConstantSize ) );
+        }
+
         result = spvReflectEnumerateDescriptorSets( &module, &count, NULL );
         PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
 

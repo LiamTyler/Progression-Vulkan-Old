@@ -29,8 +29,8 @@ int main( int argc, char* argv[] )
         return 0;
     }
 
-    std::string fbxFile = PG_RESOURCE_DIR "dragon/Dragon_Baked_Actions_fbx_7.4_binary.fbx";
-    // std::string fbxFile = PG_RESOURCE_DIR "primitive.fbx";
+    // std::string fbxFile = PG_RESOURCE_DIR "dragon/Dragon_Baked_Actions_fbx_7.4_binary.fbx";
+    std::string fbxFile = PG_RESOURCE_DIR "primitive.fbx";
     //std::string fbxFile = PG_RESOURCE_DIR "boblampclean.md5mesh";
     
     std::vector< Animation > animations;
@@ -42,28 +42,45 @@ int main( int argc, char* argv[] )
         return 0;
     }
 
-    auto entity             = scene->registry.create();
-    auto& transform         = scene->registry.assign< Transform >( entity );
-    transform.position      = glm::vec3( 0, 0, 0 );
-    // transform.rotation      = glm::vec3( glm::radians( -90.0f ), glm::radians( 90.0f ), 0 );
-    transform.scale         = glm::vec3( .001f );
+    {
+        auto entity             = scene->registry.create();
+        auto& transform         = scene->registry.assign< Transform >( entity );
+        transform.position      = glm::vec3( 0, 0, 0 );
+        // transform.rotation      = glm::vec3( glm::radians( -90.0f ), glm::radians( 90.0f ), 0 );
+        transform.scale         = glm::vec3( .001f );
 
-    //transform.position      = glm::vec3( 0, 0, 0 );
-    // transform.rotation      = glm::vec3( glm::radians( 90.0f ), glm::radians( 0.0f ), 0 );
-    // transform.scale         = glm::vec3( .01f );
-    auto& skinned_renderer  = scene->registry.assign< SkinnedRenderer >( entity );
-    skinned_renderer.model  = skinnedModel;
-    LOG( "AABB min = ", skinnedModel->aabb.min );
-    LOG( "AABB max = ", skinnedModel->aabb.max );
-    // for ( auto& mat : skinnedModel->materials )
-    // {
-    //     mat->Kd = glm::vec3( 0, 1, 0 );
-    // }
+        auto& skinned_renderer  = scene->registry.assign< SkinnedRenderer >( entity );
+        skinned_renderer.model  = skinnedModel;
 
-    auto& animator = scene->registry.assign< Animator >( entity );
-    animator.animation = &animations[0];
-    animator.animationTime = 0;
-    animator.model = skinnedModel.get();
+        // for ( auto& mat : skinnedModel->materials )
+        // {
+        //     mat->Kd = glm::vec3( 0, 1, 0 );
+        // }
+
+        auto& animator         = scene->registry.assign< Animator >( entity, skinnedModel.get() );
+        animator.animation     = &animations[0];
+        animator.animationTime = 0;
+    }
+
+    {
+        auto entity             = scene->registry.create();
+        auto& transform         = scene->registry.assign< Transform >( entity );
+        transform.position      = glm::vec3( 3, 0, 0 );
+        // transform.rotation      = glm::vec3( glm::radians( -90.0f ), glm::radians( 90.0f ), 0 );
+        transform.scale         = glm::vec3( .001f );
+
+        auto& skinned_renderer  = scene->registry.assign< SkinnedRenderer >( entity );
+        skinned_renderer.model  = skinnedModel;
+
+        // for ( auto& mat : skinnedModel->materials )
+        // {
+        //     mat->Kd = glm::vec3( 0, 1, 0 );
+        // }
+
+        auto& animator         = scene->registry.assign< Animator >( entity, skinnedModel.get() );
+        animator.animation     = &animations[0];
+        animator.animationTime = 0.5;
+    }
 
     scene->Start();
 
@@ -90,7 +107,7 @@ int main( int argc, char* argv[] )
     }
 
     vkDeviceWaitIdle( PG::Gfx::g_renderState.device.GetHandle() );
-    scene->registry.view< SkinnedRenderer >().each([]( SkinnedRenderer& renderer ) { renderer.model->Free( false, true ); } );
+    // scene->registry.view< SkinnedRenderer >().each([]( SkinnedRenderer& renderer ) { renderer.model->Free( false, true ); } );
 
     delete scene;
 

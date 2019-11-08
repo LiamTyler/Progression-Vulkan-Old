@@ -4,8 +4,9 @@
 #include "core/lua.hpp"
 #include "core/time.hpp"
 #include "components/factory.hpp"
+#include "components/animation_component.hpp"
 #include "components/script_component.hpp"
-#include "graphics/lights.hpp"
+#include "graphics/shader_c_shared/lights.h"
 #include "resource/image.hpp"
 #include "resource/resource_manager.hpp"
 #include "utils/logger.hpp"
@@ -16,14 +17,20 @@
 
 using namespace Progression;
 
-static void ParseResourcefile( rapidjson::Value& v, Scene* scene )
+static void ParseFastfile( rapidjson::Value& v, Scene* scene )
 {
-    PG_UNUSED( scene );
-    PG_ASSERT( v.HasMember( "filename" ) );
-    auto& member = v["filename"];
-    PG_ASSERT( member.IsString() );
-    std::string fname = member.GetString();
-    ResourceManager::LoadFastFile( PG_RESOURCE_DIR "cache/fastfiles/" + fname );
+    static FunctionMapper< void > mapping(
+    {
+        { "filename", []( rapidjson::Value& v )
+            {
+                PG_ASSERT( v.IsString() );
+                std::string fname = v.GetString();
+                ResourceManager::LoadFastFile( PG_RESOURCE_DIR "cache/fastfiles/" + fname );
+            }
+        }
+    });
+
+    mapping.ForEachMember( v );
 }
 
 static void ParseCamera( rapidjson::Value& v, Scene* scene )
@@ -121,6 +128,16 @@ static void ParseAmbientColor( rapidjson::Value& v, Scene* scene )
 namespace Progression
 {
 
+Scene::~Scene()
+{
+    auto view = registry.view< Animator >();
+
+    for ( auto entity : view )
+    {
+        registry.remove< Animator >( entity );
+    }
+}
+
 Scene* Scene::Load( const std::string& filename )
 {
     Scene* scene = new Scene;
@@ -142,12 +159,13 @@ Scene* Scene::Load( const std::string& filename )
         { "DirectionalLight", ParseDirectionalLight },
         { "PointLight",       ParsePointLight },
         { "SpotLight",        ParseSpotLight },
-        { "Resourcefile",     ParseResourcefile },
+        { "Fastfile",         ParseFastfile },
     });
 
     mapping.ForEachMember( document, std::move( scene ) );
 
-    // scene->registry.on_construct<position>().connect<&my_free_function>();
+    scene->registry.on_construct< Animator >().connect< &AnimationSystem::OnAnimatorConstruction >();
+    scene->registry.on_destroy< Animator >().connect< &AnimationSystem::OnAnimatorDestruction >();
 
     return scene;
 }

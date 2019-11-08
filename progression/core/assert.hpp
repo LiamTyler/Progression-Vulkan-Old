@@ -7,14 +7,16 @@
 if ( !( x ) )                                                                            \
 {                                                                                        \
     printf( "Failed assertion: (%s) at line %d in file %s.\n", #x, __LINE__, __FILE__ ); \
+    fflush( stdout );                                                                    \
     abort();                                                                             \
 }
 
-#define _PG_ASSERT_WITH_MSG( x, msg )                                                                               \
-if ( !( x ) )                                                                                                       \
-{                                                                                                                   \
+#define _PG_ASSERT_WITH_MSG( x, msg )                                                                                   \
+if ( !( x ) )                                                                                                           \
+{                                                                                                                       \
     printf( "Failed assertion: (%s) at line %d in file %s: %s\n", #x, __LINE__, __FILE__, std::string( msg ).c_str() ); \
-    abort();                                                                                                        \
+    fflush( stdout );                                                                                                   \
+    abort();                                                                                                            \
 }
 
 #define _PG_GET_ASSERT_MACRO( _1, _2, NAME, ... ) NAME

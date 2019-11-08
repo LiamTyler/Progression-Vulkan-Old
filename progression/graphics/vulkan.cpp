@@ -713,6 +713,8 @@ bool VulkanInit()
         return false;
     }
 
+    g_renderState.transientCommandPool = g_renderState.device.NewCommandPool( COMMAND_POOL_TRANSIENT );
+
     return true;
 }
 
@@ -730,6 +732,7 @@ void VulkanShutdown()
     g_renderState.depthTex.Free();
 
     g_renderState.commandPool.Free();
+    g_renderState.transientCommandPool.Free();
     for ( auto framebuffer : g_renderState.swapChainFramebuffers )
     {
         vkDestroyFramebuffer( dev, framebuffer, nullptr );

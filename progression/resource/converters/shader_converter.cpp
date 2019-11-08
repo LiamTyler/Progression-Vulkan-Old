@@ -45,7 +45,18 @@ static bool PreprocessShader( const std::string& filename, std::string& text, st
     std::string line;
     while ( std::getline( in, line ) )
     {
-        if ( line.length() >= 8 && line.substr( 0, 8 ) == "#include" )
+        if ( line == "#pragma once" )
+        {
+            continue;
+        }
+        std::string firstWord;
+        auto whitespaceBegin = line.find_first_of( " \t" );
+        if ( whitespaceBegin != std::string::npos )
+        {
+            firstWord = line.substr( 0, whitespaceBegin );
+        }
+
+        if ( firstWord == "#include" )
         {
             text += "// " + line + "\n";
             auto firstParen  = line.find( '\"' );
@@ -233,6 +244,7 @@ ConverterStatus ShaderConverter::Convert()
             serialize::Write( out, set.createInfo );
             serialize::Write( out, set.bindings );
         }
+        serialize::Write( out, reflectInfo.pushConstants );
         serialize::Write( out, buffer );
     }
 

@@ -1,0 +1,20 @@
+Shader
+name animatedModelsVert
+filename shaders/animated_models.vert
+
+Shader
+name forwardBlinnPhongFrag
+filename shaders/forward_blinn_phong.frag
+
+Shader
+name rigidModelsVert
+filename shaders/rigid_models.vert
+
+Image
+name RENDER_SYSTEM_DUMMY_TEXTURE
+filenames textures/render_system_dummy_texture.png
+sampler nearest_clamped
+flipVertically false
+generateMipmaps false
+createTexture true
+freeCpuCopy true

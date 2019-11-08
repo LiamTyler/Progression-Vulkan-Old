@@ -2,18 +2,23 @@
 #include <cstdint>
 #include <vector>
 #include "graphics_api/descriptor.hpp"
-#include "graphics/shader_c_shared/texture_defines.h"
 
 namespace Progression
 {
 namespace Gfx
 {
-    class Texture;
 
-    void InitTextureManager();
-    uint16_t GetOpenTextureSlot( Texture* texture );
-    void FreeTextureSlot( uint16_t slot );
-    void UpdateTextureDescriptors( const std::vector< DescriptorSet >& textureDescriptorSets );
+class Texture;
 
+namespace TextureManager
+{
+
+    void Init();
+    void Shutdown();
+    uint16_t GetOpenSlot( Texture* texture );
+    void FreeSlot( uint16_t slot );
+    void UpdateDescriptors( const std::vector< DescriptorSet >& textureDescriptorSets );
+
+} // namespace TextureManager
 } // namespace Gfx
 } // namespace Progression

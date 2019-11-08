@@ -206,8 +206,8 @@ namespace Gfx
         if ( memoryType & MEMORY_TYPE_DEVICE_LOCAL )
         {
             Buffer stagingBuffer = NewBuffer( length, BUFFER_TYPE_TRANSFER_SRC, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
-            void* stagingBufferData = stagingBuffer.Map();
-            memcpy( stagingBufferData, data, length );
+            stagingBuffer.Map();
+            memcpy( stagingBuffer.MappedPtr(), data, length );
             stagingBuffer.UnMap();
 
             dstBuffer = NewBuffer( length, type | BUFFER_TYPE_TRANSFER_DST, memoryType );
@@ -217,8 +217,8 @@ namespace Gfx
         else if ( ( memoryType & MEMORY_TYPE_HOST_VISIBLE ) && ( memoryType & MEMORY_TYPE_HOST_COHERENT ) )
         {
             dstBuffer = NewBuffer( length, type, memoryType );
-            void* dstBufferData = dstBuffer.Map();
-            memcpy( dstBufferData, data, length );
+            dstBuffer.Map();
+            memcpy( dstBuffer.MappedPtr(), data, length );
             dstBuffer.UnMap();
         }
         else
@@ -280,7 +280,7 @@ namespace Gfx
         tex.m_imageView   = CreateImageView( tex.m_image, vkFormat, isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT );
         if ( managed )
         {
-            tex.m_textureSlot = GetOpenTextureSlot( &tex );
+            tex.m_textureSlot = TextureManager::GetOpenSlot( &tex );
         }
 
         return tex;
@@ -401,18 +401,32 @@ namespace Gfx
         }
         pipelineLayoutInfo.setLayoutCount         = static_cast< uint32_t >( layouts.size() );
         pipelineLayoutInfo.pSetLayouts            = layouts.data();
-        //pipelineLayoutInfo.pushConstantRangeCount = 0;
-        //pipelineLayoutInfo.pPushConstantRanges    = nullptr;
 
-        VkPushConstantRange pushConstantInfo[2] = { 0 };
-        pushConstantInfo[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        pushConstantInfo[0].offset = 0;
-        pushConstantInfo[0].size = 2*sizeof( glm::mat4 );
-        pushConstantInfo[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        pushConstantInfo[1].offset = 128;
-        pushConstantInfo[1].size = 3*sizeof( glm::vec4 ) + 4;
-        pipelineLayoutInfo.pushConstantRangeCount = 2;
-        pipelineLayoutInfo.pPushConstantRanges = pushConstantInfo;
+        std::vector< VkPushConstantRange > pushConstants;
+        for ( int i = 0; i < desc.numShaders; ++i )
+        {
+            for ( const auto& range : desc.shaders[i]->reflectInfo.pushConstants )
+            {
+                pushConstants.push_back( range );
+            }
+        }
+        std::sort( pushConstants.begin(), pushConstants.end(), []( const auto& lhs, const auto& rhs ) { return lhs.offset < rhs.offset; } );
+        for ( size_t i = 1; i < pushConstants.size(); ++i )
+        {
+            if ( pushConstants[i].offset == pushConstants[i-1].offset + pushConstants[i-1].size )
+            {
+                pushConstants[i-1].size += pushConstants[i].size;
+                pushConstants[i-1].stageFlags |= pushConstants[i].stageFlags;
+                pushConstants.erase( pushConstants.begin() + i );
+                --i;
+            }
+        }
+        for ( size_t i = 0; i < pushConstants.size(); ++i )
+        {
+            LOG( "Push constant[", i, "]: ", pushConstants[i].stageFlags, ", ", pushConstants[i].offset, ", ", pushConstants[i].size );
+        }
+        pipelineLayoutInfo.pushConstantRangeCount = static_cast< uint32_t >( pushConstants.size() );
+        pipelineLayoutInfo.pPushConstantRanges    = pushConstants.data();
 
         if ( vkCreatePipelineLayout( m_handle, &pipelineLayoutInfo, nullptr, &p.m_pipelineLayout ) != VK_SUCCESS )
         {

@@ -114,9 +114,10 @@ namespace Gfx
     friend class Device;
     public:
         void Free();
-        void* Map();
+        void Map();
         void UnMap();
         void Bind( size_t offset = 0 ) const;
+        char* MappedPtr() const;
         size_t GetLength() const;
         MemoryType GetMemoryType() const;
         BufferType GetType() const;
@@ -126,6 +127,7 @@ namespace Gfx
     protected:
         BufferType m_type;
         MemoryType m_memoryType;
+        void* m_mappedPtr       = nullptr;
         size_t m_length         = 0; // in bytes
         VkBuffer m_handle       = VK_NULL_HANDLE;
         VkDeviceMemory m_memory = VK_NULL_HANDLE;

@@ -2,7 +2,7 @@
 
 #include "core/camera.hpp"
 #include "core/ecs.hpp"
-#include "graphics/lights.hpp"
+#include "graphics/shader_c_shared/lights.h"
 #include <vector>
 
 namespace Progression
@@ -11,7 +11,7 @@ namespace Progression
     {
     public:
         Scene() = default;
-        ~Scene() = default;
+        ~Scene();
 
         static Scene* Load( const std::string& filename );
 

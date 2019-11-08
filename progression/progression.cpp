@@ -63,22 +63,41 @@ bool EngineInitialize( std::string config_name )
     }
     Time::Reset();
     Input::Init();
-    ResourceManager::Init();
-    if ( !RenderSystem::Init() )
+    Gfx::TextureManager::Init();
+    if ( !Gfx::VulkanInit() )
     {
-        LOG_ERR( "Could not initialize the rendering system" );
+        LOG_ERR( "Could not initialize vulkan" );
         return false;
     }
-    AnimationSystem::Init();
+    ResourceManager::Init();
+    if ( !g_converterMode )
+    {
+        RenderSystem::InitSamplers();
+        if ( !ResourceManager::LoadFastFile( PG_RESOURCE_DIR "cache/fastfiles/engine_required_resources.ff" ) )
+        {
+            return false;
+        }
+        if ( !RenderSystem::Init() )
+        {
+            LOG_ERR( "Could not initialize the rendering system" );
+            return false;
+        }
+        AnimationSystem::Init();
+    }
 
     return true;
 }
 
 void EngineQuit()
 {
-    AnimationSystem::Shutdown();
-    RenderSystem::Shutdown();
+    if ( !g_converterMode )
+    {
+        AnimationSystem::Shutdown();
+        RenderSystem::Shutdown();
+    }
     ResourceManager::Shutdown();
+    Gfx::VulkanShutdown();
+    Gfx::TextureManager::Shutdown();
     Input::Free();
     ShutdownWindowSystem();
     g_Logger.Shutdown();

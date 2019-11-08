@@ -1,4 +1,8 @@
-#include "graphics/shader_c_shared/type_defines.h"
+#pragma once
+
+#include "graphics/shader_c_shared/defines.h"
+
+PG_NAMESPACE_BEGIN
 
 struct DirectionalLight
 {
@@ -18,3 +22,5 @@ struct SpotLight
     VEC4 positionAndRadius; // x,y,z = position, w = radius
     VEC4 directionAndCutoff; // x,y,z = direction, w = cutoff
 };
+
+PG_NAMESPACE_END

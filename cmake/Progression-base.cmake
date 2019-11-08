@@ -22,7 +22,6 @@ set(PROGRESSION_INCLUDE_DIRS
     ${PROGRESSION_DIR}
     ${PROGRESSION_DIR}/ext
     ${PROGRESSION_DIR}/ext/lua
-    ${PROGRESSION_DIR}/ext/LuaBridge/Source
     ${PROGRESSION_DIR}/ext/getopt
     ${PROGRESSION_DIR}/ext/entt/src
     ${PROGRESSION_DIR}/ext/glfw/include

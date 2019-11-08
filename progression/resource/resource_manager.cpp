@@ -48,6 +48,7 @@ namespace ResourceManager
 
     void Shutdown()
     {
+        FreeGPUResources();
         f_resources.Clear();
     }
 

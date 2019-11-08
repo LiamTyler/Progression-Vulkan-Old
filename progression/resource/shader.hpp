@@ -38,6 +38,7 @@ public:
     std::unordered_map< std::string, uint32_t > inputLocations;
     std::unordered_map< std::string, uint32_t > outputLocations;
     std::vector< Gfx::DescriptorSetLayoutData > descriptorSetLayouts;
+    std::vector< VkPushConstantRange > pushConstants;
 };
 
 class Shader : public Resource

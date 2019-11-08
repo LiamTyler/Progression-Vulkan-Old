@@ -13,7 +13,6 @@
 
 using namespace Progression::Gfx;
 
-#define MAX_NUM_TRANSFORMS 1000
 static std::list< std::pair< uint32_t, uint32_t > > s_freeList;
 
 namespace Progression
@@ -26,12 +25,12 @@ RenderData renderData;
 
 bool Init()
 {
-    s_freeList = { { 0, MAX_NUM_TRANSFORMS } };
+    s_freeList = { { 0, MAX_ANIMATOR_NUM_TRANSFORMS } };
     uint32_t numFrames = Gfx::MAX_FRAMES_IN_FLIGHT + 1;
     renderData.gpuBoneBuffers.resize( numFrames );
     for ( auto& buf : renderData.gpuBoneBuffers )
     {
-        buf = g_renderState.device.NewBuffer( sizeof( glm::mat4 ) * MAX_NUM_TRANSFORMS,
+        buf = g_renderState.device.NewBuffer( sizeof( glm::mat4 ) * MAX_ANIMATOR_NUM_TRANSFORMS,
             BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
     }
 
@@ -165,20 +164,20 @@ void Update( Scene* scene )
             uint32_t prevFrameIndex = comp.currentKeyFrame - 1;
             if ( comp.currentKeyFrame == 0 )
             {
-               prevFrameIndex = comp.animation->keyFrames.size();
+               prevFrameIndex = static_cast< uint32_t >( comp.animation->keyFrames.size() );
             }
 
             auto& prevKeyFrame     = comp.animation->keyFrames[prevFrameIndex];
             auto& nextKeyFrame     = comp.animation->keyFrames[nextFrameIndex];
             float keyFrameDuration = ( nextKeyFrame.time - prevKeyFrame.time ) / comp.animation->ticksPerSecond;
             float progress         = ( comp.animationTime - prevKeyFrame.time / comp.animation->ticksPerSecond ) / keyFrameDuration;
-            for ( uint32_t i = 0; i < comp.model->joints.size(); ++i )
+            for ( uint32_t i = 0; i < comp.GetModel()->joints.size(); ++i )
             {
                 const JointTransform interpolatedTransform = prevKeyFrame.jointSpaceTransforms[i].Interpolate( nextKeyFrame.jointSpaceTransforms[i], progress );
-                comp.model->joints[i].modelSpaceTransform = interpolatedTransform.GetLocalTransformMatrix();
+                comp.transformBuffer[i] = interpolatedTransform.GetLocalTransformMatrix();
             }
 
-            comp.model->ApplyPoseToJoints( 0, glm::mat4( 1 ) );
+            comp.GetModel()->ApplyPoseToJoints( 0, glm::mat4( 1 ), comp.transformBuffer );
         }
     });
 }
@@ -189,10 +188,10 @@ void UploadToGpu( Scene* scene, uint32_t frameIndex )
     {
         if ( comp.animation && comp.animationTime < comp.animation->duration )
         {
-            std::vector< glm::mat4 > boneTransforms;
-            comp.model->GetCurrentPose( boneTransforms );
-            void* data = renderData.gpuBoneBuffers[frameIndex].Map();
-            memcpy( (char*)data, boneTransforms.data(), boneTransforms.size() * sizeof( glm::mat4 ) );
+            auto& boneTransforms = comp.transformBuffer;
+            renderData.gpuBoneBuffers[frameIndex].Map();
+            glm::mat4* ptr = (glm::mat4*) renderData.gpuBoneBuffers[frameIndex].MappedPtr();
+            memcpy( ptr + comp.GetTransformSlot(), boneTransforms.data(), boneTransforms.size() * sizeof( glm::mat4 ) );
             renderData.gpuBoneBuffers[frameIndex].UnMap();
         }
     });
@@ -202,17 +201,19 @@ uint32_t AllocateGPUTransforms( uint32_t numTransforms )
 {
     for ( auto it = s_freeList.begin(); it != s_freeList.end(); ++it )
     {
-        uint32_t slot         = it->first;
-        uint32_t numFreeSlots = it->second;
-        if ( numTransforms <= numFreeSlots )
+        uint32_t slot = it->first;
+        if ( numTransforms <= it->second )
         {
-            s_freeList.erase( it );
-            if ( numTransforms < numFreeSlots )
+            if ( numTransforms == it->second )
             {
-                it->first  = slot + numTransforms;
-                it->second = numFreeSlots - numTransforms;
+                s_freeList.erase( it );
             }
-            return slot;
+            else
+            {
+                it->first  = it->first + numTransforms;
+                it->second = it->second - numTransforms;
+            }
+            return slot | numTransforms << 16;
         }
     }
 
@@ -222,7 +223,60 @@ uint32_t AllocateGPUTransforms( uint32_t numTransforms )
 
 void FreeGPUTransforms( uint32_t id )
 {
-    
+    uint32_t slot = GET_ANIMATOR_SLOT_FROM_ID( id );
+    uint32_t size = GET_ANIMATOR_SIZE_FROM_ID( id );
+    auto it = s_freeList.begin();
+    while ( it != s_freeList.end() && it->first < slot )
+    {
+        if ( slot == it->first + it->second )
+        {
+            it->second += size;
+            auto next = std::next( it );
+            if ( next != s_freeList.end() && slot + size == next->first )
+            {
+                it->second += next->second;
+                s_freeList.erase( next );
+            }
+            return;
+        }
+        ++it;
+    }
+
+    if ( it != s_freeList.end() && slot + size == it->first )
+    {
+        it->first   = slot;
+        it->second += size;
+    }
+    else
+    {
+        s_freeList.insert( it, { slot, size } );
+    }
+}
+
+void OnAnimatorConstruction( entt::entity entity, entt::registry& registry, Animator& animator )
+{
+    if ( !animator.GetModel() )
+    {
+        return;
+    }
+
+    animator.AssignNewModel( animator.GetModel() );
+}
+
+void OnAnimatorDestruction( entt::entity entity, entt::registry& registry )
+{
+    Animator& a = registry.get< Animator >( entity );
+    a.ReleaseModel();
+}
+
+void PrintFreeList()
+{
+    LOG( "Animation Free List:" );
+    for ( const auto& [ slot, size ] : s_freeList )
+    {
+        LOG( "Slot = ", slot, ", size = ", size );
+    }
+    LOG( "" );
 }
 
 } // namespace AnimationSystem

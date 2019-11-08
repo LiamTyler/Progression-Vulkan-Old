@@ -251,7 +251,7 @@ namespace Gfx
         vkFreeMemory( m_device, m_memory, nullptr );
         if ( m_textureSlot != PG_INVALID_TEXTURE_INDEX )
         {
-            FreeTextureSlot( m_textureSlot );
+            TextureManager::FreeSlot( m_textureSlot );
             m_textureSlot = PG_INVALID_TEXTURE_INDEX;
         }
         m_image       = VK_NULL_HANDLE;

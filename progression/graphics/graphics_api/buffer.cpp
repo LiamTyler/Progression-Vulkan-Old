@@ -20,16 +20,15 @@ namespace Gfx
         return size[static_cast< int >( type )];
     }
 
-    void* Buffer::Map()
+    void Buffer::Map()
     {
-        void* data;
-        vkMapMemory( m_device, m_memory, 0, m_length, 0, &data );
-        return data;
+        vkMapMemory( m_device, m_memory, 0, m_length, 0, &m_mappedPtr );
     }
 
     void Buffer::UnMap()
     {
         vkUnmapMemory( m_device, m_memory );
+        m_mappedPtr = nullptr;
     }
 
     void Buffer::Free()
@@ -38,6 +37,11 @@ namespace Gfx
         vkDestroyBuffer( m_device, m_handle, nullptr );
         vkFreeMemory( m_device, m_memory, nullptr );
         m_handle = VK_NULL_HANDLE;
+    }
+
+    char* Buffer::MappedPtr() const
+    {
+        return static_cast< char* >( m_mappedPtr );
     }
 
     size_t Buffer::GetLength() const
