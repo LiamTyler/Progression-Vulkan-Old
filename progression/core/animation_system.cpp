@@ -171,7 +171,7 @@ void Update( Scene* scene )
             auto& nextKeyFrame     = comp.animation->keyFrames[nextFrameIndex];
             float keyFrameDuration = ( nextKeyFrame.time - prevKeyFrame.time ) / comp.animation->ticksPerSecond;
             float progress         = ( comp.animationTime - prevKeyFrame.time / comp.animation->ticksPerSecond ) / keyFrameDuration;
-            for ( uint32_t i = 0; i < comp.GetModel()->joints.size(); ++i )
+            for ( uint32_t i = 0; i < comp.GetModel()->skeleton.joints.size(); ++i )
             {
                 const JointTransform interpolatedTransform = prevKeyFrame.jointSpaceTransforms[i].Interpolate( nextKeyFrame.jointSpaceTransforms[i], progress );
                 comp.transformBuffer[i] = interpolatedTransform.GetLocalTransformMatrix();

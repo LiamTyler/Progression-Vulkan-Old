@@ -4,6 +4,7 @@
 #include "core/math.hpp"
 #include "graphics/graphics_api/buffer.hpp"
 #include "resource/material.hpp"
+#include "resource/resource.hpp"
 #include <vector>
 #include <unordered_map>
 
@@ -90,25 +91,36 @@ namespace Progression
         uint32_t m_numIndices  = ~0u;
     };
 
-    class SkinnedModel
+    struct Skeleton
     {
-    public:
-        std::string name;
-        std::vector< glm::vec3 > vertices;
-        std::vector< glm::vec3 > normals;
-        std::vector< glm::vec2 > uvs;
-        std::vector< uint32_t > indices;
-        std::vector< BlendWeight > blendWeights;
-        Gfx::Buffer vertexBuffer;
-        Gfx::Buffer indexBuffer;
-
-        AABB aabb;
-        std::vector< SkinnedMesh > meshes;
-        std::vector< std::shared_ptr< Material > > materials;
-
         std::vector< Joint > joints;
 
-        static bool LoadFBX( const std::string& filename, std::shared_ptr< SkinnedModel >& model, std::vector< Animation >& animations );
+        void Serialize( std::ofstream& outFile ) const;
+        void Deserialize( char*& buffer );
+    };
+
+    struct SkinnedModelCreateInfo : public ResourceCreateInfo
+    {
+        std::string filename = "";
+        bool optimize        = true;
+        bool freeCpuCopy     = true;
+        bool createGpuCopy   = true;
+    };
+
+    class SkinnedModel : public Resource
+    {
+    public:
+        SkinnedModel() = default;
+        SkinnedModel( SkinnedModel&& model ) = default;
+        SkinnedModel& operator=( SkinnedModel&& model ) = default;
+        
+        bool Load( ResourceCreateInfo* createInfo = nullptr ) override;
+        void Move( std::shared_ptr< Resource > dst ) override;
+        bool Serialize( std::ofstream& outFile ) const override;
+        bool Deserialize( char*& buffer ) override;
+
+        //static bool LoadFBX( const std::string& filename, std::shared_ptr< SkinnedModel >& model, std::vector< Animation >& animations );
+        bool LoadFBX( const std::string& filename, std::shared_ptr< SkinnedModel >& model, std::vector< Animation >& animations );
         void RecalculateNormals();
         void RecalculateAABB();
         void UploadToGpu();
@@ -123,12 +135,25 @@ namespace Progression
         uint32_t GetBlendWeightOffset() const;
         Gfx::IndexType GetIndexType() const;
 
+        std::vector< glm::vec3 > vertices;
+        std::vector< glm::vec3 > normals;
+        std::vector< glm::vec2 > uvs;
+        std::vector< uint32_t > indices;
+        std::vector< BlendWeight > blendWeights;
+        Gfx::Buffer vertexBuffer;
+        Gfx::Buffer indexBuffer;
+
+        AABB aabb;
+        std::vector< SkinnedMesh > meshes;
+        std::vector< std::shared_ptr< Material > > materials;
+        Skeleton skeleton;
+
     private:
-        uint32_t m_numVertices          = 0;
-        uint32_t m_normalOffset         = ~0u;
-        uint32_t m_uvOffset             = ~0u;
-        uint32_t m_blendWeightOffset    = ~0u;
-        bool m_gpuDataCreated           = false;
+        uint32_t m_numVertices       = 0;
+        uint32_t m_normalOffset      = ~0u;
+        uint32_t m_uvOffset          = ~0u;
+        uint32_t m_blendWeightOffset = ~0u;
+        bool m_gpuDataCreated        = false;
     };
 
 } // namespace Progression

@@ -11,7 +11,7 @@ Animator::Animator( SkinnedModel* m ) :
 {
     if ( m )
     {
-        transformBuffer.resize( m->joints.size() );
+        transformBuffer.resize( m->skeleton.joints.size() );
     }
 }
 
@@ -23,8 +23,8 @@ void Animator::AssignNewModel( SkinnedModel* m )
         AnimationSystem::FreeGPUTransforms( animationSysSlotID );
     }
     model = m;
-    animationSysSlotID = AnimationSystem::AllocateGPUTransforms( static_cast< uint32_t >( m->joints.size() ) );
-    transformBuffer.resize( m->joints.size() );
+    animationSysSlotID = AnimationSystem::AllocateGPUTransforms( static_cast< uint32_t >( m->skeleton.joints.size() ) );
+    transformBuffer.resize( m->skeleton.joints.size() );
 }
 
 void Animator::ReleaseModel()

@@ -39,11 +39,11 @@ Mesh::Mesh( Mesh&& mesh ) noexcept
 
 Mesh& Mesh::operator=( Mesh&& mesh ) noexcept
 {
-    aabb        = std::move( mesh.aabb );
-    vertices    = std::move( mesh.vertices );
-    normals     = std::move( mesh.normals );
-    uvs         = std::move( mesh.uvs );
-    indices     = std::move( mesh.indices );
+    aabb     = std::move( mesh.aabb );
+    vertices = std::move( mesh.vertices );
+    normals  = std::move( mesh.normals );
+    uvs      = std::move( mesh.uvs );
+    indices  = std::move( mesh.indices );
 
     if ( vertexBuffer )
     {

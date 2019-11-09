@@ -1,11 +1,12 @@
 #include "resource/skinned_model.hpp"
 #include "core/assert.hpp"
 #include "core/time.hpp"
-#include "utils/logger.hpp"
 #include "graphics/vulkan.hpp"
-#include "assimp/Importer.hpp"      // C++ importer interface
-#include "assimp/postprocess.h" // Post processing flags
-#include "assimp/scene.h"       // Output data structure
+#include "utils/logger.hpp"
+#include "utils/serialize.hpp"
+#include "assimp/Importer.hpp"
+#include "assimp/postprocess.h"
+#include "assimp/scene.h"
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/quaternion.hpp"
 #include <set>
@@ -71,6 +72,30 @@ namespace Progression
         return m_numIndices;
     }
 
+    void Skeleton::Serialize( std::ofstream& outFile ) const
+    {
+        serialize::Write( outFile, joints.size() );
+        for ( const auto& joint : joints )
+        {
+            serialize::Write( outFile, joint.name );
+            serialize::Write( outFile, joint.inverseBindTransform );
+            serialize::Write( outFile, joint.children );
+        }
+    }
+
+    void Skeleton::Deserialize( char*& buffer )
+    {
+        size_t numJoints;
+        serialize::Read( buffer, numJoints );
+        joints.resize( numJoints );
+        for ( size_t i = 0; i < numJoints; ++i )
+        {
+            serialize::Read( buffer, joints[i].name );
+            serialize::Read( buffer, joints[i].inverseBindTransform );
+            serialize::Read( buffer, joints[i].children );
+        }
+    }
+
     void SkinnedModel::RecalculateNormals()
     {
         normals.resize( vertices.size(), glm::vec3( 0 ) );
@@ -122,7 +147,6 @@ namespace Progression
         memcpy( dst, uvs.data(), uvs.size() * sizeof( glm::vec2 ) );
         dst += uvs.size() * sizeof( glm::vec2 );
         memcpy( dst, blendWeights.data(), blendWeights.size() * 2 * sizeof( glm::vec4 ) );
-        LOG( "Num floats = ", vertexData.size() );
         vertexBuffer = Gfx::g_renderState.device.NewBuffer( vertexData.size() * sizeof( float ), vertexData.data(), BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL );
         indexBuffer  = Gfx::g_renderState.device.NewBuffer( indices.size() * sizeof ( uint32_t ), indices.data(), BUFFER_TYPE_INDEX, MEMORY_TYPE_DEVICE_LOCAL );
 
@@ -130,15 +154,6 @@ namespace Progression
         m_normalOffset          = m_numVertices * sizeof( glm::vec3 );
         m_uvOffset              = m_normalOffset + m_numVertices * sizeof( glm::vec3 );
         m_blendWeightOffset     = static_cast< uint32_t >( m_uvOffset + uvs.size() * sizeof( glm::vec2 ) );
-
-        LOG( "m_numVertices = ",    m_numVertices );
-        LOG( "m_normalOffset = ",   m_normalOffset );
-        LOG( "m_uvOffset = ",       m_uvOffset );
-        LOG( "m_blendWeightOffset = ", m_blendWeightOffset );
-        LOG( "normals.size() = ",   normals.size() );
-        LOG( "uvs.size() = ",       uvs.size() );
-
-        // Free();
     }
 
     void SkinnedModel::Free( bool cpuCopy, bool gpuCopy )
@@ -151,7 +166,7 @@ namespace Progression
             uvs           = std::vector< glm::vec2 >();
             indices       = std::vector< uint32_t >();
             blendWeights  = std::vector< BlendWeight >();
-            joints        = std::vector< Joint >();
+            skeleton      = Skeleton{};
         }
 
         if ( gpuCopy )
@@ -233,11 +248,11 @@ namespace Progression
     void SkinnedModel::ApplyPoseToJoints( uint32_t jointIdx, const glm::mat4& parentTransform, std::vector< glm::mat4 >& transformBuffer )
     {
         glm::mat4 currentTransform = parentTransform * transformBuffer[jointIdx];
-        for ( const auto& child : joints[jointIdx].children )
+        for ( const auto& child : skeleton.joints[jointIdx].children )
         {
             ApplyPoseToJoints( child, currentTransform, transformBuffer );
         }
-        transformBuffer[jointIdx] = currentTransform * joints[jointIdx].inverseBindTransform;
+        transformBuffer[jointIdx] = currentTransform * skeleton.joints[jointIdx].inverseBindTransform;
     }
 
     static void FindJointChildren( aiNode* node, std::unordered_map< std::string, uint32_t >& jointMapping, std::vector< Joint >& joints )
@@ -438,7 +453,7 @@ namespace Progression
         BuildAINodeMap( scene->mRootNode, aiNodeMap );
         Joint rootJointPlaceholder;
         rootJointPlaceholder.name = "___DUMMY_ROOT_BONE_PLACEHOLDER___";
-        model->joints.push_back( rootJointPlaceholder );
+        model->skeleton.joints.push_back( rootJointPlaceholder );
         for ( size_t meshIdx = 0; meshIdx < model->meshes.size(); ++meshIdx )
         {
             const aiMesh* paiMesh = scene->mMeshes[meshIdx];
@@ -462,11 +477,11 @@ namespace Progression
 
                 if ( jointNameToIndexMap.find( jointName ) == jointNameToIndexMap.end() )
                 {
-                    jointIndex = static_cast< uint32_t >( model->joints.size() );
+                    jointIndex = static_cast< uint32_t >( model->skeleton.joints.size() );
                     Joint newJoint;
                     newJoint.name                 = jointName;
                     newJoint.inverseBindTransform = AiToGLMMat4( paiMesh->mBones[boneIdx]->mOffsetMatrix );
-                    model->joints.push_back( newJoint );
+                    model->skeleton.joints.push_back( newJoint );
                     jointNameToIndexMap[jointName] = jointIndex;
                 }
                 else
@@ -493,14 +508,14 @@ namespace Progression
         }
         
         // Add root bone
-        for ( uint32_t joint = 1; joint < (uint32_t) model->joints.size(); ++joint )
+        for ( uint32_t joint = 1; joint < (uint32_t) model->skeleton.joints.size(); ++joint )
         {
-            aiNode* parent = aiNodeMap[model->joints[joint].name]->mParent;
+            aiNode* parent = aiNodeMap[model->skeleton.joints[joint].name]->mParent;
             PG_ASSERT( parent );
             std::string parentName( parent->mName.data );
             if ( jointNameToIndexMap.find( parentName ) == jointNameToIndexMap.end() )
             {
-                Joint& rootBone = model->joints[0];
+                Joint& rootBone = model->skeleton.joints[0];
                 rootBone.name = parentName;
                 rootBone.inverseBindTransform = glm::mat4( 1 );
                 while ( parent != NULL )
@@ -508,9 +523,9 @@ namespace Progression
                     rootBone.inverseBindTransform = AiToGLMMat4( parent->mTransformation ) * rootBone.inverseBindTransform;
                     parent = parent->mParent;
                 }
-                for ( uint32_t i = 1; i < (uint32_t) model->joints.size(); ++i )
+                for ( uint32_t i = 1; i < (uint32_t) model->skeleton.joints.size(); ++i )
                 {
-                    std::string boneParent = aiNodeMap[model->joints[i].name]->mParent->mName.data;
+                    std::string boneParent = aiNodeMap[model->skeleton.joints[i].name]->mParent->mName.data;
                     if ( rootBone.name == boneParent )
                     {
                         rootBone.children.push_back( i );
@@ -521,13 +536,13 @@ namespace Progression
             }
         }
 
-        LOG( "Num joints = ", model->joints.size() );
+        LOG( "Num joints = ", model->skeleton.joints.size() );
 
         //ReadNodeHeirarchy( scene->mRootNode, scene->mNumAnimations, scene->mAnimations );
         //LOG( "" );
 
-        FindJointChildren( scene->mRootNode, jointNameToIndexMap, model->joints );
-        jointNameToIndexMap[model->joints[0].name] = 0;
+        FindJointChildren( scene->mRootNode, jointNameToIndexMap, model->skeleton.joints );
+        jointNameToIndexMap[model->skeleton.joints[0].name] = 0;
 
         animations.resize( scene->mNumAnimations );
         for ( uint32_t animIdx = 0; animIdx < scene->mNumAnimations; ++animIdx )
@@ -549,17 +564,17 @@ namespace Progression
             AnalyzeMemoryEfficiency( aiAnim, keyFrameTimes );
             std::unordered_map< std::string, aiNodeAnim* > aiAnimNodeMap;
             BuildAIAnimNodeMap( scene->mRootNode, aiAnim, aiAnimNodeMap );
-            PG_ASSERT( aiAnimNodeMap.size() == model->joints.size(), "Animation does not have the same skeleton as model" );
+            PG_ASSERT( aiAnimNodeMap.size() == model->skeleton.joints.size(), "Animation does not have the same skeleton as model" );
 
             pgAnim.keyFrames.resize( keyFrameTimes.size() );
             int frameIdx = 0;
             for ( const auto& time : keyFrameTimes )
             {
                 pgAnim.keyFrames[frameIdx].time = time;
-                pgAnim.keyFrames[frameIdx].jointSpaceTransforms.resize( model->joints.size() );
-                for ( uint32_t joint = 0; joint < (uint32_t) model->joints.size(); ++joint )
+                pgAnim.keyFrames[frameIdx].jointSpaceTransforms.resize( model->skeleton.joints.size() );
+                for ( uint32_t joint = 0; joint < (uint32_t) model->skeleton.joints.size(); ++joint )
                 {
-                    aiNodeAnim* animNode       = aiAnimNodeMap[model->joints[joint].name];
+                    aiNodeAnim* animNode       = aiAnimNodeMap[model->skeleton.joints[joint].name];
                     JointTransform& jTransform = pgAnim.keyFrames[frameIdx].jointSpaceTransforms[joint];
                     uint32_t i;
                     float dt;
@@ -620,6 +635,123 @@ namespace Progression
         }
         model->RecalculateAABB();
         model->UploadToGpu();
+
+        return true;
+    }
+
+    bool SkinnedModel::Load( ResourceCreateInfo* createInfo )
+    {
+        PG_UNUSED( createInfo );
+        return true;
+    }
+
+    void SkinnedModel::Move( std::shared_ptr< Resource > dst )
+    {
+        PG_ASSERT( std::dynamic_pointer_cast< SkinnedModel >( dst ) );
+        SkinnedModel* dstPtr = (SkinnedModel*) dst.get();
+        *dstPtr              = std::move( *this );
+    }
+
+    bool SkinnedModel::Serialize( std::ofstream& out ) const
+    {
+        uint32_t numMaterials = static_cast< uint32_t >( materials.size() );
+        serialize::Write( out, numMaterials );
+        for ( uint32_t i = 0; i < numMaterials; ++i )
+        {
+            if ( !materials[i]->Serialize( out ) )
+            {
+                LOG( "Could not write material: ", i, ", of model: ", name, " to fastfile" );
+                return false;
+            }
+        }
+        uint32_t numVertices     = static_cast< uint32_t >( vertices.size() );
+        uint32_t numUVs          = static_cast< uint32_t >( uvs.size() );
+        uint32_t numBlendWeights = static_cast< uint32_t >( blendWeights.size() );
+        uint32_t numIndices      = static_cast< uint32_t >( indices.size() );
+        serialize::Write( out, numVertices );
+        serialize::Write( out, numUVs );
+        serialize::Write( out, numBlendWeights );
+        serialize::Write( out, numIndices );
+        serialize::Write( out, (char*) vertices.data(),     numVertices * sizeof( glm::vec3 ) );
+        serialize::Write( out, (char*) normals.data(),      numVertices * sizeof( glm::vec3 ) );
+        serialize::Write( out, (char*) uvs.data(),          numUVs * sizeof( glm::vec2 ) );
+        serialize::Write( out, (char*) blendWeights.data(), numBlendWeights * 2 * sizeof( glm::vec4 ) );
+        serialize::Write( out, (char*) indices.data(),      numIndices * sizeof( uint32_t ) );
+
+        serialize::Write( out, aabb.min );
+        serialize::Write( out, aabb.max );
+        serialize::Write( out, aabb.extent );
+        serialize::Write( out, meshes );
+        skeleton.Serialize( out );
+
+        return !out.fail();
+    }
+
+    bool SkinnedModel::Deserialize( char*& buffer )
+    {
+        serialize::Read( buffer, name );
+        bool freeCpuCopy;
+        bool createGpuCopy;
+        serialize::Read( buffer, freeCpuCopy );
+        serialize::Read( buffer, createGpuCopy );
+
+        uint32_t numMaterials;
+        serialize::Read( buffer, numMaterials );
+        for ( uint32_t i = 0; i < numMaterials; ++i )
+        {
+            materials[i]->Deserialize( buffer );
+        }
+
+        uint32_t numVertices, numUVs, numBlendWeights, numIndices;
+        serialize::Read( buffer, numVertices );
+        serialize::Read( buffer, numUVs );
+        serialize::Read( buffer, numBlendWeights );
+        serialize::Read( buffer, numIndices );
+        if ( freeCpuCopy )
+        {
+            using namespace Progression::Gfx;
+            if ( m_gpuDataCreated )
+            {
+                vertexBuffer.Free();
+                indexBuffer.Free();
+            }
+            m_gpuDataCreated = true;
+            size_t totalVertexSize = 2 * numVertices * sizeof( glm::vec3 ) + numUVs * sizeof( glm::vec2 ) + numBlendWeights * 2 * sizeof( glm::vec4 );
+            vertexBuffer = Gfx::g_renderState.device.NewBuffer( totalVertexSize, buffer, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL );
+            buffer += totalVertexSize;
+            indexBuffer  = Gfx::g_renderState.device.NewBuffer( numIndices * sizeof( uint32_t ), buffer, BUFFER_TYPE_INDEX, MEMORY_TYPE_DEVICE_LOCAL );
+            buffer += numIndices * sizeof( uint32_t );
+
+            m_numVertices       = numVertices;
+            m_normalOffset      = m_numVertices * sizeof( glm::vec3 );
+            m_uvOffset          = m_normalOffset + numVertices * sizeof( glm::vec3 );
+            m_blendWeightOffset = m_uvOffset + numUVs * sizeof( glm::vec2 );
+        }
+        else
+        {
+            vertices.resize( numVertices );
+            normals.resize( numVertices );
+            uvs.resize( numUVs );
+            blendWeights.resize( numBlendWeights );
+            indices.resize( numIndices );
+
+            serialize::Read( buffer, vertices );
+            serialize::Read( buffer, normals );
+            serialize::Read( buffer, uvs );
+            serialize::Read( buffer, blendWeights );
+            serialize::Read( buffer, indices );
+
+            if ( createGpuCopy )
+            {
+                UploadToGpu();
+            }
+        }
+
+        serialize::Read( buffer, aabb.min );
+        serialize::Read( buffer, aabb.max );
+        serialize::Read( buffer, aabb.extent );
+        serialize::Read( buffer, meshes );
+        skeleton.Deserialize( buffer );
 
         return true;
     }
