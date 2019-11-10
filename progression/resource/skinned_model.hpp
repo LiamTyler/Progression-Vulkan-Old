@@ -63,7 +63,7 @@ namespace Progression
 
     struct KeyFrame
     {
-        std::vector< JointTransform > jointSpaceTransforms; // one element for each bone in the model's skeleton. Same ordering as skeleton
+        std::vector< JointTransform > jointSpaceTransforms; // one element for each joint in the model's skeleton. Same ordering as skeleton
         float time;
     };
 
@@ -75,20 +75,13 @@ namespace Progression
         std::vector< KeyFrame > keyFrames;
     };
 
-    class SkinnedMesh
+    struct SkinnedMesh
     {
-        friend class SkinnedModel;
     public:
-        uint32_t GetStartVertex() const;
-        uint32_t GetStartIndex() const;
-        uint32_t GetNumIndices() const;
-
         int materialIndex = -1;
-
-    private:
-        uint32_t m_startIndex  = ~0u;
-        uint32_t m_startVertex = ~0u;
-        uint32_t m_numIndices  = ~0u;
+        uint32_t startIndex  = ~0u;
+        uint32_t startVertex = ~0u;
+        uint32_t numIndices  = ~0u;
     };
 
     struct Skeleton
@@ -119,12 +112,11 @@ namespace Progression
         bool Serialize( std::ofstream& outFile ) const override;
         bool Deserialize( char*& buffer ) override;
 
-        //static bool LoadFBX( const std::string& filename, std::shared_ptr< SkinnedModel >& model, std::vector< Animation >& animations );
-        bool LoadFBX( const std::string& filename, std::shared_ptr< SkinnedModel >& model, std::vector< Animation >& animations );
         void RecalculateNormals();
         void RecalculateAABB();
         void UploadToGpu();
-        void Free( bool cpuCopy = true, bool gpuCopy = false );
+        void FreeGeometry( bool cpuCopy = true, bool gpuCopy = false );
+        void Optimize();
 
         void ApplyPoseToJoints( uint32_t jointIdx, const glm::mat4& parentTransform, std::vector< glm::mat4 >& transformBuffer );
 
@@ -147,6 +139,7 @@ namespace Progression
         std::vector< SkinnedMesh > meshes;
         std::vector< std::shared_ptr< Material > > materials;
         Skeleton skeleton;
+        std::vector< Animation > animations;
 
     private:
         uint32_t m_numVertices       = 0;

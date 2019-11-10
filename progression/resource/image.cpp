@@ -31,6 +31,10 @@ Image::~Image()
     {
         free( m_pixels );
     }
+    if ( m_texture )
+    {
+        m_texture.Free();
+    }
 }
 
 Image::Image( Image&& src )
@@ -50,6 +54,23 @@ Image& Image::operator=( Image&& src )
     src.m_pixels    = nullptr;
 
     return *this;
+}
+
+std::shared_ptr< Image > Image::Load2DImageWithDefaultSettings( const std::string& filename )
+{
+    ImageCreateInfo info;
+    info.filenames.push_back( filename );
+    info.name    = std::filesystem::path( filename ).stem().string();
+    info.flags   = IMAGE_FLIP_VERTICALLY | IMAGE_CREATE_TEXTURE_ON_LOAD;
+    info.sampler = "linear_clamped";
+    std::shared_ptr< Image > image = std::make_shared< Image >();
+    if ( !image->Load( &info ) )
+    {
+        LOG_ERR( "Could not load image with name '", info.name, "' and filename '", filename, "'" );
+        return nullptr;
+    }
+
+    return image;
 }
 
 bool Image::Load( ResourceCreateInfo* createInfo )
@@ -328,6 +349,7 @@ void Image::FreeCpuCopy()
     if ( m_pixels )
     {
         free( m_pixels );
+        m_pixels = nullptr;
     }
 }
 

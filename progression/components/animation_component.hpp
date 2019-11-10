@@ -5,18 +5,18 @@
 
 namespace Progression
 {
-    class SkinnedModel;
+    class Model;
     struct Animation;
 
     struct Animator
     {
         Animator() = default;
-        Animator( SkinnedModel* m );
+        Animator( Model* m );
 
-        void AssignNewModel( SkinnedModel* m );
+        void AssignNewModel( Model* m );
         void ReleaseModel();
         uint32_t GetTransformSlot() const;
-        SkinnedModel* GetModel() const;
+        Model* GetModel() const;
 
         Animation* animation        = nullptr;
         float animationTime         = 0;
@@ -26,7 +26,7 @@ namespace Progression
 
     private:
         uint32_t animationSysSlotID = ~0u;
-        SkinnedModel* model         = nullptr;
+        Model* model         = nullptr;
     };
 
 } // namespace Progression

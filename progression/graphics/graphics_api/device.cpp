@@ -391,7 +391,6 @@ namespace Gfx
 
         // no dynamic state currently
 
-        // pipeline layout where you specify uniforms (none currently)
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
         pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         std::vector< VkDescriptorSetLayout > layouts( desc.descriptorSetLayouts.size() );
@@ -420,10 +419,6 @@ namespace Gfx
                 pushConstants.erase( pushConstants.begin() + i );
                 --i;
             }
-        }
-        for ( size_t i = 0; i < pushConstants.size(); ++i )
-        {
-            LOG( "Push constant[", i, "]: ", pushConstants[i].stageFlags, ", ", pushConstants[i].offset, ", ", pushConstants[i].size );
         }
         pipelineLayoutInfo.pushConstantRangeCount = static_cast< uint32_t >( pushConstants.size() );
         pipelineLayoutInfo.pPushConstantRanges    = pushConstants.data();

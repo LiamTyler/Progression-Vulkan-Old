@@ -40,8 +40,26 @@ bool Material::Serialize( std::ofstream& out ) const
     serialize::Write( out, Ks );
     serialize::Write( out, Ke );
     serialize::Write( out, Ns );
-    std::string map_Kd_name = map_Kd ? map_Kd->name : "";
-    serialize::Write( out, map_Kd_name );
+    bool hasDiffuseTexture = map_Kd != nullptr;
+    serialize::Write( out, hasDiffuseTexture );
+    if ( hasDiffuseTexture )
+    {
+        bool diffuseTexManaged = ResourceManager::Get< Image >( map_Kd->name ) != nullptr;
+        serialize::Write( out, diffuseTexManaged );
+        if ( diffuseTexManaged )
+        {
+            std::string map_Kd_name = map_Kd->name;
+            serialize::Write( out, map_Kd_name );
+        }
+        else
+        {
+            serialize::Write( out, name );
+            serialize::Write( out, map_Kd->GetImageFlags() );
+            std::string samplerName = map_Kd->sampler ? map_Kd->sampler->GetName() : "";
+            serialize::Write( out, samplerName );
+            map_Kd->Serialize( out );
+        }
+    }
 
     return !out.fail();
 }
@@ -54,12 +72,31 @@ bool Material::Deserialize( char*& buffer )
     serialize::Read( buffer, Ks );
     serialize::Read( buffer, Ke );
     serialize::Read( buffer, Ns );
-    std::string map_Kd_name;
+    /*std::string map_Kd_name;
     serialize::Read( buffer, map_Kd_name );
     if ( !map_Kd_name.empty() )
     {
         map_Kd = ResourceManager::Get< Image >( map_Kd_name );
         PG_ASSERT( map_Kd, "No diffuse texture with name '" + map_Kd_name + "' found" );
+    }*/
+    bool hasDiffuseTexture;
+    serialize::Read( buffer, hasDiffuseTexture );
+    if ( hasDiffuseTexture )
+    {
+        bool diffuseTexManaged;
+        serialize::Read( buffer, diffuseTexManaged );
+        if ( diffuseTexManaged )
+        {
+            std::string map_Kd_name;
+            serialize::Read( buffer, map_Kd_name );
+            map_Kd = ResourceManager::Get< Image >( map_Kd_name );
+            PG_ASSERT( map_Kd, "No diffuse texture with name '" + map_Kd_name + "' found" );
+        }
+        else
+        {
+            map_Kd = std::make_shared< Image >();
+            map_Kd->Deserialize( buffer );
+        }
     }
 
     return true;
@@ -122,8 +159,14 @@ bool Material::LoadMtlFile( std::vector< Material >& materials, const std::strin
             mat->map_Kd = ResourceManager::Get< Image >( texName );
             if ( !mat->map_Kd )
             {
-                LOG_ERR("Failed to load map_Kd image '", texName, "' in mtl file '", fname, "'");
-                return false;
+                // LOG_ERR("Failed to load map_Kd image '", texName, "' in mtl file '", fname, "'");
+                // return false;
+                mat->map_Kd = Image::Load2DImageWithDefaultSettings( PG_RESOURCE_DIR + texName );
+                if ( !mat->map_Kd )
+                {
+                    LOG_ERR( "Failed to load texture with default settings while parsing MTL file." );
+                    return false;
+                }
             }
         }
     }

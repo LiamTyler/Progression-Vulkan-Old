@@ -23,15 +23,14 @@
 
 #include "resource/image.hpp"
 #include "resource/material.hpp"
-#include "resource/mesh.hpp"
 #include "resource/model.hpp"
 #include "resource/resource_manager.hpp"
 #include "resource/script.hpp"
 #include "resource/shader.hpp"
-#include "resource/skinned_model.hpp"
 #include "utils/logger.hpp"
 #include "utils/random.hpp"
 
+#include "components/animation_component.hpp"
 #include "components/entity_metadata.hpp"
 #include "components/model_renderer.hpp"
 #include "components/skinned_renderer.hpp"

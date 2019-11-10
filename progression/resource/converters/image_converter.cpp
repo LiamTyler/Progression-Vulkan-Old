@@ -19,10 +19,8 @@ static std::string GetContentFastFileName( ImageCreateInfo& createInfo )
     size_t hash                = std::hash< std::string >{}( filePath.string() );
     std::string baseName       = filePath.filename().string();
     std::string flipVertically = createInfo.flags & IMAGE_FLIP_VERTICALLY ? "1" : "0";
-    std::string format         = std::to_string( (int) createInfo.dstFormat );
 
-    return PG_RESOURCE_DIR "cache/images/" + baseName + "_" + flipVertically + "_" +
-           format + "_" + std::to_string( hash ) + ".ffi";
+    return PG_RESOURCE_DIR "cache/images/" + baseName + "_" + flipVertically + "_" + std::to_string( hash ) + ".ffi";
 }
 
 static std::string GetSettingsFastFileName( const ImageCreateInfo& createInfo )

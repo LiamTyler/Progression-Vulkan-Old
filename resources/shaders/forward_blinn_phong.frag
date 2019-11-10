@@ -42,9 +42,6 @@ float Attenuate( in const float distSquared, in const float radiusSquared )
 
 void main()
 {
-    //outColor.xyz = vec3( 1, 0, 0 );
-    //outColor.w = 1; 
-    //return;
     vec3 n = normalize( normalInWorldSpace );
     vec3 e = normalize( sceneConstantBuffer.cameraPos.xyz - posInWorldSpace );
 
@@ -55,9 +52,6 @@ void main()
         Kd *= texture( textures[material.diffuseTexIndex], texCoord ).xyz;
     }
     
-    // outColor = vec4( Kd, 1 );
-    // return;
-    // directional light
     vec3 lightColor = sceneConstantBuffer.dirLight.colorAndIntensity.w * sceneConstantBuffer.dirLight.colorAndIntensity.xyz;
     vec3 l = normalize( -sceneConstantBuffer.dirLight.direction.xyz );
     vec3 h = normalize( l + e );
@@ -85,8 +79,7 @@ void main()
     }
     
     // spotlights
-    //for ( uint i = 0; i < sceneConstantBuffer.numSpotLights; ++i )
-    for ( uint i = 0; i < 1; ++i )
+    for ( uint i = 0; i < sceneConstantBuffer.numSpotLights; ++i )
     {
         vec3 l = normalize( spotLights[i].positionAndRadius.xyz - posInWorldSpace );
         float theta = dot( -l, spotLights[i].directionAndCutoff.xyz );

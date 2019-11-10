@@ -291,6 +291,7 @@ namespace RenderSystem
 
         scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& modelRenderer, Transform& transform )
         {
+            const auto& model = modelRenderer.model;
             auto M = transform.GetModelMatrix();
             auto N = glm::transpose( glm::inverse( M ) );
             ObjectConstantBufferData b;
@@ -298,10 +299,16 @@ namespace RenderSystem
             b.N = N;
             vkCmdPushConstants( cmdBuf.GetHandle(), s_rigidModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( ObjectConstantBufferData ), &b );
 
-            for ( size_t i = 0; i < modelRenderer.materials.size(); ++i )
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetUVOffset(), 2 );
+            cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
+
+            for ( size_t i = 0; i < model->meshes.size(); ++i )
             {
                 const auto& mesh = modelRenderer.model->meshes[i];
-                const auto& mat  = modelRenderer.materials[i];
+                // const auto& mat  = modelRenderer.materials[i];
+                const auto& mat  = modelRenderer.materials[mesh.materialIndex];
 
                 MaterialConstantBufferData mcbuf{};
                 mcbuf.Ka = glm::vec4( mat->Ka, 0 );
@@ -310,11 +317,7 @@ namespace RenderSystem
                 mcbuf.diffuseTexIndex = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
                 vkCmdPushConstants( cmdBuf.GetHandle(), s_rigidModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
 
-                cmdBuf.BindVertexBuffer( mesh.vertexBuffer, 0, 0 );
-                cmdBuf.BindVertexBuffer( mesh.vertexBuffer, mesh.GetNormalOffset(), 1 );
-                cmdBuf.BindVertexBuffer( mesh.vertexBuffer, mesh.GetUVOffset(), 2 );
-                cmdBuf.BindIndexBuffer(  mesh.indexBuffer,  mesh.GetIndexType() );
-                cmdBuf.DrawIndexed( 0, mesh.GetNumIndices() );
+                cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
             }
         });
 
@@ -335,12 +338,18 @@ namespace RenderSystem
             b.M = M;
             b.N = N;
             b.boneTransformIdx = animator.GetTransformSlot();
-            vkCmdPushConstants( cmdBuf.GetHandle(), animPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( AnimatedObjectConstantBufferData ), &b );            
+            vkCmdPushConstants( cmdBuf.GetHandle(), animPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( AnimatedObjectConstantBufferData ), &b );
+
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetUVOffset(), 2 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetBlendWeightOffset(), 3 );
+            cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
 
             for ( size_t i = 0; i < renderer.model->meshes.size(); ++i )
             {
                 const auto& mesh = model->meshes[i];
-                const auto& mat  = model->materials[mesh.materialIndex];
+                const auto& mat  = renderer.materials[mesh.materialIndex];
 
                 MaterialConstantBufferData mcbuf{};
                 mcbuf.Ka = glm::vec4( mat->Ka, 0 );
@@ -348,13 +357,8 @@ namespace RenderSystem
                 mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
                 mcbuf.diffuseTexIndex = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
                 vkCmdPushConstants( cmdBuf.GetHandle(), animPipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
-
-                cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
-                cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
-                cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetUVOffset(), 2 );
-                cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetBlendWeightOffset(), 3 );
-                cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
-                cmdBuf.DrawIndexed( mesh.GetStartIndex(), mesh.GetNumIndices(), mesh.GetStartVertex() );
+                
+                cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
             }
         });
 

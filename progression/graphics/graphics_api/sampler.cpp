@@ -13,6 +13,11 @@ namespace Gfx
         m_handle = VK_NULL_HANDLE;
     }
 
+    std::string Sampler::GetName() const
+    {
+        return m_desc.name;
+    }
+
     FilterMode Sampler::GetMinFilter() const
     {
         return m_desc.minFilter;

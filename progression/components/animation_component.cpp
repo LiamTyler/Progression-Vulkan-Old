@@ -1,12 +1,12 @@
 #include "components/animation_component.hpp"
 #include "core/animation_system.hpp"
 #include "core/assert.hpp"
-#include "resource/skinned_model.hpp"
+#include "resource/model.hpp"
 
 namespace Progression
 {
 
-Animator::Animator( SkinnedModel* m ) :
+Animator::Animator( Model* m ) :
     model( m )
 {
     if ( m )
@@ -15,7 +15,7 @@ Animator::Animator( SkinnedModel* m ) :
     }
 }
 
-void Animator::AssignNewModel( SkinnedModel* m )
+void Animator::AssignNewModel( Model* m )
 {
     PG_ASSERT( m );
     if ( animationSysSlotID != ~0u )
@@ -42,7 +42,7 @@ uint32_t Animator::GetTransformSlot() const
     return GET_ANIMATOR_SLOT_FROM_ID( animationSysSlotID );
 }
 
-SkinnedModel* Animator::GetModel() const
+Model* Animator::GetModel() const
 {
     return model;
 }

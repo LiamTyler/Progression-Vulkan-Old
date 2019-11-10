@@ -15,14 +15,14 @@ generateMipmaps false
 createTexture true
 freeCpuCopy true
 
-Image
-name floor
-filenames textures/metal2.jpg
-sampler linear_clamped
-flipVertically true
-generateMipmaps false
-createTexture true
-freeCpuCopy true
+#Image
+#name floor
+#filenames textures/metal2.jpg
+#sampler linear_clamped
+#flipVertically true
+#generateMipmaps false
+#createTexture true
+#freeCpuCopy true
 
 MTLFile
 filename materials/miscellaneous.mtl

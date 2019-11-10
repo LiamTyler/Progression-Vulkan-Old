@@ -1,5 +1,4 @@
 #include "progression.hpp"
-#include "components/animation_component.hpp"
 #include <thread>
 
 using namespace Progression;
@@ -18,6 +17,7 @@ int main( int argc, char* argv[] )
         return 0;
     }
 
+    {
     Window* window = GetMainWindow();
     window->SetRelativeMouse(true);
     
@@ -28,16 +28,15 @@ int main( int argc, char* argv[] )
         PG::EngineQuit();
         return 0;
     }
-
-    // std::string fbxFile = PG_RESOURCE_DIR "dragon/Dragon_Baked_Actions_fbx_7.4_binary.fbx";
-    std::string fbxFile = PG_RESOURCE_DIR "primitive.fbx";
-    //std::string fbxFile = PG_RESOURCE_DIR "boblampclean.md5mesh";
     
-    std::vector< Animation > animations;
-    std::shared_ptr< SkinnedModel > skinnedModel = std::make_shared< SkinnedModel >();
-    if ( !SkinnedModel::LoadFBX( fbxFile, skinnedModel, animations ) )
+    std::shared_ptr< Model > skinnedModel1 = std::make_shared< Model >();
+    ModelCreateInfo info;
+    info.name = "arms";
+    info.filename = PG_RESOURCE_DIR "primitive.fbx";
+    info.optimize = true;
+    if ( !skinnedModel1->Load( &info ) )
     {
-        LOG_ERR( "Could not load the fbx file '", fbxFile, "'" );
+        LOG_ERR( "Could not load the fbx file '", info.filename, "'" );
         PG::EngineQuit();
         return 0;
     }
@@ -50,35 +49,44 @@ int main( int argc, char* argv[] )
         transform.scale         = glm::vec3( .001f );
 
         auto& skinned_renderer  = scene->registry.assign< SkinnedRenderer >( entity );
-        skinned_renderer.model  = skinnedModel;
+        skinned_renderer.model  = skinnedModel1;
+        skinned_renderer.materials = skinnedModel1->materials;
 
         // for ( auto& mat : skinnedModel->materials )
         // {
         //     mat->Kd = glm::vec3( 0, 1, 0 );
         // }
 
-        auto& animator         = scene->registry.assign< Animator >( entity, skinnedModel.get() );
-        animator.animation     = &animations[0];
+        auto& animator         = scene->registry.assign< Animator >( entity, skinnedModel1.get() );
+        animator.animation     = &skinnedModel1->animations[0];
         animator.animationTime = 0;
     }
 
+    std::shared_ptr< Model > skinnedModel2 = skinnedModel1;
+    // std::shared_ptr< Model > skinnedModel2 = std::make_shared< Model >();
+    // info.name = "dragon";
+    // info.filename = PG_RESOURCE_DIR "dragon/Dragon_Baked_Actions_fbx_7.4_binary.fbx";
+    // // info.filename = PG_RESOURCE_DIR "models/chalet2.obj";
+    // if ( !skinnedModel2->Load( &info ) )
+    // {
+    //     LOG_ERR( "Could not load the fbx file '", info.filename, "'" );
+    //     PG::EngineQuit();
+    //     return 0;
+    // }
+    // 
     {
         auto entity             = scene->registry.create();
         auto& transform         = scene->registry.assign< Transform >( entity );
         transform.position      = glm::vec3( 3, 0, 0 );
         // transform.rotation      = glm::vec3( glm::radians( -90.0f ), glm::radians( 90.0f ), 0 );
         transform.scale         = glm::vec3( .001f );
-
+    
         auto& skinned_renderer  = scene->registry.assign< SkinnedRenderer >( entity );
-        skinned_renderer.model  = skinnedModel;
-
-        // for ( auto& mat : skinnedModel->materials )
-        // {
-        //     mat->Kd = glm::vec3( 0, 1, 0 );
-        // }
-
-        auto& animator         = scene->registry.assign< Animator >( entity, skinnedModel.get() );
-        animator.animation     = &animations[0];
+        skinned_renderer.model  = skinnedModel2;
+        skinned_renderer.materials = skinnedModel2->materials;
+    
+        auto& animator         = scene->registry.assign< Animator >( entity, skinnedModel2.get() );
+        animator.animation     = &skinnedModel2->animations[0];
         animator.animationTime = 0.5;
     }
 
@@ -106,10 +114,9 @@ int main( int argc, char* argv[] )
         window->EndFrame();
     }
 
-    vkDeviceWaitIdle( PG::Gfx::g_renderState.device.GetHandle() );
-    // scene->registry.view< SkinnedRenderer >().each([]( SkinnedRenderer& renderer ) { renderer.model->Free( false, true ); } );
-
+    PG::Gfx::g_renderState.device.WaitForIdle();
     delete scene;
+    }
 
     PG::EngineQuit();
 

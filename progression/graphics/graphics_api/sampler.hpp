@@ -40,6 +40,7 @@ namespace Gfx
     class SamplerDescriptor
     {
     public:
+        std::string name        = "default";
         FilterMode minFilter    = FilterMode::LINEAR;
         FilterMode magFilter    = FilterMode::LINEAR;
         MipFilterMode mipFilter = MipFilterMode::LINEAR;
@@ -56,6 +57,7 @@ namespace Gfx
     public:
         void Free();
 
+        std::string GetName() const;
         FilterMode GetMinFilter() const;
         FilterMode GetMagFilter() const;
         WrapMode GetWrapModeU() const;

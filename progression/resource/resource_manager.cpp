@@ -42,7 +42,7 @@ namespace ResourceManager
         }
         for ( auto& [ name, res ] : f_resources[GetResourceTypeID< Model >()] )
         {
-            std::static_pointer_cast< Model >( res )->Free( true, false );
+            std::static_pointer_cast< Model >( res )->FreeGeometry( false, true );
         }
     }
 

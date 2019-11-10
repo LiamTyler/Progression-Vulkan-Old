@@ -7,7 +7,7 @@
 #include "graphics/vulkan.hpp"
 #include "resource/resource_manager.hpp"
 #include "resource/shader.hpp"
-#include "resource/skinned_model.hpp"
+#include "resource/model.hpp"
 #include "utils/logger.hpp"
 #include <list>
 
@@ -145,6 +145,7 @@ void Update( Scene* scene )
     {
         if ( comp.animation && comp.animationTime < comp.animation->duration )
         {
+            PG_ASSERT( comp.GetModel()->skeleton.joints.size() > 0, "Trying to animate a skeleton with 0 bones" );
             comp.animationTime = comp.animationTime + Time::DeltaTime();            
             //comp.animationTime = comp.animationTime + 1.0f/165;            
             if ( comp.loop && comp.animationTime >= comp.animation->duration / comp.animation->ticksPerSecond )

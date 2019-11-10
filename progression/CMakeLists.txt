@@ -83,22 +83,18 @@ set(
 	RESOURCE
 	resource/image.cpp
     resource/material.cpp
-    resource/mesh.cpp
     resource/model.cpp
     resource/resource_manager.cpp
     resource/script.cpp
     resource/shader.cpp
-    resource/skinned_model.cpp
 	
 	resource/resource_manager.hpp
     resource/resource.hpp
     resource/image.hpp
     resource/material.hpp
-    resource/mesh.hpp
     resource/model.hpp
     resource/script.hpp
     resource/shader.hpp
-    resource/skinned_model.hpp
 )
 
 set(
@@ -124,14 +120,12 @@ set(
 	EXTERNALS
 	../ext/getopt/getopt.c
     ../ext/memory_map/MemoryMapped.cpp    
-    ../ext/tinyobjloader/tiny_obj_loader.cc
 	
 	../ext/cpptoml.h
     ../ext/getopt/getopt.h
     ../ext/memory_map/MemoryMapped.h
     ../ext/stb_image/stb_image.h
     ../ext/stb_image/stb_image_write.h
-    ../ext/tinyobjloader/tiny_obj_loader.h
 
     ../ext/SPIRV-Reflect/spirv_reflect.h
     ../ext/SPIRV-Reflect/spirv_reflect.c

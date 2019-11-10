@@ -21,7 +21,6 @@ typedef uint32_t ImageFlags;
 struct ImageCreateInfo : public ResourceCreateInfo
 {
     std::vector< std::string > filenames;
-    Gfx::PixelFormat dstFormat;
     std::string sampler = "";
     ImageFlags flags    = 0;
 };
@@ -35,6 +34,7 @@ public:
     Image( Image&& src );
     Image& operator=( Image&& src );
 
+    static std::shared_ptr< Image > Load2DImageWithDefaultSettings( const std::string& filename );
     bool Load( ResourceCreateInfo* createInfo ) override;
     void Move( std::shared_ptr< Resource > dst ) override;
     bool Serialize( std::ofstream& outFile ) const override;

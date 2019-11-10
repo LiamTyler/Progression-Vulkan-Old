@@ -1,13 +1,14 @@
 #pragma once
 
-#include "resource/skinned_model.hpp"
+#include "resource/model.hpp"
 
 namespace Progression
 {
 
 struct SkinnedRenderer
 {
-    std::shared_ptr< SkinnedModel > model;
+    std::shared_ptr< Model > model;
+    std::vector< std::shared_ptr< Material > > materials;
 };
 
 } // namespace Progression

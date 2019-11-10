@@ -1,315 +1,1033 @@
 #include "resource/model.hpp"
-#include "resource/material.hpp"
+#include "assimp/Importer.hpp"
+#include "assimp/postprocess.h"
+#include "assimp/scene.h"
+#include "core/assert.hpp"
+#include "core/time.hpp"
+#include "graphics/vulkan.hpp"
+#include "meshoptimizer/src/meshoptimizer.h"
 #include "resource/resource_manager.hpp"
-#include "tinyobjloader/tiny_obj_loader.h"
-#include "utils/fileIO.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
-#include <limits>
+#define GLM_ENABLE_EXPERIMENTAL
+#include "glm/gtx/quaternion.hpp"
+#include "glm/gtx/hash.hpp"
+#include <filesystem>
+#include <set>
+
+static aiMatrix4x4 GLMMat4ToAi( const glm::mat4& mat )
+{
+    return aiMatrix4x4( mat[0][0], mat[0][1], mat[0][2], mat[0][3],
+                        mat[1][0], mat[1][1], mat[1][2], mat[1][3],
+                        mat[2][0], mat[2][1], mat[2][2], mat[2][3],
+                        mat[3][0], mat[3][1], mat[3][2], mat[3][3] );
+}
+
+static glm::mat4 AiToGLMMat4( const aiMatrix4x4& in_mat )
+{
+    glm::mat4 tmp;
+    tmp[0][0] = in_mat.a1;
+    tmp[1][0] = in_mat.b1;
+    tmp[2][0] = in_mat.c1;
+    tmp[3][0] = in_mat.d1;
+
+    tmp[0][1] = in_mat.a2;
+    tmp[1][1] = in_mat.b2;
+    tmp[2][1] = in_mat.c2;
+    tmp[3][1] = in_mat.d2;
+
+    tmp[0][2] = in_mat.a3;
+    tmp[1][2] = in_mat.b3;
+    tmp[2][2] = in_mat.c3;
+    tmp[3][2] = in_mat.d3;
+
+    tmp[0][3] = in_mat.a4;
+    tmp[1][3] = in_mat.b4;
+    tmp[2][3] = in_mat.c4;
+    tmp[3][3] = in_mat.d4;
+    return glm::transpose( tmp );
+}
+
+static glm::vec3 AiToGLMVec3( const aiVector3D& v )
+{
+    return { v.x, v.y, v.z };
+}
+
+static glm::quat AiToGLMQuat( const aiQuaternion& q )
+{
+    return { q.w, q.x, q.y, q.z };
+}
+
+static std::string TrimWhiteSpace( const std::string& s )
+{
+    size_t start = s.find_first_not_of( " \t" );
+    size_t end   = s.find_last_not_of( " \t" );
+    return s.substr( start, end - start + 1 );
+}
+
+class Vertex
+{
+public:
+    Vertex() = default;
+
+    bool operator==( const Vertex& other ) const
+    {
+        return vertex == other.vertex &&
+               normal == other.normal &&
+               uv == other.uv &&
+               blendWeight.weights == other.blendWeight.weights &&
+               blendWeight.joints == other.blendWeight.joints;
+    }
+
+    glm::vec3 vertex = glm::vec3( 0 );
+    glm::vec3 normal = glm::vec3( 0 );
+    glm::vec2 uv     = glm::vec2( 0 );
+    Progression::BlendWeight blendWeight;
+};
+
+namespace std
+{
+template <>
+struct hash< Vertex >
+{
+    size_t operator()( Vertex const& vertex ) const
+    {
+        size_t seed = hash< glm::vec3 >()( vertex.vertex );
+        seed ^= hash< glm::vec3 >()( vertex.normal ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+        seed ^= hash< glm::vec2 >()( vertex.uv ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+        seed ^= hash< glm::vec4 >()( vertex.blendWeight.weights ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+        seed ^= hash< glm::uvec4 >()( vertex.blendWeight.joints ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+        return seed;
+    }
+};
+} // namespace std
+
 
 namespace Progression
 {
 
-Model::Model( Model&& model )
-{
-    *this = std::move( model );
-}
-
-Model& Model::operator=( Model&& model )
-{
-    name      = std::move( model.name );
-    for ( auto& mesh : meshes )
+    aiNodeAnim* FindAINodeAnim( aiAnimation* pAnimation, const std::string& NodeName )
     {
-        mesh.Free( true, false );
-    }
-    meshes    = std::move( model.meshes );
-    materials = std::move( model.materials );
-
-    return *this;
-}
-
-void Model::Move( std::shared_ptr< Resource > dst )
-{
-    PG_ASSERT( std::dynamic_pointer_cast< Model >( dst ) );
-    Model* dstPtr = (Model*) dst.get();
-    *dstPtr       = std::move( *this );
-}
-
-bool Model::Load( ResourceCreateInfo* createInfo )
-{
-    PG_ASSERT( createInfo );
-    ModelCreateInfo* info = static_cast< ModelCreateInfo* >( createInfo );
-    name = info->name;
-    return LoadFromObj( info );
-}
-
-void Model::Free( bool gpuCopy, bool cpuCopy )
-{
-    for ( auto& mesh : meshes )
-    {
-        mesh.Free( gpuCopy, cpuCopy );
-    }
-}
-
-bool Model::Serialize( std::ofstream& out ) const
-{
-    // serialize::Write( out, name );
-    uint32_t numMeshes = static_cast< uint32_t >( meshes.size() );
-    serialize::Write( out, numMeshes );
-    for ( uint32_t i = 0; i < numMeshes; ++i )
-    {
-        if ( !materials[i]->Serialize( out ) )
+        for ( uint32_t i = 0; i < pAnimation->mNumChannels; ++i )
         {
-            LOG( "Could not write material: ", i, ", of model: ", name, " to fastfile" );
-            return false;
-        }
-    }
-
-    for ( uint32_t i = 0; i < numMeshes; ++i )
-    {
-        if ( !meshes[i].Serialize( out ) )
-        {
-            LOG( "Could not write mesh: ", i, ", of model: ", name, " to fastfile" );
-            return false;
-        }
-    }
-
-    serialize::Write( out, aabb.min );
-    serialize::Write( out, aabb.max );
-    serialize::Write( out, aabb.extent );
-
-    return !out.fail();
-}
-
-bool Model::Deserialize( char*& buffer )
-{
-    serialize::Read( buffer, name );
-    bool freeCpuCopy;
-    bool createGpuCopy;
-    serialize::Read( buffer, freeCpuCopy );
-    serialize::Read( buffer, createGpuCopy );
-    uint32_t numMeshes;
-    serialize::Read( buffer, numMeshes );
-    meshes.resize( numMeshes );
-    materials.resize( numMeshes );
-    for ( uint32_t i = 0; i < numMeshes; ++i )
-    {
-        auto mat = std::make_shared< Material >();
-        if ( !mat->Deserialize( buffer ) )
-        {
-            LOG( "Could not load material: ", i, ", of model: ", name, " from fastfile" );
-            return false;
-        }
-        materials[i] = mat;
-    }
-
-    for ( uint32_t i = 0; i < numMeshes; ++i )
-    {
-        if ( !meshes[i].Deserialize( buffer, createGpuCopy, freeCpuCopy ) )
-        {
-            LOG( "Could not load mesh: ", i, ", of model: ", name, " from fastfile" );
-            return false;
-        }
-    }
-
-    serialize::Read( buffer, aabb.min );
-    serialize::Read( buffer, aabb.max );
-    serialize::Read( buffer, aabb.extent );
-
-    return true;
-}
-
-bool Model::LoadFromObj( ModelCreateInfo* createInfo )
-{
-    PG_ASSERT( createInfo->createGpuCopy || !createInfo->freeCpuCopy );
-    tinyobj::attrib_t attrib;
-    std::vector< tinyobj::shape_t > shapes;
-    std::vector< tinyobj::material_t > tiny_materials;
-    std::string err;
-    bool ret = tinyobj::LoadObj( &attrib, &shapes, &tiny_materials, &err,
-                                 createInfo->filename.c_str(), PG_RESOURCE_DIR, true );
-
-    if ( !err.empty() )
-    {
-        LOG_WARN( "TinyObj loader warning: ", err );
-    }
-
-    if ( !ret )
-    {
-        LOG_ERR( "Failed to load the obj file: ", createInfo->filename );
-        return false;
-    }
-
-    meshes.clear();
-    materials.clear();
-
-    aabb.min = glm::vec3( std::numeric_limits< float >::max() );
-    aabb.max = glm::vec3( -std::numeric_limits< float >::max() );
-
-    for ( int currentMaterialID = -1; currentMaterialID < (int) tiny_materials.size();
-          ++currentMaterialID )
-    {
-        auto currentMaterial = std::make_shared< Material >();
-        if ( currentMaterialID == -1 )
-        {
-            currentMaterial->name = "default";
-        }
-        else
-        {
-            tinyobj::material_t& mat = tiny_materials[currentMaterialID];
-            currentMaterial->name    = mat.name;
-            currentMaterial->Ka      = glm::vec3( mat.ambient[0], mat.ambient[1], mat.ambient[2] );
-            currentMaterial->Kd      = glm::vec3( mat.diffuse[0], mat.diffuse[1], mat.diffuse[2] );
-            currentMaterial->Ks      = glm::vec3( mat.specular[0], mat.specular[1], mat.specular[2] );
-            currentMaterial->Ke      = glm::vec3( mat.emission[0], mat.emission[1], mat.emission[2] );
-            currentMaterial->Ns      = mat.shininess;
-            if ( !mat.diffuse_texname.empty() )
+            aiNodeAnim* pNodeAnim = pAnimation->mChannels[i];
+        
+            if ( std::string( pNodeAnim->mNodeName.data ) == NodeName )
             {
-                currentMaterial->map_Kd  = ResourceManager::Get< Image >( mat.diffuse_texname );
-                if ( !currentMaterial->map_Kd )
+                return pNodeAnim;
+            }
+        }
+    
+        return NULL;
+    }
+
+    static void ReadNodeHeirarchy( aiNode* pNode, uint32_t numAnimations, aiAnimation** animations, int depth = 0 )
+    {
+        std::string NodeName( pNode->mName.data );
+        std::string tabbing( depth * 2, ' ' );
+            
+        glm::mat4 NodeTransformation( AiToGLMMat4( pNode->mTransformation ) );
+
+        bool animFound = false;
+        for ( auto i = 0u; i < numAnimations && !animFound; ++i )
+        {
+            aiNodeAnim* pNodeAnim = FindAINodeAnim( animations[i], NodeName );
+            if ( pNodeAnim )
+            {
+                LOG( tabbing, "Node '", NodeName, "' has first animation component in animation: ", i );
+                animFound = true;
+            }
+        }
+        if ( !animFound )
+        {
+            LOG( tabbing, "Node '", NodeName, "' does not have animation component" );
+        }
+        LOG( tabbing, "NodeTransformation =" );
+        LOG( tabbing, NodeTransformation[0] );
+        LOG( tabbing, NodeTransformation[1] );
+        LOG( tabbing, NodeTransformation[2] );
+        LOG( tabbing, NodeTransformation[3] );
+        
+    
+        for ( uint32_t i = 0; i < pNode->mNumChildren; i++ )
+        {
+            ReadNodeHeirarchy( pNode->mChildren[i], numAnimations, animations, depth + 1 );
+        }
+    }
+
+    void Model::ApplyPoseToJoints( uint32_t jointIdx, const glm::mat4& parentTransform, std::vector< glm::mat4 >& transformBuffer )
+    {
+        glm::mat4 currentTransform = parentTransform * transformBuffer[jointIdx];
+        for ( const auto& child : skeleton.joints[jointIdx].children )
+        {
+            ApplyPoseToJoints( child, currentTransform, transformBuffer );
+        }
+        transformBuffer[jointIdx] = currentTransform * skeleton.joints[jointIdx].inverseBindTransform;
+    }
+
+    static void FindJointChildren( aiNode* node, std::unordered_map< std::string, uint32_t >& jointMapping, std::vector< Joint >& joints )
+    {
+        std::string name( node->mName.data );
+        if ( jointMapping.find( name ) != jointMapping.end() )
+        {
+            for ( uint32_t i = 0; i < node->mNumChildren; i++ )
+            {
+                std::string childName( node->mChildren[i]->mName.data );
+                // PG_ASSERT( jointMapping.find( childName ) != jointMapping.end(), "AI bone has a non-bone node as a child" );
+                if  ( jointMapping.find( childName ) != jointMapping.end() )
                 {
-                    LOG_ERR( "Could not load material '", mat.name, "' from OBJ '", createInfo->filename, "'" );
-                    LOG_ERR( "Texture '", mat.diffuse_texname, "' needs to be already in resource manager" );
-                    return false;
+                    joints[jointMapping[name]].children.push_back( jointMapping[childName] );
                 }
             }
         }
-
-        Mesh currentMesh;
-        glm::vec3 min = glm::vec3( std::numeric_limits< float >::max() );
-        glm::vec3 max = glm::vec3( -std::numeric_limits< float >::max() );
-        for ( const auto& shape : shapes )
+        for ( uint32_t i = 0; i < node->mNumChildren; i++ )
         {
-            // Loop over faces(polygon)
-            for ( size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++ )
+            FindJointChildren( node->mChildren[i], jointMapping, joints );
+        }
+    }
+
+    static void BuildAINodeMap( aiNode* pNode, std::unordered_map< std::string, aiNode* >& nodes )
+    {
+        std::string name( pNode->mName.data );
+        PG_ASSERT( nodes.find( name ) == nodes.end(), "Map of AI nodes already contains name '" + name + "'" );
+        nodes[name] = pNode;
+    
+        for ( uint32_t i = 0; i < pNode->mNumChildren; i++ )
+        {
+            BuildAINodeMap( pNode->mChildren[i], nodes );
+        }
+    }
+
+    static void BuildAIAnimNodeMap( aiNode* pNode, aiAnimation* pAnimation, std::unordered_map< std::string, aiNodeAnim* >& animNodes )
+    {
+        std::string nodeName( pNode->mName.data );
+        aiNodeAnim* pNodeAnim = FindAINodeAnim( pAnimation, nodeName );
+    
+        if ( pNodeAnim )
+        {
+            PG_ASSERT( animNodes.find( nodeName ) == animNodes.end(), "Map of AI animation nodes already contains name '" + nodeName + "'" );
+            animNodes[nodeName] = pNodeAnim;
+        }
+    
+        for ( uint32_t i = 0; i < pNode->mNumChildren; i++ )
+        {
+            BuildAIAnimNodeMap( pNode->mChildren[i], pAnimation, animNodes );
+        }
+    }
+
+    static std::set< float > GetAllAnimationTimes( aiAnimation* pAnimation )
+    {
+        std::set< float > times;
+        for ( uint32_t i = 0; i < pAnimation->mNumChannels; ++i )
+        {
+            aiNodeAnim* p = pAnimation->mChannels[i];
+        
+            for ( uint32_t i = 0; i < p->mNumPositionKeys; ++i )
             {
-                if ( shape.mesh.material_ids[f] == currentMaterialID )
+                times.insert( static_cast< float >( p->mPositionKeys[i].mTime ) );
+            }
+            for ( uint32_t i = 0; i < p->mNumRotationKeys; ++i )
+            {
+                times.insert( static_cast< float >( p->mRotationKeys[i].mTime ) );
+            }
+            for ( uint32_t i = 0; i < p->mNumPositionKeys; ++i )
+            {
+                times.insert( static_cast< float >( p->mScalingKeys[i].mTime ) );
+            }
+        }
+
+        return times;
+    }
+
+    static void AnalyzeMemoryEfficiency( aiAnimation* pAnimation, const std::set< float >& times )
+    {
+        double efficient = 0;
+        for ( uint32_t i = 0; i < pAnimation->mNumChannels; ++i )
+        {
+            aiNodeAnim* p = pAnimation->mChannels[i];
+            efficient += p->mNumPositionKeys * sizeof( glm::vec3 ) + p->mNumRotationKeys * sizeof( glm::quat ) + p->mNumScalingKeys * sizeof( glm::vec3 );
+        }
+        double easy = static_cast< double >( pAnimation->mNumChannels * times.size() * ( sizeof( glm::vec3 ) + sizeof( glm::quat ) + sizeof( glm::vec3 ) ) );
+
+        efficient /= ( 2 << 20 );
+        easy      /= ( 2 << 20 );
+        LOG( "Efficient method = ", efficient, "MB, easy method = ", easy, "MB, ratio = ", easy / efficient );
+    }
+
+    static bool ParseMaterials( const std::string& filename, Model* model, const aiScene* scene )
+    {
+        namespace fs = std::filesystem;
+        model->materials.resize( scene->mNumMaterials );
+        for ( uint32_t mtlIdx = 0; mtlIdx < scene->mNumMaterials; ++mtlIdx )
+        {
+            const aiMaterial* pMaterial = scene->mMaterials[mtlIdx];
+            model->materials[mtlIdx] = std::make_shared< Material >();
+            aiString name;
+            aiColor3D color;
+            pMaterial->Get( AI_MATKEY_NAME, name );
+            model->materials[mtlIdx]->name = name.C_Str();
+
+            color = aiColor3D( 0.f, 0.f, 0.f );
+            pMaterial->Get( AI_MATKEY_COLOR_AMBIENT, color );
+            model->materials[mtlIdx]->Ka = { color.r, color.g, color.b };
+            color = aiColor3D( 0.f, 0.f, 0.f );
+            pMaterial->Get( AI_MATKEY_COLOR_DIFFUSE, color );
+            model->materials[mtlIdx]->Kd = { color.r, color.g, color.b };
+            color = aiColor3D( 0.f, 0.f, 0.f );
+            pMaterial->Get( AI_MATKEY_COLOR_SPECULAR, color );
+            model->materials[mtlIdx]->Ks = { color.r, color.g, color.b };
+            color = aiColor3D( 0.f, 0.f, 0.f );
+            pMaterial->Get( AI_MATKEY_COLOR_EMISSIVE, color );
+            model->materials[mtlIdx]->Ke = { color.r, color.g, color.b };
+            color = aiColor3D( 0.f, 0.f, 0.f );
+            float Ns;
+            pMaterial->Get( AI_MATKEY_SHININESS, Ns );
+            model->materials[mtlIdx]->Ns = Ns;
+
+            if ( pMaterial->GetTextureCount( aiTextureType_DIFFUSE ) > 0 )
+            {
+                PG_ASSERT( pMaterial->GetTextureCount( aiTextureType_DIFFUSE ) == 1, "Can't have more than 1 diffuse texture per material" );
+                aiString path;
+                if ( pMaterial->GetTexture( aiTextureType_DIFFUSE, 0, &path, NULL, NULL, NULL, NULL, NULL ) == AI_SUCCESS )
                 {
-                    // Loop over vertices in the face. Each face should have 3 vertices from the
-                    // LoadObj triangulation
-                    for ( size_t v = 0; v < 3; v++ )
+                    std::string name = TrimWhiteSpace( path.data );
+                    if ( ResourceManager::Get< Image >( name ) )
                     {
-                        tinyobj::index_t idx = shape.mesh.indices[3 * f + v];
-                        tinyobj::real_t vx   = attrib.vertices[3 * idx.vertex_index + 0];
-                        tinyobj::real_t vy   = attrib.vertices[3 * idx.vertex_index + 1];
-                        tinyobj::real_t vz   = attrib.vertices[3 * idx.vertex_index + 2];
-                        glm::vec3 vert( vx, vy, vz );
-                        min = glm::min( min, vert );
-                        max = glm::max( max, vert );
+                        model->materials[mtlIdx]->map_Kd = ResourceManager::Get< Image >( name );
+                        continue;
+                    }
 
-                        tinyobj::real_t nx = 0;
-                        tinyobj::real_t ny = 0;
-                        tinyobj::real_t nz = 0;
-                        if ( idx.normal_index != -1 )
+                    std::string fullPath;
+                    // search for texture starting with
+                    if ( fs::exists( PG_RESOURCE_DIR + name ) )
+                    {
+                        fullPath = PG_RESOURCE_DIR + name;
+                    }
+                    else
+                    {
+                        std::string basename = fs::path( name ).filename().string();
+                        for( auto itEntry = fs::recursive_directory_iterator( PG_RESOURCE_DIR ); itEntry != fs::recursive_directory_iterator(); ++itEntry )
                         {
-                            nx = attrib.normals[3 * idx.normal_index + 0];
-                            ny = attrib.normals[3 * idx.normal_index + 1];
-                            nz = attrib.normals[3 * idx.normal_index + 2];
+                            if ( basename == itEntry->path().filename().string() )
+                            {
+                                fullPath = fs::absolute( itEntry->path() ).string();
+                                break;
+                            }
                         }
-
-                        tinyobj::real_t tx = 0, ty = 0;
-                        if ( idx.texcoord_index != -1 )
+                    }
+                    
+                    if ( fullPath != "" )
+                    {
+                        model->materials[mtlIdx]->map_Kd = Image::Load2DImageWithDefaultSettings( fullPath );
+                        if ( !model->materials[mtlIdx]->map_Kd )
                         {
-                            tx = attrib.texcoords[2 * idx.texcoord_index + 0];
-                            ty = attrib.texcoords[2 * idx.texcoord_index + 1];
+                            LOG_ERR( "Failed to load diffuse texture '", fullPath, "'" );
+                            return false;
                         }
-
-                        currentMesh.vertices.emplace_back( vert );
-                        
-                        if ( idx.normal_index != -1 )
-                        {
-                            currentMesh.normals.emplace_back( nx, ny, nz );
-                        }
-
-                        if ( idx.texcoord_index != -1 )
-                        {
-                            currentMesh.uvs.emplace_back( tx, ty );
-                        }
-
-                        currentMesh.indices.push_back( static_cast< uint32_t >( currentMesh.indices.size() ) );
+                    }
+                    else
+                    {
+                        LOG_ERR( "Could not find file '", name, "'" );
+                        return false;
                     }
                 }
             }
         }
 
-        // create mesh and upload to GPU
-        if ( currentMesh.vertices.size() )
+        return true;
+    }
+
+    Model::~Model()
+    {
+        if ( vertexBuffer )
         {
-            if ( currentMaterial->name == "default" )
-            {
-                LOG_WARN( "Mesh from OBJ '", createInfo->filename, "' has no assigned material. Using default." );
-            }
-
-            if ( currentMesh.normals.empty() )
-            {
-                currentMesh.RecalculateNormals();
-            }
-
-            currentMesh.aabb = AABB( min, max );
-            aabb.min         = glm::min( min, aabb.min );
-            aabb.max         = glm::max( max, aabb.max );
-
-            if ( createInfo->optimize )
-            {
-                currentMesh.Optimize();
-            }
-
-            if ( createInfo->createGpuCopy )
-            {
-                currentMesh.UploadToGpu( createInfo->freeCpuCopy );
-            }
-
-            materials.push_back( currentMaterial );
-            meshes.push_back( std::move( currentMesh ) );
+            vertexBuffer.Free();
+        }
+        if ( indexBuffer )
+        {
+            indexBuffer.Free();
         }
     }
 
-    aabb = AABB( aabb.min, aabb.max );
-
-    return true;
-}
-
-void Model::RecalculateBB( bool recursive )
-{
-    if ( meshes.empty() )
+    bool Model::Load( ResourceCreateInfo* baseInfo )
     {
-        return;
+        PG_ASSERT( baseInfo );
+        ModelCreateInfo* createInfo = static_cast< ModelCreateInfo* >( baseInfo );
+        name = createInfo->name;
+        Assimp::Importer importer;
+        const aiScene* scene = importer.ReadFile( createInfo->filename.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices );
+        if ( !scene )
+        {
+            LOG_ERR( "Error parsing FBX file '", createInfo->filename.c_str(), "': ", importer.GetErrorString() );
+            return false;
+        }
+
+        meshes.resize( scene->mNumMeshes );       
+        uint32_t numVertices = 0;
+        uint32_t numIndices = 0;    
+        for ( size_t i = 0 ; i < meshes.size(); i++ )
+        {
+            meshes[i].materialIndex = scene->mMeshes[i]->mMaterialIndex;
+            meshes[i].numIndices  = scene->mMeshes[i]->mNumFaces * 3;
+            meshes[i].numVertices = scene->mMeshes[i]->mNumVertices;
+            meshes[i].startVertex = numVertices;
+            meshes[i].startIndex  = numIndices;
+        
+            numVertices += scene->mMeshes[i]->mNumVertices;
+            numIndices  += meshes[i].numIndices;
+        }
+        vertices.reserve( numVertices );
+        normals.reserve( numVertices );
+        uvs.reserve( numVertices );
+        indices.reserve( numIndices );
+        blendWeights.resize( numVertices );
+
+        std::unordered_map< std::string, uint32_t > jointNameToIndexMap;
+        
+        std::unordered_map< std::string, aiNode* > aiNodeMap;
+        BuildAINodeMap( scene->mRootNode, aiNodeMap );
+        // Assimp doesn't seem to provide the root bone in the actual bone list, but animations are provided the scene
+        // node that would be the root bone. Store a placeholder for it now, so that spot [0] is reserved, and find
+        // the actual root bone after parsing the other bones.
+        Joint rootJointPlaceholder;
+        rootJointPlaceholder.name = "___ROOT_BONE_PLACEHOLDER___";
+        skeleton.joints.push_back( rootJointPlaceholder );
+        for ( size_t meshIdx = 0; meshIdx < meshes.size(); ++meshIdx )
+        {
+            const aiMesh* paiMesh = scene->mMeshes[meshIdx];
+            const aiVector3D Zero3D( 0.0f, 0.0f, 0.0f );
+
+            for ( uint32_t vIdx = 0; vIdx < paiMesh->mNumVertices ; ++vIdx )
+            {
+                const aiVector3D* pPos      = &( paiMesh->mVertices[vIdx] );
+                const aiVector3D* pNormal   = &( paiMesh->mNormals[vIdx] );
+                const aiVector3D* pTexCoord = paiMesh->HasTextureCoords( 0 ) ? &( paiMesh->mTextureCoords[0][vIdx] ) : &Zero3D;
+
+                vertices.emplace_back( pPos->x, pPos->y, pPos->z );
+                normals.emplace_back( pNormal->x, pNormal->y, pNormal->z );
+                uvs.emplace_back( pTexCoord->x, pTexCoord->y );
+            }
+
+            for ( uint32_t boneIdx = 0; boneIdx < paiMesh->mNumBones; ++boneIdx )
+            {
+                uint32_t jointIndex = 0;
+                std::string jointName( paiMesh->mBones[boneIdx]->mName.data );
+
+                if ( jointNameToIndexMap.find( jointName ) == jointNameToIndexMap.end() )
+                {
+                    jointIndex = static_cast< uint32_t >( skeleton.joints.size() );
+                    Joint newJoint;
+                    newJoint.name                 = jointName;
+                    newJoint.inverseBindTransform = AiToGLMMat4( paiMesh->mBones[boneIdx]->mOffsetMatrix );
+                    skeleton.joints.push_back( newJoint );
+                    jointNameToIndexMap[jointName] = jointIndex;
+                }
+                else
+                {
+                    jointIndex = jointNameToIndexMap[jointName];
+                }
+        
+                for ( unsigned int weightIdx = 0; weightIdx < paiMesh->mBones[boneIdx]->mNumWeights; ++weightIdx )
+                {
+                    uint32_t vertexID = meshes[meshIdx].startVertex + paiMesh->mBones[boneIdx]->mWeights[weightIdx].mVertexId;
+                    float weight      = paiMesh->mBones[boneIdx]->mWeights[weightIdx].mWeight;
+                    blendWeights[vertexID].AddJointData( jointIndex, weight );
+                }
+            }
+
+            for ( size_t iIdx = 0 ; iIdx < paiMesh->mNumFaces ; ++iIdx )
+            {
+                const aiFace& face = paiMesh->mFaces[iIdx];
+                PG_ASSERT( face.mNumIndices == 3 );
+                indices.push_back( face.mIndices[0] );
+                indices.push_back( face.mIndices[1] );
+                indices.push_back( face.mIndices[2] );
+            }
+        }
+
+        // Find actual root bone and children if there is a skeleton
+        if ( skeleton.joints.size() == 1 )
+        {
+            skeleton.joints.clear();
+        }
+        else
+        {
+            for ( uint32_t joint = 1; joint < (uint32_t) skeleton.joints.size(); ++joint )
+            {
+                aiNode* parent = aiNodeMap[skeleton.joints[joint].name]->mParent;
+                PG_ASSERT( parent );
+                std::string parentName( parent->mName.data );
+                if ( jointNameToIndexMap.find( parentName ) == jointNameToIndexMap.end() )
+                {
+                    Joint& rootBone = skeleton.joints[0];
+                    rootBone.name = parentName;
+                    rootBone.inverseBindTransform = glm::mat4( 1 );
+                    while ( parent != NULL )
+                    {
+                        rootBone.inverseBindTransform = AiToGLMMat4( parent->mTransformation ) * rootBone.inverseBindTransform;
+                        parent = parent->mParent;
+                    }
+                    for ( uint32_t i = 1; i < (uint32_t) skeleton.joints.size(); ++i )
+                    {
+                        std::string boneParent = aiNodeMap[skeleton.joints[i].name]->mParent->mName.data;
+                        if ( rootBone.name == boneParent )
+                        {
+                            rootBone.children.push_back( i );
+                        }
+                    }
+                    rootBone.inverseBindTransform = glm::inverse( rootBone.inverseBindTransform );
+                    break;
+                }
+            }
+            FindJointChildren( scene->mRootNode, jointNameToIndexMap, skeleton.joints );
+            jointNameToIndexMap[skeleton.joints[0].name] = 0;
+        }
+
+        //ReadNodeHeirarchy( scene->mRootNode, scene->mNumAnimations, scene->mAnimations );
+        //LOG( "" );
+
+        animations.resize( scene->mNumAnimations );
+        for ( uint32_t animIdx = 0; animIdx < scene->mNumAnimations; ++animIdx )
+        {
+            Animation& pgAnim         = animations[animIdx];
+            aiAnimation* aiAnim       = scene->mAnimations[animIdx];
+            pgAnim.name               = aiAnim->mName.data;
+            pgAnim.duration           = static_cast< float >( aiAnim->mDuration );
+            PG_ASSERT( pgAnim.duration > 0 );
+            pgAnim.ticksPerSecond     = static_cast< float >( aiAnim->mTicksPerSecond );
+            if ( aiAnim->mTicksPerSecond == 0 )
+            {
+                LOG_WARN( "Animation '", aiAnim->mName.C_Str(), "' does not specify TicksPerSecond. Using default of 30" );
+                pgAnim.ticksPerSecond = 30;
+            }
+
+            std::set< float > keyFrameTimes = GetAllAnimationTimes( aiAnim );
+            AnalyzeMemoryEfficiency( aiAnim, keyFrameTimes );
+            std::unordered_map< std::string, aiNodeAnim* > aiAnimNodeMap;
+            BuildAIAnimNodeMap( scene->mRootNode, aiAnim, aiAnimNodeMap );
+            PG_ASSERT( aiAnimNodeMap.size() == skeleton.joints.size(), "Animation does not have the same skeleton as model" );
+
+            pgAnim.keyFrames.resize( keyFrameTimes.size() );
+            int frameIdx = 0;
+            for ( const auto& time : keyFrameTimes )
+            {
+                pgAnim.keyFrames[frameIdx].time = time;
+                pgAnim.keyFrames[frameIdx].jointSpaceTransforms.resize( skeleton.joints.size() );
+                for ( uint32_t joint = 0; joint < (uint32_t) skeleton.joints.size(); ++joint )
+                {
+                    aiNodeAnim* animNode       = aiAnimNodeMap[skeleton.joints[joint].name];
+                    JointTransform& jTransform = pgAnim.keyFrames[frameIdx].jointSpaceTransforms[joint];
+                    uint32_t i;
+                    float dt;
+
+                    for ( i = 0; i < animNode->mNumPositionKeys - 1 && time > (float) animNode->mPositionKeys[i + 1].mTime; ++i );
+                    if ( i + 1 == animNode->mNumPositionKeys )
+                    {
+                        jTransform.position = AiToGLMVec3( animNode->mPositionKeys[i].mValue );
+                    }
+                    else
+                    {
+                        glm::vec3 currentPos = AiToGLMVec3( animNode->mPositionKeys[i].mValue );
+                        glm::vec3 nextPos    = AiToGLMVec3( animNode->mPositionKeys[i + 1].mValue );
+                        dt                   = ( time - (float) animNode->mPositionKeys[i].mTime ) / ( (float) animNode->mPositionKeys[i + 1].mTime - (float) animNode->mPositionKeys[i].mTime );
+                        jTransform.position  = currentPos + dt * ( nextPos - currentPos );
+                    }
+
+                    for ( i = 0; i < animNode->mNumRotationKeys - 1 && time > (float) animNode->mRotationKeys[i + 1].mTime; ++i );
+                    if ( i + 1 == animNode->mNumRotationKeys )
+                    {
+                        jTransform.rotation = AiToGLMQuat( animNode->mRotationKeys[i].mValue );
+                    }
+                    else
+                    {
+                        glm::quat currentRot = glm::normalize( AiToGLMQuat( animNode->mRotationKeys[i].mValue ) );
+                        glm::quat nextRot    = glm::normalize( AiToGLMQuat( animNode->mRotationKeys[i + 1].mValue ) );
+                        dt                   = ( time - (float) animNode->mRotationKeys[i].mTime ) / ( (float) animNode->mRotationKeys[i + 1].mTime - (float) animNode->mRotationKeys[i].mTime );
+                        jTransform.rotation  = glm::normalize( glm::slerp( currentRot, nextRot, dt ) );
+                    }
+                    
+
+                    for ( i = 0; i < animNode->mNumScalingKeys - 1 && time > (float) animNode->mScalingKeys[i + 1].mTime; ++i );
+                    if ( i + 1 == animNode->mNumScalingKeys )
+                    {
+                        jTransform.scale = AiToGLMVec3( animNode->mScalingKeys[i].mValue );
+                    }
+                    else
+                    {
+                        glm::vec3 currentScale = AiToGLMVec3( animNode->mScalingKeys[i].mValue );
+                        glm::vec3 nextScale    = AiToGLMVec3( animNode->mScalingKeys[i + 1].mValue );
+                        dt                     = ( time - (float) animNode->mScalingKeys[i].mTime ) / ( (float) animNode->mScalingKeys[i + 1].mTime - (float) animNode->mScalingKeys[i].mTime );
+                        jTransform.scale       = currentScale + dt * ( nextScale - nextScale );
+                    }
+                    
+                }
+                ++frameIdx;
+            }
+        }
+
+        // renormalize the blend weights to 1 if skeleton exists
+        if ( skeleton.joints.size() )
+        {
+            for ( size_t i = 0; i < blendWeights.size(); ++i )
+            {
+                auto& data = blendWeights[i];
+                float sum = data.weights[0] + data.weights[1] + data.weights[2] + data.weights[3];
+                PG_ASSERT( sum > 0 );
+                data.weights /= sum;
+            }
+        }
+        else
+        {
+            blendWeights = std::vector< BlendWeight >{};
+        }
+
+        RecalculateAABB();
+
+        if ( createInfo->optimize )
+        {
+            Optimize();
+        }
+        if ( createInfo->createGpuCopy )
+        {
+            UploadToGpu();
+        }
+        if ( createInfo->freeCpuCopy )
+        {
+            FreeGeometry();
+        }
+
+        if ( !ParseMaterials( createInfo->filename, this, scene ) )
+        {
+            LOG_ERR( "Could not load the model's materials" );
+            return false;
+        }
+        // materials that were not already in the resource manager don't have their CPU copies freed by default
+        if ( createInfo->freeCpuCopy )
+        {
+            for ( const auto& mat : materials )
+            {
+                if ( mat->map_Kd && !ResourceManager::Get< Image >( mat->map_Kd->name ) )
+                {
+                    mat->map_Kd->FreeCpuCopy();
+                }
+            }
+        }
+
+        return true;
     }
-    
-    if ( recursive )
+
+    void Model::Move( std::shared_ptr< Resource > dst )
     {
+        PG_ASSERT( std::dynamic_pointer_cast< Model >( dst ) );
+        Model* dstPtr = (Model*) dst.get();
+        *dstPtr              = std::move( *this );
+    }
+
+    bool Model::Serialize( std::ofstream& out ) const
+    {
+        uint32_t numMaterials = static_cast< uint32_t >( materials.size() );
+        serialize::Write( out, numMaterials );
+        for ( uint32_t i = 0; i < numMaterials; ++i )
+        {
+            if ( !materials[i]->Serialize( out ) )
+            {
+                LOG( "Could not write material: ", i, ", of model: ", name, " to fastfile" );
+                return false;
+            }
+        }
+        uint32_t numVertices     = static_cast< uint32_t >( vertices.size() );
+        uint32_t numUVs          = static_cast< uint32_t >( uvs.size() );
+        uint32_t numBlendWeights = static_cast< uint32_t >( blendWeights.size() );
+        uint32_t numIndices      = static_cast< uint32_t >( indices.size() );
+        serialize::Write( out, numVertices );
+        serialize::Write( out, numUVs );
+        serialize::Write( out, numBlendWeights );
+        serialize::Write( out, numIndices );
+        serialize::Write( out, (char*) vertices.data(),     numVertices * sizeof( glm::vec3 ) );
+        serialize::Write( out, (char*) normals.data(),      numVertices * sizeof( glm::vec3 ) );
+        serialize::Write( out, (char*) uvs.data(),          numUVs * sizeof( glm::vec2 ) );
+        serialize::Write( out, (char*) blendWeights.data(), numBlendWeights * 2 * sizeof( glm::vec4 ) );
+        serialize::Write( out, (char*) indices.data(),      numIndices * sizeof( uint32_t ) );
+
+        serialize::Write( out, aabb.min );
+        serialize::Write( out, aabb.max );
+        serialize::Write( out, aabb.extent );
+        serialize::Write( out, meshes );
+        skeleton.Serialize( out );
+
+        return !out.fail();
+    }
+
+    bool Model::Deserialize( char*& buffer )
+    {
+        serialize::Read( buffer, name );
+        bool freeCpuCopy;
+        bool createGpuCopy;
+        serialize::Read( buffer, freeCpuCopy );
+        serialize::Read( buffer, createGpuCopy );
+
+        uint32_t numMaterials;
+        serialize::Read( buffer, numMaterials );
+        materials.resize( numMaterials );
+        for ( uint32_t i = 0; i < numMaterials; ++i )
+        {
+            materials[i] = std::make_shared< Material >();
+            materials[i]->Deserialize( buffer );
+        }
+
+        uint32_t numVertices, numUVs, numBlendWeights, numIndices;
+        serialize::Read( buffer, numVertices );
+        serialize::Read( buffer, numUVs );
+        serialize::Read( buffer, numBlendWeights );
+        serialize::Read( buffer, numIndices );
+        if ( freeCpuCopy )
+        {
+            using namespace Progression::Gfx;
+            size_t totalVertexSize = 2 * numVertices * sizeof( glm::vec3 ) + numUVs * sizeof( glm::vec2 ) + numBlendWeights * 2 * sizeof( glm::vec4 );
+            vertexBuffer = Gfx::g_renderState.device.NewBuffer( totalVertexSize, buffer, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL );
+            buffer += totalVertexSize;
+            indexBuffer  = Gfx::g_renderState.device.NewBuffer( numIndices * sizeof( uint32_t ), buffer, BUFFER_TYPE_INDEX, MEMORY_TYPE_DEVICE_LOCAL );
+            buffer += numIndices * sizeof( uint32_t );
+
+            m_numVertices       = numVertices;
+            m_normalOffset      = m_numVertices * sizeof( glm::vec3 );
+            m_uvOffset          = m_normalOffset + numVertices * sizeof( glm::vec3 );
+            m_blendWeightOffset = m_uvOffset + numUVs * sizeof( glm::vec2 );
+        }
+        else
+        {
+            vertices.resize( numVertices );
+            normals.resize( numVertices );
+            uvs.resize( numUVs );
+            blendWeights.resize( numBlendWeights );
+            indices.resize( numIndices );
+
+            serialize::Read( buffer, vertices );
+            serialize::Read( buffer, normals );
+            serialize::Read( buffer, uvs );
+            serialize::Read( buffer, blendWeights );
+            serialize::Read( buffer, indices );
+
+            if ( createGpuCopy )
+            {
+                UploadToGpu();
+            }
+        }
+
+        serialize::Read( buffer, aabb.min );
+        serialize::Read( buffer, aabb.max );
+        serialize::Read( buffer, aabb.extent );
+        serialize::Read( buffer, meshes );
+        skeleton.Deserialize( buffer );
+
+        return true;
+    }
+
+    void Model::RecalculateNormals()
+    {
+        normals.resize( vertices.size(), glm::vec3( 0 ) );
+
+        for ( size_t i = 0; i < indices.size(); i += 3 )
+        {
+            glm::vec3 v1 = vertices[indices[i + 0]];
+            glm::vec3 v2 = vertices[indices[i + 1]];
+            glm::vec3 v3 = vertices[indices[i + 2]];
+            glm::vec3 n = glm::cross( v2 - v1, v3 - v1 );
+            normals[indices[i + 0]] += n;
+            normals[indices[i + 1]] += n;
+            normals[indices[i + 2]] += n;
+        }
+
+        for ( auto& normal : normals )
+        {
+            normal = glm::normalize( normal );
+        }
+    }
+
+    void Model::RecalculateAABB()
+    {
+        if ( vertices.empty() )
+        {
+            aabb.min = aabb.max = glm::vec3( 0 );
+            return;
+        }
+
+        aabb.min = vertices[0];
+        aabb.max = vertices[0];
+        for ( const auto& vertex : vertices )
+        {
+            aabb.min = glm::min( aabb.min, vertex );
+            aabb.max = glm::max( aabb.max, vertex );
+        }
+    }
+
+    void Model::UploadToGpu()
+    {
+        using namespace Gfx;
+
+        if ( vertexBuffer )
+        {
+            vertexBuffer.Free();
+        }
+        if ( indexBuffer )
+        {
+            indexBuffer.Free();
+        }
+        std::vector< float > vertexData( 3 * vertices.size() + 3 * normals.size() + 2 * uvs.size() + 8 * blendWeights.size() );
+        char* dst = (char*) vertexData.data();
+        memcpy( dst, vertices.data(), vertices.size() * sizeof( glm::vec3 ) );
+        dst += vertices.size() * sizeof( glm::vec3 );
+        memcpy( dst, normals.data(), normals.size() * sizeof( glm::vec3 ) );
+        dst += normals.size() * sizeof( glm::vec3 );
+        memcpy( dst, uvs.data(), uvs.size() * sizeof( glm::vec2 ) );
+        dst += uvs.size() * sizeof( glm::vec2 );
+        memcpy( dst, blendWeights.data(), blendWeights.size() * 2 * sizeof( glm::vec4 ) );
+        vertexBuffer = Gfx::g_renderState.device.NewBuffer( vertexData.size() * sizeof( float ), vertexData.data(), BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL );
+        indexBuffer  = Gfx::g_renderState.device.NewBuffer( indices.size() * sizeof ( uint32_t ), indices.data(), BUFFER_TYPE_INDEX, MEMORY_TYPE_DEVICE_LOCAL );
+
+        m_numVertices       = static_cast< uint32_t >( vertices.size() );
+        m_normalOffset      = m_numVertices * sizeof( glm::vec3 );
+        m_uvOffset          = m_normalOffset + m_numVertices * sizeof( glm::vec3 );
+        m_blendWeightOffset = static_cast< uint32_t >( m_uvOffset + uvs.size() * sizeof( glm::vec2 ) );
+    }
+
+    void Model::FreeGeometry( bool cpuCopy, bool gpuCopy )
+    {
+        if ( cpuCopy )
+        {
+            m_numVertices = static_cast< uint32_t >( vertices.size() );
+            vertices      = std::vector< glm::vec3 >();
+            normals       = std::vector< glm::vec3 >();
+            uvs           = std::vector< glm::vec2 >();
+            indices       = std::vector< uint32_t >();
+            blendWeights  = std::vector< BlendWeight >();
+        }
+
+        if ( gpuCopy )
+        {
+            if ( vertexBuffer )
+            {
+                vertexBuffer.Free();
+            }
+            if ( indexBuffer )
+            {
+                indexBuffer.Free();
+            }
+            m_numVertices = 0;
+            m_normalOffset = m_uvOffset = m_blendWeightOffset = ~0u;
+        }
+    }
+
+    void Model::Optimize()
+    {
+        if ( vertices.size() == 0 )
+        {
+            LOG_ERR( "Trying to optimize a mesh with no vertices. Did you free them after uploading to the GPU?" );
+            return;
+        }
+
+        std::vector< Vertex > interleavedVerts;
+        interleavedVerts.reserve( vertices.size() );
+        bool hasNormals      = !normals.empty();
+        bool hasUVs          = !uvs.empty();
+        bool hasBlendWeights = !blendWeights.empty();
+        for ( size_t i = 0; i < vertices.size(); ++i )
+        {
+            Vertex v;
+            v.vertex = vertices[i];
+            if ( hasNormals )
+            {
+                v.normal = normals[i];
+            }
+            if ( hasUVs )
+            {
+                v.uv = uvs[i];
+            }
+            if ( hasBlendWeights )
+            {
+                v.blendWeight = blendWeights[i];
+            }
+
+            interleavedVerts.push_back( v );
+        }
+        vertices.clear();
+        normals.clear();
+        uvs.clear();
+        blendWeights.clear();
+
         for ( auto& mesh : meshes )
         {
-            mesh.RecalculateBB();
+            // const size_t kCacheSize = 16;
+            // meshopt_VertexCacheStatistics vcs = meshopt_analyzeVertexCache( &mesh.indices[0],
+            // mesh.indices.size(), mesh.vertices.size(), kCacheSize, 0, 0);
+            // meshopt_OverdrawStatistics os = meshopt_analyzeOverdraw(&mesh.indices[0],
+            // mesh.indices.size(), &vertices[0].vertex.x, mesh.vertices.size(), sizeof(Vertex));
+            // meshopt_VertexFetchStatistics vfs = meshopt_analyzeVertexFetch(&mesh.indices[0],
+            // mesh.indices.size(), mesh.vertices.size(), sizeof(Vertex) );
+            // LOG( "Before:" );
+            // LOG( "ACMR: ", vcs.acmr, ", ATVR: ", vcs.atvr, ", avg overdraw: ", os.overdraw, " avg # fetched: ", vfs.overfetch);
+
+            // std::vector< uint32_t > remap( mesh.numIndices );
+            // size_t optVertexCount = meshopt_generateVertexRemap( &remap[0], NULL, mesh.numIndices,
+            //                                                      &interleavedVerts[mesh.startVertex], mesh.numIndices, sizeof( Vertex ) );
+            // meshopt_remapIndexBuffer( &indices[mesh.startIndex], NULL, mesh.numIndices, &remap[0] );
+            // std::vector< Vertex > optVertices( optVertexCount );
+            // meshopt_remapVertexBuffer( &optVertices[0], &interleavedVerts[0], mesh.numIndices, sizeof( Vertex ), &remap[0] );
+
+            std::unordered_map< Vertex, uint32_t > uniqueVertexMap;
+            std::vector< Vertex > optVertices;
+            optVertices.reserve( mesh.numVertices );
+            size_t indexCount = 0;
+            for ( size_t idx = mesh.startIndex; idx < mesh.numIndices; ++idx )
+            {
+                const auto& vert = interleavedVerts[indices[idx]];
+                if ( uniqueVertexMap.count( vert ) == 0 )
+                {
+                    uniqueVertexMap[vert] = static_cast< uint32_t >( optVertices.size() );
+                    optVertices.push_back( vert );
+                }
+
+                indices[idx] = uniqueVertexMap[vert];
+            }
+
+            // vertex cache optimization should go first as it provides starting order for overdraw
+            meshopt_optimizeVertexCache( &indices[mesh.startIndex], &indices[mesh.startIndex], mesh.numIndices, optVertices.size() );
+
+            // reorder indices for overdraw, balancing overdraw and vertex cache efficiency
+            const float kThreshold = 1.01f; // allow up to 1% worse ACMR to get more reordering opportunities for overdraw
+            meshopt_optimizeOverdraw( &indices[mesh.startIndex], &indices[mesh.startIndex], mesh.numIndices, &optVertices[0].vertex.x,
+                                      optVertices.size(), sizeof( Vertex ), kThreshold );
+
+            // vertex fetch optimization should go last as it depends on the final index order
+            meshopt_optimizeVertexFetch( &optVertices[0].vertex.x, &indices[mesh.startIndex], mesh.numIndices,
+                                         &optVertices[0].vertex.x, optVertices.size(), sizeof( Vertex ) );
+
+            // vcs = meshopt_analyzeVertexCache(&indices[0], indices.size(), vertices.size(), kCacheSize, 0,
+            // 0); os = meshopt_analyzeOverdraw(&indices[0], indices.size(), &vertices[0].vertex.x,
+            // vertices.size(), sizeof(Vertex)); vfs = meshopt_analyzeVertexFetch(&indices[0],
+            // indices.size(), vertices.size(), sizeof(Vertex)); LOG("After:"); LOG("ACMR: ", vcs.acmr, ",
+            // ATVR: ", vcs.atvr, ", avg overdraw: ", os.overdraw, " avg # fetched: ", vfs.overfetch);
+
+            // collect back into mesh structure
+            mesh.startVertex = static_cast< uint32_t >( vertices.size() );
+            mesh.numVertices = static_cast< uint32_t >( optVertices.size() );
+            for ( size_t i = 0; i < optVertices.size(); ++i )
+            {
+                const auto& v = optVertices[i];
+                vertices.emplace_back( v.vertex );
+                if ( hasNormals )
+                {
+                    normals.emplace_back( v.normal );
+                }
+                if ( hasUVs )
+                {
+                    uvs.emplace_back( v.uv );
+                }
+                if ( hasBlendWeights )
+                {
+                    blendWeights.emplace_back( v.blendWeight );
+                }
+            }
         }
     }
 
-    glm::vec3 min = meshes[0].aabb.min;
-    glm::vec3 max = meshes[0].aabb.max;
-
-    for ( size_t i = 1; i < meshes.size(); ++i )
+    uint32_t Model::GetNumVertices() const
     {
-        min = glm::min( min, meshes[i].aabb.min );
-        max = glm::max( max, meshes[i].aabb.max );
+        return m_numVertices;
     }
 
-    aabb = AABB( min, max );
-}
-
-void Model::UploadToGpu( bool freeCPUCopy )
-{
-    for ( Mesh& mesh : meshes )
+    uint32_t Model::GetVertexOffset() const
     {
-        mesh.UploadToGpu( freeCPUCopy );
+        return 0;
     }
-}
 
-void Model::Optimize()
-{
-    for ( Mesh& mesh : meshes )
+    uint32_t Model::GetNormalOffset() const
     {
-        mesh.Optimize();
+        return m_normalOffset;
     }
-}
+
+    uint32_t Model::GetUVOffset() const
+    {
+        return m_uvOffset;
+    }
+
+    uint32_t Model::GetBlendWeightOffset() const
+    {
+        return m_blendWeightOffset;
+    }
+
+    Gfx::IndexType Model::GetIndexType() const
+    {
+        return Gfx::IndexType::UNSIGNED_INT;
+    }
+ 
+    void BlendWeight::AddJointData( uint32_t id, float w )
+    {
+        for ( uint32_t i = 0; i < 4; i++)
+        {
+            if ( weights[i] == 0.0 )
+            {
+                joints[i]  = id;
+                weights[i] = w;
+                return;
+            }        
+        }
+        int min = 0;
+		for ( int m = 1; m < 4; ++m )
+		{
+			if ( weights[m] < weights[min] )
+            {
+                min = m;
+            }
+		}
+
+		if ( weights[min] < w )
+		{
+			weights[min] = w;
+			joints[min] = id;
+		}
+    }
+
+    glm::mat4 JointTransform::GetLocalTransformMatrix() const
+    {
+        glm::mat4 T = glm::translate( glm::mat4( 1 ), position );
+        glm::mat4 R = glm::toMat4( rotation );
+        glm::mat4 S = glm::scale( glm::mat4( 1 ), scale );
+        return T * R * S;
+    }
+
+    JointTransform JointTransform::Interpolate( const JointTransform& end, float t )
+    {
+        JointTransform ret;
+        ret.position = ( 1.0f - t ) * position + t * end.position;
+        ret.rotation = glm::normalize( glm::slerp( rotation, end.rotation, t ) );
+        ret.scale    = ( 1.0f - t ) * scale + t * end.scale;
+
+        return ret;
+    }
+        
+    void Skeleton::Serialize( std::ofstream& outFile ) const
+    {
+        serialize::Write( outFile, joints.size() );
+        for ( const auto& joint : joints )
+        {
+            serialize::Write( outFile, joint.name );
+            serialize::Write( outFile, joint.inverseBindTransform );
+            serialize::Write( outFile, joint.children );
+        }
+    }
+
+    void Skeleton::Deserialize( char*& buffer )
+    {
+        size_t numJoints;
+        serialize::Read( buffer, numJoints );
+        joints.resize( numJoints );
+        for ( size_t i = 0; i < numJoints; ++i )
+        {
+            serialize::Read( buffer, joints[i].name );
+            serialize::Read( buffer, joints[i].inverseBindTransform );
+            serialize::Read( buffer, joints[i].children );
+        }
+    }
 
 } // namespace Progression
