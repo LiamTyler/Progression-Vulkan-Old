@@ -2,6 +2,7 @@
 #include "core/assert.hpp"
 #include "resource/image.hpp"
 #include "resource/resource_manager.hpp"
+#include "resource/resource_version_numbers.hpp"
 #include "utils/fileIO.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
@@ -16,11 +17,12 @@ static std::string GetContentFastFileName( ImageCreateInfo& createInfo )
 {
     fs::path filePath = fs::absolute( createInfo.filenames[0] );
 
-    size_t hash                = std::hash< std::string >{}( filePath.string() );
-    std::string baseName       = filePath.filename().string();
-    std::string flipVertically = createInfo.flags & IMAGE_FLIP_VERTICALLY ? "1" : "0";
+    std::string hash     = std::to_string( std::hash< std::string >{}( filePath.string() ) );
+    std::string baseName = filePath.filename().string();
+    std::string flip     = createInfo.flags & IMAGE_FLIP_VERTICALLY ? "1" : "0";
+    std::string version  = std::to_string( PG_RESOURCE_IMAGE_VERSION );
 
-    return PG_RESOURCE_DIR "cache/images/" + baseName + "_" + flipVertically + "_" + std::to_string( hash ) + ".ffi";
+    return PG_RESOURCE_DIR "cache/images/" + baseName + "_" + flip + "_" + version + "_" + hash + ".ffi";
 }
 
 static std::string GetSettingsFastFileName( const ImageCreateInfo& createInfo )

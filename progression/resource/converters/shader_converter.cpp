@@ -1,4 +1,5 @@
 #include "resource/converters/shader_converter.hpp"
+#include "resource/resource_version_numbers.hpp"
 #include "resource/shader.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
@@ -16,8 +17,9 @@ static std::string GetContentFastFileName( struct ShaderCreateInfo& createInfo )
 
     std::string fname = fs::path( createInfo.filename ).filename().string();
 
-    size_t hash = std::hash< std::string >{}( createInfo.filename );
-    return PG_RESOURCE_DIR "cache/shaders/" + fname + "_" + std::to_string( hash ) + ".ffi";
+    std::string hash    = std::to_string( std::hash< std::string >{}( createInfo.filename ) );
+    std::string version = std::to_string( PG_RESOURCE_SHADER_VERSION );
+    return PG_RESOURCE_DIR "cache/shaders/" + fname + "_" + version + "_" + hash + ".ffi";
 }
 
 static std::string GetSettingsFastFileName( const ShaderCreateInfo& createInfo )

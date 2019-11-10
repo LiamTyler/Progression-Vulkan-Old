@@ -1,6 +1,7 @@
 #include "resource/converters/model_converter.hpp"
 #include "core/assert.hpp"
 #include "resource/model.hpp"
+#include "resource/resource_version_numbers.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
 #include "utils/timestamp.hpp"
@@ -16,10 +17,11 @@ static std::string GetContentFastFileName( struct ModelCreateInfo& createInfo )
     PG_ASSERT( !createInfo.filename.empty() );
     fs::path filePath = fs::absolute( createInfo.filename );
 
-    size_t hash          = std::hash< std::string >{}( filePath.string() );
+    std::string hash     = std::to_string( std::hash< std::string >{}( filePath.string() ) );
     std::string baseName = filePath.filename().string();
+    std::string version  = std::to_string( PG_RESOURCE_MODEL_VERSION );
 
-    return PG_RESOURCE_DIR "cache/models/" + baseName + "_" + std::to_string( hash ) + ".ffi";
+    return PG_RESOURCE_DIR "cache/models/" + baseName + "_" + version + "_" + hash + ".ffi";
 }
 
 static std::string GetSettingsFastFileName( const ModelCreateInfo& createInfo )

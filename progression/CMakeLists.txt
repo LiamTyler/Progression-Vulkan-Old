@@ -87,9 +87,10 @@ set(
     resource/resource_manager.cpp
     resource/script.cpp
     resource/shader.cpp
-	
-	resource/resource_manager.hpp
+    
     resource/resource.hpp
+    resource/resource_manager.hpp
+    resource/resource_version_numbers.hpp
     resource/image.hpp
     resource/material.hpp
     resource/model.hpp
@@ -147,6 +148,7 @@ set(
     utils/random.hpp
     utils/serialize.hpp
     utils/timestamp.hpp
+    utils/type_name.hpp
 )
 
 set(

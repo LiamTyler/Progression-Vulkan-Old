@@ -1,6 +1,7 @@
 #include "resource/converters/material_converter.hpp"
 #include "memory_map/MemoryMapped.h"
 #include "resource/material.hpp"
+#include "resource/resource_version_numbers.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
 #include "utils/timestamp.hpp"
@@ -15,9 +16,10 @@ static std::string GetContentFastFileName( const std::string& mtlFileName )
 
     std::string absPath = mtlFileName.empty() ? "" : fs::absolute( mtlFileName ).string();
 
-    size_t hash = std::hash< std::string >{}( absPath );
+    std::string hash     = std::to_string( std::hash< std::string >{}( absPath ) );
     std::string basename = fs::path( mtlFileName ).filename().string();
-    return PG_RESOURCE_DIR "cache/materials/" + basename + "_" + std::to_string( hash ) + ".ffi";
+    std::string version  = std::to_string( PG_RESOURCE_MATERIAL_VERSION );
+    return PG_RESOURCE_DIR "cache/materials/" + basename + "_" + version + "_" + hash + ".ffi";
 }
 
 AssetStatus MaterialConverter::CheckDependencies()

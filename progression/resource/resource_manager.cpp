@@ -1,4 +1,5 @@
 #include "core/feature_defines.hpp"
+#include "core/assert.hpp"
 #include "core/time.hpp"
 #include "core/window.hpp"
 #include "lz4/lz4.h"
@@ -7,12 +8,16 @@
 #include "resource/material.hpp"
 #include "resource/model.hpp"
 #include "resource/resource_manager.hpp"
+#include "resource/resource_version_numbers.hpp"
 #include "resource/script.hpp"
 #include "resource/shader.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
+#include "utils/type_name.hpp"
 
 uint32_t BaseFamily::typeCounter_ = 0;
+
+#define AUTORUN_CONVERTER_ON_FF_LOAD IN_USE
 
 namespace Progression
 {
@@ -32,7 +37,7 @@ namespace ResourceManager
 
     void FreeGPUResources()
     {
-        for ( auto& [ name, res ] : f_resources[GetResourceTypeID< Shader >()] )
+        /*for ( auto& [ name, res ] : f_resources[GetResourceTypeID< Shader >()] )
         {
             std::static_pointer_cast< Shader >( res )->Free();
         }
@@ -43,13 +48,54 @@ namespace ResourceManager
         for ( auto& [ name, res ] : f_resources[GetResourceTypeID< Model >()] )
         {
             std::static_pointer_cast< Model >( res )->FreeGeometry( false, true );
-        }
+        }*/
     }
 
     void Shutdown()
     {
         FreeGPUResources();
         f_resources.Clear();
+    }
+
+    template< typename ResourceType >
+    static bool DeserializeResources( char*& data, uint32_t expectedVersion )
+    {
+        uint32_t numRes;
+        serialize::Read( data, numRes );
+        if constexpr ( !std::is_same< ResourceType, Material >::value )
+        {
+            uint32_t version;
+            serialize::Read( data, version );
+            PG_ASSERT( version == expectedVersion, std::string( "Resource type '" ) + type_name< ResourceType >().data() +
+                "', expected version: " + std::to_string( expectedVersion ) + ", but found: " + std::to_string( version ) );
+        }
+        ResourceMap& resources = f_resources[GetResourceTypeID< ResourceType >()];
+        for ( uint32_t i = 0; i < numRes; ++i )
+        {
+            auto res = std::make_shared< ResourceType >();
+            if ( !res->Deserialize( data ) )
+            {
+                LOG_ERR( "Failed to load type from fastfile" );
+                return false;
+            }
+            if ( resources.find( res->name ) != resources.end() )
+            {
+                LOG_WARN( "Resource of type '", type_name< ResourceType >(), "' and name '", res->name, "' is already in resource manager, overwritting" );
+                res->Move( resources[res->name] );
+            }
+            else
+            {
+                resources[res->name] = res;
+            }
+        }
+        if constexpr ( !std::is_same< ResourceType, Material >::value )
+        {
+            size_t magicNumberGuard;
+            serialize::Read( data, magicNumberGuard );
+            PG_ASSERT( magicNumberGuard == PG_RESOURCE_MAGIC_NUMBER_GUARD, "serializatio and deserialization do not match" );
+        }
+
+        return true;
     }
 
     bool LoadFastFile( const std::string& fname )
@@ -91,41 +137,29 @@ namespace ResourceManager
         LOG( "LZ4 decompress finished in: ", Time::GetDuration( start ), " ms." );
 #endif // #if USING( LZ4_COMPRESSED_FASTFILES )
 
-#define LOAD_RESOURCES( type ) \
-        { \
-            uint32_t numRes; \
-            serialize::Read( data, numRes ); \
-            ResourceMap& resources = f_resources[GetResourceTypeID< type >()]; \
-            for ( uint32_t i = 0; i < numRes; ++i ) \
-            { \
-                auto res = std::make_shared< type >(); \
-                if ( !res->Deserialize( data ) ) \
-                { \
-                    LOG_ERR( "Failed to load type from fastfile" ); \
-                    return false; \
-                } \
-                if ( resources.find( res->name ) != resources.end() ) \
-                { \
-                    LOG_WARN( "Resource of type " #type " and name '", res->name, "' is already in resource manager, overwritting" ); \
-                    res->Move( resources[res->name] ); \
-                } \
-                else \
-                { \
-                    resources[res->name] = res; \
-                } \
-            } \
-        } \
+        std::string originalFile;
+        serialize::Read( data, originalFile );
 
-        LOAD_RESOURCES( Shader );
-        LOAD_RESOURCES( Image );
-        uint32_t numMaterialConvs;
-        serialize::Read( data, numMaterialConvs );
-        for ( uint32_t matConv = 0; matConv < numMaterialConvs; ++matConv )
+        bool success = true;
+        success = success && DeserializeResources< Shader >( data, PG_RESOURCE_SHADER_VERSION );
+        success = success && DeserializeResources< Image >( data, PG_RESOURCE_IMAGE_VERSION );
+        if ( success )
         {
-            LOAD_RESOURCES( Material );
+            uint32_t numMaterialConvs, version;
+            serialize::Read( data, numMaterialConvs );
+            serialize::Read( data, version );
+            PG_ASSERT( version == PG_RESOURCE_MATERIAL_VERSION, std::string( "Resource type '" ) + type_name< Material >().data() +
+                "', expected version: " + std::to_string( PG_RESOURCE_MATERIAL_VERSION ) + ", but found: " + std::to_string( version ) );
+            for ( uint32_t matConv = 0; matConv < numMaterialConvs; ++matConv )
+            {
+                success = success && DeserializeResources< Material >( data, PG_RESOURCE_MATERIAL_VERSION );
+            }
+            size_t magicNumberGuard;
+            serialize::Read( data, magicNumberGuard );
+            PG_ASSERT( magicNumberGuard == PG_RESOURCE_MAGIC_NUMBER_GUARD, "serializatio and deserialization do not match" );
         }
-        LOAD_RESOURCES( Model );
-        LOAD_RESOURCES( Script );
+        success = success && DeserializeResources< Model >( data, PG_RESOURCE_MODEL_VERSION );
+        success = success && DeserializeResources< Script >( data, PG_RESOURCE_SCRIPT_VERSION );
 
         PG_MAYBE_UNUSED( start );
         LOG( "Loaded fastfile '", fname, "' in: ", Time::GetDuration( start ), " ms." );

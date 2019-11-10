@@ -6,11 +6,13 @@
 #include "resource/converters/fastfile_converter.hpp"
 #include "resource/image.hpp"
 #include "resource/model.hpp"
+#include "resource/resource_version_numbers.hpp"
 #include "resource/shader.hpp"
 #include "utils/fileIO.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
 #include "utils/timestamp.hpp"
+#include "utils/type_name.hpp"
 #include <filesystem>
 #include <fstream>
 
@@ -327,6 +329,36 @@ AssetStatus FastfileConverter::CheckDependencies()
     return m_status;
 }
 
+template< typename ConverterType >
+static ConverterStatus WriteResources( std::ofstream& out, std::vector< ConverterType >& converters, uint32_t versionNumber )
+{
+    uint32_t numResource = static_cast< uint32_t >( converters.size() );
+    serialize::Write( out, numResource );
+    serialize::Write( out, versionNumber );
+    for ( auto& converter : converters )
+    {
+        if ( converter.GetStatus() == ASSET_UP_TO_DATE )
+        {
+            converter.WriteToFastFile( out );
+        }
+        else
+        {
+            auto time = Time::GetTimePoint();
+            LOG( "\nConverter: ", type_name< ConverterType >(), ", resource '", converter.GetName(), "'" );
+            if ( converter.Convert() != CONVERT_SUCCESS )
+            {
+                LOG_ERR( "Error while in ", type_name< ConverterType >() );
+                return CONVERT_ERROR;
+            }
+            PG_MAYBE_UNUSED( time );
+            LOG( "Convert finished in: ", Time::GetDuration( time ) / 1000, " seconds" );
+            converter.WriteToFastFile( out );
+        }
+    }
+    serialize::Write( out, PG_RESOURCE_MAGIC_NUMBER_GUARD );
+    return CONVERT_SUCCESS;
+}
+
 ConverterStatus FastfileConverter::Convert()
 {
     if ( m_status == ASSET_UP_TO_DATE )
@@ -344,36 +376,23 @@ ConverterStatus FastfileConverter::Convert()
         return CONVERT_ERROR;
     }
 
-#define WRITE_RESOURCE( resource, converterList ) \
-    { \
-        uint32_t numResource = static_cast< uint32_t >( converterList.size() ); \
-        serialize::Write( out, numResource ); \
-        for ( auto& converter : converterList ) \
-        { \
-            if ( converter.GetStatus() == ASSET_UP_TO_DATE ) { \
-                converter.WriteToFastFile( out ); \
-            } \
-            else \
-            { \
-                auto time = Time::GetTimePoint(); \
-                LOG( "\nConverting ", #resource, " '", converter.GetName(), "'" ); \
-                if ( converter.Convert() != CONVERT_SUCCESS ) \
-                { \
-                    LOG_ERR( "Error while converting " #resource ); \
-                    return CONVERT_ERROR; \
-                } \
-                PG_MAYBE_UNUSED( time ); \
-                LOG( "Convert finished in: ", Time::GetDuration( time ) / 1000, " seconds" ); \
-                converter.WriteToFastFile( out ); \
-            } \
-        } \
-    }
+    serialize::Write( out, inputFile );
 
-    WRITE_RESOURCE( Shader, m_shaderConverters )
-    WRITE_RESOURCE( Image, m_imageConverters )
-    WRITE_RESOURCE( MTLFile, m_materialFileConverters )
-    WRITE_RESOURCE( Model, m_modelConverters )
-    WRITE_RESOURCE( Script, m_scriptConverters )
+    ConverterStatus ret;
+    ret = WriteResources( out, m_shaderConverters, PG_RESOURCE_SHADER_VERSION );
+    if ( ret != CONVERT_SUCCESS ) return ret;
+
+    ret = WriteResources( out, m_imageConverters, PG_RESOURCE_IMAGE_VERSION );
+    if ( ret != CONVERT_SUCCESS ) return ret;
+
+    ret = WriteResources( out, m_materialFileConverters, PG_RESOURCE_MATERIAL_VERSION );
+    if ( ret != CONVERT_SUCCESS ) return ret;
+
+    ret = WriteResources( out, m_modelConverters, PG_RESOURCE_MODEL_VERSION );
+    if ( ret != CONVERT_SUCCESS ) return ret;
+
+    ret = WriteResources( out, m_scriptConverters, PG_RESOURCE_SCRIPT_VERSION );
+    if ( ret != CONVERT_SUCCESS ) return ret;
 
     out.close();
 
