@@ -62,18 +62,18 @@ int main( int argc, char* argv[] )
         animator.animationTime = 0;
     }
 
-    std::shared_ptr< Model > skinnedModel2 = skinnedModel1;
-    // std::shared_ptr< Model > skinnedModel2 = std::make_shared< Model >();
-    // info.name = "dragon";
-    // info.filename = PG_RESOURCE_DIR "dragon/Dragon_Baked_Actions_fbx_7.4_binary.fbx";
-    // // info.filename = PG_RESOURCE_DIR "models/chalet2.obj";
-    // if ( !skinnedModel2->Load( &info ) )
-    // {
-    //     LOG_ERR( "Could not load the fbx file '", info.filename, "'" );
-    //     PG::EngineQuit();
-    //     return 0;
-    // }
-    // 
+    // std::shared_ptr< Model > skinnedModel2 = skinnedModel1;
+    std::shared_ptr< Model > skinnedModel2 = std::make_shared< Model >();
+    info.name = "dragon";
+    info.filename = PG_RESOURCE_DIR "dragon/Dragon_Baked_Actions_fbx_7.4_binary.fbx";
+    // info.filename = PG_RESOURCE_DIR "models/chalet2.obj";
+    if ( !skinnedModel2->Load( &info ) )
+    {
+        LOG_ERR( "Could not load the fbx file '", info.filename, "'" );
+        PG::EngineQuit();
+        return 0;
+    }
+    
     {
         auto entity             = scene->registry.create();
         auto& transform         = scene->registry.assign< Transform >( entity );

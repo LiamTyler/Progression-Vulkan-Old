@@ -662,13 +662,7 @@ bool VulkanInit()
     else
     {
         LOG( "Using device: ", g_renderState.physicalDeviceInfo.name );
-        // uint32_t major = VK_VERSION_MAJOR( deviceProperties.apiVersion );
-        // uint32_t minor = VK_VERSION_MINOR( deviceProperties.apiVersion );
-        // uint32_t patch = VK_VERSION_PATCH( deviceProperties.apiVersion );
-        // LOG( "Using Vulkan Version: ", major, ".", minor, ".", patch );
     }
-    LOG( "LIMITS maxPerStageDescriptorSampledImages: ", g_renderState.physicalDeviceInfo.deviceProperties.limits.maxPerStageDescriptorSampledImages );
-    LOG( "LIMITS maxPushConstantsSize: ", g_renderState.physicalDeviceInfo.deviceProperties.limits.maxPushConstantsSize );
 
     g_renderState.device = Device::CreateDefault();
     if ( !g_renderState.device )

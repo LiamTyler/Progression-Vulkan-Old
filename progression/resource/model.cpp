@@ -11,9 +11,10 @@
 #include "utils/serialize.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/quaternion.hpp"
-#include "glm/gtx/hash.hpp"
 #include <filesystem>
 #include <set>
+
+#define PRINT_OPTIMIZATION_ANALYSIS NOT_IN_USE
 
 static aiMatrix4x4 GLMMat4ToAi( const glm::mat4& mat )
 {
@@ -72,11 +73,8 @@ public:
 
     bool operator==( const Vertex& other ) const
     {
-        return vertex == other.vertex &&
-               normal == other.normal &&
-               uv == other.uv &&
-               blendWeight.weights == other.blendWeight.weights &&
-               blendWeight.joints == other.blendWeight.joints;
+        return vertex == other.vertex && normal == other.normal && uv == other.uv &&
+               blendWeight.weights == other.blendWeight.weights && blendWeight.joints == other.blendWeight.joints;
     }
 
     glm::vec3 vertex = glm::vec3( 0 );
@@ -84,24 +82,6 @@ public:
     glm::vec2 uv     = glm::vec2( 0 );
     Progression::BlendWeight blendWeight;
 };
-
-namespace std
-{
-template <>
-struct hash< Vertex >
-{
-    size_t operator()( Vertex const& vertex ) const
-    {
-        size_t seed = hash< glm::vec3 >()( vertex.vertex );
-        seed ^= hash< glm::vec3 >()( vertex.normal ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
-        seed ^= hash< glm::vec2 >()( vertex.uv ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
-        seed ^= hash< glm::vec4 >()( vertex.blendWeight.weights ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
-        seed ^= hash< glm::uvec4 >()( vertex.blendWeight.joints ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
-        return seed;
-    }
-};
-} // namespace std
-
 
 namespace Progression
 {
@@ -435,7 +415,7 @@ namespace Progression
                 }
             }
 
-            for ( size_t iIdx = 0 ; iIdx < paiMesh->mNumFaces ; ++iIdx )
+            for ( size_t iIdx = 0; iIdx < paiMesh->mNumFaces; ++iIdx )
             {
                 const aiFace& face = paiMesh->mFaces[iIdx];
                 PG_ASSERT( face.mNumIndices == 3 );
@@ -502,7 +482,7 @@ namespace Progression
             }
 
             std::set< float > keyFrameTimes = GetAllAnimationTimes( aiAnim );
-            AnalyzeMemoryEfficiency( aiAnim, keyFrameTimes );
+            // AnalyzeMemoryEfficiency( aiAnim, keyFrameTimes );
             std::unordered_map< std::string, aiNodeAnim* > aiAnimNodeMap;
             BuildAIAnimNodeMap( scene->mRootNode, aiAnim, aiAnimNodeMap );
             PG_ASSERT( aiAnimNodeMap.size() == skeleton.joints.size(), "Animation does not have the same skeleton as model" );
@@ -857,38 +837,24 @@ namespace Progression
 
         for ( auto& mesh : meshes )
         {
-            // const size_t kCacheSize = 16;
-            // meshopt_VertexCacheStatistics vcs = meshopt_analyzeVertexCache( &mesh.indices[0],
-            // mesh.indices.size(), mesh.vertices.size(), kCacheSize, 0, 0);
-            // meshopt_OverdrawStatistics os = meshopt_analyzeOverdraw(&mesh.indices[0],
-            // mesh.indices.size(), &vertices[0].vertex.x, mesh.vertices.size(), sizeof(Vertex));
-            // meshopt_VertexFetchStatistics vfs = meshopt_analyzeVertexFetch(&mesh.indices[0],
-            // mesh.indices.size(), mesh.vertices.size(), sizeof(Vertex) );
-            // LOG( "Before:" );
-            // LOG( "ACMR: ", vcs.acmr, ", ATVR: ", vcs.atvr, ", avg overdraw: ", os.overdraw, " avg # fetched: ", vfs.overfetch);
-
-            // std::vector< uint32_t > remap( mesh.numIndices );
-            // size_t optVertexCount = meshopt_generateVertexRemap( &remap[0], NULL, mesh.numIndices,
-            //                                                      &interleavedVerts[mesh.startVertex], mesh.numIndices, sizeof( Vertex ) );
-            // meshopt_remapIndexBuffer( &indices[mesh.startIndex], NULL, mesh.numIndices, &remap[0] );
-            // std::vector< Vertex > optVertices( optVertexCount );
-            // meshopt_remapVertexBuffer( &optVertices[0], &interleavedVerts[0], mesh.numIndices, sizeof( Vertex ), &remap[0] );
-
-            std::unordered_map< Vertex, uint32_t > uniqueVertexMap;
             std::vector< Vertex > optVertices;
-            optVertices.reserve( mesh.numVertices );
-            size_t indexCount = 0;
-            for ( size_t idx = mesh.startIndex; idx < mesh.numIndices; ++idx )
+            for ( size_t idx = 0; idx < mesh.numVertices; ++idx )
             {
-                const auto& vert = interleavedVerts[indices[idx]];
-                if ( uniqueVertexMap.count( vert ) == 0 )
-                {
-                    uniqueVertexMap[vert] = static_cast< uint32_t >( optVertices.size() );
-                    optVertices.push_back( vert );
-                }
-
-                indices[idx] = uniqueVertexMap[vert];
+                optVertices.push_back( interleavedVerts[mesh.startVertex + idx] );
             }
+
+#if USING( PRINT_OPTIMIZATION_ANALYSIS )
+            LOG( "Mesh: numIndices = ", mesh.numIndices, ", numVerts = ", mesh.numVertices );
+            const size_t kCacheSize = 16;
+            meshopt_VertexCacheStatistics vcs = meshopt_analyzeVertexCache( &indices[mesh.startIndex], mesh.numIndices, optVertices.size(), kCacheSize, 0, 0 );
+            meshopt_OverdrawStatistics os     = meshopt_analyzeOverdraw( &indices[mesh.startIndex], mesh.numIndices, &optVertices[0].vertex.x, optVertices.size(), sizeof( Vertex ) );
+            meshopt_VertexFetchStatistics vfs = meshopt_analyzeVertexFetch( &indices[mesh.startIndex], mesh.numIndices, optVertices.size(), sizeof( Vertex ) );
+            LOG( "Before:" );
+            LOG( "Average cache miss ratio (0.5 - 3.0): ", vcs.acmr );
+            LOG( "Average transformed vertex ratio (1.0+): ", vcs.atvr );
+            LOG( "Average overdraw (1.0+): ", os.overdraw );
+            LOG( "Average overfetch ratio (1.0+): ", vfs.overfetch );
+#endif // #if USING( PRINT_OPTIMIZATION_ANALYSIS )
 
             // vertex cache optimization should go first as it provides starting order for overdraw
             meshopt_optimizeVertexCache( &indices[mesh.startIndex], &indices[mesh.startIndex], mesh.numIndices, optVertices.size() );
@@ -902,15 +868,17 @@ namespace Progression
             meshopt_optimizeVertexFetch( &optVertices[0].vertex.x, &indices[mesh.startIndex], mesh.numIndices,
                                          &optVertices[0].vertex.x, optVertices.size(), sizeof( Vertex ) );
 
-            // vcs = meshopt_analyzeVertexCache(&indices[0], indices.size(), vertices.size(), kCacheSize, 0,
-            // 0); os = meshopt_analyzeOverdraw(&indices[0], indices.size(), &vertices[0].vertex.x,
-            // vertices.size(), sizeof(Vertex)); vfs = meshopt_analyzeVertexFetch(&indices[0],
-            // indices.size(), vertices.size(), sizeof(Vertex)); LOG("After:"); LOG("ACMR: ", vcs.acmr, ",
-            // ATVR: ", vcs.atvr, ", avg overdraw: ", os.overdraw, " avg # fetched: ", vfs.overfetch);
+#if USING( PRINT_OPTIMIZATION_ANALYSIS )
+            vcs = meshopt_analyzeVertexCache( &indices[mesh.startIndex], mesh.numIndices, optVertices.size(), kCacheSize, 0, 0 );
+            os  = meshopt_analyzeOverdraw( &indices[mesh.startIndex], mesh.numIndices, &optVertices[0].vertex.x, optVertices.size(), sizeof( Vertex ) );
+            vfs = meshopt_analyzeVertexFetch( &indices[mesh.startIndex], mesh.numIndices, optVertices.size(), sizeof( Vertex ) );
+            LOG( "After:" );
+            LOG( "Average cache miss ratio (0.5 - 3.0): ", vcs.acmr );
+            LOG( "Average transformed vertex ratio (1.0+): ", vcs.atvr );
+            LOG( "Average overdraw (1.0+): ", os.overdraw );
+            LOG( "Average overfetch ratio (1.0+): ", vfs.overfetch );
+#endif // #if USING( PRINT_OPTIMIZATION_ANALYSIS )
 
-            // collect back into mesh structure
-            mesh.startVertex = static_cast< uint32_t >( vertices.size() );
-            mesh.numVertices = static_cast< uint32_t >( optVertices.size() );
             for ( size_t i = 0; i < optVertices.size(); ++i )
             {
                 const auto& v = optVertices[i];
@@ -925,7 +893,11 @@ namespace Progression
                 }
                 if ( hasBlendWeights )
                 {
-                    blendWeights.emplace_back( v.blendWeight );
+                    auto data = v.blendWeight;
+                    float sum = data.weights[0] + data.weights[1] + data.weights[2] + data.weights[3];
+                    PG_ASSERT( sum > 0 );
+                    data.weights /= sum;
+                    blendWeights.emplace_back( data );
                 }
             }
         }
