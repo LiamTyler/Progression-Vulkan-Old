@@ -6,6 +6,18 @@ if (UNIX AND NOT APPLE)
     )
 endif()
 
+function( SET_TARGET_POSTFIX )
+    foreach(arg IN LISTS ARGN)
+        set_target_properties(
+            ${arg}
+            PROPERTIES
+            DEBUG_POSTFIX _debug
+            RELEASE_POSTFIX _release
+            SHIP_POSTFIX _ship
+        )
+    endforeach()
+endfunction()
+
 find_package(Vulkan REQUIRED)
 
 set(PROGRESSION_LIBS
@@ -34,10 +46,6 @@ get_filename_component(VULKAN_LIB_DIR ${Vulkan_LIBRARY} DIRECTORY)
 set(PROGRESSION_LIB_DIR
     ${VULKAN_LIB_DIR}
 )
-
-if (NOT PROGRESSION_BIN_DIR)
-    set(PROGRESSION_BIN_DIR ${PROGRESSION_DIR}/build/bin)
-endif()
 
 if (PROGRESSION_AUDIO)
     set(PROGRESSION_LIBS ${PROGRESSION_LIBS} openal sndfile)

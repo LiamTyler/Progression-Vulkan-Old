@@ -68,7 +68,6 @@ static std::vector< Progression::Gfx::Buffer > s_gpuPointLightBuffers;
 static std::vector< Progression::Gfx::Buffer > s_gpuSpotLightBuffers;
 std::vector< DescriptorSet > sceneDescriptorSets;
 std::vector< DescriptorSet > textureDescriptorSets;
-static std::shared_ptr< Image > s_image;
 
 #define MAX_NUM_POINT_LIGHTS 1024
 #define MAX_NUM_SPOT_LIGHTS 256
@@ -117,12 +116,12 @@ namespace RenderSystem
         sceneDescriptorSets    = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[0] );
         textureDescriptorSets  = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[1] );
 
-        s_image = ResourceManager::Get< Image >( "RENDER_SYSTEM_DUMMY_TEXTURE" );
-        PG_ASSERT( s_image );
+        auto dummyImage = ResourceManager::Get< Image >( "RENDER_SYSTEM_DUMMY_TEXTURE" );
+        PG_ASSERT( dummyImage );
         VkDescriptorImageInfo imageInfo;
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.sampler     = s_image->sampler->GetHandle();
-        imageInfo.imageView   = s_image->GetTexture()->GetView();
+        imageInfo.sampler     = dummyImage->sampler->GetHandle();
+        imageInfo.imageView   = dummyImage->GetTexture()->GetView();
         std::vector< VkDescriptorImageInfo > imageInfos( PG_MAX_NUM_TEXTURES, imageInfo );
 
         for ( size_t i = 0; i < numImages; i++ )

@@ -77,7 +77,7 @@ int main( int argc, char* argv[] )
     else
     {
         FastfileConverter conv;
-        conv.inputFile = PG_RESOURCE_DIR + std::string( argv[optind] );
+        conv.inputFile = std::string( argv[optind] );
         conv.force     = force;
         conv.verbose   = verbose;
         LOG( "Checking fastfile dependencies..." );
@@ -85,6 +85,8 @@ int main( int argc, char* argv[] )
         if ( status == ASSET_CHECKING_ERROR )
         {
             LOG_ERR( "Error while checking fastfile depends" );
+            PG::EngineQuit();
+            return 1;
         }
         else if ( status == ASSET_UP_TO_DATE )
         {
@@ -96,11 +98,12 @@ int main( int argc, char* argv[] )
             if ( CONVERT_ERROR == conv.Convert() )
             {
                 LOG_ERR( "Fastfile conversion failed" );
+                PG::EngineQuit();
+                return 1;
             }
         }
     }
 
     PG::EngineQuit();
-
     return 0;
 }

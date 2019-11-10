@@ -4,10 +4,6 @@ include(Progression)
 
 add_executable(converter main.cpp)
 
-set_target_properties(
-    converter
-    PROPERTIES
-    DEBUG_POSTFIX _debug
-)
+SET_TARGET_POSTFIX( converter )
 
 target_link_libraries(converter ${PROGRESSION_LIBS})

@@ -35,25 +35,8 @@ namespace ResourceManager
         f_resources[GetResourceTypeID< Material >()]["default"] = defaultMat;
     }
 
-    void FreeGPUResources()
-    {
-        /*for ( auto& [ name, res ] : f_resources[GetResourceTypeID< Shader >()] )
-        {
-            std::static_pointer_cast< Shader >( res )->Free();
-        }
-        for ( auto& [ name, res ] : f_resources[GetResourceTypeID< Image >()] )
-        {
-            std::static_pointer_cast< Image >( res )->FreeGpuCopy();
-        }
-        for ( auto& [ name, res ] : f_resources[GetResourceTypeID< Model >()] )
-        {
-            std::static_pointer_cast< Model >( res )->FreeGeometry( false, true );
-        }*/
-    }
-
     void Shutdown()
     {
-        FreeGPUResources();
         f_resources.Clear();
     }
 
@@ -98,7 +81,24 @@ namespace ResourceManager
         return true;
     }
 
-    bool LoadFastFile( const std::string& fname )
+    static char* DecompressFF( char* compressedData, int fileSize )
+    {
+        auto start = Time::GetTimePoint();
+        int uncompressedSize;
+        serialize::Read( compressedData, uncompressedSize );
+
+        const int compressedSize   = fileSize - 4;
+        char* uncompressedBuffer   = (char*) malloc( uncompressedSize );
+        const int decompressedSize = LZ4_decompress_safe( compressedData, uncompressedBuffer, compressedSize, uncompressedSize );
+
+        PG_ASSERT( decompressedSize >= 0, "Failed to decompress fastfile with return value: " + std::to_string( decompressedSize ) );
+        PG_ASSERT( decompressedSize == uncompressedSize, "Decompressed data size does not match the expected uncompressed size" );
+
+        LOG( "LZ4 decompress finished in: ", Time::GetDuration( start ), " ms." );
+        return uncompressedBuffer;
+    }
+
+    bool LoadFastFile( const std::string& fname, bool runConverterIfEnabled )
     {
         MemoryMapped memMappedFile;
         if ( !memMappedFile.open( fname, MemoryMapped::WholeFile, MemoryMapped::SequentialScan ) )
@@ -111,34 +111,43 @@ namespace ResourceManager
 
         char* data = (char*) memMappedFile.getData();
 #if USING( LZ4_COMPRESSED_FASTFILES )
-        char* fileData = (char*) memMappedFile.getData();
-        int uncompressedSize;
-        serialize::Read( fileData, uncompressedSize );
-
-        const int compressedSize = static_cast<int>( memMappedFile.size() - 4 );
-        char* uncompressedBuffer = (char*) malloc( uncompressedSize );
-        const int decompressedSize = LZ4_decompress_safe( fileData, uncompressedBuffer, compressedSize, uncompressedSize );
-
+        data = DecompressFF( (char*) memMappedFile.getData(), memMappedFile.size() - 4 );
+        char* uncompressedStartPtr = data;
         memMappedFile.close();
-
-        if ( decompressedSize < 0 )
-        {
-            LOG_ERR( "Failed to decompress fastfile with return value: ", decompressedSize );
-            return false;
-        }
-
-        if ( decompressedSize != uncompressedSize )
-        {
-            LOG_ERR( "Decompressed data size does not match the expected uncompressed size: ",
-                     decompressedSize, " != ", uncompressedSize );
-        }
-
-        data = uncompressedBuffer;
-        LOG( "LZ4 decompress finished in: ", Time::GetDuration( start ), " ms." );
 #endif // #if USING( LZ4_COMPRESSED_FASTFILES )
 
         std::string originalFile;
         serialize::Read( data, originalFile );
+
+        if ( runConverterIfEnabled )
+        {
+        #if USING( AUTORUN_CONVERTER_ON_FF_LOAD )
+            memMappedFile.close();
+        #if USING( LZ4_COMPRESSED_FASTFILES )
+            free( uncompressedStartPtr );
+        #endif // #if USING( LZ4_COMPRESSED_FASTFILES )
+
+            std::string command = "\"\"" PG_BIN_DIR;
+        #if USING( RELEASE_BUILD )
+            command += "converter_release\"";
+        #elif USING( SHIP_BUILD ) // #if USING( RELEASE_BUILD )
+            command += "converter_ship\"";
+        #else // #elif USING( SHIP_BUILD ) // #if USING( RELEASE_BUILD )
+            command += "converter_debug\"";
+        #endif // #else // #elif USING( SHIP_BUILD ) // #if USING( RELEASE_BUILD )
+
+            command += " \"" + originalFile + "\"\"";
+            LOG( command );
+            int ret = system( command.c_str() );
+            if ( ret != 0 )
+            {
+                LOG_ERR( "Error while running converter" );
+                return false;
+            }
+
+            return LoadFastFile( fname, false );
+        #endif // #if USING( AUTORUN_CONVERTER_ON_FF_LOAD )
+        }
 
         bool success = true;
         success = success && DeserializeResources< Shader >( data, PG_RESOURCE_SHADER_VERSION );
@@ -154,15 +163,22 @@ namespace ResourceManager
             {
                 success = success && DeserializeResources< Material >( data, PG_RESOURCE_MATERIAL_VERSION );
             }
-            size_t magicNumberGuard;
-            serialize::Read( data, magicNumberGuard );
-            PG_ASSERT( magicNumberGuard == PG_RESOURCE_MAGIC_NUMBER_GUARD, "serializatio and deserialization do not match" );
+            if ( success )
+            {
+                size_t magicNumberGuard;
+                serialize::Read( data, magicNumberGuard );
+                PG_ASSERT( magicNumberGuard == PG_RESOURCE_MAGIC_NUMBER_GUARD, "serialization and deserialization do not match" );
+            }
         }
         success = success && DeserializeResources< Model >( data, PG_RESOURCE_MODEL_VERSION );
         success = success && DeserializeResources< Script >( data, PG_RESOURCE_SCRIPT_VERSION );
 
         PG_MAYBE_UNUSED( start );
         LOG( "Loaded fastfile '", fname, "' in: ", Time::GetDuration( start ), " ms." );
+
+#if USING( LZ4_COMPRESSED_FASTFILES )
+        free( uncompressedStartPtr );
+#endif // #if USING( LZ4_COMPRESSED_FASTFILES )
 
         return true;
     }

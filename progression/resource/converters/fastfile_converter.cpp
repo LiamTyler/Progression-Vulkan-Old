@@ -376,7 +376,8 @@ ConverterStatus FastfileConverter::Convert()
         return CONVERT_ERROR;
     }
 
-    serialize::Write( out, inputFile );
+    std::string absPath = std::filesystem::absolute( inputFile ).string();
+    serialize::Write( out, absPath );
 
     ConverterStatus ret;
     ret = WriteResources( out, m_shaderConverters, PG_RESOURCE_SHADER_VERSION );

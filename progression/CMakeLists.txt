@@ -208,13 +208,7 @@ if(MSVC)
     target_compile_options(progression PRIVATE "/MP")
 endif()
 
-#set_target_properties(
-#    progression
-#    PROPERTIES
-#    DEBUG_POSTFIX _debug
-#    DEBUG_POSTFIX _release
-#    SHIP_POSTFIX _ship
-#)
+SET_TARGET_POSTFIX( progression )
 
 # link in the static libs
 target_link_libraries(progression ${PROGRESSION_LIBS})

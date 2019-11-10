@@ -76,8 +76,7 @@ namespace ResourceManager
     extern ResourceDB f_resources;
 
     void Init();
-    bool LoadFastFile( const std::string& fname );
-    void FreeGPUResources();
+    bool LoadFastFile( const std::string& fname, bool runConverterIfEnabled = true );
     void Shutdown();
 
     template < typename T >
