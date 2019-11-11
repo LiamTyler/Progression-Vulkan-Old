@@ -11,12 +11,16 @@ before_install:
   - sudo apt-get install gcc-9 -y
   - sudo apt-get install g++-9 -y
   - sudo apt-get install xorg-dev libglu1-mesa-dev
+  - wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+  - sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.1.126-bionic.list http://packages.lunarg.com/vulkan/1.1.126/lunarg-vulkan-1.1.126-bionic.list
+  - sudo apt update
+  - sudo apt install vulkan-sdk
   
-install:
-  - wget -O vulkansdk-linux-x86_64-1.1.126.0.run https://vulkan.lunarg.com/sdk/download/1.1.126.0/linux/vulkansdk-linux-x86_64-1.1.126.0.run?Human=true
-  - chmod ugo+x vulkansdk-linux-x86_64-1.1.126.0.run
-  - ./vulkansdk-linux-x86_64-1.1.126.0.run
-  - export VULKAN_SDK=$TRAVIS_BUILD_DIR/VulkanSDK/1.1.126.0/x86_64
+#install:
+#  - wget -O vulkansdk-linux-x86_64-1.1.126.0.run https://vulkan.lunarg.com/sdk/download/1.1.126.0/linux/vulkansdk-linux-x86_64-1.1.126.0.run?Human=true
+#  - chmod ugo+x vulkansdk-linux-x86_64-1.1.126.0.run
+#  - export VULKAN_SDK=$TRAVIS_BUILD_DIR/VulkanSDK/1.1.126.0/x86_64
+#  - ./vulkansdk-linux-x86_64-1.1.126.0.run
 
 script:
   - sudo ln -s /usr/bin/gcc-9 /usr/local/bin/gcc
