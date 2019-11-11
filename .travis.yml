@@ -11,6 +11,12 @@ before_install:
   - sudo apt-get install gcc-9 -y
   - sudo apt-get install g++-9 -y
   - sudo apt-get install xorg-dev libglu1-mesa-dev
+  
+install:
+  - wget -O vulkansdk-linux-x86_64-1.1.126.0.run https://vulkan.lunarg.com/sdk/download/1.0.51.0/linux/vulkansdk-linux-x86_64-1.1.126.0.run?Human=true
+  - chmod ugo+x vulkansdk-linux-x86_64-1.1.126.0.run
+  - ./vulkansdk-linux-x86_64-1.1.126.0.run
+  - export VULKAN_SDK=$TRAVIS_BUILD_DIR/VulkanSDK/1.1.126.0/x86_64
 
 script:
   - sudo ln -s /usr/bin/gcc-9 /usr/local/bin/gcc
@@ -19,9 +25,16 @@ script:
   - mkdir build
   - cd build
   - cmake -DCMAKE_BUILD_TYPE=Debug ..
-  - make -j
+  - make -j4
   - cd ..
   - mkdir build_ship
   - cd build_ship
   - cmake -DCMAKE_BUILD_TYPE=Ship ..
-  - make -j
+  - make -j4
+
+notifications:
+  email:
+    recipients:
+      - Tyler.Liam7@gmail.com
+    on_success: change
+    on_failure: always

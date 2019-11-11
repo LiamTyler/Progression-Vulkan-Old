@@ -17,7 +17,18 @@ install:
   - git submodule update --init --recursive
 
 before_build:
-  - cmake -G "Visual Studio 16 2019" -Ax64
+  - mkdir build
+  - cd build
+  - cmake -G "Visual Studio 16 2019" -Ax64 ..
 
 build:
-  project: $(APPVEYOR_BUILD_FOLDER)\$(APPVEYOR_PROJECT_NAME).sln
+  project: $(APPVEYOR_BUILD_FOLDER)\build\$(APPVEYOR_PROJECT_NAME).sln
+  parallel: true
+
+notifications:
+  - provider: Email
+    to:
+      - Tyler.Liam7@gmail.com
+    on_build_success: false
+    on_build_failure: true
+    on_build_status_changed: true
