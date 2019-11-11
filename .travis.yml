@@ -15,26 +15,20 @@ before_install:
   - sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.1.126-bionic.list http://packages.lunarg.com/vulkan/1.1.126/lunarg-vulkan-1.1.126-bionic.list
   - sudo apt update
   - sudo apt install vulkan-sdk
-  
-#install:
-#  - wget -O vulkansdk-linux-x86_64-1.1.126.0.run https://vulkan.lunarg.com/sdk/download/1.1.126.0/linux/vulkansdk-linux-x86_64-1.1.126.0.run?Human=true
-#  - chmod ugo+x vulkansdk-linux-x86_64-1.1.126.0.run
-#  - export VULKAN_SDK=$TRAVIS_BUILD_DIR/VulkanSDK/1.1.126.0/x86_64
-#  - ./vulkansdk-linux-x86_64-1.1.126.0.run
 
 script:
   - sudo ln -s /usr/bin/gcc-9 /usr/local/bin/gcc
   - sudo ln -s /usr/bin/g++-9 /usr/local/bin/g++
   - gcc -v && g++ -v && cmake --version
-  - mkdir build
-  - cd build
+  - mkdir build_debug
+  - cd build_debug
   - cmake -DCMAKE_BUILD_TYPE=Debug ..
-  - make -j4
+  - make -j2
   - cd ..
   - mkdir build_ship
   - cd build_ship
   - cmake -DCMAKE_BUILD_TYPE=Ship ..
-  - make -j4
+  - make -j2
 
 notifications:
   email:

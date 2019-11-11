@@ -9,21 +9,21 @@ configuration:
   - Ship
   
 environment:
-  VULKAN_SDK: c:\VulkanSDK\1.1.126.0
+  VULKAN_SDK: c:\VulkanSDK\1.1.121.2
 
 install:
-  - curl -L --silent --show-error --output VulkanSDK.exe https://vulkan.lunarg.com/sdk/download/1.1.126.0/windows/VulkanSDK-1.1.126.0-Installer.exe?Human=true
+  - curl -L --silent --show-error --output VulkanSDK.exe https://vulkan.lunarg.com/sdk/download/1.1.121.2/windows/VulkanSDK-1.1.121.2-Installer.exe?Human=true
   - .\VulkanSDK.exe /S
   - git submodule update --init --recursive
 
-before_build:
-  - mkdir build
-  - cd build
-  - cmake -G "Visual Studio 16 2019" -Ax64 ..
-
 build:
-  project: $(APPVEYOR_BUILD_FOLDER)\build\$(APPVEYOR_PROJECT_NAME).sln
   parallel: true
+  verbosity: minimal
+  
+build_script:
+  - mkdir build && cd build
+  - cmake -G "Visual Studio 16 2019" -Ax64 ..
+  - cmake --build . --config %CONFIGURATION%
 
 notifications:
   - provider: Email
