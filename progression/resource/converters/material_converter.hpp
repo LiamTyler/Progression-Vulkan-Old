@@ -4,7 +4,7 @@
 class MaterialConverter : public Converter
 {
 public:
-    MaterialConverter() = default;
+    MaterialConverter( bool force_ = false, bool verbose_ = false );
 
     AssetStatus CheckDependencies() override;
     ConverterStatus Convert() override;

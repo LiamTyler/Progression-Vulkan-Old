@@ -20,7 +20,8 @@ typedef uint32_t ImageFlags;
 
 struct ImageCreateInfo : public ResourceCreateInfo
 {
-    std::vector< std::string > filenames;
+    std::string filename;
+    std::vector< std::string > skyboxFilenames;
     std::string sampler = "";
     ImageFlags flags    = 0;
 };

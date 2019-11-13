@@ -1,0 +1,31 @@
+{
+    "Script": {
+        "name": "cameraController",
+        "filename": "scripts/cameraController.lua"
+    },
+    "_Image": {
+        "name": "floor",
+        "filename": "textures/metal2.jpg",
+        "sampler": "linear_clamped"
+    },
+    "Image": {
+        "name": "chaletTex",
+        "filename": "textures/chalet.jpg",
+        "sampler": "linear_clamped"
+    },
+    "MTLFile": {
+        "filename": "materials/miscellaneous.mtl"
+    },
+    "Model": {
+        "name": "chalet",
+        "filename": "models/chalet2.obj"
+    },
+    "Model": {
+        "name": "floor",
+        "filename": "models/plane.obj"
+    },
+    "Model": {
+        "name": "cube",
+        "filename": "models/cube.obj"
+    }
+}

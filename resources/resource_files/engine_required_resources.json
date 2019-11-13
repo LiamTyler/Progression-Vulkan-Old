@@ -1,0 +1,19 @@
+{
+    "Shader": {
+        "name": "animatedModelsVert",
+        "filename": "shaders/animated_models.vert"
+    },
+    "Shader": {
+        "name": "forwardBlinnPhongFrag",
+        "filename": "shaders/forward_blinn_phong.frag"
+    },
+    "Shader": {
+        "name": "rigidModelsVert",
+        "filename": "shaders/rigid_models.vert"
+    },
+    "Image": {
+        "name": "RENDER_SYSTEM_DUMMY_TEXTURE",
+        "filename": "textures/render_system_dummy_texture.png",
+        "sampler": "nearest_clamped"
+    }
+}

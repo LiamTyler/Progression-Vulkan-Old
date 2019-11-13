@@ -35,6 +35,15 @@ static std::string GetSettingsFastFileName( const ModelCreateInfo& createInfo )
         std::to_string( optimize ) + std::to_string( freeCpuCopy ) + ".ffi";
 }
 
+ModelConverter::ModelConverter( bool force_, bool verbose_ )
+{
+    force = force_;
+    verbose = verbose_;
+    createInfo.createGpuCopy = true;
+    createInfo.freeCpuCopy   = true;
+    createInfo.optimize      = true;
+}
+
 AssetStatus ModelConverter::CheckDependencies()
 {
     PG_ASSERT( !createInfo.filename.empty() );
@@ -65,7 +74,7 @@ AssetStatus ModelConverter::CheckDependencies()
                           ", FFI timestamp: ", outTimestamp ) );
 
     m_contentNeedsConverting = outTimestamp <= objFileTime || outTimestamp <= mtlTimestamp;
-    m_status = m_contentNeedsConverting ||  m_settingsNeedsConverting ? ASSET_OUT_OF_DATE : ASSET_UP_TO_DATE;
+    status = m_contentNeedsConverting ||  m_settingsNeedsConverting ? ASSET_OUT_OF_DATE : ASSET_UP_TO_DATE;
 
     if ( outTimestamp <= mtlTimestamp )
     {
@@ -77,12 +86,12 @@ AssetStatus ModelConverter::CheckDependencies()
         LOG( "OUT OF DATE: Model file '", createInfo.filename, "' has newer timestamp than saved FFI" );
     }
 
-    if ( m_status == ASSET_UP_TO_DATE )
+    if ( status == ASSET_UP_TO_DATE )
     {
         if ( force )
         {
             LOG( "UP TO DATE: Model file '", createInfo.name , "' but --force used, so converting anyways\n" );
-            m_status = ASSET_OUT_OF_DATE;
+            status = ASSET_OUT_OF_DATE;
         }
         else
         {
@@ -90,12 +99,12 @@ AssetStatus ModelConverter::CheckDependencies()
         }
     }
 
-    return m_status;
+    return status;
 }
 
 ConverterStatus ModelConverter::Convert()
 {
-    if ( m_status == ASSET_UP_TO_DATE )
+    if ( status == ASSET_UP_TO_DATE )
     {
         return CONVERT_SUCCESS;
     }

@@ -9,8 +9,8 @@
 #include "graphics/shader_c_shared/lights.h"
 #include "resource/image.hpp"
 #include "resource/resource_manager.hpp"
-#include "utils/logger.hpp"
 #include "utils/json_parsing.hpp"
+#include "utils/logger.hpp"
 #include <algorithm>
 #include <fstream>
 #include <sstream>

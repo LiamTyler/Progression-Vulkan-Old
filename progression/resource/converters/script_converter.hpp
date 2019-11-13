@@ -5,7 +5,7 @@
 class ScriptConverter : public Converter
 {
 public:
-    ScriptConverter() = default;
+    ScriptConverter( bool force_ = false, bool verbose_ = false );
 
     AssetStatus CheckDependencies() override;
     ConverterStatus Convert() override;

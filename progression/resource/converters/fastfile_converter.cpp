@@ -9,6 +9,7 @@
 #include "resource/resource_version_numbers.hpp"
 #include "resource/shader.hpp"
 #include "utils/fileIO.hpp"
+#include "utils/json_parsing.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
 #include "utils/timestamp.hpp"
@@ -17,15 +18,6 @@
 #include <fstream>
 
 using namespace Progression;
-
-bool ParseShaderCreateInfoFromFile( std::istream& in, ShaderCreateInfo& info )
-{
-    fileIO::ParseLineKeyVal( in, "name", info.name );
-    fileIO::ParseLineKeyValOptional( in, "filename", info.filename );
-    info.filename = PG_RESOURCE_DIR + info.filename;
-
-    return true;
-}
 
 static std::unordered_map< std::string, Gfx::PixelFormat > pixelFormatMap =
 {
@@ -105,89 +97,138 @@ static std::unordered_map< std::string, Gfx::PixelFormat > pixelFormatMap =
     { "BC7_SRGB", Gfx::PixelFormat::BC7_SRGB },
 };
 
-bool ParseImageCreateInfoFromFile( std::istream& in, ImageCreateInfo& info )
+static void ParseImage( rapidjson::Value& value, FastfileConverter* conv )
 {
-    fileIO::ParseLineKeyVal( in, "name",     info.name );
-    fileIO::ParseLineKeyVal( in, "filenames", info.filenames );
-    for ( auto& fname : info.filenames )
+    ImageConverter converter( conv->force, conv->verbose );
+    static FunctionMapper< void, ImageCreateInfo& > mapping(
     {
-        fname = PG_RESOURCE_DIR + fname;
-    }
-    // auto res = fileIO::ParseLineKeyMap( in, "dstFormat", pixelFormatMap, info.dstFormat ), "Check pixel format for spelling mistake" 
-    // PG_ASSERT( res, "Check pixel format for spelling mistake" );
-    fileIO::ParseLineKeyValOptional( in, "sampler", info.sampler );
+        { "name",            []( rapidjson::Value& v, ImageCreateInfo& i ) { i.name     = v.GetString(); } },
+        { "filename",        []( rapidjson::Value& v, ImageCreateInfo& i ) { i.filename = PG_RESOURCE_DIR + std::string( v.GetString() ); } },
+        { "skyboxFilenames", []( rapidjson::Value& v, ImageCreateInfo& i )
+            {
+                PG_ASSERT( v.IsArray() && v.Size() == 6, "Please provide an array of 6 filenames for a skybox" );
+                for ( const auto& e : v.GetArray() )
+                {
+                    i.skyboxFilenames.push_back( PG_RESOURCE_DIR + std::string( e.GetString() ) );
+                }
+            }
+        },
+        { "sampler",         []( rapidjson::Value& v, ImageCreateInfo& i ) { i.sampler = v.GetString(); } },
+        { "flipVertically",  []( rapidjson::Value& v, ImageCreateInfo& i ) { if ( v.GetBool() ) i.flags |= IMAGE_FLIP_VERTICALLY; } },
+        { "generateMipmaps", []( rapidjson::Value& v, ImageCreateInfo& i ) { if ( v.GetBool() ) i.flags |= IMAGE_GENERATE_MIPMAPS_ON_CONVERT; } },
+        { "createTexture",   []( rapidjson::Value& v, ImageCreateInfo& i ) { if ( v.GetBool() ) i.flags |= IMAGE_CREATE_TEXTURE_ON_LOAD; } },
+        { "freeCpuCopy",     []( rapidjson::Value& v, ImageCreateInfo& i ) { if ( v.GetBool() ) i.flags |= IMAGE_FREE_CPU_COPY_ON_LOAD; } },
+    });
 
-    bool tmp;
-    fileIO::ParseLineKeyVal( in, "flipVertically", tmp );
-    if ( tmp )
-    {
-        info.flags |= IMAGE_FLIP_VERTICALLY;
-    }
-    fileIO::ParseLineKeyVal( in, "generateMipmaps", tmp );
-    if ( tmp )
-    {
-        info.flags |= IMAGE_GENERATE_MIPMAPS_ON_CONVERT;
-    }
-    fileIO::ParseLineKeyVal( in, "createTexture", tmp );
-    if ( tmp )
-    {
-        info.flags |= IMAGE_CREATE_TEXTURE_ON_LOAD;
-    }
-    fileIO::ParseLineKeyVal( in, "freeCpuCopy", tmp );
-    if ( tmp )
-    {
-        info.flags |= IMAGE_FREE_CPU_COPY_ON_LOAD;
-    }
-
-    return true;
-}
-
-bool ParseMaterialFileFromFile( std::istream& in, std::string& mtlFileName )
-{
-    fileIO::ParseLineKeyVal( in, "filename", mtlFileName );
-    mtlFileName = PG_RESOURCE_DIR + mtlFileName;
-    return true;
-}
-
-bool ParseModelFromFile( std::istream& in, ModelCreateInfo& createInfo )
-{
-    fileIO::ParseLineKeyVal( in, "name",          createInfo.name );
-    fileIO::ParseLineKeyVal( in, "filename",      createInfo.filename );
-    fileIO::ParseLineKeyVal( in, "optimize",      createInfo.optimize );
-    fileIO::ParseLineKeyVal( in, "freeCpuCopy",   createInfo.freeCpuCopy );
-    fileIO::ParseLineKeyVal( in, "createGpuCopy", createInfo.createGpuCopy );
-    createInfo.filename = PG_RESOURCE_DIR + createInfo.filename;
+    mapping.ForEachMember( value, converter.createInfo );
     
-    return true;
+    auto status = converter.CheckDependencies();
+    conv->UpdateStatus( status );
+    if ( status == ASSET_CHECKING_ERROR )
+    {
+        LOG_ERR( "Error while checking dependencies on script: '", converter.createInfo.name, "'" );
+        return;
+    }
+    conv->imageConverters.emplace_back( std::move( converter ) );
 }
 
-bool ParseScriptFileFromFile( std::istream& in, ScriptCreateInfo& createInfo )
+static void ParseModel( rapidjson::Value& value, FastfileConverter* conv )
 {
-    fileIO::ParseLineKeyVal( in, "name", createInfo.name );
-    fileIO::ParseLineKeyVal( in, "filename", createInfo.filename );
-    createInfo.filename = PG_RESOURCE_DIR + createInfo.filename;
-    return true;
+    ModelConverter converter( conv->force, conv->verbose );
+    static FunctionMapper< void, ModelCreateInfo& > mapping(
+    {
+        { "name",          []( rapidjson::Value& v, ModelCreateInfo& i ) { i.name          = v.GetString(); } },
+        { "filename",      []( rapidjson::Value& v, ModelCreateInfo& i ) { i.filename      = PG_RESOURCE_DIR + std::string( v.GetString() ); } },
+        { "optimize",      []( rapidjson::Value& v, ModelCreateInfo& i ) { i.optimize      = v.GetBool(); } },
+        { "freeCpuCopy",   []( rapidjson::Value& v, ModelCreateInfo& i ) { i.freeCpuCopy   = v.GetBool(); } },
+        { "createGpuCopy", []( rapidjson::Value& v, ModelCreateInfo& i ) { i.createGpuCopy = v.GetBool(); } },
+    });
+
+    mapping.ForEachMember( value, converter.createInfo );
+
+    auto status = converter.CheckDependencies();
+    conv->UpdateStatus( status );
+    if ( status == ASSET_CHECKING_ERROR )
+    {
+        LOG_ERR( "Error while checking dependencies on script: '", converter.createInfo.name, "'" );
+        return;
+    }
+    conv->modelConverters.emplace_back( std::move( converter ) );
+}
+
+static void ParseMTLFile( rapidjson::Value& value, FastfileConverter* conv )
+{
+    MaterialConverter converter( conv->force, conv->verbose );
+    static FunctionMapper< void, std::string& > mapping(
+    {
+        { "filename", []( rapidjson::Value& v, std::string& f ) { f = PG_RESOURCE_DIR + std::string( v.GetString() ); } },
+    });
+
+    mapping.ForEachMember( value, converter.inputFile );
+
+    auto status = converter.CheckDependencies();
+    conv->UpdateStatus( status );
+    if ( status == ASSET_CHECKING_ERROR )
+    {
+        LOG_ERR( "Error while checking dependencies on MTLFile: '", converter.inputFile, "'" );
+        return;
+    }
+    conv->materialFileConverters.emplace_back( std::move( converter ) );
+}
+
+static void ParseScript( rapidjson::Value& value, FastfileConverter* conv )
+{
+    ScriptConverter converter( conv->force, conv->verbose );
+    static FunctionMapper< void, ScriptCreateInfo& > mapping(
+    {
+        { "name",     []( rapidjson::Value& v, ScriptCreateInfo& i ) { i.name     = v.GetString(); } },
+        { "filename", []( rapidjson::Value& v, ScriptCreateInfo& i ) { i.filename = PG_RESOURCE_DIR + std::string( v.GetString() ); } },
+    });
+
+    mapping.ForEachMember( value, converter.createInfo );
+    
+    auto status = converter.CheckDependencies();
+    conv->UpdateStatus( status );
+    if ( status == ASSET_CHECKING_ERROR )
+    {
+        LOG_ERR( "Error while checking dependencies on script: '", converter.createInfo.name, "'" );
+        return;
+    }
+    conv->scriptConverters.emplace_back( std::move( converter ) );
+}
+
+static void ParseShader( rapidjson::Value& value, FastfileConverter* conv )
+{
+    ShaderConverter converter( conv->force, conv->verbose );
+    static FunctionMapper< void, ShaderCreateInfo& > mapping(
+    {
+        { "name",     []( rapidjson::Value& v, ShaderCreateInfo& i ) { i.name     = v.GetString(); } },
+        { "filename", []( rapidjson::Value& v, ShaderCreateInfo& i ) { i.filename = PG_RESOURCE_DIR + std::string( v.GetString() ); } },
+    });
+
+    mapping.ForEachMember( value, converter.createInfo );
+
+    auto status = converter.CheckDependencies();
+    conv->UpdateStatus( status );
+    if ( status == ASSET_CHECKING_ERROR )
+    {
+        LOG_ERR( "Error while checking dependencies on shader: '", converter.createInfo.name, "'" );
+        return;
+    }
+    conv->shaderConverters.emplace_back( std::move( converter ) );
 }
 
 AssetStatus FastfileConverter::CheckDependencies()
 {
     IF_VERBOSE_MODE( LOG( "Checking dependencies for fastfile '", inputFile, "'" ) );
-    std::ifstream in( inputFile );
-    if ( !in )
-    {
-        LOG_ERR( "Could not open the input resource file: '", inputFile, "'" );
-        return ASSET_CHECKING_ERROR;
-    }
+    status = ASSET_UP_TO_DATE;
 
-    m_status = ASSET_UP_TO_DATE;
-
-    m_outputContentFile = PG_RESOURCE_DIR "cache/fastfiles/" +
-                          std::filesystem::path( inputFile ).stem().string() + ".ff";
+    m_outputContentFile = PG_RESOURCE_DIR "cache/fastfiles/" + std::filesystem::path( inputFile ).stem().string() + ".ff";
     IF_VERBOSE_MODE( LOG( "Resource file '", inputFile, "' outputs fastfile '", m_outputContentFile, "'" ) );
     if ( !std::filesystem::exists( m_outputContentFile ) )
     {
         LOG( "OUT OF DATE: Fastfile file for '", inputFile, "' does not exist, convert required" );
-        m_status = ASSET_OUT_OF_DATE;
+        status = ASSET_OUT_OF_DATE;
     }
     else
     {
@@ -196,137 +237,38 @@ AssetStatus FastfileConverter::CheckDependencies()
 
         IF_VERBOSE_MODE( LOG( "Resource file timestamp: ", newestFileTime, ", fastfile timestamp: ", outTimestamp ) );
 
-        m_status = outTimestamp <= newestFileTime ? ASSET_OUT_OF_DATE : ASSET_UP_TO_DATE;
+        status = outTimestamp <= newestFileTime ? ASSET_OUT_OF_DATE : ASSET_UP_TO_DATE;
 
-        if ( m_status == ASSET_OUT_OF_DATE )
+        if ( status == ASSET_OUT_OF_DATE )
         {
             LOG( "OUT OF DATE: Fastfile file '", inputFile, "' has newer timestamp than saved FF" );
         }
     }
 
-    auto UpdateStatus = [this]( AssetStatus status )
+    auto document = ParseJSONFile( inputFile );
+    if ( document.IsNull() )
     {
-        if ( status == ASSET_OUT_OF_DATE )
-        {
-            m_status = ASSET_OUT_OF_DATE;
-        }
-    };
-
-    std::string line;
-    while ( std::getline( in, line ) )
-    {
-        if ( line == "" || line[0] == '#' )
-        {
-            continue;
-        }
-        if ( line == "Shader" )
-        {
-            ShaderConverter converter;
-            converter.force   = force;
-            converter.verbose = verbose;
-            if ( !ParseShaderCreateInfoFromFile( in, converter.createInfo ) )
-            {
-                LOG_ERR( "Error while parsing ShaderCreateInfo" );
-                return ASSET_CHECKING_ERROR;
-            }
-
-            auto status = converter.CheckDependencies();
-            if ( status == ASSET_CHECKING_ERROR )
-            {
-                LOG_ERR( "Error while checking dependencies on resource: '", converter.createInfo.name, "'" );
-                return ASSET_CHECKING_ERROR;
-            }
-            UpdateStatus( status );
-
-            m_shaderConverters.emplace_back( std::move( converter ) );
-        }
-        else if ( line == "Image" )
-        {
-            ImageConverter converter;
-            converter.force   = force;
-            converter.verbose = verbose;
-            if ( !ParseImageCreateInfoFromFile( in, converter.createInfo ) )
-            {
-                LOG_ERR( "Error while parsing ShaderCreateInfo" );
-                return ASSET_CHECKING_ERROR;
-            }
-
-            auto status = converter.CheckDependencies();
-            if ( status == ASSET_CHECKING_ERROR )
-            {
-                LOG_ERR( "Error while checking dependencies on resource: '", converter.createInfo.name, "'" );
-                return ASSET_CHECKING_ERROR;
-            }
-            UpdateStatus( status );
-
-            m_imageConverters.emplace_back( std::move( converter ) );
-        }
-        else if ( line == "MTLFile")
-        {
-            MaterialConverter converter;
-            converter.force   = force;
-            converter.verbose = verbose;
-            ParseMaterialFileFromFile( in, converter.inputFile );
-
-            auto status = converter.CheckDependencies();
-            if ( status == ASSET_CHECKING_ERROR )
-            {
-                LOG_ERR( "Error while checking dependencies on mtlFile '", converter.inputFile, "'" );
-                return ASSET_CHECKING_ERROR;
-            }
-            UpdateStatus( status );
-
-            m_materialFileConverters.emplace_back( std::move( converter ) );
-        }
-        else if ( line == "Model")
-        {
-            ModelConverter converter;
-            converter.force   = force;
-            converter.verbose = verbose;
-            ParseModelFromFile( in, converter.createInfo );
-
-            auto status = converter.CheckDependencies();
-            if ( status == ASSET_CHECKING_ERROR )
-            {
-                LOG_ERR( "Error while checking dependencies on model file '", converter.createInfo.filename, "'" );
-                return ASSET_CHECKING_ERROR;
-            }
-            UpdateStatus( status );
-
-            m_modelConverters.emplace_back( std::move( converter ) );
-        }
-        else if ( line == "Script")
-        {
-            ScriptConverter converter;
-            converter.force   = force;
-            converter.verbose = verbose;
-            ParseScriptFileFromFile( in, converter.createInfo );
-
-            auto status = converter.CheckDependencies();
-            if ( status == ASSET_CHECKING_ERROR )
-            {
-                LOG_ERR( "Error while checking dependencies on script file '", converter.createInfo.filename, "'" );
-                return ASSET_CHECKING_ERROR;
-            }
-            UpdateStatus( status );
-
-            m_scriptConverters.emplace_back( std::move( converter ) );
-        }
-        else
-        {
-            LOG_WARN( "Unrecognized line: ", line );
-        }
+        return ASSET_CHECKING_ERROR;
     }
 
-    in.close();
+    static FunctionMapper< void, FastfileConverter* > mapping(
+    {
+        { "Image",   ParseImage },
+        { "Model",   ParseModel },
+        { "MTLFile", ParseMTLFile },
+        { "Script",  ParseScript },
+        { "Shader",  ParseShader },
+    });
 
-    if ( force && ASSET_UP_TO_DATE )
+    mapping.ForEachMember( document, std::move( this ) );
+
+    if ( force && status == ASSET_UP_TO_DATE )
     {
         LOG( "Fastfile '", inputFile, "' is up to date, but --force used, so converting anyways\n" );
-        m_status = ASSET_OUT_OF_DATE;
+        status = ASSET_OUT_OF_DATE;
     }
 
-    return m_status;
+    return status;
 }
 
 template< typename ConverterType >
@@ -337,7 +279,7 @@ static ConverterStatus WriteResources( std::ofstream& out, std::vector< Converte
     serialize::Write( out, versionNumber );
     for ( auto& converter : converters )
     {
-        if ( converter.GetStatus() == ASSET_UP_TO_DATE )
+        if ( converter.status == ASSET_UP_TO_DATE )
         {
             converter.WriteToFastFile( out );
         }
@@ -361,7 +303,7 @@ static ConverterStatus WriteResources( std::ofstream& out, std::vector< Converte
 
 ConverterStatus FastfileConverter::Convert()
 {
-    if ( m_status == ASSET_UP_TO_DATE )
+    if ( status == ASSET_UP_TO_DATE )
     {
         return CONVERT_SUCCESS;
     }
@@ -380,19 +322,19 @@ ConverterStatus FastfileConverter::Convert()
     serialize::Write( out, absPath );
 
     ConverterStatus ret;
-    ret = WriteResources( out, m_shaderConverters, PG_RESOURCE_SHADER_VERSION );
+    ret = WriteResources( out, shaderConverters, PG_RESOURCE_SHADER_VERSION );
     if ( ret != CONVERT_SUCCESS ) return ret;
 
-    ret = WriteResources( out, m_imageConverters, PG_RESOURCE_IMAGE_VERSION );
+    ret = WriteResources( out, imageConverters, PG_RESOURCE_IMAGE_VERSION );
     if ( ret != CONVERT_SUCCESS ) return ret;
 
-    ret = WriteResources( out, m_materialFileConverters, PG_RESOURCE_MATERIAL_VERSION );
+    ret = WriteResources( out, materialFileConverters, PG_RESOURCE_MATERIAL_VERSION );
     if ( ret != CONVERT_SUCCESS ) return ret;
 
-    ret = WriteResources( out, m_modelConverters, PG_RESOURCE_MODEL_VERSION );
+    ret = WriteResources( out, modelConverters, PG_RESOURCE_MODEL_VERSION );
     if ( ret != CONVERT_SUCCESS ) return ret;
 
-    ret = WriteResources( out, m_scriptConverters, PG_RESOURCE_SCRIPT_VERSION );
+    ret = WriteResources( out, scriptConverters, PG_RESOURCE_SCRIPT_VERSION );
     if ( ret != CONVERT_SUCCESS ) return ret;
 
     out.close();
@@ -445,4 +387,12 @@ ConverterStatus FastfileConverter::Convert()
     LOG( "\nFastfile built in: ", Time::GetDuration( fastFileStartTime ) / 1000, " seconds" );
 
     return CONVERT_SUCCESS;
+}
+
+void FastfileConverter::UpdateStatus( AssetStatus s )
+{
+    if ( s > status )
+    {
+        status = s;
+    }
 }

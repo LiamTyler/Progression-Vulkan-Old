@@ -5,7 +5,7 @@
 class ShaderConverter : public Converter
 {
 public:
-    ShaderConverter() = default;
+    ShaderConverter( bool force_ = false, bool verbose_ = false );
 
     AssetStatus CheckDependencies() override;
     ConverterStatus Convert() override;

@@ -22,6 +22,12 @@ static std::string GetContentFastFileName( const std::string& mtlFileName )
     return PG_RESOURCE_DIR "cache/materials/" + basename + "_" + version + "_" + hash + ".ffi";
 }
 
+MaterialConverter::MaterialConverter( bool force_, bool verbose_ )
+{
+    force   = force_;
+    verbose = verbose_;
+}
+
 AssetStatus MaterialConverter::CheckDependencies()
 {
     m_outputContentFile = GetContentFastFileName( inputFile );
@@ -37,9 +43,9 @@ AssetStatus MaterialConverter::CheckDependencies()
     
     IF_VERBOSE_MODE( LOG( "MTLFile timestamp: ", newestFileTime, ", FFI timestamp: ", outTimestamp ) );
 
-    m_status = outTimestamp <= newestFileTime ? ASSET_OUT_OF_DATE : ASSET_UP_TO_DATE;
+    status = outTimestamp <= newestFileTime ? ASSET_OUT_OF_DATE : ASSET_UP_TO_DATE;
 
-    if ( m_status == ASSET_OUT_OF_DATE )
+    if ( status == ASSET_OUT_OF_DATE )
     {
         LOG( "OUT OF DATE: MTLFile file'", inputFile, "' has newer timestamp than saved FFI" );
     }
@@ -48,7 +54,7 @@ AssetStatus MaterialConverter::CheckDependencies()
         if ( force )
         {
             LOG( "UP TO DATE: MTLFile '", inputFile, "', but --force used, so converting anyways\n" );
-            m_status = ASSET_OUT_OF_DATE;
+            status = ASSET_OUT_OF_DATE;
         }
         else
         {
@@ -56,12 +62,12 @@ AssetStatus MaterialConverter::CheckDependencies()
         }
     }
 
-    return m_status;
+    return status;
 }
 
 ConverterStatus MaterialConverter::Convert()
 {
-    if ( m_status == ASSET_UP_TO_DATE )
+    if ( status == ASSET_UP_TO_DATE )
     {
         return CONVERT_SUCCESS;
     }

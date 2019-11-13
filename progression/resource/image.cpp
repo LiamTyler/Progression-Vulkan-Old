@@ -59,10 +59,10 @@ Image& Image::operator=( Image&& src )
 std::shared_ptr< Image > Image::Load2DImageWithDefaultSettings( const std::string& filename )
 {
     ImageCreateInfo info;
-    info.filenames.push_back( filename );
-    info.name    = std::filesystem::path( filename ).stem().string();
-    info.flags   = IMAGE_FLIP_VERTICALLY | IMAGE_CREATE_TEXTURE_ON_LOAD;
-    info.sampler = "linear_clamped";
+    info.filename = filename;
+    info.name     = std::filesystem::path( filename ).stem().string();
+    info.flags    = IMAGE_FLIP_VERTICALLY | IMAGE_CREATE_TEXTURE_ON_LOAD;
+    info.sampler  = "linear_clamped";
     std::shared_ptr< Image > image = std::make_shared< Image >();
     if ( !image->Load( &info ) )
     {
@@ -80,15 +80,25 @@ bool Image::Load( ResourceCreateInfo* createInfo )
     name                  = info->name;
     m_flags               = info->flags;
     PG_ASSERT( ( m_flags & IMAGE_CREATE_TEXTURE_ON_LOAD ) || !( m_flags & IMAGE_FREE_CPU_COPY_ON_LOAD ) );
+    PG_ASSERT( !( !info->filename.empty() && !info->skyboxFilenames.empty() ), "Can't specify both a single file and skybox images to load" );
+    PG_ASSERT( !info->filename.empty() || info->skyboxFilenames.size() == 6, "Must specify single file or 6 skybox files to load" );
 
-    int numImages = static_cast< int >( info->filenames.size() );
-    PG_ASSERT( numImages == 1 || numImages == 6 );
+    std::vector< std::string > filenames;
+    if ( !info->filename.empty() )
+    {
+        filenames.push_back( info->filename );
+    }
+    else
+    {
+        filenames = info->skyboxFilenames;
+    }
+    int numImages = static_cast< int >( filenames.size() );
     std::vector< ImageDescriptor > imageDescs( numImages );
     std::vector< unsigned char* > imageData( numImages );
 
     for ( int i = 0; i < numImages; ++i )
     {
-        std::string file = info->filenames[i];
+        std::string file = filenames[i];
         std::string ext = std::filesystem::path( file ).extension().string();
         if ( ext == ".jpg" || ext == ".png" || ext == ".tga" || ext == ".bmp" )
         {

@@ -40,15 +40,14 @@ public:
     virtual bool WriteToFastFile( std::ofstream& out ) const;
 
     virtual std::string GetName() const;
-    AssetStatus GetStatus() const;
 
-    bool force   = false;
-    bool verbose = false;
+    bool force         = false;
+    bool verbose       = false;
+    AssetStatus status = ASSET_OUT_OF_DATE;
 
 protected:
     std::string m_outputContentFile;
     std::string m_outputSettingsFile;
     bool  m_contentNeedsConverting;
     bool  m_settingsNeedsConverting;
-    AssetStatus m_status = ASSET_OUT_OF_DATE;
 };

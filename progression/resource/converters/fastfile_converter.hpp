@@ -12,13 +12,13 @@ public:
 
     AssetStatus CheckDependencies();
     ConverterStatus Convert();
+    void UpdateStatus( AssetStatus s );
 
     std::string inputFile;
 
-private:
-    std::vector< ImageConverter >    m_imageConverters;
-    std::vector< MaterialConverter > m_materialFileConverters;
-    std::vector< ModelConverter >    m_modelConverters;
-    std::vector< ScriptConverter >   m_scriptConverters;
-    std::vector< ShaderConverter >   m_shaderConverters;
+    std::vector< ImageConverter >    imageConverters;
+    std::vector< MaterialConverter > materialFileConverters;
+    std::vector< ModelConverter >    modelConverters;
+    std::vector< ScriptConverter >   scriptConverters;
+    std::vector< ShaderConverter >   shaderConverters;
 };

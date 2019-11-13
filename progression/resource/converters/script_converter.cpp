@@ -24,6 +24,12 @@ static std::string GetSettingsFastFileName( const ScriptCreateInfo& createInfo )
     return PG_RESOURCE_DIR "cache/scripts/settings_" + createInfo.name + ".ffi";
 }
 
+ScriptConverter::ScriptConverter( bool force_, bool verbose_ )
+{
+    force   = force_;
+    verbose = verbose_;
+}
+
 AssetStatus ScriptConverter::CheckDependencies()
 {
     m_outputContentFile  = GetContentFastFileName( createInfo );
@@ -63,28 +69,28 @@ AssetStatus ScriptConverter::CheckDependencies()
 
     if ( m_settingsNeedsConverting || m_contentNeedsConverting )
     {
-        m_status = ASSET_OUT_OF_DATE;
+        status = ASSET_OUT_OF_DATE;
     }
     else
     {
         if ( force )
         {
             LOG( "UP TO DATE: Script with name '", createInfo.name, "', but --force used, so converting anyways\n" );
-            m_status = ASSET_OUT_OF_DATE;
+            status = ASSET_OUT_OF_DATE;
         }
         else
         {
-            m_status = ASSET_UP_TO_DATE;
+            status = ASSET_UP_TO_DATE;
             LOG( "UP TO DATE: Script with name '", createInfo.name, "'" );
         }
     }
 
-    return m_status;
+    return status;
 }
 
 ConverterStatus ScriptConverter::Convert()
 {
-    if ( m_status == ASSET_UP_TO_DATE )
+    if ( status == ASSET_UP_TO_DATE )
     {
         return CONVERT_SUCCESS;
     }

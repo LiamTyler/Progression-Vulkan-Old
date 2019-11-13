@@ -5,7 +5,7 @@
 class ModelConverter : public Converter
 {
 public:
-    ModelConverter() = default;
+    ModelConverter( bool force_ = false, bool verbose_ = false );
 
     AssetStatus CheckDependencies();
     ConverterStatus Convert();

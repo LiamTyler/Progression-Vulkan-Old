@@ -15,10 +15,19 @@ namespace fs = std::filesystem;
 
 static std::string GetContentFastFileName( ImageCreateInfo& createInfo )
 {
-    fs::path filePath = fs::absolute( createInfo.filenames[0] );
-
-    std::string hash     = std::to_string( std::hash< std::string >{}( filePath.string() ) );
-    std::string baseName = filePath.filename().string();
+    std::string hash, baseName;
+    if ( !createInfo.filename.empty() )
+    {
+        fs::path filePath = fs::absolute( createInfo.filename );
+        hash     = std::to_string( std::hash< std::string >{}( filePath.string() ) );
+        baseName = filePath.filename().string();
+    }
+    else
+    {
+        fs::path filePath = fs::absolute( createInfo.skyboxFilenames[0] );
+        hash     = std::to_string( std::hash< std::string >{}( filePath.string() ) );
+        baseName = "skybox_" + filePath.filename().string();
+    }
     std::string flip     = createInfo.flags & IMAGE_FLIP_VERTICALLY ? "1" : "0";
     std::string version  = std::to_string( PG_RESOURCE_IMAGE_VERSION );
 
@@ -31,9 +40,17 @@ static std::string GetSettingsFastFileName( const ImageCreateInfo& createInfo )
            std::to_string( static_cast< int >( createInfo.flags ) ) + ".ffi";
 }
 
+ImageConverter::ImageConverter( bool f, bool v )
+{
+    force              = f;
+    verbose            = v;
+    createInfo.flags   = IMAGE_FLIP_VERTICALLY | IMAGE_CREATE_TEXTURE_ON_LOAD | IMAGE_FREE_CPU_COPY_ON_LOAD;
+    createInfo.sampler = "nearest_clamped";
+}
+
 AssetStatus ImageConverter::CheckDependencies()
 {
-    PG_ASSERT( !createInfo.filenames.empty() );
+    PG_ASSERT( !createInfo.filename.empty() || !createInfo.skyboxFilenames.empty() );
 
     // Add an empty image to the manager to notify other resources that an image with this
     // name has already been loaded
@@ -67,7 +84,7 @@ AssetStatus ImageConverter::CheckDependencies()
     {
         auto timestamp = Timestamp( m_outputContentFile );
         IF_VERBOSE_MODE( LOG( "Image FFI timestamp: ", timestamp ) );
-        for ( const auto& fname : createInfo.filenames )
+        for ( const auto& fname : createInfo.skyboxFilenames )
         {
             auto ts = Timestamp( fname ) ;
             if ( timestamp < ts )
@@ -75,8 +92,8 @@ AssetStatus ImageConverter::CheckDependencies()
                 IF_VERBOSE_MODE( LOG( "Input image '", fname, ", timestamp: ", ts ) );
                 LOG( "OUT OF DATE: Image '", fname, "' has newer timestamp than saved FFI" );
                 m_contentNeedsConverting = true;
-                m_status = ASSET_OUT_OF_DATE;
-                return m_status;
+                status = ASSET_OUT_OF_DATE;
+                return status;
             }
         }
         m_contentNeedsConverting = false;
@@ -84,28 +101,28 @@ AssetStatus ImageConverter::CheckDependencies()
 
     if ( m_settingsNeedsConverting || m_contentNeedsConverting )
     {
-        m_status = ASSET_OUT_OF_DATE;
+        status = ASSET_OUT_OF_DATE;
     }
     else
     {
         if ( force )
         {
             LOG( "UP TO DATE: Image with name '", createInfo.name, "', but --force used, so converting anyways\n" );
-            m_status = ASSET_OUT_OF_DATE;
+            status = ASSET_OUT_OF_DATE;
         }
         else
         {
-            m_status = ASSET_UP_TO_DATE;
+            status = ASSET_UP_TO_DATE;
             LOG( "UP TO DATE: Image with name '", createInfo.name, "'" );
         }
     }
 
-    return m_status;
+    return status;
 }
 
 ConverterStatus ImageConverter::Convert()
 {
-    if ( m_status == ASSET_UP_TO_DATE )
+    if ( status == ASSET_UP_TO_DATE )
     {
         return CONVERT_SUCCESS;
     }

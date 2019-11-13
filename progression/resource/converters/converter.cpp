@@ -30,8 +30,3 @@ std::string Converter::GetName() const
 {
     return m_outputContentFile;
 }
-
-AssetStatus Converter::GetStatus() const
-{
-    return m_status;
-}

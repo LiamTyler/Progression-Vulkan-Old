@@ -114,6 +114,12 @@ static bool PreprocessShader( const std::string& filename, std::string& text, st
     return true;
 }
 
+ShaderConverter::ShaderConverter( bool force_, bool verbose_ )
+{
+    force = force_;
+    verbose = verbose_;
+}
+
 AssetStatus ShaderConverter::CheckDependencies()
 {
     m_outputContentFile  = GetContentFastFileName( createInfo );
@@ -153,28 +159,28 @@ AssetStatus ShaderConverter::CheckDependencies()
 
     if ( m_settingsNeedsConverting || m_contentNeedsConverting )
     {
-        m_status = ASSET_OUT_OF_DATE;
+        status = ASSET_OUT_OF_DATE;
     }
     else
     {
         if ( force )
         {
             LOG( "UP TO DATE: Shader with name '", createInfo.name, "', but --force used, so converting anyways\n" );
-            m_status = ASSET_OUT_OF_DATE;
+            status = ASSET_OUT_OF_DATE;
         }
         else
         {
-            m_status = ASSET_UP_TO_DATE;
+            status = ASSET_UP_TO_DATE;
             LOG( "UP TO DATE: Shader with name '", createInfo.name, "'" );
         }
     }
 
-    return m_status;
+    return status;
 }
 
 ConverterStatus ShaderConverter::Convert()
 {
-    if ( m_status == ASSET_UP_TO_DATE )
+    if ( status == ASSET_UP_TO_DATE )
     {
         return CONVERT_SUCCESS;
     }

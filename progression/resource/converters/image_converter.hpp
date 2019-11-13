@@ -5,7 +5,7 @@
 class ImageConverter : public Converter
 {
 public:
-    ImageConverter() = default;
+    ImageConverter( bool force = false, bool verbose = false );
 
     AssetStatus CheckDependencies() override;
     ConverterStatus Convert() override;
