@@ -141,7 +141,7 @@ namespace Gfx
     class ImageDescriptor
     {
     public:
-        ImageType type      = ImageType::NUM_IMAGE_TYPES;
+        ImageType type      = ImageType::TYPE_2D;
         PixelFormat format  = PixelFormat::NUM_PIXEL_FORMATS;
         uint8_t mipLevels   = 1;
         uint8_t arrayLayers = 1;

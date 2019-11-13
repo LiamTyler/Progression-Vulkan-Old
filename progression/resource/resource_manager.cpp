@@ -137,7 +137,6 @@ namespace ResourceManager
         #endif // #else // #elif USING( SHIP_BUILD ) // #if USING( RELEASE_BUILD )
 
             command += " \"" + originalFile + "\"\"";
-            LOG( command );
             int ret = system( command.c_str() );
             if ( ret != 0 )
             {
