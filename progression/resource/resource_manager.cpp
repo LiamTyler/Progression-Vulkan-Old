@@ -17,7 +17,7 @@
 
 uint32_t BaseFamily::typeCounter_ = 0;
 
-#define AUTORUN_CONVERTER_ON_FF_LOAD IN_USE
+#define AUTORUN_CONVERTER_ON_FF_LOAD NOT_IN_USE
 
 namespace Progression
 {

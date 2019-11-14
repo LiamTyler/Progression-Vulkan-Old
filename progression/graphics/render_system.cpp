@@ -227,10 +227,6 @@ namespace RenderSystem
     void Shutdown()
     {
         g_renderState.device.WaitForIdle();
-        for ( auto& [name, sampler] : s_samplers )
-        {
-            sampler.Free();
-        }
 
         s_descriptorPool.Free();
         for ( size_t i = 0; i < g_renderState.swapChain.images.size(); ++i )
@@ -390,6 +386,14 @@ namespace RenderSystem
         samplerDesc.wrapModeV = WrapMode::REPEAT;
         samplerDesc.wrapModeW = WrapMode::REPEAT;
         AddSampler( samplerDesc );
+    }
+
+    void FreeSamplers()
+    {
+        for ( auto& [name, sampler] : s_samplers )
+        {
+            sampler.Free();
+        }
     }
 
 } // namespace RenderSystem

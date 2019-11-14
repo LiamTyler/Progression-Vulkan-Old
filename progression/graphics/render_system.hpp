@@ -24,6 +24,7 @@ namespace RenderSystem
     void Render( Scene* scene );
     
     void InitSamplers();
+    void FreeSamplers();
     Gfx::Sampler* AddSampler( Gfx::SamplerDescriptor& desc );
     Gfx::Sampler* GetSampler( const std::string& name );
 

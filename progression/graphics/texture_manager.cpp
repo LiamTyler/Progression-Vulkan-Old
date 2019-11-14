@@ -75,10 +75,11 @@ namespace TextureManager
         s_freeSlots.push_front( slot );
     }
 
-    void UpdateSampler( Texture* texture )
+    void UpdateSampler( Texture* tex )
     {
-        PG_ASSERT( texture && texture->GetShaderSlot() != PG_INVALID_TEXTURE_INDEX && s_slotsInUse[texture->GetShaderSlot()] );
-        s_slotsAddedSinceLastUpdate.emplace_back( texture->GetShaderSlot(), texture );
+        PG_ASSERT( tex && tex->GetShaderSlot() != PG_INVALID_TEXTURE_INDEX && s_slotsInUse[tex->GetShaderSlot()] );
+        TexInfo info = { tex->GetView(), tex->GetSampler()->GetHandle() };
+        s_slotsAddedSinceLastUpdate.emplace_back( tex->GetShaderSlot(), info );
     }
 
     void UpdateDescriptors( const std::vector< DescriptorSet >& textureDescriptorSets )
