@@ -1,0 +1,9 @@
+{
+    "Script": {
+        "name": "cameraController",
+        "filename": "scripts/cameraController.lua"
+    },
+    "MTLFile": {
+        "filename": "materials/miscellaneous.mtl"
+    }
+}

@@ -31,17 +31,17 @@ namespace Progression
 namespace RenderSystem
 {
 
-    Gfx::Sampler* AddSampler( const std::string& name, Gfx::SamplerDescriptor& desc )
+    Gfx::Sampler* AddSampler( Gfx::SamplerDescriptor& desc )
     {
-        auto it = s_samplers.find( name );
+        auto it = s_samplers.find( desc.name );
         if ( it != s_samplers.end() )
         {
             return &it->second;
         }
         else
         {
-            s_samplers[name] = Gfx::g_renderState.device.NewSampler( desc );
-            return &s_samplers[name];
+            s_samplers[desc.name] = Gfx::g_renderState.device.NewSampler( desc );
+            return &s_samplers[desc.name];
         }
     }
 
@@ -120,7 +120,7 @@ namespace RenderSystem
         PG_ASSERT( dummyImage );
         VkDescriptorImageInfo imageInfo;
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.sampler     = dummyImage->sampler->GetHandle();
+        imageInfo.sampler     = dummyImage->GetTexture()->GetSampler()->GetHandle();
         imageInfo.imageView   = dummyImage->GetTexture()->GetView();
         std::vector< VkDescriptorImageInfo > imageInfos( PG_MAX_NUM_TEXTURES, imageInfo );
 
@@ -372,19 +372,24 @@ namespace RenderSystem
     {
         SamplerDescriptor samplerDesc;
 
+        samplerDesc.name = "nearest_clamped";
         samplerDesc.minFilter = FilterMode::NEAREST;
         samplerDesc.magFilter = FilterMode::NEAREST;
         samplerDesc.wrapModeU = WrapMode::CLAMP_TO_EDGE;
         samplerDesc.wrapModeV = WrapMode::CLAMP_TO_EDGE;
         samplerDesc.wrapModeW = WrapMode::CLAMP_TO_EDGE;
-        AddSampler( "nearest_clamped", samplerDesc );
+        AddSampler( samplerDesc );
 
+        samplerDesc.name = "linear_clamped";
         samplerDesc.minFilter = FilterMode::LINEAR;
         samplerDesc.magFilter = FilterMode::LINEAR;
+        AddSampler( samplerDesc );
+
+        samplerDesc.name = "linear_repeat";
         samplerDesc.wrapModeU = WrapMode::REPEAT;
         samplerDesc.wrapModeV = WrapMode::REPEAT;
         samplerDesc.wrapModeW = WrapMode::REPEAT;
-        AddSampler( "linear_clamped", samplerDesc );
+        AddSampler( samplerDesc );
     }
 
 } // namespace RenderSystem

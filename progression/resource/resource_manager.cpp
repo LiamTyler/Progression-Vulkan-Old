@@ -49,8 +49,11 @@ namespace ResourceManager
         {
             uint32_t version;
             serialize::Read( data, version );
-            PG_ASSERT( version == expectedVersion, std::string( "Resource type '" ) + type_name< ResourceType >().data() +
-                "', expected version: " + std::to_string( expectedVersion ) + ", but found: " + std::to_string( version ) );
+            if ( numRes > 0 )
+            {
+                PG_ASSERT( version == expectedVersion, std::string( "Resource type '" ) + type_name< ResourceType >().data() +
+                    "', expected version: " + std::to_string( expectedVersion ) + ", but found: " + std::to_string( version ) );
+            }
         }
         ResourceMap& resources = f_resources[GetResourceTypeID< ResourceType >()];
         for ( uint32_t i = 0; i < numRes; ++i )

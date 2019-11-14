@@ -29,12 +29,12 @@ int main( int argc, char* argv[] )
             return 0;
         }
     
-        std::shared_ptr< Model > skinnedModel1 = std::make_shared< Model >();
+        std::shared_ptr< Model > model = std::make_shared< Model >();
         ModelCreateInfo info;
-        info.name = "arms";
-        info.filename = PG_RESOURCE_DIR "primitive.fbx";
+        info.name = "sponza";
+        info.filename = PG_RESOURCE_DIR "Sponza-master/sponza.obj";
         info.optimize = true;
-        if ( !skinnedModel1->Load( &info ) )
+        if ( !model->Load( &info ) )
         {
             LOG_ERR( "Could not load the fbx file '", info.filename, "'" );
             PG::EngineQuit();
@@ -42,24 +42,14 @@ int main( int argc, char* argv[] )
         }
 
         {
-            auto entity             = scene->registry.create();
-            auto& transform         = scene->registry.assign< Transform >( entity );
-            transform.position      = glm::vec3( 0, 0, 0 );
-            // transform.rotation      = glm::vec3( glm::radians( -90.0f ), glm::radians( 90.0f ), 0 );
-            transform.scale         = glm::vec3( .001f );
-
-            auto& skinned_renderer  = scene->registry.assign< SkinnedRenderer >( entity );
-            skinned_renderer.model  = skinnedModel1;
-            skinned_renderer.materials = skinnedModel1->materials;
-
-            // for ( auto& mat : skinnedModel->materials )
-            // {
-            //     mat->Kd = glm::vec3( 0, 1, 0 );
-            // }
-
-            auto& animator         = scene->registry.assign< Animator >( entity, skinnedModel1.get() );
-            animator.animation     = &skinnedModel1->animations[0];
-            animator.animationTime = 0;
+            auto entity        = scene->registry.create();
+            auto& transform    = scene->registry.assign< Transform >( entity );
+            transform.position = glm::vec3( 0, 0, 0 );
+            // transform.rotation = glm::vec3( glm::radians( -90.0f ), glm::radians( 90.0f ), 0 );
+            transform.scale    = glm::vec3( .01f );
+            auto& renderer     = scene->registry.assign< ModelRenderer >( entity );
+            renderer.model     = model;
+            renderer.materials = model->materials;
         }
 
         scene->Start();

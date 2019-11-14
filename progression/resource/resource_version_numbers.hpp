@@ -1,6 +1,6 @@
 #pragma once
 
-#define PG_RESOURCE_IMAGE_VERSION       1  // Changing how single image vs skybox filenames are passed in
+#define PG_RESOURCE_IMAGE_VERSION       2  // Samplers are now serialized differently
 
 #define PG_RESOURCE_MATERIAL_VERSION    0  // Initial version
 

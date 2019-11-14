@@ -55,7 +55,8 @@ bool Material::Serialize( std::ofstream& out ) const
         {
             serialize::Write( out, name );
             serialize::Write( out, map_Kd->GetImageFlags() );
-            std::string samplerName = map_Kd->sampler ? map_Kd->sampler->GetName() : "";
+            // std::string samplerName = map_Kd->texture.sampler ? map_Kd->sampler->GetName() : "";
+            std::string samplerName = map_Kd->GetTexture()->GetSampler()->GetName();
             serialize::Write( out, samplerName );
             map_Kd->Serialize( out );
         }
@@ -72,13 +73,6 @@ bool Material::Deserialize( char*& buffer )
     serialize::Read( buffer, Ks );
     serialize::Read( buffer, Ke );
     serialize::Read( buffer, Ns );
-    /*std::string map_Kd_name;
-    serialize::Read( buffer, map_Kd_name );
-    if ( !map_Kd_name.empty() )
-    {
-        map_Kd = ResourceManager::Get< Image >( map_Kd_name );
-        PG_ASSERT( map_Kd, "No diffuse texture with name '" + map_Kd_name + "' found" );
-    }*/
     bool hasDiffuseTexture;
     serialize::Read( buffer, hasDiffuseTexture );
     if ( hasDiffuseTexture )

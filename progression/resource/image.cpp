@@ -62,7 +62,7 @@ std::shared_ptr< Image > Image::Load2DImageWithDefaultSettings( const std::strin
     info.filename = filename;
     info.name     = std::filesystem::path( filename ).stem().string();
     info.flags    = IMAGE_FLIP_VERTICALLY | IMAGE_CREATE_TEXTURE_ON_LOAD;
-    info.sampler  = "linear_clamped";
+    info.sampler  = "linear_repeat";
     std::shared_ptr< Image > image = std::make_shared< Image >();
     if ( !image->Load( &info ) )
     {
@@ -120,6 +120,7 @@ bool Image::Load( ResourceCreateInfo* createInfo )
             imageDescs[i].arrayLayers = 1;
             imageDescs[i].mipLevels   = 1;
             imageDescs[i].type        = ImageType::TYPE_2D;
+            imageDescs[i].sampler     = info->sampler;
             
             // TODO: how to detect sRGB?
             PixelFormat componentsToFormat[] =
@@ -209,17 +210,7 @@ bool Image::Deserialize( char*& buffer )
 {
     serialize::Read( buffer, name );
     serialize::Read( buffer, m_flags );
-    std::string samplerName;
-    serialize::Read( buffer, samplerName );
-    if ( !samplerName.empty() )
-    {
-        sampler = RenderSystem::GetSampler( samplerName );
-        PG_ASSERT( sampler != nullptr, "No sampler found with name '" + samplerName + "' found" );
-    }
-    else
-    {
-        sampler = nullptr;
-    }
+    serialize::Read( buffer, m_texture.m_desc.sampler );
     serialize::Read( buffer, m_texture.m_desc.type );
     serialize::Read( buffer, m_texture.m_desc.format );
     serialize::Read( buffer, m_texture.m_desc.mipLevels );

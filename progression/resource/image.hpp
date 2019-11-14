@@ -60,8 +60,6 @@ public:
     size_t GetTotalImageBytes() const;
     ImageFlags GetImageFlags() const;
 
-    Gfx::Sampler* sampler = nullptr;
-
 protected:
     Gfx::Texture m_texture;
     unsigned char* m_pixels = nullptr;

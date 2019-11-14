@@ -1,0 +1,42 @@
+{
+    "Fastfile": {
+        "filename": "sponza.ff"
+    },
+    "Camera": {
+        "position": [ 0, 2, 10 ],
+        "rotation": [ 0, 0, 0 ],
+        "fov": 60,
+        "aspectRatio": 1.777777777,
+        "nearPlane": 0.1,
+        "farPlane": 100
+    },
+    "AmbientColor": {
+        "color": [ 1, 1, 1 ]
+    },
+    "DirectionalLight": {
+        "colorAndIntensity": [ 1, 1, 1, 1 ],
+        "direction": [ 0.5, -1.5, -1 ]
+    },
+    "_PointLight": {
+        "colorAndIntensity": [ 1, 1, 1, 1 ],
+        "positionAndRadius": [ -2, 0, -4, 20 ]
+    },
+    "_Entity": {
+        "NameComponent": "chalet1",
+        "Transform": {
+            "position": [ -2, -0.7, 0 ],
+            "rotation": [ -90, 90, 0 ]
+        },
+        "ModelRenderer": {
+            "model": "chalet"
+        },
+        "_ScriptComponent": {
+            "script": "spinner"
+        }
+    },
+    "Entity": {
+        "ScriptComponent": {
+            "script": "cameraController"
+        }
+    }
+}

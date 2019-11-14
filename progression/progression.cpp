@@ -72,7 +72,6 @@ bool EngineInitialize( std::string config_name )
     ResourceManager::Init();
     if ( !g_converterMode )
     {
-        RenderSystem::InitSamplers();
         if ( !ResourceManager::LoadFastFile( PG_RESOURCE_DIR "cache/fastfiles/engine_required_resources.ff" ) )
         {
             return false;

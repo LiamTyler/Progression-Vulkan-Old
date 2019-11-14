@@ -11,6 +11,8 @@ class Image;
 namespace Gfx
 {
 
+    class Sampler;
+
     enum class PixelFormat
     {
         INVALID                 = 0,
@@ -148,6 +150,7 @@ namespace Gfx
         uint32_t width      = 0;
         uint32_t height     = 0;
         uint32_t depth      = 1;
+        std::string sampler = "linear_repeat";
     };
 
     class Texture
@@ -171,6 +174,8 @@ namespace Gfx
         VkImage GetHandle() const;
         VkImageView GetView() const;
         uint16_t GetShaderSlot() const;
+        Sampler* GetSampler() const;
+        void SetSampler( Sampler* sampler );
 
         operator bool() const;
 
@@ -181,6 +186,7 @@ namespace Gfx
         VkDeviceMemory m_memory = VK_NULL_HANDLE;
         VkDevice m_device       = VK_NULL_HANDLE;
         uint16_t m_textureSlot  = PG_INVALID_TEXTURE_INDEX;
+        Sampler* m_sampler      = nullptr;
     };
 
 } // namespace Gfx

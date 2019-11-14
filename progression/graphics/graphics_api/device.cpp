@@ -2,6 +2,7 @@
 #include "core/assert.hpp"
 #include "core/platform_defines.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
+#include "graphics/render_system.hpp"
 #include "graphics/texture_manager.hpp"
 #include "graphics/vulkan.hpp"
 #include "utils/logger.hpp"
@@ -253,8 +254,10 @@ namespace Gfx
         imageInfo.flags         = 0;
 
         Texture tex;
-        tex.m_device = m_handle;
-        tex.m_desc   = desc;
+        tex.m_device  = m_handle;
+        tex.m_desc    = desc;
+        tex.m_sampler = RenderSystem::GetSampler( desc.sampler );
+        PG_ASSERT( tex.m_sampler, "Sampler '" + desc.sampler + "' not a valid sampler" );
 
         VkResult res = vkCreateImage( m_handle, &imageInfo, nullptr, &tex.m_image );
         PG_ASSERT( res == VK_SUCCESS);

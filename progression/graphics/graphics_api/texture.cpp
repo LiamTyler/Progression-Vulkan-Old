@@ -315,6 +315,18 @@ namespace Gfx
         return m_textureSlot;
     }
 
+    Sampler* Texture::GetSampler() const
+    {
+        return m_sampler;
+    }
+
+    void Texture::SetSampler( Sampler* sampler )
+    {
+        PG_ASSERT( sampler );
+        m_sampler = sampler;
+        TextureManager::UpdateSampler( this );
+    }
+
     Texture::operator bool() const
     {
         return m_image != VK_NULL_HANDLE;

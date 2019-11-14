@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.hpp>
 #include "core/window.hpp"
 #include "graphics/graphics_api.hpp"
+#include "graphics/render_system.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
 #include "utils/logger.hpp"
 #include <iostream>
@@ -469,10 +470,11 @@ static bool CreateRenderPass()
 static bool CreateDepthTexture()
 {
     ImageDescriptor info;
-    info.type   = ImageType::TYPE_2D;
-    info.format = PixelFormat::DEPTH_32_FLOAT;
-    info.width  = g_renderState.swapChain.extent.width;
-    info.height = g_renderState.swapChain.extent.height;
+    info.type    = ImageType::TYPE_2D;
+    info.format  = PixelFormat::DEPTH_32_FLOAT;
+    info.width   = g_renderState.swapChain.extent.width;
+    info.height  = g_renderState.swapChain.extent.height;
+    info.sampler = "nearest_clamped";
     g_renderState.depthTex = g_renderState.device.NewTexture( info, false );
     return g_renderState.depthTex;
 }
@@ -670,6 +672,8 @@ bool VulkanInit()
         LOG_ERR( "Could not create logical device" );
         return false;
     }
+
+    RenderSystem::InitSamplers();
 
     if ( !g_renderState.swapChain.Create( g_renderState.device.GetHandle() ) )
     {
