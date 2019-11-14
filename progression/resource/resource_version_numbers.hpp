@@ -1,6 +1,6 @@
 #pragma once
 
-#define PG_RESOURCE_IMAGE_VERSION       2  // Samplers are now serialized differently
+#define PG_RESOURCE_IMAGE_VERSION       3  // Samplers names changed
 
 #define PG_RESOURCE_MATERIAL_VERSION    0  // Initial version
 

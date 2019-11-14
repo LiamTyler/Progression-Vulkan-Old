@@ -244,7 +244,7 @@ namespace Gfx
         imageInfo.format        = PGToVulkanPixelFormat( desc.format );
         imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        imageInfo.usage         = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        imageInfo.usage         = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         if ( isDepth )
         {
             imageInfo.usage         = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
@@ -280,7 +280,7 @@ namespace Gfx
         }
         VkFormat vkFormat = PGToVulkanPixelFormat( desc.format );
         PG_ASSERT( FormatSupported( vkFormat, features ) );
-        tex.m_imageView   = CreateImageView( tex.m_image, vkFormat, isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT );
+        tex.m_imageView = CreateImageView( tex.m_image, vkFormat, isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT, desc.mipLevels );
         if ( managed )
         {
             tex.m_textureSlot = TextureManager::GetOpenSlot( &tex );
@@ -311,7 +311,7 @@ namespace Gfx
         info.mipmapMode              = PGToVulkanMipFilter( desc.mipFilter );
         info.mipLodBias              = 0.0f;
         info.minLod                  = 0.0f;
-        info.maxLod                  = 0.0f;
+        info.maxLod                  = 100.0f;
 
         VkResult res = vkCreateSampler( m_handle, &info, nullptr, &sampler.m_handle );
         PG_ASSERT( res == VK_SUCCESS );

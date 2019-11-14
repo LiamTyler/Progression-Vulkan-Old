@@ -1,5 +1,6 @@
 #include "resource/converters/image_converter.hpp"
 #include "core/assert.hpp"
+#include "graphics/render_system.hpp"
 #include "resource/image.hpp"
 #include "resource/resource_manager.hpp"
 #include "resource/resource_version_numbers.hpp"
@@ -45,7 +46,7 @@ ImageConverter::ImageConverter( bool f, bool v )
     force              = f;
     verbose            = v;
     createInfo.flags   = IMAGE_FLIP_VERTICALLY | IMAGE_CREATE_TEXTURE_ON_LOAD | IMAGE_FREE_CPU_COPY_ON_LOAD;
-    createInfo.sampler = "nearest_clamped";
+    createInfo.sampler = "linear_repeat_linear";
 }
 
 AssetStatus ImageConverter::CheckDependencies()
@@ -57,6 +58,11 @@ AssetStatus ImageConverter::CheckDependencies()
     auto placeHolderImg  = std::make_shared< Image >();
     placeHolderImg->name = createInfo.name;
     ResourceManager::Add< Image >( placeHolderImg );
+    if ( !RenderSystem::GetSampler( createInfo.sampler ) )
+    {
+        LOG_ERR( "Sampler '", createInfo.sampler, "' does not exist in the render system" );
+        return ASSET_CHECKING_ERROR;
+    }
 
     m_outputContentFile  = GetContentFastFileName( createInfo );
     m_outputSettingsFile = GetSettingsFastFileName( createInfo );

@@ -5,13 +5,11 @@
     },
     "_Image": {
         "name": "floor",
-        "filename": "textures/metal2.jpg",
-        "sampler": "linear_clamped"
+        "filename": "textures/metal2.jpg"
     },
     "Image": {
         "name": "chaletTex",
-        "filename": "textures/chalet.jpg",
-        "sampler": "linear_clamped"
+        "filename": "textures/chalet.jpg"
     },
     "MTLFile": {
         "filename": "materials/miscellaneous.mtl"

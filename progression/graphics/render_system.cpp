@@ -368,20 +368,22 @@ namespace RenderSystem
     {
         SamplerDescriptor samplerDesc;
 
-        samplerDesc.name = "nearest_clamped";
+        samplerDesc.name = "nearest_clamped_nearest";
         samplerDesc.minFilter = FilterMode::NEAREST;
         samplerDesc.magFilter = FilterMode::NEAREST;
+        samplerDesc.mipFilter = MipFilterMode::NEAREST;
         samplerDesc.wrapModeU = WrapMode::CLAMP_TO_EDGE;
         samplerDesc.wrapModeV = WrapMode::CLAMP_TO_EDGE;
         samplerDesc.wrapModeW = WrapMode::CLAMP_TO_EDGE;
         AddSampler( samplerDesc );
 
-        samplerDesc.name = "linear_clamped";
+        samplerDesc.name = "linear_clamped_linear";
+        samplerDesc.mipFilter = MipFilterMode::LINEAR;
         samplerDesc.minFilter = FilterMode::LINEAR;
         samplerDesc.magFilter = FilterMode::LINEAR;
         AddSampler( samplerDesc );
 
-        samplerDesc.name = "linear_repeat";
+        samplerDesc.name = "linear_repeat_linear";
         samplerDesc.wrapModeU = WrapMode::REPEAT;
         samplerDesc.wrapModeV = WrapMode::REPEAT;
         samplerDesc.wrapModeW = WrapMode::REPEAT;

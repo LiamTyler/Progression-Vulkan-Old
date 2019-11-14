@@ -2,6 +2,7 @@
 #include "core/assert.hpp"
 #include "core/core_defines.hpp"
 #include "resource/resource_manager.hpp"
+#include "resource/resource_version_numbers.hpp"
 #include "utils/fileIO.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
@@ -53,9 +54,9 @@ bool Material::Serialize( std::ofstream& out ) const
         }
         else
         {
+            serialize::Write( out, (uint32_t) PG_RESOURCE_IMAGE_VERSION );
             serialize::Write( out, name );
             serialize::Write( out, map_Kd->GetImageFlags() );
-            // std::string samplerName = map_Kd->texture.sampler ? map_Kd->sampler->GetName() : "";
             std::string samplerName = map_Kd->GetTexture()->GetSampler()->GetName();
             serialize::Write( out, samplerName );
             map_Kd->Serialize( out );
@@ -88,6 +89,10 @@ bool Material::Deserialize( char*& buffer )
         }
         else
         {
+            uint32_t imVersion;
+            serialize::Read( buffer, imVersion );
+            PG_ASSERT( imVersion == PG_RESOURCE_IMAGE_VERSION, "Expected image version: " +
+                std::to_string( PG_RESOURCE_IMAGE_VERSION ) + ", but got: " + std::to_string( imVersion ) );
             map_Kd = std::make_shared< Image >();
             map_Kd->Deserialize( buffer );
         }

@@ -18,8 +18,9 @@ static std::string GetContentFastFileName( const std::string& mtlFileName )
 
     std::string hash     = std::to_string( std::hash< std::string >{}( absPath ) );
     std::string basename = fs::path( mtlFileName ).filename().string();
-    std::string version  = std::to_string( PG_RESOURCE_MATERIAL_VERSION );
-    return PG_RESOURCE_DIR "cache/materials/" + basename + "_" + version + "_" + hash + ".ffi";
+    std::string mtlVersion = std::to_string( PG_RESOURCE_MATERIAL_VERSION );
+    std::string imgVersion = std::to_string( PG_RESOURCE_IMAGE_VERSION );
+    return PG_RESOURCE_DIR "cache/materials/" + basename + "_" + mtlVersion + "_" + imgVersion + "_" + hash + ".ffi";
 }
 
 MaterialConverter::MaterialConverter( bool force_, bool verbose_ )

@@ -61,8 +61,8 @@ std::shared_ptr< Image > Image::Load2DImageWithDefaultSettings( const std::strin
     ImageCreateInfo info;
     info.filename = filename;
     info.name     = std::filesystem::path( filename ).stem().string();
-    info.flags    = IMAGE_FLIP_VERTICALLY | IMAGE_CREATE_TEXTURE_ON_LOAD;
-    info.sampler  = "linear_repeat";
+    info.flags    = IMAGE_FLIP_VERTICALLY | IMAGE_CREATE_TEXTURE_ON_LOAD | IMAGE_GENERATE_MIPMAPS_ON_CONVERT;
+    info.sampler  = "linear_repeat_linear";
     std::shared_ptr< Image > image = std::make_shared< Image >();
     if ( !image->Load( &info ) )
     {
@@ -119,6 +119,10 @@ bool Image::Load( ResourceCreateInfo* createInfo )
             imageDescs[i].depth       = 1;
             imageDescs[i].arrayLayers = 1;
             imageDescs[i].mipLevels   = 1;
+            if ( m_flags & IMAGE_GENERATE_MIPMAPS_ON_CONVERT )
+            {
+                imageDescs[i].mipLevels = static_cast< uint32_t >( 1 + std::floor( std::log2( std::max( width, height ) ) ) );
+            }
             imageDescs[i].type        = ImageType::TYPE_2D;
             imageDescs[i].sampler     = info->sampler;
             
@@ -308,8 +312,9 @@ bool Image::Save( const std::string& fname, bool flipVertically ) const
 
 void Image::UploadToGpu()
 {
-    auto& device = g_renderState.device;
-    size_t imSize = GetTotalImageBytes();
+    auto& device  = g_renderState.device;
+    size_t imSize = m_texture.m_desc.width * m_texture.m_desc.height * m_texture.m_desc.depth *
+                    m_texture.m_desc.arrayLayers * SizeOfPixelFromat( m_texture.m_desc.format );
     Buffer stagingBuffer = device.NewBuffer( imSize, BUFFER_TYPE_TRANSFER_SRC, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
     stagingBuffer.Map();
     memcpy( stagingBuffer.MappedPtr(), m_pixels, imSize );
@@ -319,10 +324,18 @@ void Image::UploadToGpu()
     PG_ASSERT( FormatSupported( vkFormat, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT ) );
 
     m_texture = device.NewTexture( m_texture.m_desc );
-    TransitionImageLayout( m_texture.GetHandle(), vkFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
+    TransitionImageLayout( m_texture.GetHandle(), vkFormat, VK_IMAGE_LAYOUT_UNDEFINED,
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_texture.m_desc.mipLevels );
     device.CopyBufferToImage( stagingBuffer, m_texture );
-    TransitionImageLayout( m_texture.GetHandle(), vkFormat,
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+    if ( m_flags & IMAGE_GENERATE_MIPMAPS_ON_CONVERT )
+    {
+        m_texture.GenerateMipMaps();
+    }
+    else
+    {
+        TransitionImageLayout( m_texture.GetHandle(), vkFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_texture.m_desc.mipLevels );
+    }
 
     stagingBuffer.Free();
 
@@ -406,12 +419,18 @@ unsigned char* Image::GetPixels() const
 
 size_t Image::GetTotalImageBytes() const
 {
-    PG_ASSERT( m_texture.m_desc.mipLevels == 1, "havent added mipmapping yet" );
-    int pixelSize = SizeOfPixelFromat( m_texture.m_desc.format );
+    PG_ASSERT( m_texture.m_desc.mipLevels == 1 || m_texture.m_desc.depth == 1, "No mipmapping with depth > 1" );
+    int texelSize = SizeOfPixelFromat( m_texture.m_desc.format );
     uint32_t w    = m_texture.m_desc.width;
     uint32_t h    = m_texture.m_desc.height;
     uint32_t d    = m_texture.m_desc.depth;
-    size_t size   = w * h * d * m_texture.m_desc.arrayLayers * pixelSize;
+    size_t size   = w * h * d * m_texture.m_desc.arrayLayers * texelSize;
+    for ( uint32_t mip = 1; mip < m_texture.GetMipLevels(); ++ mip )
+    {
+        if ( w > 1 ) w /= 2;
+        if ( h > 1 ) h /= 2;
+        size += w * h * d * m_texture.m_desc.arrayLayers * texelSize;
+    }
 
     return size;
 }

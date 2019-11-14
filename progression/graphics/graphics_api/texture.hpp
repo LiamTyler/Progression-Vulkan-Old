@@ -150,7 +150,7 @@ namespace Gfx
         uint32_t width      = 0;
         uint32_t height     = 0;
         uint32_t depth      = 1;
-        std::string sampler = "linear_repeat";
+        std::string sampler = "linear_repeat_linear";
     };
 
     class Texture
@@ -161,6 +161,7 @@ namespace Gfx
         Texture() = default;
 
         void Free();
+        void GenerateMipMaps();
 
         unsigned char* GetPixelData() const;
         ImageType GetType() const;

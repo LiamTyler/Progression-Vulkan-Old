@@ -474,7 +474,7 @@ static bool CreateDepthTexture()
     info.format  = PixelFormat::DEPTH_32_FLOAT;
     info.width   = g_renderState.swapChain.extent.width;
     info.height  = g_renderState.swapChain.extent.height;
-    info.sampler = "nearest_clamped";
+    info.sampler = "nearest_clamped_nearest";
     g_renderState.depthTex = g_renderState.device.NewTexture( info, false );
     return g_renderState.depthTex;
 }
@@ -621,7 +621,7 @@ bool SwapChain::Create( VkDevice dev )
 
     for ( size_t i = 0; i < images.size(); ++i )
     {
-        imageViews[i] = CreateImageView( images[i], imageFormat, VK_IMAGE_ASPECT_COLOR_BIT );
+        imageViews[i] = CreateImageView( images[i], imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1 );
     }
     
     return true;
@@ -767,7 +767,7 @@ uint32_t FindMemoryType( uint32_t typeFilter, VkMemoryPropertyFlags properties )
     return ~0u;
 }
 
-void TransitionImageLayout( VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout )
+void TransitionImageLayout( VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels )
 {
     CommandBuffer cmdBuf = g_renderState.transientCommandPool.NewCommandBuffer();
     cmdBuf.BeginRecording( COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT );
@@ -781,7 +781,7 @@ void TransitionImageLayout( VkImage image, VkFormat format, VkImageLayout oldLay
     barrier.image                           = image;
     barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.baseMipLevel   = 0;
-    barrier.subresourceRange.levelCount     = 1;
+    barrier.subresourceRange.levelCount     = mipLevels;
     barrier.subresourceRange.baseArrayLayer = 0;
     barrier.subresourceRange.layerCount     = 1;
     barrier.srcAccessMask                   = 0;
@@ -823,7 +823,7 @@ bool FormatSupported( VkFormat format, VkFormatFeatureFlags requestedSupport )
     return ( props.optimalTilingFeatures & requestedSupport ) == requestedSupport;
 }
 
-VkImageView CreateImageView( VkImage image, VkFormat format, VkImageAspectFlags aspectFlags )
+VkImageView CreateImageView( VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels )
 {
     VkImageViewCreateInfo viewCreateInfo = {};
     viewCreateInfo.sType        = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -838,7 +838,7 @@ VkImageView CreateImageView( VkImage image, VkFormat format, VkImageAspectFlags 
     // specify image purpose and which part to access
     viewCreateInfo.subresourceRange.aspectMask     = aspectFlags;
     viewCreateInfo.subresourceRange.baseMipLevel   = 0;
-    viewCreateInfo.subresourceRange.levelCount     = 1;
+    viewCreateInfo.subresourceRange.levelCount     = mipLevels;
     viewCreateInfo.subresourceRange.baseArrayLayer = 0;
     viewCreateInfo.subresourceRange.layerCount     = 1;
 
