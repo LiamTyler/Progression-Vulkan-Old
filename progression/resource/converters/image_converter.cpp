@@ -146,6 +146,7 @@ ConverterStatus ImageConverter::Convert()
         Image image;
         createInfo.flags &= ~IMAGE_FREE_CPU_COPY_ON_LOAD;
         createInfo.flags &= ~IMAGE_CREATE_TEXTURE_ON_LOAD;
+        createInfo.flags &= ~IMAGE_GENERATE_MIPMAPS;
         if ( !image.Load( &createInfo ) )
         {
             LOG_ERR( "Could not load image '", createInfo.name, "'" );

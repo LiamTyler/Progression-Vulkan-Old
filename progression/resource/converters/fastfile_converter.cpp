@@ -115,7 +115,7 @@ static void ParseImage( rapidjson::Value& value, FastfileConverter* conv )
         },
         { "sampler",         []( rapidjson::Value& v, ImageCreateInfo& i ) { i.sampler = v.GetString(); } },
         { "flipVertically",  []( rapidjson::Value& v, ImageCreateInfo& i ) { if ( v.GetBool() ) i.flags |= IMAGE_FLIP_VERTICALLY; } },
-        { "generateMipmaps", []( rapidjson::Value& v, ImageCreateInfo& i ) { if ( v.GetBool() ) i.flags |= IMAGE_GENERATE_MIPMAPS_ON_CONVERT; } },
+        { "generateMipmaps", []( rapidjson::Value& v, ImageCreateInfo& i ) { if ( v.GetBool() ) i.flags |= IMAGE_GENERATE_MIPMAPS; } },
         { "createTexture",   []( rapidjson::Value& v, ImageCreateInfo& i ) { if ( v.GetBool() ) i.flags |= IMAGE_CREATE_TEXTURE_ON_LOAD; } },
         { "freeCpuCopy",     []( rapidjson::Value& v, ImageCreateInfo& i ) { if ( v.GetBool() ) i.flags |= IMAGE_FREE_CPU_COPY_ON_LOAD; } },
     });

@@ -10,10 +10,10 @@ namespace Progression
 
 enum ImageFlagBits
 {
-    IMAGE_CREATE_TEXTURE_ON_LOAD      = 1 << 0,
-    IMAGE_FREE_CPU_COPY_ON_LOAD       = 1 << 1,
-    IMAGE_FLIP_VERTICALLY             = 1 << 2,
-    IMAGE_GENERATE_MIPMAPS_ON_CONVERT = 1 << 3,
+    IMAGE_CREATE_TEXTURE_ON_LOAD = 1 << 0,
+    IMAGE_FREE_CPU_COPY_ON_LOAD  = 1 << 1,
+    IMAGE_FLIP_VERTICALLY        = 1 << 2,
+    IMAGE_GENERATE_MIPMAPS       = 1 << 3,
 };
 
 typedef uint32_t ImageFlags;

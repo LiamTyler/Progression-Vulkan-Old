@@ -61,7 +61,7 @@ std::shared_ptr< Image > Image::Load2DImageWithDefaultSettings( const std::strin
     ImageCreateInfo info;
     info.filename = filename;
     info.name     = std::filesystem::path( filename ).stem().string();
-    info.flags    = IMAGE_FLIP_VERTICALLY | IMAGE_CREATE_TEXTURE_ON_LOAD | IMAGE_GENERATE_MIPMAPS_ON_CONVERT;
+    info.flags    = IMAGE_FLIP_VERTICALLY | IMAGE_CREATE_TEXTURE_ON_LOAD | IMAGE_GENERATE_MIPMAPS;
     info.sampler  = "linear_repeat_linear";
     std::shared_ptr< Image > image = std::make_shared< Image >();
     if ( !image->Load( &info ) )
@@ -119,10 +119,6 @@ bool Image::Load( ResourceCreateInfo* createInfo )
             imageDescs[i].depth       = 1;
             imageDescs[i].arrayLayers = 1;
             imageDescs[i].mipLevels   = 1;
-            if ( m_flags & IMAGE_GENERATE_MIPMAPS_ON_CONVERT )
-            {
-                imageDescs[i].mipLevels = static_cast< uint32_t >( 1 + std::floor( std::log2( std::max( width, height ) ) ) );
-            }
             imageDescs[i].type        = ImageType::TYPE_2D;
             imageDescs[i].sampler     = info->sampler;
             
@@ -203,7 +199,10 @@ bool Image::Serialize( std::ofstream& out ) const
     serialize::Write( out, m_texture.m_desc.width );
     serialize::Write( out, m_texture.m_desc.height );
     serialize::Write( out, m_texture.m_desc.depth );
-    size_t totalSize = GetTotalImageBytes();
+
+    // Can't read back mips yet to cpu, so just save the first mip
+    size_t totalSize = m_texture.m_desc.width * m_texture.m_desc.height * m_texture.m_desc.depth *
+                       m_texture.m_desc.arrayLayers * SizeOfPixelFromat( m_texture.m_desc.format );
     serialize::Write( out, totalSize );
     serialize::Write( out, (char*) m_pixels, totalSize );
 
@@ -323,13 +322,19 @@ void Image::UploadToGpu()
     VkFormat vkFormat = PGToVulkanPixelFormat( m_texture.GetPixelFormat() );
     PG_ASSERT( FormatSupported( vkFormat, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT ) );
 
+    if ( m_flags & IMAGE_GENERATE_MIPMAPS )
+    {
+        m_texture.m_desc.mipLevels = static_cast< uint32_t >( 1 + std::floor( std::log2( std::max( m_texture.m_desc.width, m_texture.m_desc.height ) ) ) );
+    }
+
     m_texture = device.NewTexture( m_texture.m_desc );
     TransitionImageLayout( m_texture.GetHandle(), vkFormat, VK_IMAGE_LAYOUT_UNDEFINED,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_texture.m_desc.mipLevels );
     device.CopyBufferToImage( stagingBuffer, m_texture );
-    if ( m_flags & IMAGE_GENERATE_MIPMAPS_ON_CONVERT )
+    if ( m_flags & IMAGE_GENERATE_MIPMAPS )
     {
         m_texture.GenerateMipMaps();
+        //PG_ASSERT( ( m_flags & IMAGE_FREE_CPU_COPY_ON_LOAD ), "Mipmaps currently not copied back to the cpu yet" );
     }
     else
     {
@@ -338,8 +343,6 @@ void Image::UploadToGpu()
     }
 
     stagingBuffer.Free();
-
-    // m_texture.m_imageView = CreateImageView( m_texture.m_image, vkFormat );
 }
 
 void Image::ReadToCpu()
