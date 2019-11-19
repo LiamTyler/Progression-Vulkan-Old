@@ -27,6 +27,7 @@ set(PROGRESSION_LIBS
     Vulkan::Vulkan
     lua
     assimp
+    basisu_lib
     ${SYSTEM_LIBS}
 )
 

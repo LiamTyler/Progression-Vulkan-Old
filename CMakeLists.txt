@@ -108,6 +108,7 @@ set_target_properties(
     SHIP_POSTFIX _ship
 )
 
+add_subdirectory(ext/basis_universal)
 add_subdirectory(ext/meshoptimizer)
 add_subdirectory(ext/lz4)
 
