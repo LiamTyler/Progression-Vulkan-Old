@@ -195,7 +195,7 @@ bool Image::Serialize( std::ofstream& out ) const
     serialize::Write( out, m_texture.m_desc.type );
     serialize::Write( out, m_texture.m_desc.format );
     serialize::Write( out, m_texture.m_desc.mipLevels );
-    serialize::Write( out, m_texture.m_desc.arrayLayers  );
+    serialize::Write( out, m_texture.m_desc.arrayLayers );
     serialize::Write( out, m_texture.m_desc.width );
     serialize::Write( out, m_texture.m_desc.height );
     serialize::Write( out, m_texture.m_desc.depth );
@@ -322,7 +322,14 @@ void Image::UploadToGpu()
     VkFormat vkFormat = PGToVulkanPixelFormat( m_texture.GetPixelFormat() );
     PG_ASSERT( FormatSupported( vkFormat, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT ) );
 
-    if ( m_flags & IMAGE_GENERATE_MIPMAPS )
+    bool generateMips = m_flags & IMAGE_GENERATE_MIPMAPS;
+    if ( Gfx::PixelFormatIsCompressed( m_texture.m_desc.format ) && generateMips )
+    {
+        LOG_WARN( "Cannot generate mips for a compressed texture" );
+        generateMips = false;
+    }
+
+    if ( generateMips )
     {
         m_texture.m_desc.mipLevels = static_cast< uint32_t >( 1 + std::floor( std::log2( std::max( m_texture.m_desc.width, m_texture.m_desc.height ) ) ) );
     }
@@ -331,7 +338,7 @@ void Image::UploadToGpu()
     TransitionImageLayout( m_texture.GetHandle(), vkFormat, VK_IMAGE_LAYOUT_UNDEFINED,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_texture.m_desc.mipLevels );
     device.CopyBufferToImage( stagingBuffer, m_texture );
-    if ( m_flags & IMAGE_GENERATE_MIPMAPS )
+    if ( generateMips )
     {
         m_texture.GenerateMipMaps();
         //PG_ASSERT( ( m_flags & IMAGE_FREE_CPU_COPY_ON_LOAD ), "Mipmaps currently not copied back to the cpu yet" );

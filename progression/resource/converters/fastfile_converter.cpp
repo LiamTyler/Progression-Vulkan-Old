@@ -118,6 +118,20 @@ static void ParseImage( rapidjson::Value& value, FastfileConverter* conv )
         { "generateMipmaps", []( rapidjson::Value& v, ImageCreateInfo& i ) { if ( v.GetBool() ) i.flags |= IMAGE_GENERATE_MIPMAPS; } },
         { "createTexture",   []( rapidjson::Value& v, ImageCreateInfo& i ) { if ( v.GetBool() ) i.flags |= IMAGE_CREATE_TEXTURE_ON_LOAD; } },
         { "freeCpuCopy",     []( rapidjson::Value& v, ImageCreateInfo& i ) { if ( v.GetBool() ) i.flags |= IMAGE_FREE_CPU_COPY_ON_LOAD; } },
+        { "dstFormat",       []( rapidjson::Value& v, ImageCreateInfo& i )
+            {
+                std::string format = v.GetString();
+                auto it = pixelFormatMap.find( format );
+                if ( it == pixelFormatMap.end() )
+                {
+                    LOG_WARN( "No pixel format found matching '", format, "'" );
+                }
+                else
+                {
+                    i.dstFormat = it->second;
+                }
+            }
+        },
     });
 
     mapping.ForEachMember( value, converter.createInfo );

@@ -19,6 +19,26 @@ set(BASISU_SRC_LIST ${COMMON_SRC_LIST}
 	basisu_astc_decomp.cpp
 	lodepng.cpp
 	transcoder/basisu_transcoder.cpp
+    
+    basisu_backend.h
+	basisu_basis_file.h
+	basisu_comp.h
+	basisu_enc.h
+	basisu_etc.h
+	basisu_frontend.h
+	basisu_global_selector_palette_helpers.h
+	basisu_gpu_texture.h
+	basisu_pvrtc1_4.h
+	basisu_resampler.h
+	basisu_resampler_filters.h
+	basisu_ssim.h
+	basisu_astc_decomp.h
+	lodepng.h
+	transcoder/basisu_transcoder.h
+	transcoder/basisu.h
+	transcoder/basisu_global_selector_cb.h
+	transcoder/basisu_global_selector_palette.h
+    
 )
 
 #add_executable(basisu ${BASISU_SRC_LIST})

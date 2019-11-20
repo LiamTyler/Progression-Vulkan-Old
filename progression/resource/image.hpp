@@ -22,8 +22,9 @@ struct ImageCreateInfo : public ResourceCreateInfo
 {
     std::string filename;
     std::vector< std::string > skyboxFilenames;
-    std::string sampler = "";
-    ImageFlags flags    = 0;
+    std::string sampler        = "";
+    ImageFlags flags           = 0;
+    Gfx::PixelFormat dstFormat = Gfx::PixelFormat::INVALID;
 };
 
 class Image : public Resource 
