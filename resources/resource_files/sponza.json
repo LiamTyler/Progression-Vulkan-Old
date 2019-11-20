@@ -5,5 +5,9 @@
     },
     "MTLFile": {
         "filename": "materials/miscellaneous.mtl"
+    },
+    "Model": {
+        "name": "sponza",
+        "filename": "Sponza-master/sponza.obj"
     }
 }

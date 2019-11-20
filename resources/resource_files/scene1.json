@@ -23,6 +23,10 @@
         "filename": "models/plane.obj"
     },
     "Model": {
+        "name": "dragon",
+        "filename": "dragon/Dragon_Baked_Actions_fbx_7.4_binary.fbx"
+    },
+    "Model": {
         "name": "cube",
         "filename": "models/cube.obj"
     }

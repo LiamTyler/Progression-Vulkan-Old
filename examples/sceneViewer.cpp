@@ -29,6 +29,7 @@ int main( int argc, char* argv[] )
             return 0;
         }
     
+        /*
         std::shared_ptr< Model > model = std::make_shared< Model >();
         ModelCreateInfo info;
         info.name = "sponza";
@@ -51,6 +52,7 @@ int main( int argc, char* argv[] )
             renderer.model     = model;
             renderer.materials = model->materials;
         }
+        */
 
         scene->Start();
 

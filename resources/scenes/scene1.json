@@ -32,9 +32,20 @@
         },
         "ModelRenderer": {
             "model": "chalet"
+        }
+    },
+    "Entity": {
+        "NameComponent": "dragon",
+        "Transform": {
+            "position": [ 5, 0, 0 ],
+            "rotation": [ 0, 0, 0 ],
+            "scale": [ 0.001, 0.001, 0.001 ]
         },
-        "_ScriptComponent": {
-            "script": "spinner"
+        "SkinnedRenderer": {
+            "model": "dragon"
+        },
+        "Animator": {
+            "model": "dragon"
         }
     },
     "Entity": {

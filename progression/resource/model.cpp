@@ -634,6 +634,20 @@ namespace Progression
         serialize::Write( out, aabb.extent );
         serialize::Write( out, meshes );
         skeleton.Serialize( out );
+        size_t numAnimations = animations.size();
+        serialize::Write( out, numAnimations );
+        for ( const auto& anim : animations )
+        {
+            serialize::Write( out, anim.name );
+            serialize::Write( out, anim.duration );
+            serialize::Write( out, anim.ticksPerSecond );
+            serialize::Write( out, anim.keyFrames.size() );
+            for ( const auto& keyFrame : anim.keyFrames )
+            {
+                serialize::Write( out, keyFrame.time );
+                serialize::Write( out, keyFrame.jointSpaceTransforms );
+            }
+        }
 
         return !out.fail();
     }
@@ -699,6 +713,24 @@ namespace Progression
         serialize::Read( buffer, aabb.extent );
         serialize::Read( buffer, meshes );
         skeleton.Deserialize( buffer );
+
+        size_t numAnimations;
+        serialize::Read( buffer, numAnimations );
+        animations.resize( numAnimations );
+        for ( auto& anim : animations )
+        {
+            serialize::Read( buffer, anim.name );
+            serialize::Read( buffer, anim.duration );
+            serialize::Read( buffer, anim.ticksPerSecond );
+            size_t numKeyFrames;
+            serialize::Read( buffer, numKeyFrames );
+            anim.keyFrames.resize( numKeyFrames );
+            for ( auto& keyFrame : anim.keyFrames )
+            {
+                serialize::Read( buffer, keyFrame.time );
+                serialize::Read( buffer, keyFrame.jointSpaceTransforms );
+            }
+        }
 
         return true;
     }

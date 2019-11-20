@@ -1,8 +1,10 @@
 #include "components/factory.hpp"
+#include "components/animation_component.hpp"
 #include "components/transform.hpp"
 #include "components/entity_metadata.hpp"
 #include "components/model_renderer.hpp"
 #include "components/script_component.hpp"
+#include "components/skinned_renderer.hpp"
 #include "resource/model.hpp"
 #include "resource/material.hpp"
 #include "core/assert.hpp"
@@ -114,6 +116,61 @@ namespace Progression
         mapping.ForEachMember( value, comp );
     }
 
+    static void ParseSkinnedRenderer( rapidjson::Value& value, entt::entity e, entt::registry& registry )
+    {   
+        auto& comp = registry.assign< SkinnedRenderer >( e );
+        static FunctionMapper< void, SkinnedRenderer& > mapping(
+        {
+            { "model", []( rapidjson::Value& v, SkinnedRenderer& comp )
+                {
+                    PG_ASSERT( v.IsString(), "Please provide a string of the model's name" );
+                    comp.model = ResourceManager::Get< Model >( v.GetString() );
+                    PG_ASSERT( comp.model != nullptr, "Model with name '" + std::string( v.GetString() ) + "' not found" );
+                    comp.materials = comp.model->materials;
+                }
+            },
+            { "material", []( rapidjson::Value& v, SkinnedRenderer& comp )
+                {
+                    PG_ASSERT( v.IsString(), "Please provide a string of the material's name" );
+                    auto mat = ResourceManager::Get< Material >( v.GetString() );
+                    PG_ASSERT( mat != nullptr, "Material with name '" + std::string( v.GetString() ) + "' not found" );
+                    PG_ASSERT( comp.model != nullptr, "Must specify model before assigning materials for it" );
+                    for ( auto& matPtr : comp.materials )
+                    {
+                        matPtr = mat;
+                    }
+                }
+            },
+        });
+
+        mapping.ForEachMember( value, comp );
+    }
+
+    static void ParseAnimator( rapidjson::Value& value, entt::entity e, entt::registry& registry )
+    {   
+        auto& comp = registry.assign< Animator >( e );
+        static FunctionMapper< void, Animator& > mapping(
+        {
+            { "model", []( rapidjson::Value& v, Animator& comp )
+                {
+                    PG_ASSERT( v.IsString(), "Please provide a string of the model's name" );
+                    Model* model = ResourceManager::Get< Model >( v.GetString() ).get();
+                    PG_ASSERT( model != nullptr, "Model with name '" + std::string( v.GetString() ) + "' not found" );
+                    comp.AssignNewModel( model );
+                }
+            },
+        });
+
+        mapping.ForEachMember( value, comp );
+
+        if ( comp.GetModel() )
+        {
+            comp.animationTime = 0;
+            comp.animation = &comp.GetModel()->animations[0];
+        }
+
+    }
+
     void ParseComponent( rapidjson::Value& value, entt::entity e, entt::registry& registry, const std::string& typeName )
     {
         static FunctionMapper< void, entt::entity, entt::registry& > mapping(
@@ -123,6 +180,8 @@ namespace Progression
             { "ScriptComponent", ParseScriptComponent },
             { "Transform",       ParseTransform },
             { "ModelRenderer",   ParseModelRenderer },
+            { "SkinnedRenderer", ParseSkinnedRenderer },
+            { "Animator",        ParseAnimator },
         });
 
         //mapping[typeName]( value, e, registry );
