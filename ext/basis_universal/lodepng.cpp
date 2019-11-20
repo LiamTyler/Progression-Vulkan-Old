@@ -33,7 +33,7 @@ Rename this file to lodepng.cpp to use it for C++, or to lodepng.c to use it for
 
 #ifndef BASISU_NO_ITERATOR_DEBUG_LEVEL
 #if defined(_DEBUG) || defined(DEBUG)
-#define _ITERATOR_DEBUG_LEVEL 1
+#define _ITERATOR_DEBUG_LEVEL 2
 #define _SECURE_SCL 1
 #else
 #define _SECURE_SCL 0

@@ -27,7 +27,7 @@
 		#if defined(_DEBUG) || defined(DEBUG)
 			// This is madness, but we need to disable iterator debugging in debug builds or the encoder is unsable because MSVC's iterator debugging implementation is totally broken.
 			#ifndef _ITERATOR_DEBUG_LEVEL
-			#define _ITERATOR_DEBUG_LEVEL 1
+			#define _ITERATOR_DEBUG_LEVEL 2
 			#endif
 			#ifndef _SECURE_SCL
 			#define _SECURE_SCL 1

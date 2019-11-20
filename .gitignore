@@ -3,6 +3,7 @@ logs/
 *.swp
 a.out
 logs/
+*.vs*
 progression/core/platform_defines.hpp
 resources/sponza
 resources/cache
