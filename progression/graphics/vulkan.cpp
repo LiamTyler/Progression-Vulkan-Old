@@ -322,7 +322,6 @@ static int RatePhysicalDevice( const PhysicalDeviceInfo& deviceInfo )
     return score;
 }
 
-
 static bool CreateInstance()
 {
     // struct that holds info about our application. Mainly used by some layers / drivers

@@ -657,7 +657,7 @@ namespace Gfx
         vkQueuePresentKHR( m_presentQueue, &presentInfo );
         
         g_renderState.currentFrame = ( g_renderState.currentFrame + 1 ) % MAX_FRAMES_IN_FLIGHT;
-        // vkDeviceWaitIdle( g_renderState.device.GetHandle() );
+        vkDeviceWaitIdle( g_renderState.device.GetHandle() );
     }
 
 } // namespace Gfx

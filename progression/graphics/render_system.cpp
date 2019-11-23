@@ -63,11 +63,18 @@ static Window* s_window;
 static Pipeline s_rigidModelPipeline;
 static DescriptorPool s_descriptorPool;
 static std::vector< DescriptorSetLayout > s_descriptorSetLayouts;
-static std::vector< Progression::Gfx::Buffer > s_gpuSceneConstantBuffers;
-static std::vector< Progression::Gfx::Buffer > s_gpuPointLightBuffers;
-static std::vector< Progression::Gfx::Buffer > s_gpuSpotLightBuffers;
+static std::vector< Gfx::Buffer > s_gpuSceneConstantBuffers;
+static std::vector< Gfx::Buffer > s_gpuPointLightBuffers;
+static std::vector< Gfx::Buffer > s_gpuSpotLightBuffers;
 std::vector< DescriptorSet > sceneDescriptorSets;
 std::vector< DescriptorSet > textureDescriptorSets;
+
+struct OffScreenRenderData
+{
+    Gfx::RenderPass renderPass;
+    Gfx::Texture colorAttachment;
+    VkFramebuffer frameBuffer;
+} offScreenRenderData;
 
 #define MAX_NUM_POINT_LIGHTS 1024
 #define MAX_NUM_SPOT_LIGHTS 256
@@ -203,8 +210,46 @@ namespace RenderSystem
         attribDescs[2].format   = BufferDataType::FLOAT2;
         attribDescs[2].offset   = 0;
 
+        RenderPassDescriptor renderPassDesc;
+        renderPassDesc.colorAttachmentDescriptors[0].format     = VulkanToPGPixelFormat( g_renderState.swapChain.imageFormat );
+        renderPassDesc.colorAttachmentDescriptors[0].clearColor = glm::vec4( .2, .2, .2, 1 );
+        renderPassDesc.depthAttachmentDescriptor.format         = PixelFormat::DEPTH_32_FLOAT;
+        renderPassDesc.depthAttachmentDescriptor.loadAction     = LoadAction::CLEAR;
+        renderPassDesc.depthAttachmentDescriptor.storeAction    = StoreAction::DONT_CARE;
+
+        offScreenRenderData.renderPass = g_renderState.device.NewRenderPass( renderPassDesc );
+
+        ImageDescriptor info;
+        info.type    = ImageType::TYPE_2D;
+        info.format  = VulkanToPGPixelFormat( g_renderState.swapChain.imageFormat );
+        info.width   = g_renderState.swapChain.extent.width;
+        info.height  = g_renderState.swapChain.extent.height;
+        info.sampler = "nearest_clamped_nearest";
+        offScreenRenderData.colorAttachment = g_renderState.device.NewTexture( info );
+        TransitionImageLayout( offScreenRenderData.colorAttachment.GetHandle(), g_renderState.swapChain.imageFormat,
+                               VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+
+        VkImageView attachments[2];
+        attachments[0] = offScreenRenderData.colorAttachment.GetView();
+        attachments[1] = g_renderState.depthTex.GetView();
+
+        VkFramebufferCreateInfo framebufferInfo = {};
+        framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass      = offScreenRenderData.renderPass.GetHandle();
+        framebufferInfo.attachmentCount = 2;
+        framebufferInfo.pAttachments    = attachments;
+        framebufferInfo.width           = offScreenRenderData.colorAttachment.GetWidth();
+        framebufferInfo.height          = offScreenRenderData.colorAttachment.GetHeight();
+        framebufferInfo.layers          = 1;
+
+        if ( vkCreateFramebuffer( g_renderState.device.GetHandle(), &framebufferInfo, nullptr, &offScreenRenderData.frameBuffer ) != VK_SUCCESS )
+        {
+            LOG_ERR( "Could not create offscreen framebuffer" );
+            return false;
+        }
+
         PipelineDescriptor pipelineDesc;
-        pipelineDesc.renderPass             = &g_renderState.renderPass;
+        pipelineDesc.renderPass             = &offScreenRenderData.renderPass;
         pipelineDesc.descriptorSetLayouts   = s_descriptorSetLayouts;
         pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 3, bindingDesc, 3, attribDescs.data() );
         pipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
@@ -279,7 +324,8 @@ namespace RenderSystem
 
         auto& cmdBuf = g_renderState.commandBuffers[imageIndex];
         cmdBuf.BeginRecording();
-        cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex] );
+        // cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex] );
+        cmdBuf.BeginRenderPass( offScreenRenderData.renderPass, offScreenRenderData.frameBuffer );
         cmdBuf.BindRenderPipeline( s_rigidModelPipeline );
         cmdBuf.BindDescriptorSets( 1, &sceneDescriptorSets[imageIndex], s_rigidModelPipeline, PG_SCENE_CONSTANT_BUFFER_SET );
         cmdBuf.BindDescriptorSets( 1, &textureDescriptorSets[imageIndex], s_rigidModelPipeline, PG_2D_TEXTURES_SET );
@@ -358,6 +404,10 @@ namespace RenderSystem
         });
 
         cmdBuf.EndRenderPass();
+
+        // cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex] );
+        // cmdBuf.EndRenderPass();
+
         cmdBuf.EndRecording();
         g_renderState.device.SubmitRenderCommands( 1, &cmdBuf );
 
