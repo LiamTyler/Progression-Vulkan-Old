@@ -80,6 +80,84 @@ struct OffScreenRenderData
     std::vector< Gfx::DescriptorSetLayout > textureToProcessLayout;
 } offScreenRenderData;
 
+bool CreateOffScreenRenderPass()
+{
+    RenderPassDescriptor desc;
+    desc.colorAttachmentDescriptors[0].format     = VulkanToPGPixelFormat( g_renderState.swapChain.imageFormat );
+    desc.colorAttachmentDescriptors[0].clearColor = glm::vec4( .2, .2, .2, 1 );
+    desc.depthAttachmentDescriptor.format         = PixelFormat::DEPTH_32_FLOAT;
+    desc.depthAttachmentDescriptor.loadAction     = LoadAction::CLEAR;
+    desc.depthAttachmentDescriptor.storeAction    = StoreAction::STORE;
+    auto& pass = offScreenRenderData.renderPass;
+    pass.desc     = desc;
+    pass.m_device = g_renderState.device.GetHandle();
+
+    std::vector< VkAttachmentDescription > attachments;
+    std::vector< VkAttachmentReference > attachmentRefs;
+
+    const auto& attach = desc.colorAttachmentDescriptors[0];
+    attachments.push_back( {} );
+    attachments[0].format         = PGToVulkanPixelFormat( attach.format );
+    attachments[0].samples        = VK_SAMPLE_COUNT_1_BIT;
+    attachments[0].loadOp         = PGToVulkanLoadAction( attach.loadAction );
+    attachments[0].storeOp        = PGToVulkanStoreAction( attach.storeAction );
+    attachments[0].stencilLoadOp  = PGToVulkanLoadAction( LoadAction::DONT_CARE );
+    attachments[0].stencilStoreOp = PGToVulkanStoreAction( StoreAction::DONT_CARE );
+    attachments[0].initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[0].finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    attachmentRefs.push_back( {} );
+    attachmentRefs[0].attachment = 0;
+    attachmentRefs[0].layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentDescription depthAttachment = {};
+    depthAttachment.format         = PGToVulkanPixelFormat( desc.depthAttachmentDescriptor.format );
+    depthAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp         = PGToVulkanLoadAction( desc.depthAttachmentDescriptor.loadAction );
+    depthAttachment.storeOp        = PGToVulkanStoreAction( desc.depthAttachmentDescriptor.storeAction );
+    depthAttachment.stencilLoadOp  = PGToVulkanLoadAction( LoadAction::DONT_CARE );
+    depthAttachment.stencilStoreOp = PGToVulkanStoreAction( StoreAction::DONT_CARE );
+    depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depthAttachmentRef = {};
+    depthAttachmentRef.attachment = 1;
+    depthAttachmentRef.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attachments.push_back( depthAttachment );
+
+    VkSubpassDescription subpass    = {};
+    subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount    = 1;
+    subpass.pColorAttachments       = attachmentRefs.data();
+    subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+    VkSubpassDependency dependency = {};
+    dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass    = 0;
+    dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    VkRenderPassCreateInfo renderPassInfo = {};
+    renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = static_cast< uint32_t >( attachments.size() );
+    renderPassInfo.pAttachments    = attachments.data();
+    renderPassInfo.subpassCount    = 1;
+    renderPassInfo.pSubpasses      = &subpass;
+    renderPassInfo.dependencyCount = 1;
+    renderPassInfo.pDependencies   = &dependency;
+
+    if ( vkCreateRenderPass( g_renderState.device.GetHandle(), &renderPassInfo, nullptr, &pass.m_handle ) != VK_SUCCESS )
+    {
+        pass.m_handle = VK_NULL_HANDLE;
+        LOG_ERR( "Could not create render pass" );
+        return false;
+    }
+
+    return true;
+}
+
 #define MAX_NUM_POINT_LIGHTS 1024
 #define MAX_NUM_SPOT_LIGHTS 256
 
@@ -91,6 +169,12 @@ namespace RenderSystem
     bool Init()
     {
         s_window = GetMainWindow();
+        
+		// Post Processing
+        if ( !CreateOffScreenRenderPass() )
+        {
+            return false;
+        }
 
         uint32_t numImages = static_cast< uint32_t >( g_renderState.swapChain.images.size() );
         s_gpuSceneConstantBuffers.resize( numImages );
@@ -214,14 +298,23 @@ namespace RenderSystem
         attribDescs[2].format   = BufferDataType::FLOAT2;
         attribDescs[2].offset   = 0;
 
-        RenderPassDescriptor renderPassDesc;
-        renderPassDesc.colorAttachmentDescriptors[0].format     = VulkanToPGPixelFormat( g_renderState.swapChain.imageFormat );
-        renderPassDesc.colorAttachmentDescriptors[0].clearColor = glm::vec4( .2, .2, .2, 1 );
-        renderPassDesc.depthAttachmentDescriptor.format         = PixelFormat::DEPTH_32_FLOAT;
-        renderPassDesc.depthAttachmentDescriptor.loadAction     = LoadAction::CLEAR;
-        renderPassDesc.depthAttachmentDescriptor.storeAction    = StoreAction::DONT_CARE;
+        PipelineDescriptor pipelineDesc;
+        pipelineDesc.renderPass             = &offScreenRenderData.renderPass;
+        pipelineDesc.descriptorSetLayouts   = s_descriptorSetLayouts;
+        pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 3, bindingDesc, 3, attribDescs.data() );
+        pipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
+        pipelineDesc.viewport               = FullScreenViewport();
+        pipelineDesc.scissor                = FullScreenScissor();
+        pipelineDesc.shaders[0]             = rigidModelsVert.get();
+        pipelineDesc.shaders[1]             = forwardBlinnPhongFrag.get();
+        pipelineDesc.numShaders             = 2;
 
-        offScreenRenderData.renderPass = g_renderState.device.NewRenderPass( renderPassDesc );
+        s_rigidModelPipeline = g_renderState.device.NewPipeline( pipelineDesc );
+        if ( !s_rigidModelPipeline )
+        {
+            LOG_ERR( "Could not create rigid model pipeline" );
+            return false;
+        }
 
         ImageDescriptor info;
         info.type    = ImageType::TYPE_2D;
@@ -252,28 +345,6 @@ namespace RenderSystem
             LOG_ERR( "Could not create offscreen framebuffer" );
             return false;
         }
-
-        PipelineDescriptor pipelineDesc;
-        pipelineDesc.renderPass             = &offScreenRenderData.renderPass;
-        pipelineDesc.descriptorSetLayouts   = s_descriptorSetLayouts;
-        pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 3, bindingDesc, 3, attribDescs.data() );
-        pipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
-        pipelineDesc.viewport               = FullScreenViewport();
-        pipelineDesc.scissor                = FullScreenScissor();
-        pipelineDesc.shaders[0]             = rigidModelsVert.get();
-        pipelineDesc.shaders[1]             = forwardBlinnPhongFrag.get();
-        pipelineDesc.numShaders             = 2;
-
-        s_rigidModelPipeline = g_renderState.device.NewPipeline( pipelineDesc );
-        if ( !s_rigidModelPipeline )
-        {
-            LOG_ERR( "Could not create rigid model pipeline" );
-            return false;
-        }
-
-
-
-		// Post Processing
 
 
         // Post Processing shaders
@@ -310,8 +381,8 @@ namespace RenderSystem
         postProcessingPipelineDesc.shaders[1]			  = postProcessingFrag.get();
         postProcessingPipelineDesc.numShaders             = 2;
 
-		offScreenRenderData.postPorcessingPipeline = g_renderState.device.NewPipeline(postProcessingPipelineDesc);
-		if (!offScreenRenderData.postPorcessingPipeline)
+		offScreenRenderData.postPorcessingPipeline = g_renderState.device.NewPipeline( postProcessingPipelineDesc );
+		if ( !offScreenRenderData.postPorcessingPipeline )
 		{
 			LOG_ERR("Could not create post processing pipeline");
 			return false;
@@ -376,7 +447,6 @@ namespace RenderSystem
             layout.Free();
         }
         offScreenRenderData.quadBuffer.Free();
-
     }
 
     void Render( Scene* scene )
@@ -500,11 +570,11 @@ namespace RenderSystem
         // Post Processing Render Pass
         cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex] );
 
-        cmdBuf.BindRenderPipeline(offScreenRenderData.postPorcessingPipeline);
-        cmdBuf.BindDescriptorSets(1, &offScreenRenderData.textureToProcess, offScreenRenderData.postPorcessingPipeline, 0);
+        cmdBuf.BindRenderPipeline( offScreenRenderData.postPorcessingPipeline );
+        cmdBuf.BindDescriptorSets( 1, &offScreenRenderData.textureToProcess, offScreenRenderData.postPorcessingPipeline, 0 );
         
-        cmdBuf.BindVertexBuffer(offScreenRenderData.quadBuffer, 0, 0);
-        cmdBuf.Draw(0, 6);
+        cmdBuf.BindVertexBuffer( offScreenRenderData.quadBuffer, 0, 0 );
+        cmdBuf.Draw( 0, 6 );
 
         cmdBuf.EndRenderPass();
 

@@ -70,7 +70,7 @@ namespace Gfx
 
         RenderPassDescriptor desc;
 
-    private:
+    // private:
         VkRenderPass m_handle = VK_NULL_HANDLE;
         VkDevice     m_device = VK_NULL_HANDLE;
     };
