@@ -143,13 +143,14 @@ namespace Gfx
     class ImageDescriptor
     {
     public:
-        ImageType type      = ImageType::TYPE_2D;
-        PixelFormat format  = PixelFormat::NUM_PIXEL_FORMATS;
-        uint8_t mipLevels   = 1;
-        uint8_t arrayLayers = 1;
-        uint32_t width      = 0;
-        uint32_t height     = 0;
-        uint32_t depth      = 1;
+        ImageType type          = ImageType::TYPE_2D;
+        PixelFormat format      = PixelFormat::NUM_PIXEL_FORMATS;
+        uint8_t mipLevels       = 1;
+        uint8_t arrayLayers     = 1;
+        uint32_t width          = 0;
+        uint32_t height         = 0;
+        uint32_t depth          = 1;
+        VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         std::string sampler = "linear_repeat_linear";
     };
 

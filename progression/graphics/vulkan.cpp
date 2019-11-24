@@ -474,6 +474,7 @@ static bool CreateDepthTexture()
     info.width   = g_renderState.swapChain.extent.width;
     info.height  = g_renderState.swapChain.extent.height;
     info.sampler = "nearest_clamped_nearest";
+    info.usage   = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     g_renderState.depthTex = g_renderState.device.NewTexture( info, false );
     return g_renderState.depthTex;
 }

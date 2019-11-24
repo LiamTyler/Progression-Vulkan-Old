@@ -244,11 +244,7 @@ namespace Gfx
         imageInfo.format        = PGToVulkanPixelFormat( desc.format );
         imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        imageInfo.usage         = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-        if ( isDepth )
-        {
-            imageInfo.usage         = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-        }
+        imageInfo.usage         = desc.usage;
         imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
         imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
         imageInfo.flags         = 0;

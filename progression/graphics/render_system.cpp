@@ -225,9 +225,10 @@ namespace RenderSystem
         info.width   = g_renderState.swapChain.extent.width;
         info.height  = g_renderState.swapChain.extent.height;
         info.sampler = "nearest_clamped_nearest";
-        offScreenRenderData.colorAttachment = g_renderState.device.NewTexture( info );
-        TransitionImageLayout( offScreenRenderData.colorAttachment.GetHandle(), g_renderState.swapChain.imageFormat,
-                               VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+        info.usage   = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        offScreenRenderData.colorAttachment = g_renderState.device.NewTexture( info, false );
+        // TransitionImageLayout( offScreenRenderData.colorAttachment.GetHandle(), g_renderState.swapChain.imageFormat,
+        //                        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 
         VkImageView attachments[2];
         attachments[0] = offScreenRenderData.colorAttachment.GetView();
@@ -272,6 +273,10 @@ namespace RenderSystem
     void Shutdown()
     {
         g_renderState.device.WaitForIdle();
+
+        offScreenRenderData.colorAttachment.Free();
+        offScreenRenderData.renderPass.Free();
+        vkDestroyFramebuffer( g_renderState.device.GetHandle(), offScreenRenderData.frameBuffer, nullptr );
 
         s_descriptorPool.Free();
         for ( size_t i = 0; i < g_renderState.swapChain.images.size(); ++i )
@@ -405,8 +410,8 @@ namespace RenderSystem
 
         cmdBuf.EndRenderPass();
 
-        // cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex] );
-        // cmdBuf.EndRenderPass();
+        cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex] );
+        cmdBuf.EndRenderPass();
 
         cmdBuf.EndRecording();
         g_renderState.device.SubmitRenderCommands( 1, &cmdBuf );
