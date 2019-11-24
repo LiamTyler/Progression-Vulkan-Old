@@ -19,6 +19,10 @@
         "name": "postProcessFrag",
         "filename": "shaders/post_process.frag"
     },
+    "Shader": {
+        "name": "directionalShadowVert",
+        "filename": "shaders/directional_shadow.vert"
+    },
     "Image": {
         "name": "RENDER_SYSTEM_DUMMY_TEXTURE",
         "filename": "textures/render_system_dummy_texture.png",

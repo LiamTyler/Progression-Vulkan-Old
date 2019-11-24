@@ -41,6 +41,15 @@ namespace Gfx
         return v;
     }
 
+
+    Viewport CustomViewport( const float &w, const float&h )
+    {
+        Viewport v;
+        v.width = w;
+        v.height = h;
+        return v;
+    }
+
     Scissor FullScreenScissor()
     {
         Scissor s;

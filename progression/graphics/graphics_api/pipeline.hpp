@@ -120,6 +120,7 @@ namespace Gfx
         float maxDepth = 1.0f;
     };
 
+    Viewport CustomViewport( const float &w, const float &h );
     Viewport FullScreenViewport();
 
     struct Scissor

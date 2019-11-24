@@ -158,8 +158,19 @@ bool CreateOffScreenRenderPass()
     return true;
 }
 
+struct ShadowRenderData
+{
+    Gfx::RenderPass renderPass;
+    Gfx::Texture depthAttachment;
+    VkFramebuffer frameBuffer;
+    Gfx::Pipeline pipeline;
+    Gfx::DescriptorSet descSet;
+    std::vector< Gfx::DescriptorSetLayout > descSetLayouts;
+} directionalShadow;
+
 #define MAX_NUM_POINT_LIGHTS 1024
 #define MAX_NUM_SPOT_LIGHTS 256
+#define DIRECTIONAL_SHADOW_MAP_RESOLUTION 1024
 
 namespace Progression
 {
@@ -324,8 +335,6 @@ namespace RenderSystem
         info.sampler = "nearest_clamped_nearest";
         info.usage   = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         offScreenRenderData.colorAttachment = g_renderState.device.NewTexture( info, false );
-        // TransitionImageLayout( offScreenRenderData.colorAttachment.GetHandle(), g_renderState.swapChain.imageFormat,
-        //                        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 
         VkImageView attachments[2];
         attachments[0] = offScreenRenderData.colorAttachment.GetView();
@@ -346,6 +355,9 @@ namespace RenderSystem
             return false;
         }
 
+
+
+		// Post Processing
 
         // Post Processing shaders
         auto postProcessingVert = ResourceManager::Get< Shader >("postProcessVert");
@@ -414,6 +426,59 @@ namespace RenderSystem
         };
 
         offScreenRenderData.quadBuffer = g_renderState.device.NewBuffer(sizeof(quadVerts), quadVerts, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL );
+
+
+
+
+        // Shadow Mapping for Direction Light
+
+        auto directionalShadowVert = ResourceManager::Get< Shader >("directionalShadowVert");
+
+        descriptorSetData = directionalShadowVert->reflectInfo.descriptorSetLayouts;
+
+        // TODO: Some wonky stuff might be happening here, check back after we know which descSet stuff we need for shadow maps (uniform view)
+        directionalShadow.descSetLayouts = g_renderState.device.NewDescriptorSetLayouts(descriptorSetData);
+        directionalShadow.descSet = s_descriptorPool.NewDescriptorSets(1, directionalShadow.descSetLayouts[0])[0];
+
+        
+        VertexBindingDescriptor directionalShadowBindingDesc[1];
+        directionalShadowBindingDesc[0].binding = 0;
+        directionalShadowBindingDesc[0].stride = sizeof(glm::vec3);
+        directionalShadowBindingDesc[0].inputRate = VertexInputRate::PER_VERTEX;
+
+        std::array< VertexAttributeDescriptor, 1 > directionalShadowAttribDescs;
+        directionalShadowAttribDescs[0].binding = 0;
+        directionalShadowAttribDescs[0].location = 0;
+        directionalShadowAttribDescs[0].format = BufferDataType::FLOAT3;
+        directionalShadowAttribDescs[0].offset = 0;
+
+        PipelineDescriptor directionalShadowPipelineDesc;
+        directionalShadowPipelineDesc.renderPass = &g_renderState.renderPass;
+        directionalShadowPipelineDesc.descriptorSetLayouts = directionalShadow.descSetLayouts;
+        directionalShadowPipelineDesc.vertexDescriptor = VertexInputDescriptor::Create(1, directionalShadowBindingDesc, 1, directionalShadowAttribDescs.data());
+        directionalShadowPipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE; // TODO: Why is this clockwise??
+        directionalShadowPipelineDesc.viewport = CustomViewport( DIRECTIONAL_SHADOW_MAP_RESOLUTION, DIRECTIONAL_SHADOW_MAP_RESOLUTION );
+        directionalShadowPipelineDesc.scissor = FullScreenScissor();
+        directionalShadowPipelineDesc.shaders[0] = directionalShadowVert.get();
+        directionalShadowPipelineDesc.numShaders = 1;
+
+        directionalShadow.pipeline = g_renderState.device.NewPipeline(directionalShadowPipelineDesc);
+        if (!directionalShadow.pipeline)
+        {
+            LOG_ERR("Could not create directional shadow pipeline");
+            return false;
+        }
+
+
+        
+        info.type = ImageType::TYPE_2D;
+        info.format = PixelFormat::DEPTH_32_FLOAT;
+        info.width = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
+        info.height = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
+        info.sampler = "nearest_clamped_nearest";
+        info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        directionalShadow.depthAttachment = g_renderState.device.NewTexture(info, true);
+
 
         return true;
     }
