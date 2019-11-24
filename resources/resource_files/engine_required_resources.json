@@ -11,6 +11,14 @@
         "name": "rigidModelsVert",
         "filename": "shaders/rigid_models.vert"
     },
+    "Shader": {
+        "name": "postProcessVert",
+        "filename": "shaders/post_process.vert"
+    },
+    "Shader": {
+        "name": "postProcessFrag",
+        "filename": "shaders/post_process.frag"
+    },
     "Image": {
         "name": "RENDER_SYSTEM_DUMMY_TEXTURE",
         "filename": "textures/render_system_dummy_texture.png",

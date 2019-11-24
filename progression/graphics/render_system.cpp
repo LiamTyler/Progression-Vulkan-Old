@@ -74,6 +74,10 @@ struct OffScreenRenderData
     Gfx::RenderPass renderPass;
     Gfx::Texture colorAttachment;
     VkFramebuffer frameBuffer;
+	Gfx::Pipeline postPorcessingPipeline;
+    Gfx::Buffer quadBuffer;
+    Gfx::DescriptorSet textureToProcess;
+    std::vector< Gfx::DescriptorSetLayout > textureToProcessLayout;
 } offScreenRenderData;
 
 #define MAX_NUM_POINT_LIGHTS 1024
@@ -108,12 +112,12 @@ namespace RenderSystem
         poolSize[1].type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         poolSize[1].descriptorCount = 3 * numImages;
         poolSize[2].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        poolSize[2].descriptorCount = numImages;
+        poolSize[2].descriptorCount = numImages + 1;
 
         s_descriptorPool = g_renderState.device.NewDescriptorPool( 3, poolSize, 3 * numImages );
         
-        auto rigidModelsVert       = ResourceManager::Get< Shader >( "rigidModelsVert" );
-        auto forwardBlinnPhongFrag = ResourceManager::Get< Shader >( "forwardBlinnPhongFrag" );
+        auto rigidModelsVert		= ResourceManager::Get< Shader >( "rigidModelsVert" );
+        auto forwardBlinnPhongFrag  = ResourceManager::Get< Shader >( "forwardBlinnPhongFrag" );
 
         std::vector< DescriptorSetLayoutData > descriptorSetData = rigidModelsVert->reflectInfo.descriptorSetLayouts;
         descriptorSetData.insert( descriptorSetData.end(), forwardBlinnPhongFrag->reflectInfo.descriptorSetLayouts.begin(), forwardBlinnPhongFrag->reflectInfo.descriptorSetLayouts.end() );
@@ -267,6 +271,79 @@ namespace RenderSystem
             return false;
         }
 
+
+
+		// Post Processing
+
+
+        // Post Processing shaders
+        auto postProcessingVert = ResourceManager::Get< Shader >("postProcessVert");
+        auto postProcessingFrag = ResourceManager::Get< Shader >("postProcessFrag");
+
+        descriptorSetData = postProcessingVert->reflectInfo.descriptorSetLayouts;
+        descriptorSetData.insert(descriptorSetData.end(), postProcessingFrag->reflectInfo.descriptorSetLayouts.begin(), postProcessingFrag->reflectInfo.descriptorSetLayouts.end());
+        combined = CombineDescriptorSetLayouts(descriptorSetData);
+
+        offScreenRenderData.textureToProcessLayout = g_renderState.device.NewDescriptorSetLayouts(combined);
+        offScreenRenderData.textureToProcess = s_descriptorPool.NewDescriptorSets(1, offScreenRenderData.textureToProcessLayout[0])[0];
+
+
+		VertexBindingDescriptor postProcescsingBindingDesc[1];
+        postProcescsingBindingDesc[0].binding = 0;
+        postProcescsingBindingDesc[0].stride = sizeof(glm::vec3);
+        postProcescsingBindingDesc[0].inputRate = VertexInputRate::PER_VERTEX;
+
+		std::array< VertexAttributeDescriptor, 1 > postProcescsingAttribDescs;
+        postProcescsingAttribDescs[0].binding = 0;
+        postProcescsingAttribDescs[0].location = 0;
+        postProcescsingAttribDescs[0].format = BufferDataType::FLOAT3;
+        postProcescsingAttribDescs[0].offset = 0;
+
+		PipelineDescriptor postProcessingPipelineDesc;
+        postProcessingPipelineDesc.renderPass	          = &g_renderState.renderPass;
+        postProcessingPipelineDesc.descriptorSetLayouts   = offScreenRenderData.textureToProcessLayout;
+        postProcessingPipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create(1, postProcescsingBindingDesc, 1, postProcescsingAttribDescs.data());
+        postProcessingPipelineDesc.rasterizerInfo.winding = WindingOrder::CLOCKWISE; // TODO: Why is this clockwise??
+        postProcessingPipelineDesc.viewport               = FullScreenViewport();
+        postProcessingPipelineDesc.scissor                = FullScreenScissor();
+        postProcessingPipelineDesc.shaders[0]	          = postProcessingVert.get();
+        postProcessingPipelineDesc.shaders[1]			  = postProcessingFrag.get();
+        postProcessingPipelineDesc.numShaders             = 2;
+
+		offScreenRenderData.postPorcessingPipeline = g_renderState.device.NewPipeline(postProcessingPipelineDesc);
+		if (!offScreenRenderData.postPorcessingPipeline)
+		{
+			LOG_ERR("Could not create post processing pipeline");
+			return false;
+		}
+
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageInfo.sampler = offScreenRenderData.colorAttachment.GetSampler()->GetHandle();
+        imageInfo.imageView = offScreenRenderData.colorAttachment.GetView();
+
+        VkWriteDescriptorSet descriptorWrite[1] = {};
+        descriptorWrite[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite[0].dstSet = offScreenRenderData.textureToProcess.GetHandle();
+        descriptorWrite[0].dstBinding = 0;
+        descriptorWrite[0].dstArrayElement = 0;
+        descriptorWrite[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrite[0].descriptorCount = 1;
+        descriptorWrite[0].pImageInfo = &imageInfo;
+
+        g_renderState.device.UpdateDescriptorSets(1, descriptorWrite);
+
+        glm::vec3 quadVerts[] =
+        {
+            glm::vec3( -1, -1, 0 ),
+            glm::vec3(  1,  1, 0 ),
+            glm::vec3( -1,  1, 0 ),
+            glm::vec3( -1, -1, 0 ),
+            glm::vec3(  1, -1, 0 ),
+            glm::vec3(  1,  1, 0 )
+        };
+
+        offScreenRenderData.quadBuffer = g_renderState.device.NewBuffer(sizeof(quadVerts), quadVerts, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL );
+
         return true;
     }
 
@@ -274,9 +351,7 @@ namespace RenderSystem
     {
         g_renderState.device.WaitForIdle();
 
-        offScreenRenderData.colorAttachment.Free();
-        offScreenRenderData.renderPass.Free();
-        vkDestroyFramebuffer( g_renderState.device.GetHandle(), offScreenRenderData.frameBuffer, nullptr );
+        
 
         s_descriptorPool.Free();
         for ( size_t i = 0; i < g_renderState.swapChain.images.size(); ++i )
@@ -290,6 +365,18 @@ namespace RenderSystem
             layout.Free();
         }
         s_rigidModelPipeline.Free();
+
+        // Free Post Processing Data
+        offScreenRenderData.colorAttachment.Free();
+        offScreenRenderData.renderPass.Free();
+        vkDestroyFramebuffer(g_renderState.device.GetHandle(), offScreenRenderData.frameBuffer, nullptr);
+        offScreenRenderData.postPorcessingPipeline.Free();
+        for (auto& layout : offScreenRenderData.textureToProcessLayout)
+        {
+            layout.Free();
+        }
+        offScreenRenderData.quadBuffer.Free();
+
     }
 
     void Render( Scene* scene )
@@ -410,7 +497,15 @@ namespace RenderSystem
 
         cmdBuf.EndRenderPass();
 
+        // Post Processing Render Pass
         cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex] );
+
+        cmdBuf.BindRenderPipeline(offScreenRenderData.postPorcessingPipeline);
+        cmdBuf.BindDescriptorSets(1, &offScreenRenderData.textureToProcess, offScreenRenderData.postPorcessingPipeline, 0);
+        
+        cmdBuf.BindVertexBuffer(offScreenRenderData.quadBuffer, 0, 0);
+        cmdBuf.Draw(0, 6);
+
         cmdBuf.EndRenderPass();
 
         cmdBuf.EndRecording();
