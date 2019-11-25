@@ -73,4 +73,16 @@ sol::function ScriptComponent::GetFunction( const std::string& scriptName, const
     return ret;
 }
 
+ScriptData* ScriptComponent::GetScriptData( const std::string& scriptName )
+{
+    for ( int i = 0; i < numScripts; ++i )
+    {
+        if ( scripts[i].script->name == scriptName )
+        {
+            return &scripts[i];
+        }
+    }
+    return nullptr;
+}
+
 } // namespace Progression

@@ -38,6 +38,8 @@ namespace Gfx
         void BindIndexBuffer( const Buffer& buffer, IndexType indexType, size_t offset = 0 ) const;
         void PipelineBarrier( VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage,
                               const VkImageMemoryBarrier& barrier ) const;
+        void SetViewport( const Viewport& viewport );
+        void SetScissor( const Scissor& scissor );
 
         void Copy( const Buffer& dst, const Buffer& src );
 

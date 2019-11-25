@@ -114,6 +114,28 @@ namespace Gfx
         vkCmdPipelineBarrier( m_handle, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier );
     }
 
+    void CommandBuffer::SetViewport( const Viewport& viewport )
+    {
+        VkViewport v;
+        v.x        = viewport.x;
+        v.y        = viewport.y;
+        v.minDepth = viewport.minDepth;
+        v.maxDepth = viewport.maxDepth;
+        v.width    = viewport.width;
+        v.height   = viewport.height;
+        vkCmdSetViewport( m_handle, 0, 1, &v );
+    }
+
+    void CommandBuffer::SetScissor( const Scissor& scissor )
+    {
+        VkRect2D s;
+        s.offset.x      = scissor.x;
+        s.offset.y      = scissor.y;
+        s.extent.width  = scissor.width;
+        s.extent.height = scissor.height;
+        vkCmdSetScissor( m_handle, 0, 1, &s );
+    }
+
     void CommandBuffer::Copy( const Buffer& dst, const Buffer& src )
     {
         VkBufferCopy copyRegion = {};

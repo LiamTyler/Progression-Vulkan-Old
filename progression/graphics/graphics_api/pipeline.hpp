@@ -112,6 +112,9 @@ namespace Gfx
 
     struct Viewport
     {
+        Viewport() = default;
+        Viewport( float w, float h ) : width( w ), height( h ) {}
+
         float x = 0;
         float y = 0;
         float width;
@@ -120,11 +123,13 @@ namespace Gfx
         float maxDepth = 1.0f;
     };
 
-    Viewport CustomViewport( const float &w, const float &h );
     Viewport FullScreenViewport();
 
     struct Scissor
     {
+        Scissor() = default;
+        Scissor( int w, int h ) : width( w ), height( h ) {}
+
         int x = 0;
         int y = 0;
         int width;

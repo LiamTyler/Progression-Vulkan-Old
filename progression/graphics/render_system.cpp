@@ -5,6 +5,7 @@
 #include "core/time.hpp"
 #include "core/window.hpp"
 #include "components/model_renderer.hpp"
+#include "components/script_component.hpp"
 #include "components/skinned_renderer.hpp"
 #include "graphics/graphics_api.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
@@ -164,13 +165,130 @@ struct ShadowRenderData
     Gfx::Texture depthAttachment;
     VkFramebuffer frameBuffer;
     Gfx::Pipeline pipeline;
-    Gfx::DescriptorSet descSet;
-    std::vector< Gfx::DescriptorSetLayout > descSetLayouts;
 } directionalShadow;
 
 #define MAX_NUM_POINT_LIGHTS 1024
 #define MAX_NUM_SPOT_LIGHTS 256
 #define DIRECTIONAL_SHADOW_MAP_RESOLUTION 1024
+
+static bool InitShadowPassData()
+{
+    RenderPassDescriptor desc;
+    desc.depthAttachmentDescriptor.format      = PixelFormat::DEPTH_32_FLOAT;
+    desc.depthAttachmentDescriptor.loadAction  = LoadAction::CLEAR;
+    desc.depthAttachmentDescriptor.storeAction = StoreAction::STORE;
+    auto& pass = directionalShadow.renderPass;
+    pass.desc     = desc;
+    pass.m_device = g_renderState.device.GetHandle();
+
+    std::vector< VkAttachmentDescription > attachments;
+    std::vector< VkAttachmentReference > attachmentRefs;
+
+    VkAttachmentDescription depthAttachment = {};
+    depthAttachment.format         = PGToVulkanPixelFormat( desc.depthAttachmentDescriptor.format );
+    depthAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp         = PGToVulkanLoadAction( desc.depthAttachmentDescriptor.loadAction );
+    depthAttachment.storeOp        = PGToVulkanStoreAction( desc.depthAttachmentDescriptor.storeAction );
+    depthAttachment.stencilLoadOp  = PGToVulkanLoadAction( LoadAction::DONT_CARE );
+    depthAttachment.stencilStoreOp = PGToVulkanStoreAction( StoreAction::DONT_CARE );
+    depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+
+    VkAttachmentReference depthAttachmentRef = {};
+    depthAttachmentRef.attachment = 0;
+    depthAttachmentRef.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attachments.push_back( depthAttachment );
+
+    VkSubpassDescription subpass    = {};
+    subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount    = 0;
+    subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+    VkSubpassDependency dependency = {};
+    dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass    = 0;
+    dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    VkRenderPassCreateInfo renderPassInfo = {};
+    renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = static_cast< uint32_t >( attachments.size() );
+    renderPassInfo.pAttachments    = attachments.data();
+    renderPassInfo.subpassCount    = 1;
+    renderPassInfo.pSubpasses      = &subpass;
+    renderPassInfo.dependencyCount = 1;
+    renderPassInfo.pDependencies   = &dependency;
+
+    if ( vkCreateRenderPass( g_renderState.device.GetHandle(), &renderPassInfo, nullptr, &pass.m_handle ) != VK_SUCCESS )
+    {
+        pass.m_handle = VK_NULL_HANDLE;
+        LOG_ERR( "Could not create shadow render pass" );
+        return false;
+    }
+
+    auto directionalShadowVert = ResourceManager::Get< Shader >( "directionalShadowVert" );
+
+    VertexBindingDescriptor directionalShadowBindingDesc[1];
+    directionalShadowBindingDesc[0].binding   = 0;
+    directionalShadowBindingDesc[0].stride    = sizeof(glm::vec3);
+    directionalShadowBindingDesc[0].inputRate = VertexInputRate::PER_VERTEX;
+
+    std::array< VertexAttributeDescriptor, 1 > directionalShadowAttribDescs;
+    directionalShadowAttribDescs[0].binding  = 0;
+    directionalShadowAttribDescs[0].location = 0;
+    directionalShadowAttribDescs[0].format   = BufferDataType::FLOAT3;
+    directionalShadowAttribDescs[0].offset   = 0;
+
+    PipelineDescriptor directionalShadowPipelineDesc;
+    directionalShadowPipelineDesc.renderPass             = &directionalShadow.renderPass;
+    directionalShadowPipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 1, directionalShadowBindingDesc, 1, directionalShadowAttribDescs.data() );
+    directionalShadowPipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE; // TODO: Why is this clockwise??
+    directionalShadowPipelineDesc.viewport               = Viewport( DIRECTIONAL_SHADOW_MAP_RESOLUTION, DIRECTIONAL_SHADOW_MAP_RESOLUTION );
+    Scissor scissor = {};
+    scissor.width   = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
+    scissor.height  = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
+    directionalShadowPipelineDesc.scissor                = scissor;
+    directionalShadowPipelineDesc.shaders[0]             = directionalShadowVert.get();
+    directionalShadowPipelineDesc.numShaders             = 1;
+
+    directionalShadow.pipeline = g_renderState.device.NewPipeline( directionalShadowPipelineDesc );
+    if ( !directionalShadow.pipeline )
+    {
+        LOG_ERR( "Could not create directional shadow pipeline" );
+        return false;
+    }
+ 
+    ImageDescriptor info;
+    info.type    = ImageType::TYPE_2D;
+    info.format  = PixelFormat::DEPTH_32_FLOAT;
+    info.width   = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
+    info.height  = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
+    info.sampler = "shadow_map";
+    info.usage   = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    directionalShadow.depthAttachment = g_renderState.device.NewTexture( info, false );
+
+    VkImageView frameBufferAttachments[1];
+    frameBufferAttachments[0] = directionalShadow.depthAttachment.GetView();
+
+    VkFramebufferCreateInfo framebufferInfo = {};
+    framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.renderPass      = directionalShadow.renderPass.GetHandle();
+    framebufferInfo.attachmentCount = 1;
+    framebufferInfo.pAttachments    = frameBufferAttachments;
+    framebufferInfo.width           = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
+    framebufferInfo.height          = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
+    framebufferInfo.layers          = 1;
+
+    if ( vkCreateFramebuffer( g_renderState.device.GetHandle(), &framebufferInfo, nullptr, &directionalShadow.frameBuffer ) != VK_SUCCESS )
+    {
+        LOG_ERR( "Could not create shadow framebuffer" );
+        return false;
+    }
+
+    return true;
+}
 
 namespace Progression
 {
@@ -180,12 +298,6 @@ namespace RenderSystem
     bool Init()
     {
         s_window = GetMainWindow();
-        
-		// Post Processing
-        if ( !CreateOffScreenRenderPass() )
-        {
-            return false;
-        }
 
         uint32_t numImages = static_cast< uint32_t >( g_renderState.swapChain.images.size() );
         s_gpuSceneConstantBuffers.resize( numImages );
@@ -210,6 +322,12 @@ namespace RenderSystem
         poolSize[2].descriptorCount = numImages + 1;
 
         s_descriptorPool = g_renderState.device.NewDescriptorPool( 3, poolSize, 3 * numImages );
+                
+		// Post Processing
+        if ( !CreateOffScreenRenderPass() )
+        {
+            return false;
+        }
         
         auto rigidModelsVert		= ResourceManager::Get< Shader >( "rigidModelsVert" );
         auto forwardBlinnPhongFrag  = ResourceManager::Get< Shader >( "forwardBlinnPhongFrag" );
@@ -281,7 +399,7 @@ namespace RenderSystem
             g_renderState.device.UpdateDescriptorSets( 4, descriptorWrite );
         }
  
-        VertexBindingDescriptor bindingDesc[5];
+        VertexBindingDescriptor bindingDesc[4];
         bindingDesc[0].binding   = 0;
         bindingDesc[0].stride    = sizeof( glm::vec3 );
         bindingDesc[0].inputRate = VertexInputRate::PER_VERTEX;
@@ -295,7 +413,7 @@ namespace RenderSystem
         bindingDesc[3].stride    = 2 * sizeof( glm::vec4 );
         bindingDesc[3].inputRate = VertexInputRate::PER_VERTEX;
 
-        std::array< VertexAttributeDescriptor, 5 > attribDescs;
+        std::array< VertexAttributeDescriptor, 3 > attribDescs;
         attribDescs[0].binding  = 0;
         attribDescs[0].location = 0;
         attribDescs[0].format   = BufferDataType::FLOAT3;
@@ -355,25 +473,22 @@ namespace RenderSystem
             return false;
         }
 
-
-
 		// Post Processing
 
         // Post Processing shaders
-        auto postProcessingVert = ResourceManager::Get< Shader >("postProcessVert");
-        auto postProcessingFrag = ResourceManager::Get< Shader >("postProcessFrag");
+        auto postProcessingVert = ResourceManager::Get< Shader >( "postProcessVert" );
+        auto postProcessingFrag = ResourceManager::Get< Shader >( "postProcessFrag" );
 
         descriptorSetData = postProcessingVert->reflectInfo.descriptorSetLayouts;
-        descriptorSetData.insert(descriptorSetData.end(), postProcessingFrag->reflectInfo.descriptorSetLayouts.begin(), postProcessingFrag->reflectInfo.descriptorSetLayouts.end());
-        combined = CombineDescriptorSetLayouts(descriptorSetData);
+        descriptorSetData.insert( descriptorSetData.end(), postProcessingFrag->reflectInfo.descriptorSetLayouts.begin(), postProcessingFrag->reflectInfo.descriptorSetLayouts.end() );
+        combined = CombineDescriptorSetLayouts( descriptorSetData );
 
         offScreenRenderData.textureToProcessLayout = g_renderState.device.NewDescriptorSetLayouts(combined);
-        offScreenRenderData.textureToProcess = s_descriptorPool.NewDescriptorSets(1, offScreenRenderData.textureToProcessLayout[0])[0];
-
+        offScreenRenderData.textureToProcess = s_descriptorPool.NewDescriptorSets( 1, offScreenRenderData.textureToProcessLayout[0] )[0];
 
 		VertexBindingDescriptor postProcescsingBindingDesc[1];
         postProcescsingBindingDesc[0].binding = 0;
-        postProcescsingBindingDesc[0].stride = sizeof(glm::vec3);
+        postProcescsingBindingDesc[0].stride = sizeof( glm::vec3 );
         postProcescsingBindingDesc[0].inputRate = VertexInputRate::PER_VERTEX;
 
 		std::array< VertexAttributeDescriptor, 1 > postProcescsingAttribDescs;
@@ -385,7 +500,7 @@ namespace RenderSystem
 		PipelineDescriptor postProcessingPipelineDesc;
         postProcessingPipelineDesc.renderPass	          = &g_renderState.renderPass;
         postProcessingPipelineDesc.descriptorSetLayouts   = offScreenRenderData.textureToProcessLayout;
-        postProcessingPipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create(1, postProcescsingBindingDesc, 1, postProcescsingAttribDescs.data());
+        postProcessingPipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 1, postProcescsingBindingDesc, 1, postProcescsingAttribDescs.data() );
         postProcessingPipelineDesc.rasterizerInfo.winding = WindingOrder::CLOCKWISE; // TODO: Why is this clockwise??
         postProcessingPipelineDesc.viewport               = FullScreenViewport();
         postProcessingPipelineDesc.scissor                = FullScreenScissor();
@@ -396,7 +511,7 @@ namespace RenderSystem
 		offScreenRenderData.postPorcessingPipeline = g_renderState.device.NewPipeline( postProcessingPipelineDesc );
 		if ( !offScreenRenderData.postPorcessingPipeline )
 		{
-			LOG_ERR("Could not create post processing pipeline");
+			LOG_ERR( "Could not create post processing pipeline" );
 			return false;
 		}
 
@@ -413,7 +528,7 @@ namespace RenderSystem
         descriptorWrite[0].descriptorCount = 1;
         descriptorWrite[0].pImageInfo = &imageInfo;
 
-        g_renderState.device.UpdateDescriptorSets(1, descriptorWrite);
+        g_renderState.device.UpdateDescriptorSets( 1, descriptorWrite );
 
         glm::vec3 quadVerts[] =
         {
@@ -425,60 +540,13 @@ namespace RenderSystem
             glm::vec3(  1,  1, 0 )
         };
 
-        offScreenRenderData.quadBuffer = g_renderState.device.NewBuffer(sizeof(quadVerts), quadVerts, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL );
+        offScreenRenderData.quadBuffer = g_renderState.device.NewBuffer( sizeof( quadVerts ), quadVerts, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL );
 
-
-
-
-        // Shadow Mapping for Direction Light
-
-        auto directionalShadowVert = ResourceManager::Get< Shader >("directionalShadowVert");
-
-        descriptorSetData = directionalShadowVert->reflectInfo.descriptorSetLayouts;
-
-        // TODO: Some wonky stuff might be happening here, check back after we know which descSet stuff we need for shadow maps (uniform view)
-        directionalShadow.descSetLayouts = g_renderState.device.NewDescriptorSetLayouts(descriptorSetData);
-        directionalShadow.descSet = s_descriptorPool.NewDescriptorSets(1, directionalShadow.descSetLayouts[0])[0];
-
-        
-        VertexBindingDescriptor directionalShadowBindingDesc[1];
-        directionalShadowBindingDesc[0].binding = 0;
-        directionalShadowBindingDesc[0].stride = sizeof(glm::vec3);
-        directionalShadowBindingDesc[0].inputRate = VertexInputRate::PER_VERTEX;
-
-        std::array< VertexAttributeDescriptor, 1 > directionalShadowAttribDescs;
-        directionalShadowAttribDescs[0].binding = 0;
-        directionalShadowAttribDescs[0].location = 0;
-        directionalShadowAttribDescs[0].format = BufferDataType::FLOAT3;
-        directionalShadowAttribDescs[0].offset = 0;
-
-        PipelineDescriptor directionalShadowPipelineDesc;
-        directionalShadowPipelineDesc.renderPass = &g_renderState.renderPass;
-        directionalShadowPipelineDesc.descriptorSetLayouts = directionalShadow.descSetLayouts;
-        directionalShadowPipelineDesc.vertexDescriptor = VertexInputDescriptor::Create(1, directionalShadowBindingDesc, 1, directionalShadowAttribDescs.data());
-        directionalShadowPipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE; // TODO: Why is this clockwise??
-        directionalShadowPipelineDesc.viewport = CustomViewport( DIRECTIONAL_SHADOW_MAP_RESOLUTION, DIRECTIONAL_SHADOW_MAP_RESOLUTION );
-        directionalShadowPipelineDesc.scissor = FullScreenScissor();
-        directionalShadowPipelineDesc.shaders[0] = directionalShadowVert.get();
-        directionalShadowPipelineDesc.numShaders = 1;
-
-        directionalShadow.pipeline = g_renderState.device.NewPipeline(directionalShadowPipelineDesc);
-        if (!directionalShadow.pipeline)
+        if ( !InitShadowPassData() )
         {
-            LOG_ERR("Could not create directional shadow pipeline");
+            LOG_ERR( "Could not init shadow pass data" );
             return false;
         }
-
-
-        
-        info.type = ImageType::TYPE_2D;
-        info.format = PixelFormat::DEPTH_32_FLOAT;
-        info.width = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
-        info.height = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
-        info.sampler = "nearest_clamped_nearest";
-        info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        directionalShadow.depthAttachment = g_renderState.device.NewTexture(info, true);
-
 
         return true;
     }
@@ -505,13 +573,79 @@ namespace RenderSystem
         // Free Post Processing Data
         offScreenRenderData.colorAttachment.Free();
         offScreenRenderData.renderPass.Free();
-        vkDestroyFramebuffer(g_renderState.device.GetHandle(), offScreenRenderData.frameBuffer, nullptr);
+        vkDestroyFramebuffer( g_renderState.device.GetHandle(), offScreenRenderData.frameBuffer, nullptr );
         offScreenRenderData.postPorcessingPipeline.Free();
-        for (auto& layout : offScreenRenderData.textureToProcessLayout)
+        for ( auto& layout : offScreenRenderData.textureToProcessLayout )
         {
             layout.Free();
         }
         offScreenRenderData.quadBuffer.Free();
+    }
+
+    void ShadowPass( Scene* scene, CommandBuffer& cmdBuf )
+    {
+        // cmdBuf.BeginRenderPass( directionalShadow.renderPass, directionalShadow.frameBuffer );
+        VkRenderPassBeginInfo renderPassInfo = {};
+        renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass        = directionalShadow.renderPass.GetHandle();
+        renderPassInfo.framebuffer       = directionalShadow.frameBuffer;
+        renderPassInfo.renderArea.offset = { 0, 0 };
+        renderPassInfo.renderArea.extent = { DIRECTIONAL_SHADOW_MAP_RESOLUTION, DIRECTIONAL_SHADOW_MAP_RESOLUTION };
+
+        VkClearValue clearValues[1] = {};
+        clearValues[0].depthStencil = { 1.0f, 0 };
+        renderPassInfo.clearValueCount = 1;
+        renderPassInfo.pClearValues    = clearValues;
+        vkCmdBeginRenderPass( cmdBuf.GetHandle(), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
+
+        cmdBuf.BindRenderPipeline( directionalShadow.pipeline );
+
+        auto entity = GetEntityByName( scene->registry, "camera" );
+        Camera& cam = scene->registry.get< ScriptComponent >( entity ).GetScriptData( "debugCamera" )->env["camera"];
+        glm::vec3 pos( -2, 5, 5 );
+        auto V  = glm::lookAt( pos, pos + glm::vec3( 0, -1, -1 ), glm::vec3( 0, 1, -1 ) );
+        //auto V  = scene->camera.GetV();
+        float W = 25;
+        auto P  = glm::ortho( -W, W, W, -W, .1f, 50.0f );
+        //auto P = scene->camera.GetP();
+        //auto VP = P * V;
+        
+        auto VP = cam.GetVP();
+
+        scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& modelRenderer, Transform& transform )
+        {
+            const auto& model = modelRenderer.model;
+            auto MVP = VP * transform.GetModelMatrix();
+            vkCmdPushConstants( cmdBuf.GetHandle(), directionalShadow.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( glm::mat4 ), &MVP[0][0] );
+
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
+            cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
+
+            for ( size_t i = 0; i < model->meshes.size(); ++i )
+            {
+                const auto& mesh = modelRenderer.model->meshes[i];
+                cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
+            }
+        });
+
+        auto& animPipeline = AnimationSystem::renderData.animatedPipeline;
+        scene->registry.view< Animator, SkinnedRenderer, Transform >().each( [&]( Animator& animator, SkinnedRenderer& renderer, Transform& transform )
+        {
+            const auto& model = renderer.model;
+            auto MVP          = VP * transform.GetModelMatrix();
+            vkCmdPushConstants( cmdBuf.GetHandle(), animPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( glm::mat4 ), &MVP[0][0] );
+
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
+            cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
+
+            for ( size_t i = 0; i < renderer.model->meshes.size(); ++i )
+            {
+                const auto& mesh = model->meshes[i];
+                cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
+            }
+        });
+
+        cmdBuf.EndRenderPass();
     }
 
     void Render( Scene* scene )
@@ -527,12 +661,39 @@ namespace RenderSystem
 
         TextureManager::UpdateDescriptors( textureDescriptorSets );
 
+        
+        auto entity = GetEntityByName( scene->registry, "camera" );
+        auto script = scene->registry.get< ScriptComponent >( entity ).GetScriptData( "debugCamera" );
+        if ( script->env["active"] )
+        {
+            // Camera& cam = script->env["camera"];
+            // scbuf.V              = cam.GetV();
+            // scbuf.P              = cam.GetP();
+            // scbuf.VP             = cam.GetVP();
+            // scbuf.cameraPos      = glm::vec4( cam.position, 0 );
+            // VkDescriptorImageInfo imageInfo;
+            // imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            // imageInfo.sampler = offScreenRenderData.colorAttachment.GetSampler()->GetHandle();
+            // imageInfo.imageView = offScreenRenderData.colorAttachment.GetView();
+            // 
+            // VkWriteDescriptorSet descriptorWrite[1] = {};
+            // descriptorWrite[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            // descriptorWrite[0].dstSet = offScreenRenderData.textureToProcess.GetHandle();
+            // descriptorWrite[0].dstBinding = 0;
+            // descriptorWrite[0].dstArrayElement = 0;
+            // descriptorWrite[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            // descriptorWrite[0].descriptorCount = 1;
+            // descriptorWrite[0].pImageInfo = &imageInfo;
+            // 
+            // g_renderState.device.UpdateDescriptorSets( 1, descriptorWrite );
+        }
+
         // sceneConstantBuffer
         SceneConstantBufferData scbuf;
         scbuf.V              = scene->camera.GetV();
         scbuf.P              = scene->camera.GetP();
         scbuf.VP             = scene->camera.GetVP();
-        scbuf.cameraPos      = glm::vec4( scene->camera.position, 0 );
+        scbuf.cameraPos      = glm::vec4( scene->camera.position, 0 );        
         scbuf.ambientColor   = glm::vec4( scene->ambientColor, 0 );
         scbuf.dirLight       = scene->directionalLight;
         scbuf.numPointLights = static_cast< uint32_t >( scene->pointLights.size() );
@@ -549,9 +710,13 @@ namespace RenderSystem
         memcpy( s_gpuSpotLightBuffers[imageIndex].MappedPtr(), scene->spotLights.data(), scene->spotLights.size() * sizeof( SpotLight ) );
         s_gpuSpotLightBuffers[imageIndex].UnMap();
 
+        AnimationSystem::UploadToGpu( scene, imageIndex );
+
         auto& cmdBuf = g_renderState.commandBuffers[imageIndex];
         cmdBuf.BeginRecording();
-        // cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex] );
+
+        ShadowPass( scene, cmdBuf );
+
         cmdBuf.BeginRenderPass( offScreenRenderData.renderPass, offScreenRenderData.frameBuffer );
         cmdBuf.BindRenderPipeline( s_rigidModelPipeline );
         cmdBuf.BindDescriptorSets( 1, &sceneDescriptorSets[imageIndex], s_rigidModelPipeline, PG_SCENE_CONSTANT_BUFFER_SET );
@@ -588,8 +753,6 @@ namespace RenderSystem
                 cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
             }
         });
-
-        AnimationSystem::UploadToGpu( scene, imageIndex );
 
         auto& animPipeline = AnimationSystem::renderData.animatedPipeline;
         cmdBuf.BindRenderPipeline( animPipeline );
@@ -662,17 +825,33 @@ namespace RenderSystem
         samplerDesc.wrapModeW = WrapMode::CLAMP_TO_EDGE;
         AddSampler( samplerDesc );
 
+        samplerDesc.name = "shadow_map";
+        samplerDesc.minFilter = FilterMode::NEAREST;
+        samplerDesc.magFilter = FilterMode::NEAREST;
+        samplerDesc.mipFilter = MipFilterMode::NEAREST;
+        samplerDesc.wrapModeU = WrapMode::CLAMP_TO_EDGE;
+        samplerDesc.wrapModeV = WrapMode::CLAMP_TO_EDGE;
+        samplerDesc.wrapModeW = WrapMode::CLAMP_TO_EDGE;
+        AddSampler( samplerDesc );
+
         samplerDesc.name = "linear_clamped_linear";
-        samplerDesc.mipFilter = MipFilterMode::LINEAR;
         samplerDesc.minFilter = FilterMode::LINEAR;
         samplerDesc.magFilter = FilterMode::LINEAR;
+        samplerDesc.mipFilter = MipFilterMode::LINEAR;
+        samplerDesc.wrapModeU = WrapMode::CLAMP_TO_EDGE;
+        samplerDesc.wrapModeV = WrapMode::CLAMP_TO_EDGE;
+        samplerDesc.wrapModeW = WrapMode::CLAMP_TO_EDGE;
         AddSampler( samplerDesc );
 
         samplerDesc.name = "linear_repeat_linear";
+        samplerDesc.minFilter = FilterMode::LINEAR;
+        samplerDesc.magFilter = FilterMode::LINEAR;
+        samplerDesc.mipFilter = MipFilterMode::LINEAR;
         samplerDesc.wrapModeU = WrapMode::REPEAT;
         samplerDesc.wrapModeV = WrapMode::REPEAT;
         samplerDesc.wrapModeW = WrapMode::REPEAT;
         AddSampler( samplerDesc );
+
     }
 
     void FreeSamplers()

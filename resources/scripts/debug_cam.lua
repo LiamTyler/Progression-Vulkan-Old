@@ -6,10 +6,10 @@ boostSpeed   = 9
 turnSpeed    = 0.002
 maxAngle     = 85 * 3.14159/180
 camera       = nil
-active       = true
+active       = false
 
 function Start()
-    camera = scene.camera
+    camera = Camera.new()
     velocity = vec3.new( 0 )
 end
 
@@ -17,6 +17,7 @@ function Update()
     if Input.GetKeyUp( Key.X ) then
         active = not active
     end
+    
     if not active then
         return
     end

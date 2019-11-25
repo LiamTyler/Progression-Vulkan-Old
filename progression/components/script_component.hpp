@@ -27,6 +27,8 @@ public:
 
     sol::function GetFunction( const std::string& scriptName, const std::string& functionName ) const;
 
+    ScriptData* GetScriptData( const std::string& scriptName );
+
     int numScripts           = 0;
     int numScriptsWithUpdate = 0;
     // std::array< ScriptData, MAX_SCRIPTS_PER_COMPONENT > scripts;
