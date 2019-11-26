@@ -75,7 +75,7 @@ namespace Gfx
         bool blendingEnabled = false;
     };
 
-    enum class WindingOrder
+    enum class  WindingOrder
     {
         COUNTER_CLOCKWISE = 0,
         CLOCKWISE         = 1,

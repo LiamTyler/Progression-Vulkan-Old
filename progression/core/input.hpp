@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/input_types.hpp"
-#include "glm/vec2.hpp"
+#include "core/math.hpp"
 
 struct lua_State;
 void RegisterLuaFunctions_Input( lua_State* L );

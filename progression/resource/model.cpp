@@ -3,6 +3,7 @@
 #include "assimp/postprocess.h"
 #include "assimp/scene.h"
 #include "core/assert.hpp"
+#include "core/math.hpp"
 #include "core/time.hpp"
 #include "graphics/vulkan.hpp"
 #include "meshoptimizer/src/meshoptimizer.h"

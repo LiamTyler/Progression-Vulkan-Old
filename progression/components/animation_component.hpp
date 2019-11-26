@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "glm/mat4x4.hpp"
+#include "core/math.hpp"
 
 namespace Progression
 {

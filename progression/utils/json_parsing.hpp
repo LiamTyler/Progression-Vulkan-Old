@@ -3,8 +3,7 @@
 #include "rapidjson/document.h"
 #include "core/assert.hpp"
 #include "utils/logger.hpp"
-#include "glm/vec3.hpp"
-#include "glm/vec4.hpp"
+#include "core/math.hpp"
 #include <functional>
 #include <string>
 #include <unordered_map>

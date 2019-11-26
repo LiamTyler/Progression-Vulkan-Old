@@ -244,8 +244,9 @@ static bool InitShadowPassData()
     PipelineDescriptor directionalShadowPipelineDesc;
     directionalShadowPipelineDesc.renderPass             = &directionalShadow.renderPass;
     directionalShadowPipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 1, directionalShadowBindingDesc, 1, directionalShadowAttribDescs.data() );
-    directionalShadowPipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE; // TODO: Why is this clockwise??
-    directionalShadowPipelineDesc.viewport               = Viewport( DIRECTIONAL_SHADOW_MAP_RESOLUTION, DIRECTIONAL_SHADOW_MAP_RESOLUTION );
+    directionalShadowPipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
+    directionalShadowPipelineDesc.viewport               = Viewport( DIRECTIONAL_SHADOW_MAP_RESOLUTION, -DIRECTIONAL_SHADOW_MAP_RESOLUTION );
+    directionalShadowPipelineDesc.viewport.y             = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
     Scissor scissor = {};
     scissor.width   = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
     scissor.height  = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
@@ -433,6 +434,8 @@ namespace RenderSystem
         pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 3, bindingDesc, 3, attribDescs.data() );
         pipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
         pipelineDesc.viewport               = FullScreenViewport();
+        pipelineDesc.viewport.height        = -pipelineDesc.viewport.height;
+        pipelineDesc.viewport.y             = -pipelineDesc.viewport.height;
         pipelineDesc.scissor                = FullScreenScissor();
         pipelineDesc.shaders[0]             = rigidModelsVert.get();
         pipelineDesc.shaders[1]             = forwardBlinnPhongFrag.get();
@@ -501,7 +504,7 @@ namespace RenderSystem
         postProcessingPipelineDesc.renderPass	          = &g_renderState.renderPass;
         postProcessingPipelineDesc.descriptorSetLayouts   = offScreenRenderData.textureToProcessLayout;
         postProcessingPipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 1, postProcescsingBindingDesc, 1, postProcescsingAttribDescs.data() );
-        postProcessingPipelineDesc.rasterizerInfo.winding = WindingOrder::CLOCKWISE; // TODO: Why is this clockwise??
+        postProcessingPipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE; // TODO: Why is this clockwise??
         postProcessingPipelineDesc.viewport               = FullScreenViewport();
         postProcessingPipelineDesc.scissor                = FullScreenScissor();
         postProcessingPipelineDesc.shaders[0]	          = postProcessingVert.get();
@@ -533,11 +536,11 @@ namespace RenderSystem
         glm::vec3 quadVerts[] =
         {
             glm::vec3( -1, -1, 0 ),
-            glm::vec3(  1,  1, 0 ),
             glm::vec3( -1,  1, 0 ),
+            glm::vec3(  1,  1, 0 ),
             glm::vec3( -1, -1, 0 ),
+            glm::vec3(  1,  1, 0 ),
             glm::vec3(  1, -1, 0 ),
-            glm::vec3(  1,  1, 0 )
         };
 
         offScreenRenderData.quadBuffer = g_renderState.device.NewBuffer( sizeof( quadVerts ), quadVerts, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL );
@@ -602,15 +605,15 @@ namespace RenderSystem
 
         auto entity = GetEntityByName( scene->registry, "camera" );
         Camera& cam = scene->registry.get< ScriptComponent >( entity ).GetScriptData( "debugCamera" )->env["camera"];
-        glm::vec3 pos( -2, 5, 5 );
-        auto V  = glm::lookAt( pos, pos + glm::vec3( 0, -1, -1 ), glm::vec3( 0, 1, -1 ) );
-        //auto V  = scene->camera.GetV();
-        float W = 25;
-        auto P  = glm::ortho( -W, W, W, -W, .1f, 50.0f );
-        //auto P = scene->camera.GetP();
-        //auto VP = P * V;
-        
-        auto VP = cam.GetVP();
+        //glm::vec3 pos( -2, 5, 5 );
+        //auto V  = glm::lookAt( pos, pos + glm::vec3( 0, -1, -1 ), glm::vec3( 0, 1, -1 ) );
+        auto V  = cam.GetV();
+        float W = 5;
+        auto P  = glm::ortho( -W, W, -W, W, 0.0f, 50.0f );
+        // P[1][1] *= -1;
+        glm::mat4 VP;
+        VP = P * V;
+        //VP = cam.GetVP();
 
         scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& modelRenderer, Transform& transform )
         {
@@ -671,21 +674,40 @@ namespace RenderSystem
             // scbuf.P              = cam.GetP();
             // scbuf.VP             = cam.GetVP();
             // scbuf.cameraPos      = glm::vec4( cam.position, 0 );
-            // VkDescriptorImageInfo imageInfo;
-            // imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            // imageInfo.sampler = offScreenRenderData.colorAttachment.GetSampler()->GetHandle();
-            // imageInfo.imageView = offScreenRenderData.colorAttachment.GetView();
-            // 
-            // VkWriteDescriptorSet descriptorWrite[1] = {};
-            // descriptorWrite[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            // descriptorWrite[0].dstSet = offScreenRenderData.textureToProcess.GetHandle();
-            // descriptorWrite[0].dstBinding = 0;
-            // descriptorWrite[0].dstArrayElement = 0;
-            // descriptorWrite[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            // descriptorWrite[0].descriptorCount = 1;
-            // descriptorWrite[0].pImageInfo = &imageInfo;
-            // 
-            // g_renderState.device.UpdateDescriptorSets( 1, descriptorWrite );
+
+            VkDescriptorImageInfo imageInfo;
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfo.sampler     = directionalShadow.depthAttachment.GetSampler()->GetHandle();
+            imageInfo.imageView   = directionalShadow.depthAttachment.GetView();
+            
+            VkWriteDescriptorSet descriptorWrite[1] = {};
+            descriptorWrite[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite[0].dstSet           = offScreenRenderData.textureToProcess.GetHandle();
+            descriptorWrite[0].dstBinding       = 0;
+            descriptorWrite[0].dstArrayElement  = 0;
+            descriptorWrite[0].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrite[0].descriptorCount  = 1;
+            descriptorWrite[0].pImageInfo       = &imageInfo;
+            
+            g_renderState.device.UpdateDescriptorSets( 1, descriptorWrite );
+        }
+        else
+        {
+            VkDescriptorImageInfo imageInfo;
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfo.sampler     = offScreenRenderData.colorAttachment.GetSampler()->GetHandle();
+            imageInfo.imageView   = offScreenRenderData.colorAttachment.GetView();
+            
+            VkWriteDescriptorSet descriptorWrite[1] = {};
+            descriptorWrite[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite[0].dstSet           = offScreenRenderData.textureToProcess.GetHandle();
+            descriptorWrite[0].dstBinding       = 0;
+            descriptorWrite[0].dstArrayElement  = 0;
+            descriptorWrite[0].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrite[0].descriptorCount  = 1;
+            descriptorWrite[0].pImageInfo       = &imageInfo;
+            
+            g_renderState.device.UpdateDescriptorSets( 1, descriptorWrite );
         }
 
         // sceneConstantBuffer

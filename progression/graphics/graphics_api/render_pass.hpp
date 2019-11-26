@@ -1,7 +1,7 @@
 #pragma once
 
 #include "graphics/graphics_api/texture.hpp"
-#include "glm/vec4.hpp"
+#include "core/math.hpp"
 #include <vulkan/vulkan.hpp>
 
 namespace Progression

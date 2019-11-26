@@ -11,8 +11,8 @@ const float gamma = 1.0;
 
 void main()
 {
-    vec3 hdrColor = texture( originalColor, UV ).rgb;
-
-    finalColor.rgb = pow( hdrColor, vec3( 1.0 / gamma ) );
+    vec3 color = texture( originalColor, UV ).rgb;
+    finalColor.rgb = pow( color, vec3( 1.0 / gamma ) );
+    //finalColor.rgb = vec3(  color.r );
     finalColor.a = 1;
 }
