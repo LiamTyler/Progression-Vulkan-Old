@@ -17,10 +17,6 @@
         "colorAndIntensity": [ 1, 1, 1, 1 ],
         "direction": [ 0, -1, -1 ]
     },
-    "_PointLight": {
-        "colorAndIntensity": [ 1, 1, 1, 1 ],
-        "positionAndRadius": [ -2, 0, -4, 20 ]
-    },
     "Entity": {
         "NameComponent": "sponza",
         "Transform": {
@@ -35,8 +31,7 @@
     "Entity": {
         "NameComponent": "camera",
         "ScriptComponent": {
-            "script": "cameraController",
-            "script": "debugCamera"
+            "script": "cameraController"
         }
     }
 }

@@ -603,17 +603,12 @@ namespace RenderSystem
 
         cmdBuf.BindRenderPipeline( directionalShadow.pipeline );
 
-        auto entity = GetEntityByName( scene->registry, "camera" );
-        Camera& cam = scene->registry.get< ScriptComponent >( entity ).GetScriptData( "debugCamera" )->env["camera"];
-        //glm::vec3 pos( -2, 5, 5 );
-        //auto V  = glm::lookAt( pos, pos + glm::vec3( 0, -1, -1 ), glm::vec3( 0, 1, -1 ) );
-        auto V  = cam.GetV();
-        float W = 5;
-        auto P  = glm::ortho( -W, W, -W, W, 0.0f, 50.0f );
-        // P[1][1] *= -1;
-        glm::mat4 VP;
-        VP = P * V;
-        //VP = cam.GetVP();
+        glm::vec3 pos( 0, 15, 0 );
+        auto V  = glm::lookAt( pos, pos + glm::vec3( scene->directionalLight.direction ), glm::vec3( 0, 1, 0 ) );
+        float W = 10;
+        auto P  = glm::ortho( -W, W, -W, W, 0.0f, 30.0f );
+        glm::mat4 VP = P * V;
+
 
         scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& modelRenderer, Transform& transform )
         {
@@ -663,52 +658,6 @@ namespace RenderSystem
         auto imageIndex = g_renderState.swapChain.AcquireNextImage( g_renderState.presentCompleteSemaphores[currentFrame] );
 
         TextureManager::UpdateDescriptors( textureDescriptorSets );
-
-        
-        auto entity = GetEntityByName( scene->registry, "camera" );
-        auto script = scene->registry.get< ScriptComponent >( entity ).GetScriptData( "debugCamera" );
-        if ( script->env["active"] )
-        {
-            // Camera& cam = script->env["camera"];
-            // scbuf.V              = cam.GetV();
-            // scbuf.P              = cam.GetP();
-            // scbuf.VP             = cam.GetVP();
-            // scbuf.cameraPos      = glm::vec4( cam.position, 0 );
-
-            VkDescriptorImageInfo imageInfo;
-            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.sampler     = directionalShadow.depthAttachment.GetSampler()->GetHandle();
-            imageInfo.imageView   = directionalShadow.depthAttachment.GetView();
-            
-            VkWriteDescriptorSet descriptorWrite[1] = {};
-            descriptorWrite[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite[0].dstSet           = offScreenRenderData.textureToProcess.GetHandle();
-            descriptorWrite[0].dstBinding       = 0;
-            descriptorWrite[0].dstArrayElement  = 0;
-            descriptorWrite[0].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrite[0].descriptorCount  = 1;
-            descriptorWrite[0].pImageInfo       = &imageInfo;
-            
-            g_renderState.device.UpdateDescriptorSets( 1, descriptorWrite );
-        }
-        else
-        {
-            VkDescriptorImageInfo imageInfo;
-            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.sampler     = offScreenRenderData.colorAttachment.GetSampler()->GetHandle();
-            imageInfo.imageView   = offScreenRenderData.colorAttachment.GetView();
-            
-            VkWriteDescriptorSet descriptorWrite[1] = {};
-            descriptorWrite[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite[0].dstSet           = offScreenRenderData.textureToProcess.GetHandle();
-            descriptorWrite[0].dstBinding       = 0;
-            descriptorWrite[0].dstArrayElement  = 0;
-            descriptorWrite[0].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrite[0].descriptorCount  = 1;
-            descriptorWrite[0].pImageInfo       = &imageInfo;
-            
-            g_renderState.device.UpdateDescriptorSets( 1, descriptorWrite );
-        }
 
         // sceneConstantBuffer
         SceneConstantBufferData scbuf;

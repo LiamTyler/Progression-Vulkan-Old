@@ -2,11 +2,7 @@
     "Script": {
         "name": "cameraController",
         "filename": "scripts/cameraController.lua"
-    },
-    "Script": {
-        "name": "debugCamera",
-        "filename": "scripts/debug_cam.lua"
-    },
+    },  
     "MTLFile": {
         "filename": "materials/miscellaneous.mtl"
     },
