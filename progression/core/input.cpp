@@ -12,9 +12,16 @@ static glm::vec2 s_scrollOffset                          = glm::ivec2( 0 );
 
 static void KeyCallback( GLFWwindow* window, int key, int scancode, int action, int mods )
 {
-    (void) window;
-    (void) scancode;
-    (void) mods;
+    PG_UNUSED( window );
+    PG_UNUSED( scancode );
+    PG_UNUSED( mods );
+
+    if ( key == GLFW_KEY_UNKNOWN )
+    {
+        LOG_WARN( "Unknown key pressed" );
+        return;
+    }
+
     if ( action == GLFW_PRESS )
     {
         s_keysDown[key] = true;
@@ -28,14 +35,14 @@ static void KeyCallback( GLFWwindow* window, int key, int scancode, int action, 
 
 static void CursorPositionCallback( GLFWwindow* window, double xpos, double ypos )
 {
-    (void) window;
+    PG_UNUSED( window );
     s_currentCursorPos = glm::vec2( xpos, ypos );
 }
 
 static void MouseButtonCallback( GLFWwindow* window, int button, int action, int mods )
 {
-    (void) window;
-    (void) mods;
+    PG_UNUSED( window );
+    PG_UNUSED( mods );
     if ( action == GLFW_PRESS )
     {
         s_mouseButtonDown[button] = true;
@@ -49,7 +56,7 @@ static void MouseButtonCallback( GLFWwindow* window, int button, int action, int
 
 static void ScrollCallback( GLFWwindow* window, double xoffset, double yoffset )
 {
-    (void) window;
+    PG_UNUSED( window );
     s_scrollOffset += glm::vec2( xoffset, yoffset );
 }
 
