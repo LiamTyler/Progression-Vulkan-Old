@@ -15,7 +15,7 @@
     },
     "DirectionalLight": {
         "colorAndIntensity": [ 1, 1, 1, 1 ],
-        "direction": [ 0, -1, -1 ]
+        "direction": [ 0, -1, -0.15 ]
     },
     "Entity": {
         "NameComponent": "sponza",

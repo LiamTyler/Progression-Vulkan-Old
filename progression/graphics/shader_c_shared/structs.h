@@ -10,11 +10,13 @@ struct SceneConstantBufferData
     MAT4 V;
     MAT4 P;
     MAT4 VP;
+    MAT4 DLSM;
     VEC4 cameraPos;
     VEC4 ambientColor;
     DirectionalLight dirLight;
     UINT numPointLights;
     UINT numSpotLights;
+    UINT shadowTextureIndex;
 };
 
 struct ObjectConstantBufferData

@@ -21,6 +21,12 @@ function Update()
         return
     end
     
+    if Input.GetKeyDown( Key.Q ) then
+        velocity.y = 1
+    end
+    if Input.GetKeyDown( Key.E ) then
+        velocity.y = -1
+    end
     if Input.GetKeyDown( Key.A ) then
         velocity.x = -1
     end
@@ -37,6 +43,12 @@ function Update()
         currentSpeed = boostSpeed
     end
     
+    if Input.GetKeyUp( Key.Q ) and velocity.y == 1 then
+        velocity.y = 0
+    end
+    if Input.GetKeyUp( Key.E ) and velocity.y == -1 then
+        velocity.y = 0
+    end
     if Input.GetKeyUp( Key.A ) and velocity.x == -1 then
         velocity.x = 0
     end
@@ -63,7 +75,8 @@ function Update()
     
     local forward = camera:GetForwardDir()
     local right = camera:GetRightDir()
+    local up = camera:GetUpDir()
     local step = currentSpeed * Time.dt
-    camera.position = camera.position + vec3.scale( velocity.z * step, forward ) + vec3.scale( velocity.x * step, right )
+    camera.position = camera.position + vec3.scale( velocity.z * step, forward ) + vec3.scale( velocity.x * step, right ) + vec3.scale( velocity.y * step, up )
     camera:UpdateViewMatrix()
 end

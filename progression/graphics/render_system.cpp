@@ -162,14 +162,15 @@ bool CreateOffScreenRenderPass()
 struct ShadowRenderData
 {
     Gfx::RenderPass renderPass;
-    Gfx::Texture depthAttachment;
-    VkFramebuffer frameBuffer;
-    Gfx::Pipeline pipeline;
+    Gfx::Texture    depthAttachment;
+    VkFramebuffer   frameBuffer;
+    Gfx::Pipeline   pipeline;
+    glm::mat4       LSM;
 } directionalShadow;
 
 #define MAX_NUM_POINT_LIGHTS 1024
 #define MAX_NUM_SPOT_LIGHTS 256
-#define DIRECTIONAL_SHADOW_MAP_RESOLUTION 1024
+#define DIRECTIONAL_SHADOW_MAP_RESOLUTION 4096
 
 static bool InitShadowPassData()
 {
@@ -192,7 +193,7 @@ static bool InitShadowPassData()
     depthAttachment.stencilLoadOp  = PGToVulkanLoadAction( LoadAction::DONT_CARE );
     depthAttachment.stencilStoreOp = PGToVulkanStoreAction( StoreAction::DONT_CARE );
     depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-    depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     VkAttachmentReference depthAttachmentRef = {};
     depthAttachmentRef.attachment = 0;
@@ -268,7 +269,7 @@ static bool InitShadowPassData()
     info.height  = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
     info.sampler = "shadow_map";
     info.usage   = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    directionalShadow.depthAttachment = g_renderState.device.NewTexture( info, false );
+    directionalShadow.depthAttachment = g_renderState.device.NewTexture( info, true );
 
     VkImageView frameBufferAttachments[1];
     frameBufferAttachments[0] = directionalShadow.depthAttachment.GetView();
@@ -504,7 +505,7 @@ namespace RenderSystem
         postProcessingPipelineDesc.renderPass	          = &g_renderState.renderPass;
         postProcessingPipelineDesc.descriptorSetLayouts   = offScreenRenderData.textureToProcessLayout;
         postProcessingPipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 1, postProcescsingBindingDesc, 1, postProcescsingAttribDescs.data() );
-        postProcessingPipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE; // TODO: Why is this clockwise??
+        postProcessingPipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
         postProcessingPipelineDesc.viewport               = FullScreenViewport();
         postProcessingPipelineDesc.scissor                = FullScreenScissor();
         postProcessingPipelineDesc.shaders[0]	          = postProcessingVert.get();
@@ -603,17 +604,10 @@ namespace RenderSystem
 
         cmdBuf.BindRenderPipeline( directionalShadow.pipeline );
 
-        glm::vec3 pos( 0, 15, 0 );
-        auto V  = glm::lookAt( pos, pos + glm::vec3( scene->directionalLight.direction ), glm::vec3( 0, 1, 0 ) );
-        float W = 10;
-        auto P  = glm::ortho( -W, W, -W, W, 0.0f, 30.0f );
-        glm::mat4 VP = P * V;
-
-
         scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& modelRenderer, Transform& transform )
         {
             const auto& model = modelRenderer.model;
-            auto MVP = VP * transform.GetModelMatrix();
+            auto MVP = directionalShadow.LSM * transform.GetModelMatrix();
             vkCmdPushConstants( cmdBuf.GetHandle(), directionalShadow.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( glm::mat4 ), &MVP[0][0] );
 
             cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
@@ -630,7 +624,7 @@ namespace RenderSystem
         scene->registry.view< Animator, SkinnedRenderer, Transform >().each( [&]( Animator& animator, SkinnedRenderer& renderer, Transform& transform )
         {
             const auto& model = renderer.model;
-            auto MVP          = VP * transform.GetModelMatrix();
+            auto MVP          = directionalShadow.LSM * transform.GetModelMatrix();
             vkCmdPushConstants( cmdBuf.GetHandle(), animPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( glm::mat4 ), &MVP[0][0] );
 
             cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
@@ -659,16 +653,25 @@ namespace RenderSystem
 
         TextureManager::UpdateDescriptors( textureDescriptorSets );
 
+        // TODO: Remove hardcoded directional shadow map
+        glm::vec3 pos( 0, 15, 0 );
+        auto V = glm::lookAt( pos, pos + glm::vec3( scene->directionalLight.direction ), glm::vec3( 0, 1, 0 ) );
+        float W = 25;
+        auto P = glm::ortho( -W, W, -W, W, 0.0f, 50.0f );
+        directionalShadow.LSM = P * V;
+
         // sceneConstantBuffer
         SceneConstantBufferData scbuf;
         scbuf.V              = scene->camera.GetV();
         scbuf.P              = scene->camera.GetP();
         scbuf.VP             = scene->camera.GetVP();
+        scbuf.DLSM           = directionalShadow.LSM;
         scbuf.cameraPos      = glm::vec4( scene->camera.position, 0 );        
         scbuf.ambientColor   = glm::vec4( scene->ambientColor, 0 );
         scbuf.dirLight       = scene->directionalLight;
         scbuf.numPointLights = static_cast< uint32_t >( scene->pointLights.size() );
         scbuf.numSpotLights  = static_cast< uint32_t >( scene->spotLights.size() );
+        scbuf.shadowTextureIndex = directionalShadow.depthAttachment.GetShaderSlot();
         s_gpuSceneConstantBuffers[imageIndex].Map();
         memcpy( s_gpuSceneConstantBuffers[imageIndex].MappedPtr(), &scbuf, sizeof( SceneConstantBufferData ) );
         s_gpuSceneConstantBuffers[imageIndex].UnMap();
