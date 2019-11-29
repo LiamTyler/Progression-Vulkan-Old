@@ -1,6 +1,7 @@
 #pragma once
 
 #include "graphics/graphics_api/buffer.hpp"
+#include <vector>
 
 namespace Progression
 {

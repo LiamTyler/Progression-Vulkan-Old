@@ -1,7 +1,8 @@
 #pragma once
 
-#include <vulkan/vulkan.hpp>
 #include "graphics/shader_c_shared/defines.h"
+#include <string>
+#include <vulkan/vulkan.h>
 
 namespace Progression
 {

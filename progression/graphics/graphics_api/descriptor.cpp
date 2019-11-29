@@ -1,6 +1,7 @@
 #include "graphics/graphics_api/descriptor.hpp"
 #include "core/assert.hpp"
 #include "utils/logger.hpp"
+#include <algorithm>
 
 namespace Progression
 {

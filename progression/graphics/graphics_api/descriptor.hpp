@@ -1,6 +1,7 @@
 #pragma once
 
-#include <vulkan/vulkan.hpp>
+#include <vector>
+#include <vulkan/vulkan.h>
 
 namespace Progression
 {

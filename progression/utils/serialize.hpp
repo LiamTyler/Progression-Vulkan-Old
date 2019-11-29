@@ -3,7 +3,6 @@
 #include "core/math.hpp"
 #include <fstream>
 #include <vector>
-#include <vulkan/vulkan.hpp>
 
 namespace serialize
 {

@@ -2,7 +2,8 @@
 
 #include "graphics/graphics_api/texture.hpp"
 #include "core/math.hpp"
-#include <vulkan/vulkan.hpp>
+#include <array>
+#include <vulkan/vulkan.h>
 
 namespace Progression
 {

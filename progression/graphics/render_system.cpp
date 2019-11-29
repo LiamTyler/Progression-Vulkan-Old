@@ -10,7 +10,9 @@
 #include "graphics/graphics_api.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
 #include "graphics/shader_c_shared/defines.h"
+#include "graphics/shader_c_shared/structs.h"
 #include "graphics/texture_manager.hpp"
+#include "graphics/vulkan.hpp"
 #include "resource/resource_manager.hpp"
 #include "resource/image.hpp"
 #include "resource/model.hpp"
@@ -18,8 +20,6 @@
 #include "utils/logger.hpp"
 #include <array>
 #include <unordered_map>
-#include "graphics/vulkan.hpp"
-#include "graphics/shader_c_shared/structs.h"
 
 using namespace Progression;
 using namespace Gfx;
@@ -559,7 +559,10 @@ namespace RenderSystem
     {
         g_renderState.device.WaitForIdle();
 
-        
+        directionalShadow.depthAttachment.Free();
+        directionalShadow.renderPass.Free();
+        directionalShadow.pipeline.Free();
+        vkDestroyFramebuffer( g_renderState.device.GetHandle(), directionalShadow.frameBuffer, nullptr );
 
         s_descriptorPool.Free();
         for ( size_t i = 0; i < g_renderState.swapChain.images.size(); ++i )

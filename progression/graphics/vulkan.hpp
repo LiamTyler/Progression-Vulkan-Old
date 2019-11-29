@@ -1,8 +1,9 @@
 #pragma once
 
 #include "graphics/graphics_api.hpp"
+#include <string>
 #include <vector>
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 namespace Progression
 {
@@ -12,7 +13,7 @@ namespace Gfx
 
     const std::vector< const char* > VK_VALIDATION_LAYERS =
     {
-        "VK_LAYER_LUNARG_standard_validation"
+        "VK_LAYER_KHRONOS_validation"
     };
 
     const std::vector< const char* > VK_DEVICE_EXTENSIONS =

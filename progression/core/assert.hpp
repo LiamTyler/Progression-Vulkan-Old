@@ -1,6 +1,8 @@
 #pragma once
 
 #include "platform_defines.hpp"
+#include <cstdio>
+#include <cstdlib>
 
 
 #define _PG_ASSERT_NO_MSG( x )                                                           \

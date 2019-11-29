@@ -4,7 +4,7 @@
 #include "core/platform_defines.hpp"
 #include "graphics/graphics_api.hpp"
 #include "resource/resource.hpp"
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 #include <unordered_map>
 
 namespace Progression

@@ -1,6 +1,6 @@
 #include "graphics/vulkan.hpp"
 #include "core/platform_defines.hpp"
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 #include "core/window.hpp"
 #include "graphics/graphics_api.hpp"
 #include "graphics/render_system.hpp"
