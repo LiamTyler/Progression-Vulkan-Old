@@ -389,6 +389,11 @@ namespace Gfx
         return m_imageView;
     }
 
+    VkDeviceMemory Texture::GetMemoryHandle() const
+    {
+        return m_memory;
+    }
+
     uint16_t Texture::GetShaderSlot() const
     {
         return m_textureSlot;

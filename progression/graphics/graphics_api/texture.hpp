@@ -176,6 +176,7 @@ namespace Gfx
 
         VkImage GetHandle() const;
         VkImageView GetView() const;
+        VkDeviceMemory GetMemoryHandle() const;
         uint16_t GetShaderSlot() const;
         Sampler* GetSampler() const;
         void SetSampler( Sampler* sampler );

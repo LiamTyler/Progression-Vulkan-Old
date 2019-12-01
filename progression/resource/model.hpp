@@ -53,6 +53,7 @@ namespace Progression
     struct Mesh
     {
     public:
+        std::string name;
         int materialIndex = -1;
         uint32_t startIndex  = 0;
         uint32_t numIndices  = 0;

@@ -64,6 +64,11 @@ namespace Gfx
         return m_handle;
     }
 
+    VkDeviceMemory Buffer::GetMemoryHandle() const
+    {
+        return m_memory;
+    }
+
     Buffer::operator bool() const
     {
         return m_handle != VK_NULL_HANDLE;

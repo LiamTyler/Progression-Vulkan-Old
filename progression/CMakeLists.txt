@@ -9,10 +9,12 @@ configure_file(${PROGRESSION_DIR}/cmake/platform_defines.hpp.in ${PROGRESSION_DI
 set(
     GRAPHICS
     #graphics/graphics_api.cpp
+    graphics/debug_marker.cpp
     graphics/render_system.cpp
     graphics/texture_manager.cpp
     graphics/vulkan.cpp
 
+    graphics/debug_marker.hpp
     graphics/graphics_api.hpp
     graphics/pg_to_vulkan_types.hpp
     graphics/render_system.hpp
@@ -27,14 +29,14 @@ set(
     graphics/graphics_api/descriptor.hpp
     graphics/graphics_api/device.cpp
     graphics/graphics_api/device.hpp
-    graphics/graphics_api/fence.cpp
-    graphics/graphics_api/fence.hpp
     graphics/graphics_api/pipeline.cpp
     graphics/graphics_api/pipeline.hpp
     graphics/graphics_api/render_pass.cpp
     graphics/graphics_api/render_pass.hpp
     graphics/graphics_api/sampler.cpp
     graphics/graphics_api/sampler.hpp
+    graphics/graphics_api/synchronization.cpp
+    graphics/graphics_api/synchronization.hpp
     graphics/graphics_api/texture.cpp
     graphics/graphics_api/texture.hpp
     graphics/graphics_api/vertex_descriptor.cpp

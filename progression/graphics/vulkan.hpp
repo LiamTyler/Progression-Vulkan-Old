@@ -11,16 +11,6 @@ namespace Gfx
 {
     const int MAX_FRAMES_IN_FLIGHT = 2;
 
-    const std::vector< const char* > VK_VALIDATION_LAYERS =
-    {
-        "VK_LAYER_KHRONOS_validation"
-    };
-
-    const std::vector< const char* > VK_DEVICE_EXTENSIONS =
-    {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
-    };
-
     struct QueueFamilyIndices
     {
         uint32_t graphicsFamily = ~0u;
@@ -41,13 +31,16 @@ namespace Gfx
         std::string name;
         int score;
         QueueFamilyIndices indices;
+        std::vector< std::string > availableExtensions;
+
+        bool ExtensionSupported( const std::string& extensionName ) const;
     };
 
     class SwapChain
     {
     public:
         bool Create( VkDevice device );
-        uint32_t AcquireNextImage( VkSemaphore presentCompleteSemaphore );
+        uint32_t AcquireNextImage( const Semaphore& presentCompleteSemaphore );
 
         VkDevice device;
         VkSwapchainKHR swapChain;
@@ -71,9 +64,9 @@ namespace Gfx
         CommandPool transientCommandPool;
         std::vector< CommandBuffer > commandBuffers;
         
-        std::vector< VkSemaphore > presentCompleteSemaphores;
-        std::vector< VkSemaphore > renderCompleteSemaphores;
-        std::vector< VkFence > inFlightFences;
+        std::vector< Semaphore > presentCompleteSemaphores;
+        std::vector< Semaphore > renderCompleteSemaphores;
+        std::vector< Fence > inFlightFences;
 
         Device device;
         RenderPass renderPass;

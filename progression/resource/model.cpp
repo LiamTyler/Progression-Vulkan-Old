@@ -5,6 +5,7 @@
 #include "core/assert.hpp"
 #include "core/math.hpp"
 #include "core/time.hpp"
+#include "graphics/debug_marker.hpp"
 #include "graphics/vulkan.hpp"
 #include "meshoptimizer/src/meshoptimizer.h"
 #include "resource/resource_manager.hpp"
@@ -348,11 +349,12 @@ namespace Progression
         uint32_t numIndices = 0;    
         for ( size_t i = 0 ; i < meshes.size(); i++ )
         {
+            meshes[i].name          = scene->mMeshes[i]->mName.C_Str();
             meshes[i].materialIndex = scene->mMeshes[i]->mMaterialIndex;
-            meshes[i].numIndices  = scene->mMeshes[i]->mNumFaces * 3;
-            meshes[i].numVertices = scene->mMeshes[i]->mNumVertices;
-            meshes[i].startVertex = numVertices;
-            meshes[i].startIndex  = numIndices;
+            meshes[i].numIndices    = scene->mMeshes[i]->mNumFaces * 3;
+            meshes[i].numVertices   = scene->mMeshes[i]->mNumVertices;
+            meshes[i].startVertex   = numVertices;
+            meshes[i].startIndex    = numIndices;
         
             numVertices += scene->mMeshes[i]->mNumVertices;
             numIndices  += meshes[i].numIndices;
@@ -633,7 +635,17 @@ namespace Progression
         serialize::Write( out, aabb.min );
         serialize::Write( out, aabb.max );
         serialize::Write( out, aabb.extent );
-        serialize::Write( out, meshes );
+        uint32_t numMeshes = static_cast< uint32_t >( meshes.size() );
+        serialize::Write( out, numMeshes );
+        for ( const auto& mesh : meshes )
+        {
+            serialize::Write( out, mesh.name );
+            serialize::Write( out, mesh.materialIndex );
+            serialize::Write( out, mesh.startIndex );
+            serialize::Write( out, mesh.numIndices );
+            serialize::Write( out, mesh.startVertex );
+            serialize::Write( out, mesh.numVertices );
+        }
         skeleton.Serialize( out );
         size_t numAnimations = animations.size();
         serialize::Write( out, numAnimations );
@@ -679,9 +691,9 @@ namespace Progression
         {
             using namespace Progression::Gfx;
             size_t totalVertexSize = 2 * numVertices * sizeof( glm::vec3 ) + numUVs * sizeof( glm::vec2 ) + numBlendWeights * 2 * sizeof( glm::vec4 );
-            vertexBuffer = Gfx::g_renderState.device.NewBuffer( totalVertexSize, buffer, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL );
+            vertexBuffer = Gfx::g_renderState.device.NewBuffer( totalVertexSize, buffer, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL, name + " VBO" );
             buffer += totalVertexSize;
-            indexBuffer  = Gfx::g_renderState.device.NewBuffer( numIndices * sizeof( uint32_t ), buffer, BUFFER_TYPE_INDEX, MEMORY_TYPE_DEVICE_LOCAL );
+            indexBuffer  = Gfx::g_renderState.device.NewBuffer( numIndices * sizeof( uint32_t ), buffer, BUFFER_TYPE_INDEX, MEMORY_TYPE_DEVICE_LOCAL, name + " IBO" );
             buffer += numIndices * sizeof( uint32_t );
 
             m_numVertices       = numVertices;
@@ -712,7 +724,18 @@ namespace Progression
         serialize::Read( buffer, aabb.min );
         serialize::Read( buffer, aabb.max );
         serialize::Read( buffer, aabb.extent );
-        serialize::Read( buffer, meshes );
+        uint32_t numMeshes;
+        serialize::Read( buffer, numMeshes );
+        meshes.resize( numMeshes );
+        for ( auto& mesh : meshes )
+        {
+            serialize::Read( buffer, mesh.name );
+            serialize::Read( buffer, mesh.materialIndex );
+            serialize::Read( buffer, mesh.startIndex );
+            serialize::Read( buffer, mesh.numIndices );
+            serialize::Read( buffer, mesh.startVertex );
+            serialize::Read( buffer, mesh.numVertices );
+        }
         skeleton.Deserialize( buffer );
 
         size_t numAnimations;
@@ -795,8 +818,8 @@ namespace Progression
         memcpy( dst, uvs.data(), uvs.size() * sizeof( glm::vec2 ) );
         dst += uvs.size() * sizeof( glm::vec2 );
         memcpy( dst, blendWeights.data(), blendWeights.size() * 2 * sizeof( glm::vec4 ) );
-        vertexBuffer = Gfx::g_renderState.device.NewBuffer( vertexData.size() * sizeof( float ), vertexData.data(), BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL );
-        indexBuffer  = Gfx::g_renderState.device.NewBuffer( indices.size() * sizeof ( uint32_t ), indices.data(), BUFFER_TYPE_INDEX, MEMORY_TYPE_DEVICE_LOCAL );
+        vertexBuffer = Gfx::g_renderState.device.NewBuffer( vertexData.size() * sizeof( float ), vertexData.data(), BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL, name + " VBO" );
+        indexBuffer  = Gfx::g_renderState.device.NewBuffer( indices.size() * sizeof ( uint32_t ), indices.data(), BUFFER_TYPE_INDEX, MEMORY_TYPE_DEVICE_LOCAL, name + " IBO" );
 
         m_numVertices       = static_cast< uint32_t >( vertices.size() );
         m_normalOffset      = m_numVertices * sizeof( glm::vec3 );

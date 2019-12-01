@@ -2,6 +2,7 @@
 #include "core/platform_defines.hpp"
 #include <vulkan/vulkan.h>
 #include "core/window.hpp"
+#include "graphics/debug_marker.hpp"
 #include "graphics/graphics_api.hpp"
 #include "graphics/render_system.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
@@ -11,12 +12,27 @@
 #include <string>
 #include <vector>
 
+std::vector< const char* > VK_VALIDATION_LAYERS =
+{
+    "VK_LAYER_KHRONOS_validation"
+};
+
+std::vector< const char* > VK_DEVICE_EXTENSIONS =
+{
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME
+};
+
 namespace Progression
 {
 namespace Gfx
 {
 
 RenderState g_renderState;
+
+bool PhysicalDeviceInfo::ExtensionSupported( const std::string& extensionName ) const
+{
+    return std::find( availableExtensions.begin(), availableExtensions.end(), extensionName ) != availableExtensions.end();
+}
 
 static std::vector< std::string > FindMissingValidationLayers( const std::vector< const char* >& layers )
 {
@@ -167,22 +183,17 @@ static QueueFamilyIndices FindQueueFamilies( VkPhysicalDevice device, VkSurfaceK
     return indices;
 }
 
-static bool CheckPhysicalDeviceExtensionSupport( VkPhysicalDevice device )
+static bool CheckPhysicalDeviceExtensionSupport( const PhysicalDeviceInfo& info )
 {
-    uint32_t extensionCount;
-    vkEnumerateDeviceExtensionProperties( device, nullptr, &extensionCount, nullptr );
-
-    std::vector< VkExtensionProperties > availableExtensions( extensionCount );
-    vkEnumerateDeviceExtensionProperties( device, nullptr, &extensionCount, availableExtensions.data() );
-
-    std::set< std::string > requiredExtensions( VK_DEVICE_EXTENSIONS.begin(), VK_DEVICE_EXTENSIONS.end() );
-
-    for ( const auto& extension : availableExtensions )
+    for ( const auto& extension : VK_DEVICE_EXTENSIONS )
     {
-        requiredExtensions.erase( extension.extensionName );
+        if ( !info.ExtensionSupported( extension ) )
+        {
+            return false;
+        }
     }
 
-    return requiredExtensions.empty();
+    return true;
 }
 
 struct SwapChainSupportDetails
@@ -299,7 +310,7 @@ static int RatePhysicalDevice( const PhysicalDeviceInfo& deviceInfo )
 {
     // check the required features first: queueFamilies, extension support,
     // and swap chain support
-    bool extensionsSupported = CheckPhysicalDeviceExtensionSupport( deviceInfo.device );
+    bool extensionsSupported = CheckPhysicalDeviceExtensionSupport( deviceInfo );
 
     bool swapChainAdequate = false;
     if ( extensionsSupported )
@@ -412,7 +423,8 @@ static bool CreateSurface()
     return glfwCreateWindowSurface( g_renderState.instance, GetMainWindow()->GetGLFWHandle(), nullptr, &g_renderState.surface ) == VK_SUCCESS;
 }
 
-static bool PickPhysicalDevice() {
+static bool PickPhysicalDevice()
+{
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices( g_renderState.instance, &deviceCount, nullptr );
 
@@ -430,7 +442,18 @@ static bool PickPhysicalDevice() {
         deviceInfos[i].device  = devices[i];
         vkGetPhysicalDeviceProperties( devices[i], &deviceInfos[i].deviceProperties );
         vkGetPhysicalDeviceFeatures( devices[i], &deviceInfos[i].deviceFeatures );
-        deviceInfos[i].deviceFeatures.samplerAnisotropy = VK_TRUE; 
+        deviceInfos[i].deviceFeatures.samplerAnisotropy = VK_TRUE;
+
+        uint32_t extensionCount;
+        vkEnumerateDeviceExtensionProperties( deviceInfos[i].device, nullptr, &extensionCount, nullptr );
+        std::vector< VkExtensionProperties > availableExtensions( extensionCount );
+        vkEnumerateDeviceExtensionProperties( deviceInfos[i].device, nullptr, &extensionCount, availableExtensions.data() );
+        deviceInfos[i].availableExtensions.resize( availableExtensions.size() );
+        for ( size_t ext = 0; ext < availableExtensions.size(); ++ext )
+        {
+            deviceInfos[i].availableExtensions[ext] = availableExtensions[ext].extensionName;
+        }
+
         deviceInfos[i].name    = deviceInfos[i].deviceProperties.deviceName;
         deviceInfos[i].indices = FindQueueFamilies( devices[i], g_renderState.surface );
         deviceInfos[i].score   = RatePhysicalDevice( deviceInfos[i] );
@@ -462,7 +485,7 @@ static bool CreateRenderPass()
     renderPassDesc.depthAttachmentDescriptor.loadAction  = LoadAction::CLEAR;
     renderPassDesc.depthAttachmentDescriptor.storeAction = StoreAction::DONT_CARE;
 
-    g_renderState.renderPass = g_renderState.device.NewRenderPass( renderPassDesc );
+    g_renderState.renderPass = g_renderState.device.NewRenderPass( renderPassDesc, "final output" );
     return g_renderState.renderPass;
 }
 
@@ -475,7 +498,7 @@ static bool CreateDepthTexture()
     info.height  = g_renderState.swapChain.extent.height;
     info.sampler = "nearest_clamped_nearest";
     info.usage   = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    g_renderState.depthTex = g_renderState.device.NewTexture( info, false );
+    g_renderState.depthTex = g_renderState.device.NewTexture( info, false, "main depth texture" );
     return g_renderState.depthTex;
 }
 
@@ -501,6 +524,7 @@ static bool CreateSwapChainFrameBuffers()
         {
             return false;
         }
+        PG_DEBUG_MARKER_SET_FRAMEBUFFER_NAME( g_renderState.swapChainFramebuffers[i], "swapchain " + std::to_string( i ) );
     }
 
     return true;
@@ -508,7 +532,7 @@ static bool CreateSwapChainFrameBuffers()
 
 static bool CreateCommandPoolAndBuffers()
 {
-    g_renderState.commandPool = g_renderState.device.NewCommandPool( COMMAND_POOL_RESET_COMMAND_BUFFER );
+    g_renderState.commandPool = g_renderState.device.NewCommandPool( COMMAND_POOL_RESET_COMMAND_BUFFER, "global" );
     if ( !g_renderState.commandPool )
     {
         return false;
@@ -516,9 +540,10 @@ static bool CreateCommandPoolAndBuffers()
 
     g_renderState.commandBuffers.resize( g_renderState.swapChain.images.size() );
 
-    for ( auto& cmdbuf : g_renderState.commandBuffers )
+    for ( size_t i = 0; i < g_renderState.commandBuffers.size(); ++i )
     {
-        cmdbuf = g_renderState.commandPool.NewCommandBuffer();
+        auto& cmdbuf = g_renderState.commandBuffers[i];
+        cmdbuf = g_renderState.commandPool.NewCommandBuffer( "Global " + std::to_string( i ) );
         if ( !cmdbuf )
         {
             return false;
@@ -537,20 +562,13 @@ static bool CreateSemaphores()
     VkSemaphoreCreateInfo semInfo = {};
     semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-    VkFenceCreateInfo fenceInfo = {};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
     VkDevice dev = g_renderState.device.GetHandle();
 
     for ( size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
     {
-        if ( vkCreateSemaphore( dev, &semInfo, nullptr, &g_renderState.presentCompleteSemaphores[i] ) != VK_SUCCESS ||
-             vkCreateSemaphore( dev, &semInfo, nullptr, &g_renderState.renderCompleteSemaphores[i] ) != VK_SUCCESS ||
-             vkCreateFence( dev, &fenceInfo, nullptr, &g_renderState.inFlightFences[i] ) != VK_SUCCESS )
-        {
-            return false;
-        }
+        g_renderState.presentCompleteSemaphores[i] = g_renderState.device.NewSemaphore( "present complete " + std::to_string( i ) );
+        g_renderState.renderCompleteSemaphores[i]  = g_renderState.device.NewSemaphore( "render complete " + std::to_string( i ) );
+        g_renderState.inFlightFences[i]            = g_renderState.device.NewFence( true, "in flight " + std::to_string( i ) );
     }
 
     return true;
@@ -611,6 +629,7 @@ bool SwapChain::Create( VkDevice dev )
     {
         return false;
     }
+    PG_DEBUG_MARKER_SET_SWAPCHAIN_NAME( swapChain, "global" );
 
     vkGetSwapchainImagesKHR( device, swapChain, &imageCount, nullptr );
     images.resize( imageCount );
@@ -622,14 +641,16 @@ bool SwapChain::Create( VkDevice dev )
     for ( size_t i = 0; i < images.size(); ++i )
     {
         imageViews[i] = CreateImageView( images[i], imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1 );
+        PG_DEBUG_MARKER_SET_IMAGE_VIEW_NAME( imageViews[i], "swapchain image " + std::to_string( i ) );
+        PG_DEBUG_MARKER_SET_IMAGE_ONLY_NAME( images[i], "swapchain " + std::to_string( i ) );
     }
     
     return true;
 }
 
-uint32_t SwapChain::AcquireNextImage( VkSemaphore presentCompleteSemaphore )
+uint32_t SwapChain::AcquireNextImage( const Semaphore& presentCompleteSemaphore )
 {
-    vkAcquireNextImageKHR( device, swapChain, UINT64_MAX, presentCompleteSemaphore, VK_NULL_HANDLE, &currentImage );
+    vkAcquireNextImageKHR( device, swapChain, UINT64_MAX, presentCompleteSemaphore.GetHandle(), VK_NULL_HANDLE, &currentImage );
 
     return currentImage;
 }
@@ -673,6 +694,14 @@ bool VulkanInit()
         return false;
     }
 
+    DebugMarker::Init( g_renderState.device.GetHandle(), g_renderState.physicalDeviceInfo.device );
+
+    // PG_DEBUG_MARKER_SET_PHYSICAL_DEVICE_NAME( g_renderState.physicalDeviceInfo.device, g_renderState.physicalDeviceInfo.name );
+    PG_DEBUG_MARKER_SET_INSTANCE_NAME( g_renderState.instance, "global" );
+    PG_DEBUG_MARKER_SET_LOGICAL_DEVICE_NAME( g_renderState.device, "default" );
+    PG_DEBUG_MARKER_SET_QUEUE_NAME( g_renderState.device.GraphicsQueue(), "graphics" );
+    PG_DEBUG_MARKER_SET_QUEUE_NAME( g_renderState.device.PresentQueue(), "present" );
+
     RenderSystem::InitSamplers();
 
     if ( !g_renderState.swapChain.Create( g_renderState.device.GetHandle() ) )
@@ -711,7 +740,7 @@ bool VulkanInit()
         return false;
     }
 
-    g_renderState.transientCommandPool = g_renderState.device.NewCommandPool( COMMAND_POOL_TRANSIENT );
+    g_renderState.transientCommandPool = g_renderState.device.NewCommandPool( COMMAND_POOL_TRANSIENT, "transient" );
 
     return true;
 }
@@ -723,9 +752,9 @@ void VulkanShutdown()
 
     for ( size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
     {
-        vkDestroySemaphore( dev, g_renderState.presentCompleteSemaphores[i], nullptr );
-        vkDestroySemaphore( dev, g_renderState.renderCompleteSemaphores[i], nullptr );
-        vkDestroyFence( dev, g_renderState.inFlightFences[i], nullptr );
+        g_renderState.presentCompleteSemaphores[i].Free();
+        g_renderState.renderCompleteSemaphores[i].Free();
+        g_renderState.inFlightFences[i].Free();
     }
 
     g_renderState.depthTex.Free();

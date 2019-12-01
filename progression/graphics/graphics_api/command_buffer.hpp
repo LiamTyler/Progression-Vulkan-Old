@@ -67,8 +67,9 @@ namespace Gfx
         CommandPool() = default;
 
         void Free();
-        CommandBuffer NewCommandBuffer();
+        CommandBuffer NewCommandBuffer( const std::string& name = "" );
         operator bool() const;
+        VkCommandPool GetHandle() const;
 
 
     private:

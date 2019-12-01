@@ -7,6 +7,7 @@
 #include "components/model_renderer.hpp"
 #include "components/script_component.hpp"
 #include "components/skinned_renderer.hpp"
+#include "graphics/debug_marker.hpp"
 #include "graphics/graphics_api.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
 #include "graphics/shader_c_shared/defines.h"
@@ -155,6 +156,7 @@ bool CreateOffScreenRenderPass()
         LOG_ERR( "Could not create render pass" );
         return false;
     }
+    PG_DEBUG_MARKER_SET_RENDER_PASS_NAME( pass, "offscreen" );
 
     return true;
 }
@@ -228,6 +230,7 @@ static bool InitShadowPassData()
         LOG_ERR( "Could not create shadow render pass" );
         return false;
     }
+    PG_DEBUG_MARKER_SET_RENDER_PASS_NAME( pass, "directional shadow pass" );
 
     auto directionalShadowVert = ResourceManager::Get< Shader >( "directionalShadowVert" );
 
@@ -248,14 +251,14 @@ static bool InitShadowPassData()
     directionalShadowPipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
     directionalShadowPipelineDesc.viewport               = Viewport( DIRECTIONAL_SHADOW_MAP_RESOLUTION, -DIRECTIONAL_SHADOW_MAP_RESOLUTION );
     directionalShadowPipelineDesc.viewport.y             = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
-    Scissor scissor = {};
-    scissor.width   = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
-    scissor.height  = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
+    Scissor scissor                                      = {};
+    scissor.width                                        = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
+    scissor.height                                       = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
     directionalShadowPipelineDesc.scissor                = scissor;
     directionalShadowPipelineDesc.shaders[0]             = directionalShadowVert.get();
     directionalShadowPipelineDesc.numShaders             = 1;
 
-    directionalShadow.pipeline = g_renderState.device.NewPipeline( directionalShadowPipelineDesc );
+    directionalShadow.pipeline = g_renderState.device.NewPipeline( directionalShadowPipelineDesc, "directional shadow pass" );
     if ( !directionalShadow.pipeline )
     {
         LOG_ERR( "Could not create directional shadow pipeline" );
@@ -269,7 +272,7 @@ static bool InitShadowPassData()
     info.height  = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
     info.sampler = "shadow_map";
     info.usage   = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    directionalShadow.depthAttachment = g_renderState.device.NewTexture( info, true );
+    directionalShadow.depthAttachment = g_renderState.device.NewTexture( info, true, "directional shadowmap" );
 
     VkImageView frameBufferAttachments[1];
     frameBufferAttachments[0] = directionalShadow.depthAttachment.GetView();
@@ -288,6 +291,7 @@ static bool InitShadowPassData()
         LOG_ERR( "Could not create shadow framebuffer" );
         return false;
     }
+    PG_DEBUG_MARKER_SET_FRAMEBUFFER_NAME( directionalShadow.frameBuffer, "directional shadow pass" );
 
     return true;
 }
@@ -308,11 +312,11 @@ namespace RenderSystem
         for ( uint32_t i = 0; i < numImages; ++i )
         {
             s_gpuSceneConstantBuffers[i] = g_renderState.device.NewBuffer( sizeof( SceneConstantBufferData ),
-                    BUFFER_TYPE_UNIFORM, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
+                    BUFFER_TYPE_UNIFORM, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT, "Scene Constants " + std::to_string( i ) );
             s_gpuPointLightBuffers[i] = g_renderState.device.NewBuffer( sizeof( PointLight ) * MAX_NUM_POINT_LIGHTS,
-                    BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
+                    BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT, "Point Lights " + std::to_string( i ) );
             s_gpuSpotLightBuffers[i] = g_renderState.device.NewBuffer( sizeof( SpotLight ) * MAX_NUM_SPOT_LIGHTS,
-                    BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
+                    BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT, "Spot Lights " + std::to_string( i ) );
         }
 
         VkDescriptorPoolSize poolSize[3] = {};
@@ -323,7 +327,7 @@ namespace RenderSystem
         poolSize[2].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         poolSize[2].descriptorCount = numImages + 1;
 
-        s_descriptorPool = g_renderState.device.NewDescriptorPool( 3, poolSize, 3 * numImages );
+        s_descriptorPool = g_renderState.device.NewDescriptorPool( 3, poolSize, 3 * numImages, "render system" );
                 
 		// Post Processing
         if ( !CreateOffScreenRenderPass() )
@@ -339,8 +343,8 @@ namespace RenderSystem
         auto combined = CombineDescriptorSetLayouts( descriptorSetData );
 
         s_descriptorSetLayouts = g_renderState.device.NewDescriptorSetLayouts( combined );
-        sceneDescriptorSets    = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[0] );
-        textureDescriptorSets  = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[1] );
+        sceneDescriptorSets    = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[0], "scene data" );
+        textureDescriptorSets  = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[1], "textures" );
 
         auto dummyImage = ResourceManager::Get< Image >( "RENDER_SYSTEM_DUMMY_TEXTURE" );
         PG_ASSERT( dummyImage );
@@ -442,7 +446,7 @@ namespace RenderSystem
         pipelineDesc.shaders[1]             = forwardBlinnPhongFrag.get();
         pipelineDesc.numShaders             = 2;
 
-        s_rigidModelPipeline = g_renderState.device.NewPipeline( pipelineDesc );
+        s_rigidModelPipeline = g_renderState.device.NewPipeline( pipelineDesc, "rigid model" );
         if ( !s_rigidModelPipeline )
         {
             LOG_ERR( "Could not create rigid model pipeline" );
@@ -456,7 +460,7 @@ namespace RenderSystem
         info.height  = g_renderState.swapChain.extent.height;
         info.sampler = "nearest_clamped_nearest";
         info.usage   = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        offScreenRenderData.colorAttachment = g_renderState.device.NewTexture( info, false );
+        offScreenRenderData.colorAttachment = g_renderState.device.NewTexture( info, false, "offscreen color attachment" );
 
         VkImageView attachments[2];
         attachments[0] = offScreenRenderData.colorAttachment.GetView();
@@ -476,6 +480,7 @@ namespace RenderSystem
             LOG_ERR( "Could not create offscreen framebuffer" );
             return false;
         }
+        PG_DEBUG_MARKER_SET_FRAMEBUFFER_NAME( offScreenRenderData.frameBuffer, "offscreen pass (gbuffer)" );
 
 		// Post Processing
 
@@ -487,8 +492,8 @@ namespace RenderSystem
         descriptorSetData.insert( descriptorSetData.end(), postProcessingFrag->reflectInfo.descriptorSetLayouts.begin(), postProcessingFrag->reflectInfo.descriptorSetLayouts.end() );
         combined = CombineDescriptorSetLayouts( descriptorSetData );
 
-        offScreenRenderData.textureToProcessLayout = g_renderState.device.NewDescriptorSetLayouts(combined);
-        offScreenRenderData.textureToProcess = s_descriptorPool.NewDescriptorSets( 1, offScreenRenderData.textureToProcessLayout[0] )[0];
+        offScreenRenderData.textureToProcessLayout = g_renderState.device.NewDescriptorSetLayouts( combined );
+        offScreenRenderData.textureToProcess = s_descriptorPool.NewDescriptorSets( 1, offScreenRenderData.textureToProcessLayout[0], "post process" )[0];
 
 		VertexBindingDescriptor postProcescsingBindingDesc[1];
         postProcescsingBindingDesc[0].binding = 0;
@@ -512,7 +517,7 @@ namespace RenderSystem
         postProcessingPipelineDesc.shaders[1]			  = postProcessingFrag.get();
         postProcessingPipelineDesc.numShaders             = 2;
 
-		offScreenRenderData.postPorcessingPipeline = g_renderState.device.NewPipeline( postProcessingPipelineDesc );
+		offScreenRenderData.postPorcessingPipeline = g_renderState.device.NewPipeline( postProcessingPipelineDesc , "post process");
 		if ( !offScreenRenderData.postPorcessingPipeline )
 		{
 			LOG_ERR( "Could not create post processing pipeline" );
@@ -544,7 +549,7 @@ namespace RenderSystem
             glm::vec3(  1, -1, 0 ),
         };
 
-        offScreenRenderData.quadBuffer = g_renderState.device.NewBuffer( sizeof( quadVerts ), quadVerts, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL );
+        offScreenRenderData.quadBuffer = g_renderState.device.NewBuffer( sizeof( quadVerts ), quadVerts, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL, "RenderSystem Quad VBO" );
 
         if ( !InitShadowPassData() )
         {
@@ -591,6 +596,7 @@ namespace RenderSystem
 
     void ShadowPass( Scene* scene, CommandBuffer& cmdBuf )
     {
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Shadow Pass", glm::vec4( .2, .2, .4, 1 ) );
         // cmdBuf.BeginRenderPass( directionalShadow.renderPass, directionalShadow.frameBuffer );
         VkRenderPassBeginInfo renderPassInfo = {};
         renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -605,8 +611,8 @@ namespace RenderSystem
         renderPassInfo.pClearValues    = clearValues;
         vkCmdBeginRenderPass( cmdBuf.GetHandle(), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
 
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Shadow rigid models", glm::vec4( .2, .6, .4, 1 ) );
         cmdBuf.BindRenderPipeline( directionalShadow.pipeline );
-
         scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& modelRenderer, Transform& transform )
         {
             const auto& model = modelRenderer.model;
@@ -619,10 +625,13 @@ namespace RenderSystem
             for ( size_t i = 0; i < model->meshes.size(); ++i )
             {
                 const auto& mesh = modelRenderer.model->meshes[i];
+                PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
                 cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
             }
         });
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
 
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Shadow animated models", glm::vec4( .6, .2, .4, 1 ) );
         auto& animPipeline = AnimationSystem::renderData.animatedPipeline;
         scene->registry.view< Animator, SkinnedRenderer, Transform >().each( [&]( Animator& animator, SkinnedRenderer& renderer, Transform& transform )
         {
@@ -636,11 +645,14 @@ namespace RenderSystem
             for ( size_t i = 0; i < renderer.model->meshes.size(); ++i )
             {
                 const auto& mesh = model->meshes[i];
+                PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
                 cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
             }
         });
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
 
         cmdBuf.EndRenderPass();
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
     }
 
     void Render( Scene* scene )
@@ -649,8 +661,8 @@ namespace RenderSystem
         PG_ASSERT( scene->pointLights.size() < MAX_NUM_POINT_LIGHTS && scene->spotLights.size() < MAX_NUM_SPOT_LIGHTS );
         size_t currentFrame = g_renderState.currentFrame;
         VkDevice dev = g_renderState.device.GetHandle();
-        vkWaitForFences( dev, 1, &g_renderState.inFlightFences[currentFrame], VK_TRUE, UINT64_MAX );
-        vkResetFences( dev, 1, &g_renderState.inFlightFences[currentFrame] );
+        g_renderState.inFlightFences[currentFrame].WaitFor();
+        g_renderState.inFlightFences[currentFrame].Reset();
 
         auto imageIndex = g_renderState.swapChain.AcquireNextImage( g_renderState.presentCompleteSemaphores[currentFrame] );
 
@@ -694,7 +706,9 @@ namespace RenderSystem
 
         ShadowPass( scene, cmdBuf );
 
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Render Scene", glm::vec4( .8, .8, .2, 1 ) );
         cmdBuf.BeginRenderPass( offScreenRenderData.renderPass, offScreenRenderData.frameBuffer );
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Render Rigid Models", glm::vec4( .2, .8, .2, 1 ) );
         cmdBuf.BindRenderPipeline( s_rigidModelPipeline );
         cmdBuf.BindDescriptorSets( 1, &sceneDescriptorSets[imageIndex], s_rigidModelPipeline, PG_SCENE_CONSTANT_BUFFER_SET );
         cmdBuf.BindDescriptorSets( 1, &textureDescriptorSets[imageIndex], s_rigidModelPipeline, PG_2D_TEXTURES_SET );
@@ -727,10 +741,13 @@ namespace RenderSystem
                 mcbuf.diffuseTexIndex = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
                 vkCmdPushConstants( cmdBuf.GetHandle(), s_rigidModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
 
+                PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
                 cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
             }
         });
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
 
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Render Animated Models", glm::vec4( .8, .2, .2, 1 ) );
         auto& animPipeline = AnimationSystem::renderData.animatedPipeline;
         cmdBuf.BindRenderPipeline( animPipeline );
         cmdBuf.BindDescriptorSets( 1, &sceneDescriptorSets[imageIndex], animPipeline, PG_SCENE_CONSTANT_BUFFER_SET );
@@ -766,22 +783,28 @@ namespace RenderSystem
                 mcbuf.diffuseTexIndex = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
                 vkCmdPushConstants( cmdBuf.GetHandle(), animPipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
                 
+                PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
                 cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
             }
         });
 
         cmdBuf.EndRenderPass();
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
 
         // Post Processing Render Pass
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Post Process", glm::vec4( .2, .2, 1, 1 ) );
         cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex] );
 
         cmdBuf.BindRenderPipeline( offScreenRenderData.postPorcessingPipeline );
         cmdBuf.BindDescriptorSets( 1, &offScreenRenderData.textureToProcess, offScreenRenderData.postPorcessingPipeline, 0 );
         
+        PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
         cmdBuf.BindVertexBuffer( offScreenRenderData.quadBuffer, 0, 0 );
         cmdBuf.Draw( 0, 6 );
 
         cmdBuf.EndRenderPass();
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
 
         cmdBuf.EndRecording();
         g_renderState.device.SubmitRenderCommands( 1, &cmdBuf );

@@ -4,7 +4,7 @@
 
 #define PG_RESOURCE_MATERIAL_VERSION    0  // Initial version
 
-#define PG_RESOURCE_MODEL_VERSION       0  // Initial version
+#define PG_RESOURCE_MODEL_VERSION       1  // Now track the mesh names
 
 #define PG_RESOURCE_SCRIPT_VERSION      0  // Initial version
 

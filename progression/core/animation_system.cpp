@@ -4,6 +4,7 @@
 #include "core/time.hpp"
 #include "components/animation_component.hpp"
 #include "components/skinned_renderer.hpp"
+#include "graphics/debug_marker.hpp"
 #include "graphics/vulkan.hpp"
 #include "resource/resource_manager.hpp"
 #include "resource/shader.hpp"
@@ -28,17 +29,17 @@ bool Init()
     s_freeList = { { 0, MAX_ANIMATOR_NUM_TRANSFORMS } };
     uint32_t numFrames = Gfx::MAX_FRAMES_IN_FLIGHT + 1;
     renderData.gpuBoneBuffers.resize( numFrames );
-    for ( auto& buf : renderData.gpuBoneBuffers )
+    for ( size_t i = 0; i < renderData.gpuBoneBuffers.size(); ++i )
     {
-        buf = g_renderState.device.NewBuffer( sizeof( glm::mat4 ) * MAX_ANIMATOR_NUM_TRANSFORMS,
-            BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
+        renderData.gpuBoneBuffers[i] = g_renderState.device.NewBuffer( sizeof( glm::mat4 ) * MAX_ANIMATOR_NUM_TRANSFORMS,
+            BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT, "Bone Transforms " + std::to_string( i ) );
     }
 
     VkDescriptorPoolSize poolSize[1] = {};
     poolSize[0].type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     poolSize[0].descriptorCount = 1 * numFrames;
 
-    renderData.descriptorPool = g_renderState.device.NewDescriptorPool( 1, poolSize, numFrames );
+    renderData.descriptorPool = g_renderState.device.NewDescriptorPool( 1, poolSize, numFrames, "animation system" );
 
     auto animatedModelsVert    = ResourceManager::Get< Shader >( "animatedModelsVert" );
     auto forwardBlinnPhongFrag = ResourceManager::Get< Shader >( "forwardBlinnPhongFrag" );
@@ -48,15 +49,15 @@ bool Init()
     auto combined = CombineDescriptorSetLayouts( descriptorSetData );
 
     renderData.descriptorSetLayouts         = g_renderState.device.NewDescriptorSetLayouts( combined );
-    renderData.animationBonesDescriptorSets = renderData.descriptorPool.NewDescriptorSets( numFrames, renderData.descriptorSetLayouts[2] );
+    renderData.animationBonesDescriptorSets = renderData.descriptorPool.NewDescriptorSets( numFrames, renderData.descriptorSetLayouts[2], "skeletal animation" );
 
     for ( uint32_t i = 0; i < numFrames; i++ )
     {
-        VkWriteDescriptorSet descriptorWrite = {};
+        VkWriteDescriptorSet descriptorWrite      = {};
         VkDescriptorBufferInfo boneDataBufferInfo = {};
-        boneDataBufferInfo.buffer = renderData.gpuBoneBuffers[i].GetHandle();
-        boneDataBufferInfo.offset = 0;
-        boneDataBufferInfo.range  = VK_WHOLE_SIZE;
+        boneDataBufferInfo.buffer        = renderData.gpuBoneBuffers[i].GetHandle();
+        boneDataBufferInfo.offset        = 0;
+        boneDataBufferInfo.range         = VK_WHOLE_SIZE;
         descriptorWrite.sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrite.dstSet           = renderData.animationBonesDescriptorSets[i].GetHandle();
         descriptorWrite.dstBinding       = 0;
@@ -114,7 +115,7 @@ bool Init()
     pipelineDesc.shaders[1]             = forwardBlinnPhongFrag.get();
     pipelineDesc.numShaders             = 2;
 
-    renderData.animatedPipeline = g_renderState.device.NewPipeline( pipelineDesc );
+    renderData.animatedPipeline = g_renderState.device.NewPipeline( pipelineDesc, "animation" );
     if ( !renderData.animatedPipeline )
     {
         LOG_ERR( "Could not create animated model pipeline" );

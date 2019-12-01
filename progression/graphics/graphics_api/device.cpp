@@ -1,12 +1,16 @@
 #include "graphics/graphics_api/device.hpp"
 #include "core/assert.hpp"
 #include "core/platform_defines.hpp"
+#include "graphics/debug_marker.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
 #include "graphics/render_system.hpp"
 #include "graphics/texture_manager.hpp"
 #include "graphics/vulkan.hpp"
 #include "utils/logger.hpp"
 #include <set>
+
+extern std::vector< const char* > VK_VALIDATION_LAYERS;
+extern std::vector< const char* > VK_DEVICE_EXTENSIONS;
 
 namespace Progression
 {
@@ -36,8 +40,14 @@ namespace Gfx
         createInfo.queueCreateInfoCount    = static_cast< uint32_t >( queueCreateInfos.size() );
         createInfo.pQueueCreateInfos       = queueCreateInfos.data();
         createInfo.pEnabledFeatures        = &g_renderState.physicalDeviceInfo.deviceFeatures;
-        createInfo.enabledExtensionCount   = static_cast< uint32_t >( VK_DEVICE_EXTENSIONS.size() );
-        createInfo.ppEnabledExtensionNames = VK_DEVICE_EXTENSIONS.data();
+
+        auto extensions = VK_DEVICE_EXTENSIONS;
+        if (g_renderState.physicalDeviceInfo.ExtensionSupported( VK_EXT_DEBUG_MARKER_EXTENSION_NAME ) )
+		{
+			extensions.push_back( VK_EXT_DEBUG_MARKER_EXTENSION_NAME );
+		}
+        createInfo.enabledExtensionCount   = static_cast< uint32_t >( extensions.size() );
+        createInfo.ppEnabledExtensionNames = extensions.data();
 
         // Specify device specific validation layers (ignored after v1.1.123?)
 #if !USING( SHIP_BUILD )
@@ -83,7 +93,7 @@ namespace Gfx
         vkQueueWaitIdle( m_graphicsQueue );
     }
 
-    CommandPool Device::NewCommandPool( CommandPoolCreateFlags flags ) const
+    CommandPool Device::NewCommandPool( CommandPoolCreateFlags flags, const std::string& name ) const
     {
         VkCommandPoolCreateInfo poolInfo = {};
         poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -96,11 +106,12 @@ namespace Gfx
         {
             cmdPool.m_handle = VK_NULL_HANDLE;
         }
+        PG_DEBUG_MARKER_IF_STR_NOT_EMPTY( name, PG_DEBUG_MARKER_SET_COMMAND_POOL_NAME( cmdPool, name ) );
 
         return cmdPool;
     }
 
-    DescriptorPool Device::NewDescriptorPool( int numPoolSizes, VkDescriptorPoolSize* poolSizes, uint32_t maxSets ) const
+    DescriptorPool Device::NewDescriptorPool( int numPoolSizes, VkDescriptorPoolSize* poolSizes, uint32_t maxSets, const std::string& name ) const
     {
         DescriptorPool pool;
         pool.m_device = m_handle;
@@ -113,6 +124,7 @@ namespace Gfx
 
         VkResult ret = vkCreateDescriptorPool( m_handle, &poolInfo, nullptr, &pool.m_handle );
         PG_ASSERT( ret == VK_SUCCESS );
+        PG_DEBUG_MARKER_IF_STR_NOT_EMPTY( name, PG_DEBUG_MARKER_SET_DESC_POOL_NAME( pool, name ) );
 
         return pool;
     }
@@ -155,20 +167,34 @@ namespace Gfx
         vkUpdateDescriptorSets( m_handle, count, writes, 0, nullptr );
     }
 
-    Fence Device::NewFence() const
+    Fence Device::NewFence( bool signaled, const std::string& name ) const
     {
         Fence fence;
         VkFenceCreateInfo fenceInfo = {};
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+        fenceInfo.flags = signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0;
         fence.m_device  = m_handle;
         VkResult ret    = vkCreateFence( m_handle, &fenceInfo, nullptr, &fence.m_handle );
         PG_ASSERT( ret == VK_SUCCESS );
+        PG_DEBUG_MARKER_IF_STR_NOT_EMPTY( name, PG_DEBUG_MARKER_SET_FENCE_NAME( fence, name ) );
 
         return fence;
     }
 
-    Buffer Device::NewBuffer( size_t length, BufferType type, MemoryType memoryType ) const
+    Semaphore Device::NewSemaphore( const std::string& name ) const
+    {
+        Semaphore sem;
+        VkSemaphoreCreateInfo info = {};
+        info.sType    = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        sem.m_device  = m_handle;
+        VkResult ret  = vkCreateSemaphore( m_handle, &info, nullptr, &sem.m_handle );
+        PG_ASSERT( ret == VK_SUCCESS );
+        PG_DEBUG_MARKER_IF_STR_NOT_EMPTY( name, PG_DEBUG_MARKER_SET_SEMAPHORE_NAME( sem, name ) );
+
+        return sem;
+    }
+
+    Buffer Device::NewBuffer( size_t length, BufferType type, MemoryType memoryType, const std::string& name ) const
     {
         Buffer buffer;
         buffer.m_device       = m_handle;
@@ -196,11 +222,12 @@ namespace Gfx
         PG_ASSERT( ret == VK_SUCCESS );
 
         vkBindBufferMemory( m_handle, buffer.m_handle, buffer.m_memory, 0 );
+        PG_DEBUG_MARKER_IF_STR_NOT_EMPTY( name, PG_DEBUG_MARKER_SET_BUFFER_NAME( buffer, name ) );
 
         return buffer;
     }
 
-    Buffer Device::NewBuffer( size_t length, void* data, BufferType type, MemoryType memoryType ) const
+    Buffer Device::NewBuffer( size_t length, void* data, BufferType type, MemoryType memoryType, const std::string& name ) const
     {
         Buffer dstBuffer;
 
@@ -211,13 +238,13 @@ namespace Gfx
             memcpy( stagingBuffer.MappedPtr(), data, length );
             stagingBuffer.UnMap();
 
-            dstBuffer = NewBuffer( length, type | BUFFER_TYPE_TRANSFER_DST, memoryType );
+            dstBuffer = NewBuffer( length, type | BUFFER_TYPE_TRANSFER_DST, memoryType, name );
             Copy( dstBuffer, stagingBuffer );
             stagingBuffer.Free();
         }
         else if ( ( memoryType & MEMORY_TYPE_HOST_VISIBLE ) && ( memoryType & MEMORY_TYPE_HOST_COHERENT ) )
         {
-            dstBuffer = NewBuffer( length, type, memoryType );
+            dstBuffer = NewBuffer( length, type, memoryType, name );
             dstBuffer.Map();
             memcpy( dstBuffer.MappedPtr(), data, length );
             dstBuffer.UnMap();
@@ -230,7 +257,7 @@ namespace Gfx
         return dstBuffer;
     }
 
-    Texture Device::NewTexture( const ImageDescriptor& desc, bool managed ) const
+    Texture Device::NewTexture( const ImageDescriptor& desc, bool managed, const std::string& name ) const
     {
         bool isDepth = PixelFormatIsDepthFormat( desc.format );
         VkImageCreateInfo imageInfo = {};
@@ -281,6 +308,7 @@ namespace Gfx
         {
             tex.m_textureSlot = TextureManager::GetOpenSlot( &tex );
         }
+        PG_DEBUG_MARKER_IF_STR_NOT_EMPTY( name, PG_DEBUG_MARKER_SET_IMAGE_NAME( tex, name ) );
 
         return tex;
     }
@@ -311,11 +339,12 @@ namespace Gfx
 
         VkResult res = vkCreateSampler( m_handle, &info, nullptr, &sampler.m_handle );
         PG_ASSERT( res == VK_SUCCESS );
+        PG_DEBUG_MARKER_IF_STR_NOT_EMPTY( desc.name, PG_DEBUG_MARKER_SET_SAMPLER_NAME( sampler, desc.name ) );
 
         return sampler;
     }
 
-    Pipeline Device::NewPipeline( const PipelineDescriptor& desc ) const
+    Pipeline Device::NewPipeline( const PipelineDescriptor& desc, const std::string& name ) const
     {
         Pipeline p;
         p.m_desc   = desc;
@@ -459,11 +488,12 @@ namespace Gfx
             vkDestroyPipelineLayout( m_handle, p.m_pipelineLayout, nullptr );
             p.m_pipeline = VK_NULL_HANDLE;
         }
+        PG_DEBUG_MARKER_IF_STR_NOT_EMPTY( name, PG_DEBUG_MARKER_SET_PIPELINE_NAME( p, name ) );
 
         return p;
     }
 
-    RenderPass Device::NewRenderPass( const RenderPassDescriptor& desc ) const
+    RenderPass Device::NewRenderPass( const RenderPassDescriptor& desc, const std::string& name ) const
     {
         RenderPass pass;
         pass.desc     = desc;
@@ -540,6 +570,7 @@ namespace Gfx
         {
             pass.m_handle = VK_NULL_HANDLE;
         }
+        PG_DEBUG_MARKER_IF_STR_NOT_EMPTY( name, PG_DEBUG_MARKER_SET_RENDER_PASS_NAME( pass, name ) );
 
         return pass;
     }
@@ -621,7 +652,7 @@ namespace Gfx
         VkSubmitInfo submitInfo = {};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        VkSemaphore waitSemaphores[]      = { g_renderState.presentCompleteSemaphores[g_renderState.currentFrame] };
+        VkSemaphore waitSemaphores[]      = { g_renderState.presentCompleteSemaphores[g_renderState.currentFrame].GetHandle() };
         VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
         submitInfo.waitSemaphoreCount     = 1;
         submitInfo.pWaitSemaphores        = waitSemaphores;
@@ -629,17 +660,17 @@ namespace Gfx
         submitInfo.commandBufferCount     = numBuffers;
         submitInfo.pCommandBuffers        = vkCmdBufs;
 
-        VkSemaphore signalSemaphores[]    = { g_renderState.renderCompleteSemaphores[g_renderState.currentFrame] };
+        VkSemaphore signalSemaphores[]    = { g_renderState.renderCompleteSemaphores[g_renderState.currentFrame].GetHandle() };
         submitInfo.signalSemaphoreCount   = 1;
         submitInfo.pSignalSemaphores      = signalSemaphores;
 
-        VkResult ret = vkQueueSubmit( m_graphicsQueue, 1, &submitInfo, g_renderState.inFlightFences[g_renderState.currentFrame] );
+        VkResult ret = vkQueueSubmit( m_graphicsQueue, 1, &submitInfo, g_renderState.inFlightFences[g_renderState.currentFrame].GetHandle() );
         PG_ASSERT( ret == VK_SUCCESS );
     }
 
     void Device::SubmitFrame( uint32_t imageIndex ) const
     {
-        VkSemaphore signalSemaphores[] = { g_renderState.renderCompleteSemaphores[g_renderState.currentFrame] };
+        VkSemaphore signalSemaphores[] = { g_renderState.renderCompleteSemaphores[g_renderState.currentFrame].GetHandle() };
         VkPresentInfoKHR presentInfo   = {};
         presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         presentInfo.waitSemaphoreCount = 1;

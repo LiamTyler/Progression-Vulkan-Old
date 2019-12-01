@@ -1,5 +1,6 @@
 #include "graphics/graphics_api/command_buffer.hpp"
 #include "core/assert.hpp"
+#include "graphics/debug_marker.hpp"
 #include "graphics/graphics_api/descriptor.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
 #include "graphics/vulkan.hpp"
@@ -168,7 +169,7 @@ namespace Gfx
         return m_handle != VK_NULL_HANDLE;
     }
 
-    CommandBuffer CommandPool::NewCommandBuffer()
+    CommandBuffer CommandPool::NewCommandBuffer( const std::string& name )
     {
         PG_ASSERT( m_handle != VK_NULL_HANDLE );
         VkCommandBufferAllocateInfo allocInfo = {};
@@ -184,8 +185,17 @@ namespace Gfx
         }
         buf.m_device = m_device;
         buf.m_pool   = m_handle;
+        if ( !name.empty() )
+        {
+            PG_DEBUG_MARKER_SET_COMMAND_BUFFER_NAME( buf, name );
+        }
 
         return buf;
+    }
+
+    VkCommandPool CommandPool::GetHandle() const
+    {
+        return m_handle;
     }
 
 } // namespace Gfx

@@ -1,5 +1,6 @@
 #include "graphics/graphics_api/descriptor.hpp"
 #include "core/assert.hpp"
+#include "graphics/debug_marker.hpp"
 #include "utils/logger.hpp"
 #include <algorithm>
 
@@ -104,7 +105,7 @@ namespace Gfx
         m_handle = VK_NULL_HANDLE;
     }
 
-    std::vector< DescriptorSet > DescriptorPool::NewDescriptorSets( uint32_t numLayouts, const DescriptorSetLayout& layout ) const
+    std::vector< DescriptorSet > DescriptorPool::NewDescriptorSets( uint32_t numLayouts, const DescriptorSetLayout& layout, const std::string& name ) const
     {
         PG_ASSERT( m_handle != VK_NULL_HANDLE );
         VkDescriptorSetAllocateInfo allocInfo = {};
@@ -117,6 +118,7 @@ namespace Gfx
         std::vector< DescriptorSet > descriptorSets( numLayouts );
         VkResult res = vkAllocateDescriptorSets( m_device, &allocInfo, (VkDescriptorSet*) descriptorSets.data() );
         PG_ASSERT( res == VK_SUCCESS );
+        PG_DEBUG_MARKER_IF_STR_NOT_EMPTY( name, for ( uint32_t i = 0; i < numLayouts; ++i ) { PG_DEBUG_MARKER_SET_DESC_SET_NAME( descriptorSets[i], name + " " + std::to_string( i ) ); } );
 
         return descriptorSets;
 

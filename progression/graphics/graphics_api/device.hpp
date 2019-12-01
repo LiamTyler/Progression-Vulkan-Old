@@ -2,7 +2,7 @@
 
 #include "graphics/graphics_api/command_buffer.hpp"
 #include "graphics/graphics_api/descriptor.hpp"
-#include "graphics/graphics_api/fence.hpp"
+#include "graphics/graphics_api/synchronization.hpp"
 #include "graphics/graphics_api/texture.hpp"
 #include "graphics/graphics_api/sampler.hpp"
 #include "graphics/graphics_api/pipeline.hpp"
@@ -23,17 +23,18 @@ namespace Gfx
 
         void Submit( const CommandBuffer& cmdBuf ) const;
         void WaitForIdle() const;
-        CommandPool NewCommandPool( CommandPoolCreateFlags flags = 0 ) const;
-        DescriptorPool NewDescriptorPool( int numPoolSizes, VkDescriptorPoolSize* poolSizes, uint32_t maxSets = 1 ) const;
+        CommandPool NewCommandPool( CommandPoolCreateFlags flags = 0, const std::string& name = "" ) const;
+        DescriptorPool NewDescriptorPool( int numPoolSizes, VkDescriptorPoolSize* poolSizes, uint32_t maxSets = 1, const std::string& name = "" ) const;
         std::vector< DescriptorSetLayout > NewDescriptorSetLayouts( const std::vector< DescriptorSetLayoutData >& layoutData ) const;
         void UpdateDescriptorSets( uint32_t count, const VkWriteDescriptorSet* writes ) const;
-        Buffer NewBuffer( size_t length, BufferType type, MemoryType memoryType ) const;
-        Buffer NewBuffer( size_t length, void* data, BufferType type, MemoryType memoryType ) const;
-        Texture NewTexture( const ImageDescriptor& desc, bool managed = true ) const;
+        Buffer NewBuffer( size_t length, BufferType type, MemoryType memoryType, const std::string& name = "" ) const;
+        Buffer NewBuffer( size_t length, void* data, BufferType type, MemoryType memoryType, const std::string& name = "" ) const;
+        Texture NewTexture( const ImageDescriptor& desc, bool managed = true, const std::string& name = "" ) const;
         Sampler NewSampler( const SamplerDescriptor& desc ) const;
-        Fence NewFence() const;
-        Pipeline NewPipeline( const PipelineDescriptor& desc ) const;
-        RenderPass NewRenderPass( const RenderPassDescriptor& desc ) const;
+        Fence NewFence( bool signaled, const std::string& name = "" ) const;
+        Semaphore NewSemaphore( const std::string& name = "" ) const;
+        Pipeline NewPipeline( const PipelineDescriptor& desc, const std::string& name = "" ) const;
+        RenderPass NewRenderPass( const RenderPassDescriptor& desc, const std::string& name = "" ) const;
         void SubmitRenderCommands( int numBuffers, CommandBuffer* cmdBufs ) const;
         void SubmitFrame( uint32_t imageIndex ) const;
 

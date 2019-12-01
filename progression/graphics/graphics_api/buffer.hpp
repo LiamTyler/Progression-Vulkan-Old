@@ -122,6 +122,7 @@ namespace Gfx
         MemoryType GetMemoryType() const;
         BufferType GetType() const;
         VkBuffer GetHandle() const;
+        VkDeviceMemory GetMemoryHandle() const;
         operator bool() const;
 
     protected:

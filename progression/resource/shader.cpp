@@ -1,4 +1,5 @@
 #include "resource/shader.hpp"
+#include "graphics/debug_marker.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
 #include "graphics/vulkan.hpp"
 #include "memory_map/MemoryMapped.h"
@@ -63,6 +64,7 @@ namespace Progression
     {
         ShaderCreateInfo* createInfo = static_cast< ShaderCreateInfo* >( info );
         Free();
+        name = createInfo->name;
 
         MemoryMapped memMappedFile;
         if ( !memMappedFile.open( createInfo->filename, MemoryMapped::WholeFile, MemoryMapped::SequentialScan ) )
@@ -84,6 +86,7 @@ namespace Progression
         {
             return false;
         }
+        PG_DEBUG_MARKER_SET_SHADER_NAME( (*this), name );
 
         reflectInfo = Reflect( spirvData, spirvSize );
 
@@ -155,6 +158,7 @@ namespace Progression
         {
             return false;
         }
+        PG_DEBUG_MARKER_SET_SHADER_NAME( (*this), name );
         buffer += spirvSize;
 
         return true;

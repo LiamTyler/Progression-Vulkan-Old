@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -53,7 +54,7 @@ namespace Gfx
         DescriptorPool() = default;
 
         void Free();
-        std::vector< DescriptorSet > NewDescriptorSets( uint32_t numLayouts, const DescriptorSetLayout& layout ) const;
+        std::vector< DescriptorSet > NewDescriptorSets( uint32_t numLayouts, const DescriptorSetLayout& layout, const std::string& name = "" ) const;
         VkDescriptorPool GetHandle() const;
         operator bool() const;
 
