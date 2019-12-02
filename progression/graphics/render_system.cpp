@@ -416,10 +416,10 @@ namespace RenderSystem
         bindingDesc[2].stride    = sizeof( glm::vec2 );
         bindingDesc[2].inputRate = VertexInputRate::PER_VERTEX;
         bindingDesc[3].binding   = 3;
-        bindingDesc[3].stride    = 2 * sizeof( glm::vec4 );
+        bindingDesc[3].stride    = sizeof( glm::vec3 );
         bindingDesc[3].inputRate = VertexInputRate::PER_VERTEX;
 
-        std::array< VertexAttributeDescriptor, 3 > attribDescs;
+        VertexAttributeDescriptor attribDescs[4];
         attribDescs[0].binding  = 0;
         attribDescs[0].location = 0;
         attribDescs[0].format   = BufferDataType::FLOAT3;
@@ -432,11 +432,15 @@ namespace RenderSystem
         attribDescs[2].location = 2;
         attribDescs[2].format   = BufferDataType::FLOAT2;
         attribDescs[2].offset   = 0;
+        attribDescs[3].binding  = 3;
+        attribDescs[3].location = 3;
+        attribDescs[3].format   = BufferDataType::FLOAT3;
+        attribDescs[3].offset   = 0;
 
         PipelineDescriptor pipelineDesc;
         pipelineDesc.renderPass             = &offScreenRenderData.renderPass;
         pipelineDesc.descriptorSetLayouts   = s_descriptorSetLayouts;
-        pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 3, bindingDesc, 3, attribDescs.data() );
+        pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 4, bindingDesc, 4, attribDescs );
         pipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
         pipelineDesc.viewport               = FullScreenViewport();
         pipelineDesc.viewport.height        = -pipelineDesc.viewport.height;
@@ -717,6 +721,10 @@ namespace RenderSystem
         scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& modelRenderer, Transform& transform )
         {
             const auto& model = modelRenderer.model;
+            // TODO: Actually fix this for models without tangets as well
+            if ( model->GetTangentOffset() == ~0u )
+                return;
+            
             auto M = transform.GetModelMatrix();
             auto N = glm::transpose( glm::inverse( M ) );
             ObjectConstantBufferData b;
@@ -727,6 +735,7 @@ namespace RenderSystem
             cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetUVOffset(), 2 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetTangentOffset(), 3 );
             cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
 
             for ( size_t i = 0; i < model->meshes.size(); ++i )
@@ -747,6 +756,7 @@ namespace RenderSystem
             }
         });
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
+        LOG(" test" );
 
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Render Animated Models", glm::vec4( .8, .2, .2, 1 ) );
         auto& animPipeline = AnimationSystem::renderData.animatedPipeline;

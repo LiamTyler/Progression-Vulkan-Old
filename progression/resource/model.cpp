@@ -422,7 +422,10 @@ namespace Progression
                 if ( paiMesh->HasTangentsAndBitangents() )
                 {
                     const aiVector3D* pTangent = &paiMesh->mTangents[vIdx];
-                    tangents.emplace_back( pTangent->x, pTangent->y, pTangent->z );
+                    glm::vec3 t( pTangent->x, pTangent->y, pTangent->z );
+                    // const glm::vec3& n = normals[vIdx];
+                    // t = glm::normalize( t - n * glm::dot( n, t ) ); // does assimp orthogonalize the tangents automatically?
+                    tangents.emplace_back( t );
                 }
             }
 
@@ -741,17 +744,20 @@ namespace Progression
 
             m_numVertices       = numVertices;
             m_normalOffset      = m_numVertices * sizeof( glm::vec3 );
+            uint32_t offset     = m_normalOffset + numVertices * sizeof( glm::vec3 );
             if ( numUVs > 0 )
             {
-                m_uvOffset = m_normalOffset + numVertices * sizeof( glm::vec3 );
+                m_uvOffset = offset;
+                offset += numUVs * sizeof( glm::vec2 );
             }
             if ( numBlendWeights > 0 )
             {
-                m_blendWeightOffset = m_uvOffset + numUVs * sizeof( glm::vec2 );
+                m_blendWeightOffset = offset;
+                offset += numBlendWeights * 2 * sizeof( glm::vec4 );
             }
             if ( numTangents )
             {
-                m_tangentOffset = m_blendWeightOffset + numBlendWeights * 2 * sizeof( glm::vec4 );
+                m_tangentOffset = offset;
             }
         }
         else
@@ -879,17 +885,20 @@ namespace Progression
 
         m_numVertices       = static_cast< uint32_t >( vertices.size() );
         m_normalOffset      = m_numVertices * sizeof( glm::vec3 );
+        uint32_t offset     = m_normalOffset + m_numVertices * sizeof( glm::vec3 );
         if ( !uvs.empty() )
         {
-            m_uvOffset = m_normalOffset + m_numVertices * sizeof( glm::vec3 );
+            m_uvOffset = offset;
+            offset += static_cast< uint32_t >( uvs.size() * sizeof( glm::vec2 ) );
         }
         if ( !blendWeights.empty() )
         {
-            m_blendWeightOffset = static_cast< uint32_t >( m_uvOffset + uvs.size() * sizeof( glm::vec2 ) );
+            m_blendWeightOffset = offset;
+            offset += static_cast< uint32_t >( blendWeights.size() * sizeof( glm::vec2 ) );
         }
         if ( !tangents.empty() )
         {
-            m_tangentOffset = static_cast< uint32_t >( m_blendWeightOffset + blendWeights.size() * 2 * sizeof( glm::vec4 ) );
+            m_tangentOffset = offset;
         }
     }
 
