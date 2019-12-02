@@ -69,9 +69,9 @@ void main()
     vec3 n = normalize( TBN[2] );
     if ( material.normalMapIndex != ~0u )
     {
-        // n = texture( textures[material.normalMapIndex], texCoord ).xyz;
-        // n = normalize( n * 2 - 1 );
-        // n = normalize( TBN * n );
+        n = texture( textures[material.normalMapIndex], texCoord ).xyz;
+        n = normalize( n * 2 - 1 );
+        n = normalize( TBN * n );
     }
     
     

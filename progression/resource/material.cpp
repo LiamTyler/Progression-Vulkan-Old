@@ -54,7 +54,7 @@ bool Material::Serialize( std::ofstream& out ) const
         else
         {
             serialize::Write( out, (uint32_t) PG_RESOURCE_IMAGE_VERSION );
-            serialize::Write( out, name );
+            serialize::Write( out, map_Kd->name );
             serialize::Write( out, map_Kd->GetImageFlags() );
             std::string samplerName = map_Kd->GetTexture()->GetSampler()->GetName();
             serialize::Write( out, samplerName );
@@ -75,7 +75,7 @@ bool Material::Serialize( std::ofstream& out ) const
         else
         {
             serialize::Write( out, (uint32_t) PG_RESOURCE_IMAGE_VERSION );
-            serialize::Write( out, name );
+            serialize::Write( out, map_Norm->name );
             serialize::Write( out, map_Norm->GetImageFlags() );
             std::string samplerName = map_Norm->GetTexture()->GetSampler()->GetName();
             serialize::Write( out, samplerName );
@@ -128,8 +128,8 @@ bool Material::Deserialize( char*& buffer )
         {
             std::string map_name;
             serialize::Read( buffer, map_name );
-            map_Kd = ResourceManager::Get< Image >( map_name );
-            PG_ASSERT( map_Kd, "No normal map with name '" + map_name + "' found" );
+            map_Norm = ResourceManager::Get< Image >( map_name );
+            PG_ASSERT( map_Norm, "No normal map with name '" + map_name + "' found" );
         }
         else
         {
@@ -137,8 +137,8 @@ bool Material::Deserialize( char*& buffer )
             serialize::Read( buffer, imVersion );
             PG_ASSERT( imVersion == PG_RESOURCE_IMAGE_VERSION, "Expected image version: " +
                 std::to_string( PG_RESOURCE_IMAGE_VERSION ) + ", but got: " + std::to_string( imVersion ) );
-            map_Kd = std::make_shared< Image >();
-            map_Kd->Deserialize( buffer );
+            map_Norm = std::make_shared< Image >();
+            map_Norm->Deserialize( buffer );
         }
     }
 
