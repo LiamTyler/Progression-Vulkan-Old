@@ -40,6 +40,30 @@ float Attenuate( in const float distSquared, in const float radiusSquared )
     return (atten * atten) / ( 1.0 + distSquared );
 }
 
+float ShadowAmount( in const vec3 fragWorldPos )
+{
+    vec4 posInLightSpace = sceneConstantBuffer.DLSM * vec4( fragWorldPos, 1 );
+    vec3 ndc             = posInLightSpace.xyz / posInLightSpace.w;
+    vec3 projCoords      = .5 * ndc + vec3( .5 );
+    projCoords.y         = 1 - projCoords.y; // Account for flip in projection matrix
+    float currentDepth   = ndc.z; // Already between 0 and 1
+    
+    if ( currentDepth > 1 )
+    {
+        return 0;
+    }
+
+    float bias = .005;
+
+    float shadowMapDepth = texture( textures[sceneConstantBuffer.shadowTextureIndex], projCoords.xy ).r;
+    if ( shadowMapDepth < currentDepth - bias )
+    {
+        return 1.0;
+    }
+    
+    return 0;
+}
+
 void main()
 {
     vec3 n = normalize( normalInWorldSpace );
@@ -52,32 +76,15 @@ void main()
         Kd *= texture( textures[material.diffuseTexIndex], texCoord ).xyz;
     }
     
-    vec4 fragPosInDirectionalLightSpace = sceneConstantBuffer.DLSM * vec4( posInWorldSpace, 1 );
-    vec3 ndc = fragPosInDirectionalLightSpace.xyz / fragPosInDirectionalLightSpace.w;
-    vec3 projCoords = .5f * ndc + vec3(.5f);
-    projCoords.y = 1 - projCoords.y; // Account for flip in projection matrix
-    float currentDepth = ndc.z; // Already between 0 and 1
-
-    float bias = .005;
-
-    bool inShadow = texture( textures[sceneConstantBuffer.shadowTextureIndex], projCoords.xy ).r < currentDepth - bias;
-
-    if ( currentDepth > 1.0 || projCoords.x < 0 || projCoords.x > 1 || projCoords.y < 0 || projCoords.y > 1 ) // TODO: Clean this up...
-    {
-        inShadow = false;
-    }
-
     vec3 lightColor = sceneConstantBuffer.dirLight.colorAndIntensity.w * sceneConstantBuffer.dirLight.colorAndIntensity.xyz;
     vec3 l = normalize( -sceneConstantBuffer.dirLight.direction.xyz );
     vec3 h = normalize( l + e );
-
-    if ( !inShadow ) 
+    
+    float S = 1 - ShadowAmount( posInWorldSpace );
+    color += S * lightColor * Kd * max( 0.0, dot( l, n ) );
+    if ( dot( l, n ) > PG_SHADER_EPSILON )
     {
-        color += lightColor * Kd * max( 0.0, dot( l, n ) );
-        if ( dot( l, n ) > PG_SHADER_EPSILON )
-        {
-            color += lightColor * material.Ks.xyz * pow( max( dot( h, n ), 0.0 ), 4 * material.Ks.w );
-        }
+        color += S * lightColor * material.Ks.xyz * pow( max( dot( h, n ), 0.0 ), 4 * material.Ks.w );
     }
 
     // pointlights

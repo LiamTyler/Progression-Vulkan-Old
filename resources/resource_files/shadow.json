@@ -1,0 +1,17 @@
+{
+    "Script": {
+        "name": "cameraController",
+        "filename": "scripts/cameraController.lua"
+    },  
+    "MTLFile": {
+        "filename": "materials/miscellaneous.mtl"
+    },
+    "Model": {
+        "name": "cube",
+        "filename": "models/cube.obj"
+    },
+    "Model": {
+        "name": "floor",
+        "filename": "models/plane.obj"
+    }
+}

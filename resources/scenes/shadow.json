@@ -1,0 +1,52 @@
+{
+    "Fastfile": {
+        "filename": "shadow.ff"
+    },
+    "Camera": {
+        "position": [ 0, 2, 5 ],
+        "rotation": [ 0, 0, 0 ],
+        "fov": 60,
+        "aspectRatio": 1.777777777,
+        "nearPlane": 0.1,
+        "farPlane": 100
+    },
+    "AmbientColor": {
+        "color": [ 1, 1, 1 ]
+    },
+    "DirectionalLight": {
+        "colorAndIntensity": [ 1, 1, 1, 1 ],
+        "direction": [ 1, -1, 1 ]
+    },
+    "PointLight": {
+        "colorAndIntensity": [ 1, 1, 1, 1 ],
+        "positionAndRadius": [ 1.5, 1, 0, 2 ]
+    },
+    "Entity": {
+        "NameComponent": "cube",
+        "Transform": {
+            "position": [ 0, 1, 0 ],
+            "scale": [ 1, 1, 1 ]
+        },
+        "ModelRenderer": {
+            "model": "cube",
+            "material": "green"
+        }
+    },
+    "Entity": {
+        "NameComponent": "floor",
+        "Transform": {
+            "position": [ 0, 0, 0 ],
+            "scale": [ 10, 1, 10 ]
+        },
+        "ModelRenderer": {
+            "model": "floor",
+            "material": "floor"
+        }
+    },
+    "Entity": {
+        "NameComponent": "camera",
+        "ScriptComponent": {
+            "script": "cameraController"
+        }
+    }
+}

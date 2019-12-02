@@ -47,11 +47,6 @@ namespace DebugMarker
 			// Set flag if at least one function pointer is present
 			s_active = ( vkDebugMarkerSetObjectName != VK_NULL_HANDLE );
 		}
-		else
-        {
-			LOG_WARN( "Warning: ", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, " not present, debug markers are disabled." );
-			LOG_WARN( "Try running from inside a Vulkan graphics debugger (e.g. RenderDoc)" );
-		}
 	}
 
     bool IsActive()

@@ -816,7 +816,7 @@ namespace RenderSystem
     {
         SamplerDescriptor samplerDesc;
 
-        samplerDesc.name = "nearest_clamped_nearest";
+        samplerDesc.name      = "nearest_clamped_nearest";
         samplerDesc.minFilter = FilterMode::NEAREST;
         samplerDesc.magFilter = FilterMode::NEAREST;
         samplerDesc.mipFilter = MipFilterMode::NEAREST;
@@ -825,16 +825,17 @@ namespace RenderSystem
         samplerDesc.wrapModeW = WrapMode::CLAMP_TO_EDGE;
         AddSampler( samplerDesc );
 
-        samplerDesc.name = "shadow_map";
-        samplerDesc.minFilter = FilterMode::NEAREST;
-        samplerDesc.magFilter = FilterMode::NEAREST;
-        samplerDesc.mipFilter = MipFilterMode::NEAREST;
-        samplerDesc.wrapModeU = WrapMode::CLAMP_TO_EDGE;
-        samplerDesc.wrapModeV = WrapMode::CLAMP_TO_EDGE;
-        samplerDesc.wrapModeW = WrapMode::CLAMP_TO_EDGE;
+        samplerDesc.name        = "shadow_map";
+        samplerDesc.minFilter   = FilterMode::NEAREST;
+        samplerDesc.magFilter   = FilterMode::NEAREST;
+        samplerDesc.mipFilter   = MipFilterMode::NEAREST;
+        samplerDesc.wrapModeU   = WrapMode::CLAMP_TO_BORDER;
+        samplerDesc.wrapModeV   = WrapMode::CLAMP_TO_BORDER;
+        samplerDesc.wrapModeW   = WrapMode::CLAMP_TO_BORDER;
+        samplerDesc.borderColor = BorderColor::OPAQUE_WHITE_FLOAT;
         AddSampler( samplerDesc );
 
-        samplerDesc.name = "linear_clamped_linear";
+        samplerDesc.name      = "linear_clamped_linear";
         samplerDesc.minFilter = FilterMode::LINEAR;
         samplerDesc.magFilter = FilterMode::LINEAR;
         samplerDesc.mipFilter = MipFilterMode::LINEAR;
@@ -843,7 +844,7 @@ namespace RenderSystem
         samplerDesc.wrapModeW = WrapMode::CLAMP_TO_EDGE;
         AddSampler( samplerDesc );
 
-        samplerDesc.name = "linear_repeat_linear";
+        samplerDesc.name      = "linear_repeat_linear";
         samplerDesc.minFilter = FilterMode::LINEAR;
         samplerDesc.magFilter = FilterMode::LINEAR;
         samplerDesc.mipFilter = MipFilterMode::LINEAR;
