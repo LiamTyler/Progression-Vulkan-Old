@@ -53,10 +53,8 @@ float ShadowAmount( in const vec3 fragWorldPos )
         return 0;
     }
 
-    float bias = .005;
-
     float shadowMapDepth = texture( textures[sceneConstantBuffer.shadowTextureIndex], projCoords.xy ).r;
-    if ( shadowMapDepth < currentDepth - bias )
+    if ( shadowMapDepth < currentDepth )
     {
         return 1.0;
     }

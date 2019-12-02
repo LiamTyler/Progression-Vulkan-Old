@@ -40,6 +40,7 @@ namespace Gfx
                               const VkImageMemoryBarrier& barrier ) const;
         void SetViewport( const Viewport& viewport );
         void SetScissor( const Scissor& scissor );
+        void SetDepthBias( float constant, float clamp, float slope );
 
         void Copy( const Buffer& dst, const Buffer& src );
 

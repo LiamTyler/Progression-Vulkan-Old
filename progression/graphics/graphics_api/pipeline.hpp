@@ -108,6 +108,7 @@ namespace Gfx
         WindingOrder winding    = WindingOrder::COUNTER_CLOCKWISE;
         CullFace cullFace       = CullFace::BACK;
         PolygonMode polygonMode = PolygonMode::FILL;
+        bool depthBiasEnable    = false;
     };
 
     struct Viewport

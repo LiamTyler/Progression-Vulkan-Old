@@ -246,17 +246,17 @@ static bool InitShadowPassData()
     directionalShadowAttribDescs[0].offset   = 0;
 
     PipelineDescriptor directionalShadowPipelineDesc;
-    directionalShadowPipelineDesc.renderPass             = &directionalShadow.renderPass;
-    directionalShadowPipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 1, directionalShadowBindingDesc, 1, directionalShadowAttribDescs.data() );
-    directionalShadowPipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
-    directionalShadowPipelineDesc.viewport               = Viewport( DIRECTIONAL_SHADOW_MAP_RESOLUTION, -DIRECTIONAL_SHADOW_MAP_RESOLUTION );
-    directionalShadowPipelineDesc.viewport.y             = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
-    Scissor scissor                                      = {};
-    scissor.width                                        = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
-    scissor.height                                       = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
-    directionalShadowPipelineDesc.scissor                = scissor;
-    directionalShadowPipelineDesc.shaders[0]             = directionalShadowVert.get();
-    directionalShadowPipelineDesc.numShaders             = 1;
+    directionalShadowPipelineDesc.rasterizerInfo.depthBiasEnable = true;
+    directionalShadowPipelineDesc.renderPass       = &directionalShadow.renderPass;
+    directionalShadowPipelineDesc.vertexDescriptor = VertexInputDescriptor::Create( 1, directionalShadowBindingDesc, 1, directionalShadowAttribDescs.data() );
+    directionalShadowPipelineDesc.viewport         = Viewport( DIRECTIONAL_SHADOW_MAP_RESOLUTION, -DIRECTIONAL_SHADOW_MAP_RESOLUTION );
+    directionalShadowPipelineDesc.viewport.y       = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
+    Scissor scissor                                = {};
+    scissor.width                                  = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
+    scissor.height                                 = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
+    directionalShadowPipelineDesc.scissor          = scissor;
+    directionalShadowPipelineDesc.shaders[0]       = directionalShadowVert.get();
+    directionalShadowPipelineDesc.numShaders       = 1;
 
     directionalShadow.pipeline = g_renderState.device.NewPipeline( directionalShadowPipelineDesc, "directional shadow pass" );
     if ( !directionalShadow.pipeline )
@@ -613,6 +613,7 @@ namespace RenderSystem
 
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Shadow rigid models", glm::vec4( .2, .6, .4, 1 ) );
         cmdBuf.BindRenderPipeline( directionalShadow.pipeline );
+        cmdBuf.SetDepthBias( 1.25, 0, 1.75 );
         scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& modelRenderer, Transform& transform )
         {
             const auto& model = modelRenderer.model;

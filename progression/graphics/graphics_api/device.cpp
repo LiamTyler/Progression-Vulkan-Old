@@ -356,6 +356,7 @@ namespace Gfx
             PG_ASSERT( desc.shaders[i] );
             shaderStages[i] = desc.shaders[i]->GetVkPipelineShaderStageCreateInfo();
         }
+        std::vector< VkDynamicState > dynamicStates;
 
         VkViewport viewport;
         viewport.x        = desc.viewport.x;
@@ -391,7 +392,16 @@ namespace Gfx
         rasterizer.lineWidth               = 1.0f; // > 1 needs the wideLines GPU feature
         rasterizer.cullMode                = PGToVulkanCullFace( desc.rasterizerInfo.cullFace );
         rasterizer.frontFace               = PGToVulkanWindingOrder( desc.rasterizerInfo.winding );
-        rasterizer.depthBiasEnable         = VK_FALSE;
+        rasterizer.depthBiasEnable         = desc.rasterizerInfo.depthBiasEnable;
+        if ( rasterizer.depthBiasEnable )
+        {
+            dynamicStates.push_back( VK_DYNAMIC_STATE_DEPTH_BIAS );
+        }
+
+        VkPipelineDynamicStateCreateInfo dynamicState = {};
+        dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dynamicState.dynamicStateCount = static_cast< uint32_t >( dynamicStates.size() );
+        dynamicState.pDynamicStates    = dynamicStates.data();
 
         VkPipelineMultisampleStateCreateInfo multisampling = {};
         multisampling.sType                 = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -416,8 +426,6 @@ namespace Gfx
         colorBlending.logicOp           = VK_LOGIC_OP_COPY;
         colorBlending.attachmentCount   = 1;
         colorBlending.pAttachments      = &colorBlendAttachment;
-
-        // no dynamic state currently
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
         pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -475,7 +483,7 @@ namespace Gfx
         pipelineInfo.pMultisampleState   = &multisampling;
         pipelineInfo.pDepthStencilState  = &depthStencil;
         pipelineInfo.pColorBlendState    = &colorBlending;
-        pipelineInfo.pDynamicState       = nullptr;
+        pipelineInfo.pDynamicState       = &dynamicState;
         pipelineInfo.layout              = p.m_pipelineLayout;
         pipelineInfo.renderPass          = desc.renderPass->GetHandle();
         pipelineInfo.renderPass          = desc.renderPass->GetHandle();

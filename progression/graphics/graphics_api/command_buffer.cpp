@@ -137,6 +137,11 @@ namespace Gfx
         vkCmdSetScissor( m_handle, 0, 1, &s );
     }
 
+    void CommandBuffer::SetDepthBias( float constant, float clamp, float slope )
+    {
+        vkCmdSetDepthBias( m_handle, constant, clamp, slope );
+    }
+
     void CommandBuffer::Copy( const Buffer& dst, const Buffer& src )
     {
         VkBufferCopy copyRegion = {};
