@@ -748,7 +748,8 @@ namespace RenderSystem
                 mcbuf.Ka = glm::vec4( mat->Ka, 0 );
                 mcbuf.Kd = glm::vec4( mat->Kd, 0 );
                 mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
-                mcbuf.diffuseTexIndex = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
+                mcbuf.diffuseTexIndex = mat->map_Kd   ? mat->map_Kd->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
+                mcbuf.normalMapIndex  = mat->map_Norm ? mat->map_Norm->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
                 vkCmdPushConstants( cmdBuf.GetHandle(), s_rigidModelPipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
 
                 PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
@@ -756,8 +757,8 @@ namespace RenderSystem
             }
         });
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
-        LOG(" test" );
 
+        /*
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Render Animated Models", glm::vec4( .8, .2, .2, 1 ) );
         auto& animPipeline = AnimationSystem::renderData.animatedPipeline;
         cmdBuf.BindRenderPipeline( animPipeline );
@@ -792,6 +793,7 @@ namespace RenderSystem
                 mcbuf.Kd = glm::vec4( mat->Kd, 0 );
                 mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
                 mcbuf.diffuseTexIndex = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
+                mcbuf.normalMapIndex  = mat->map_Norm ? mat->map_Norm->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
                 vkCmdPushConstants( cmdBuf.GetHandle(), animPipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
                 
                 PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
@@ -799,8 +801,10 @@ namespace RenderSystem
             }
         });
 
-        cmdBuf.EndRenderPass();
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
+        */
+        cmdBuf.EndRenderPass();
+
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
 
         // Post Processing Render Pass

@@ -8,8 +8,9 @@
 layout( location = 0 ) out vec4 outColor;
 
 layout( location = 0 ) in vec3 posInWorldSpace;
-layout( location = 1 ) in vec3 normalInWorldSpace;
-layout( location = 2 ) in vec2 texCoord;
+layout( location = 1 ) in mat3 TBN;
+layout( location = 4 ) in vec2 texCoord;
+
 
 layout( set = PG_SCENE_CONSTANT_BUFFER_SET, binding = 0 ) uniform SceneConstantBufferUniform
 {
@@ -64,7 +65,16 @@ float ShadowAmount( in const vec3 fragWorldPos )
 
 void main()
 {
-    vec3 n = normalize( normalInWorldSpace );
+    // vec3 n = normalize( normalInWorldSpace );
+    vec3 n = normalize( TBN[2] );
+    if ( material.normalMapIndex != ~0u )
+    {
+        // n = texture( textures[material.normalMapIndex], texCoord ).xyz;
+        // n = normalize( n * 2 - 1 );
+        // n = normalize( TBN * n );
+    }
+    
+    
     vec3 e = normalize( sceneConstantBuffer.cameraPos.xyz - posInWorldSpace );
 
     vec3 color = material.Ka.xyz * sceneConstantBuffer.ambientColor.xyz;

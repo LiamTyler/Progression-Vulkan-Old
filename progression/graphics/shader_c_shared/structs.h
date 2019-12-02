@@ -38,6 +38,7 @@ struct MaterialConstantBufferData
     VEC4 Kd;
     VEC4 Ks;
     UINT diffuseTexIndex;
+    UINT normalMapIndex;
 };
 
 PG_NAMESPACE_END

@@ -115,6 +115,8 @@ bool Init()
     pipelineDesc.shaders[1]             = forwardBlinnPhongFrag.get();
     pipelineDesc.numShaders             = 2;
 
+    return true;
+
     renderData.animatedPipeline = g_renderState.device.NewPipeline( pipelineDesc, "animation" );
     if ( !renderData.animatedPipeline )
     {
@@ -137,7 +139,7 @@ void Shutdown()
         layout.Free();
     }
     renderData.descriptorPool.Free();
-    renderData.animatedPipeline.Free();
+    //renderData.animatedPipeline.Free();
 }
 
 void Update( Scene* scene )

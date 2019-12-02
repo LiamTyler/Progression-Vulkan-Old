@@ -6,11 +6,11 @@
 layout( location = 0 ) in vec3 inPosition;
 layout( location = 1 ) in vec3 inNormal;
 layout( location = 2 ) in vec2 inTexCoord;
-layout( location = 3 ) in vec2 inTangent;
+layout( location = 3 ) in vec3 inTangent;
 
 layout( location = 0 ) out vec3 posInWorldSpace;
-layout( location = 1 ) out vec3 normalInWorldSpace;
-layout( location = 2 ) out vec2 texCoord;
+layout( location = 1 ) out mat3 TBN;
+layout( location = 4 ) out vec2 texCoord;
 
 layout( set = PG_SCENE_CONSTANT_BUFFER_SET, binding = 0 ) uniform SceneConstantBufferUniform
 {
@@ -24,8 +24,13 @@ layout( std430, push_constant ) uniform PerObjectData
 
 void main()
 {
-    posInWorldSpace    = ( perObjectData.M  * vec4( inPosition, 1 ) ).xyz;
-    normalInWorldSpace = ( perObjectData.N  * vec4( inNormal,   0 ) ).xyz;
-    texCoord           = inTexCoord;
-    gl_Position        = sceneConstantBuffer.VP * perObjectData.M * vec4( inPosition, 1.0 );
+    posInWorldSpace = ( perObjectData.M * vec4( inPosition, 1 ) ).xyz;
+    texCoord        = inTexCoord;
+    
+    vec3 T = normalize( ( perObjectData.M * vec4( inTangent, 0 ) ).xyz );
+    vec3 N = normalize( ( perObjectData.N * vec4( inNormal,  0 ) ).xyz );
+    vec3 B = normalize( cross( N, T ) );
+    TBN    = mat3( T, B, N );
+    
+    gl_Position = sceneConstantBuffer.VP * perObjectData.M * vec4( inPosition, 1.0 );
 }
