@@ -102,14 +102,16 @@ namespace Progression
         uint32_t GetVertexOffset() const;
         uint32_t GetNormalOffset() const;
         uint32_t GetUVOffset() const;
+        uint32_t GetTangentOffset() const;
         uint32_t GetBlendWeightOffset() const;
         Gfx::IndexType GetIndexType() const;
 
         std::vector< glm::vec3 > vertices;
         std::vector< glm::vec3 > normals;
         std::vector< glm::vec2 > uvs;
-        std::vector< uint32_t > indices;
         std::vector< BlendWeight > blendWeights;
+        std::vector< glm::vec3 > tangents;
+        std::vector< uint32_t > indices;
         Gfx::Buffer vertexBuffer;
         Gfx::Buffer indexBuffer;
 
@@ -124,6 +126,7 @@ namespace Progression
         uint32_t m_normalOffset      = ~0u;
         uint32_t m_uvOffset          = ~0u;
         uint32_t m_blendWeightOffset = ~0u;
+        uint32_t m_tangentOffset     = ~0u;
     };
 
 } // namespace Progression

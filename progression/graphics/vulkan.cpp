@@ -7,6 +7,7 @@
 #include "graphics/render_system.hpp"
 #include "graphics/pg_to_vulkan_types.hpp"
 #include "utils/logger.hpp"
+#include <algorithm>
 #include <iostream>
 #include <set>
 #include <string>

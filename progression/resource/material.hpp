@@ -16,6 +16,7 @@ public:
     glm::vec3 Ke;
     float Ns;
     std::string map_Kd_name;
+    std::string map_Norm_name;
 };
 
 class Material : public Resource
@@ -34,7 +35,8 @@ public:
     glm::vec3 Ks;
     glm::vec3 Ke;
     float Ns;
-    std::shared_ptr< Image > map_Kd = nullptr;
+    std::shared_ptr< Image > map_Kd   = nullptr;
+    std::shared_ptr< Image > map_Norm = nullptr;
 };
 
 } // namespace Progression

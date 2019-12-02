@@ -236,6 +236,60 @@ namespace Progression
         LOG( "Efficient method = ", efficient, "MB, easy method = ", easy, "MB, ratio = ", easy / efficient );
     }
 
+    static std::shared_ptr< Image > LoadAssimpTexture( const aiMaterial* pMaterial, aiTextureType texType )
+    {
+        namespace fs = std::filesystem;
+        aiString path;
+        if ( pMaterial->GetTexture( texType, 0, &path, NULL, NULL, NULL, NULL, NULL ) == AI_SUCCESS )
+        {
+            std::string name = TrimWhiteSpace( path.data );
+            if ( ResourceManager::Get< Image >( name ) )
+            {
+                return ResourceManager::Get< Image >( name );
+            }
+
+            std::string fullPath;
+            // search for texture starting with
+            if ( fs::exists( PG_RESOURCE_DIR + name ) )
+            {
+                fullPath = PG_RESOURCE_DIR + name;
+            }
+            else
+            {
+                std::string basename = fs::path( name ).filename().string();
+                for( auto itEntry = fs::recursive_directory_iterator( PG_RESOURCE_DIR ); itEntry != fs::recursive_directory_iterator(); ++itEntry )
+                {
+                    if ( basename == itEntry->path().filename().string() )
+                    {
+                        fullPath = fs::absolute( itEntry->path() ).string();
+                        break;
+                    }
+                }
+            }
+                    
+            if ( fullPath != "" )
+            {
+                auto ret = Image::Load2DImageWithDefaultSettings( fullPath );
+                if ( !ret )
+                {
+                    LOG_ERR( "Failed to load texture '", name, "' with default settings" );
+                    return false;
+                }
+                return ret;
+            }
+            else
+            {
+                LOG_ERR( "Could not find file '", name, "'" );
+            }
+        }
+        else
+        {
+            LOG_ERR( "Could not get texture of type: ", texType );
+        }
+
+        return nullptr;
+    }
+
     static bool ParseMaterials( const std::string& filename, Model* model, const aiScene* scene )
     {
         namespace fs = std::filesystem;
@@ -269,49 +323,22 @@ namespace Progression
             if ( pMaterial->GetTextureCount( aiTextureType_DIFFUSE ) > 0 )
             {
                 PG_ASSERT( pMaterial->GetTextureCount( aiTextureType_DIFFUSE ) == 1, "Can't have more than 1 diffuse texture per material" );
-                aiString path;
-                if ( pMaterial->GetTexture( aiTextureType_DIFFUSE, 0, &path, NULL, NULL, NULL, NULL, NULL ) == AI_SUCCESS )
+                model->materials[mtlIdx]->map_Kd = LoadAssimpTexture( pMaterial, aiTextureType_DIFFUSE );
+                if ( !model->materials[mtlIdx]->map_Kd )
                 {
-                    std::string name = TrimWhiteSpace( path.data );
-                    if ( ResourceManager::Get< Image >( name ) )
-                    {
-                        model->materials[mtlIdx]->map_Kd = ResourceManager::Get< Image >( name );
-                        continue;
-                    }
-
-                    std::string fullPath;
-                    // search for texture starting with
-                    if ( fs::exists( PG_RESOURCE_DIR + name ) )
-                    {
-                        fullPath = PG_RESOURCE_DIR + name;
-                    }
-                    else
-                    {
-                        std::string basename = fs::path( name ).filename().string();
-                        for( auto itEntry = fs::recursive_directory_iterator( PG_RESOURCE_DIR ); itEntry != fs::recursive_directory_iterator(); ++itEntry )
-                        {
-                            if ( basename == itEntry->path().filename().string() )
-                            {
-                                fullPath = fs::absolute( itEntry->path() ).string();
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if ( fullPath != "" )
-                    {
-                        model->materials[mtlIdx]->map_Kd = Image::Load2DImageWithDefaultSettings( fullPath );
-                        if ( !model->materials[mtlIdx]->map_Kd )
-                        {
-                            LOG_ERR( "Failed to load diffuse texture '", fullPath, "'" );
-                            return false;
-                        }
-                    }
-                    else
-                    {
-                        LOG_ERR( "Could not find file '", name, "'" );
-                        return false;
-                    }
+                    return false;
+                }
+            }
+            // Assimp doesnt seem to support the OBJ PBR extension for actual normal maps, so use
+            // "map_bump" instead which turns into aiTextureType_HEIGHT
+            PG_ASSERT( pMaterial->GetTextureCount( aiTextureType_NORMALS ) == 0 );
+            if ( pMaterial->GetTextureCount( aiTextureType_HEIGHT ) > 0 )
+            {
+                PG_ASSERT( pMaterial->GetTextureCount( aiTextureType_HEIGHT ) == 1, "Can't have more than 1 normal map per material" );
+                model->materials[mtlIdx]->map_Norm = LoadAssimpTexture( pMaterial, aiTextureType_HEIGHT );
+                if ( !model->materials[mtlIdx]->map_Norm )
+                {
+                    return false;
                 }
             }
         }
@@ -337,7 +364,7 @@ namespace Progression
         ModelCreateInfo* createInfo = static_cast< ModelCreateInfo* >( baseInfo );
         name = createInfo->name;
         Assimp::Importer importer;
-        const aiScene* scene = importer.ReadFile( createInfo->filename.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices );
+        const aiScene* scene = importer.ReadFile( createInfo->filename.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices | aiProcess_CalcTangentSpace );
         if ( !scene )
         {
             LOG_ERR( "Error parsing FBX file '", createInfo->filename.c_str(), "': ", importer.GetErrorString() );
@@ -382,13 +409,21 @@ namespace Progression
 
             for ( uint32_t vIdx = 0; vIdx < paiMesh->mNumVertices ; ++vIdx )
             {
-                const aiVector3D* pPos      = &( paiMesh->mVertices[vIdx] );
-                const aiVector3D* pNormal   = &( paiMesh->mNormals[vIdx] );
-                const aiVector3D* pTexCoord = paiMesh->HasTextureCoords( 0 ) ? &( paiMesh->mTextureCoords[0][vIdx] ) : &Zero3D;
-
+                const aiVector3D* pPos    = &paiMesh->mVertices[vIdx];
+                const aiVector3D* pNormal = &paiMesh->mNormals[vIdx];
                 vertices.emplace_back( pPos->x, pPos->y, pPos->z );
                 normals.emplace_back( pNormal->x, pNormal->y, pNormal->z );
-                uvs.emplace_back( pTexCoord->x, pTexCoord->y );
+
+                if ( paiMesh->HasTextureCoords( 0 ) )
+                {
+                    const aiVector3D* pTexCoord = &paiMesh->mTextureCoords[0][vIdx];
+                    uvs.emplace_back( pTexCoord->x, pTexCoord->y );
+                }
+                if ( paiMesh->HasTangentsAndBitangents() )
+                {
+                    const aiVector3D* pTangent = &paiMesh->mTangents[vIdx];
+                    tangents.emplace_back( pTangent->x, pTangent->y, pTangent->z );
+                }
             }
 
             for ( uint32_t boneIdx = 0; boneIdx < paiMesh->mNumBones; ++boneIdx )
@@ -621,15 +656,18 @@ namespace Progression
         uint32_t numVertices     = static_cast< uint32_t >( vertices.size() );
         uint32_t numUVs          = static_cast< uint32_t >( uvs.size() );
         uint32_t numBlendWeights = static_cast< uint32_t >( blendWeights.size() );
+        uint32_t numTangents     = static_cast< uint32_t >( tangents.size() );
         uint32_t numIndices      = static_cast< uint32_t >( indices.size() );
         serialize::Write( out, numVertices );
         serialize::Write( out, numUVs );
         serialize::Write( out, numBlendWeights );
+        serialize::Write( out, numTangents );
         serialize::Write( out, numIndices );
         serialize::Write( out, (char*) vertices.data(),     numVertices * sizeof( glm::vec3 ) );
         serialize::Write( out, (char*) normals.data(),      numVertices * sizeof( glm::vec3 ) );
         serialize::Write( out, (char*) uvs.data(),          numUVs * sizeof( glm::vec2 ) );
         serialize::Write( out, (char*) blendWeights.data(), numBlendWeights * 2 * sizeof( glm::vec4 ) );
+        serialize::Write( out, (char*) tangents.data(),     numTangents * sizeof( glm::vec3 ) );
         serialize::Write( out, (char*) indices.data(),      numIndices * sizeof( uint32_t ) );
 
         serialize::Write( out, aabb.min );
@@ -682,15 +720,20 @@ namespace Progression
             materials[i]->Deserialize( buffer );
         }
 
-        uint32_t numVertices, numUVs, numBlendWeights, numIndices;
+        uint32_t numVertices, numUVs, numBlendWeights, numTangents, numIndices;
         serialize::Read( buffer, numVertices );
         serialize::Read( buffer, numUVs );
         serialize::Read( buffer, numBlendWeights );
+        serialize::Read( buffer, numTangents );
         serialize::Read( buffer, numIndices );
         if ( freeCpuCopy )
         {
             using namespace Progression::Gfx;
-            size_t totalVertexSize = 2 * numVertices * sizeof( glm::vec3 ) + numUVs * sizeof( glm::vec2 ) + numBlendWeights * 2 * sizeof( glm::vec4 );
+            size_t totalVertexSize = 0;
+            totalVertexSize += 2 * numVertices * sizeof( glm::vec3 );
+            totalVertexSize += numUVs * sizeof( glm::vec2 );
+            totalVertexSize += numBlendWeights * 2 * sizeof( glm::vec4 );
+            totalVertexSize += numTangents * sizeof( glm::vec3 );
             vertexBuffer = Gfx::g_renderState.device.NewBuffer( totalVertexSize, buffer, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL, name + " VBO" );
             buffer += totalVertexSize;
             indexBuffer  = Gfx::g_renderState.device.NewBuffer( numIndices * sizeof( uint32_t ), buffer, BUFFER_TYPE_INDEX, MEMORY_TYPE_DEVICE_LOCAL, name + " IBO" );
@@ -698,14 +741,25 @@ namespace Progression
 
             m_numVertices       = numVertices;
             m_normalOffset      = m_numVertices * sizeof( glm::vec3 );
-            m_uvOffset          = m_normalOffset + numVertices * sizeof( glm::vec3 );
-            m_blendWeightOffset = m_uvOffset + numUVs * sizeof( glm::vec2 );
+            if ( numUVs > 0 )
+            {
+                m_uvOffset = m_normalOffset + numVertices * sizeof( glm::vec3 );
+            }
+            if ( numBlendWeights > 0 )
+            {
+                m_blendWeightOffset = m_uvOffset + numUVs * sizeof( glm::vec2 );
+            }
+            if ( numTangents )
+            {
+                m_tangentOffset = m_blendWeightOffset + numBlendWeights * 2 * sizeof( glm::vec4 );
+            }
         }
         else
         {
             vertices.resize( numVertices );
             normals.resize( numVertices );
             uvs.resize( numUVs );
+            tangents.resize( numTangents );
             blendWeights.resize( numBlendWeights );
             indices.resize( numIndices );
 
@@ -809,7 +863,7 @@ namespace Progression
         {
             indexBuffer.Free();
         }
-        std::vector< float > vertexData( 3 * vertices.size() + 3 * normals.size() + 2 * uvs.size() + 8 * blendWeights.size() );
+        std::vector< float > vertexData( 3 * vertices.size() + 3 * normals.size() + 2 * uvs.size() + 8 * blendWeights.size() + 3 * tangents.size() );
         char* dst = (char*) vertexData.data();
         memcpy( dst, vertices.data(), vertices.size() * sizeof( glm::vec3 ) );
         dst += vertices.size() * sizeof( glm::vec3 );
@@ -818,13 +872,25 @@ namespace Progression
         memcpy( dst, uvs.data(), uvs.size() * sizeof( glm::vec2 ) );
         dst += uvs.size() * sizeof( glm::vec2 );
         memcpy( dst, blendWeights.data(), blendWeights.size() * 2 * sizeof( glm::vec4 ) );
+        dst += blendWeights.size() * 2 * sizeof( glm::vec4 );
+        memcpy( dst, blendWeights.data(), tangents.size() * sizeof( glm::vec3 ) );
         vertexBuffer = Gfx::g_renderState.device.NewBuffer( vertexData.size() * sizeof( float ), vertexData.data(), BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL, name + " VBO" );
         indexBuffer  = Gfx::g_renderState.device.NewBuffer( indices.size() * sizeof ( uint32_t ), indices.data(), BUFFER_TYPE_INDEX, MEMORY_TYPE_DEVICE_LOCAL, name + " IBO" );
 
         m_numVertices       = static_cast< uint32_t >( vertices.size() );
         m_normalOffset      = m_numVertices * sizeof( glm::vec3 );
-        m_uvOffset          = m_normalOffset + m_numVertices * sizeof( glm::vec3 );
-        m_blendWeightOffset = static_cast< uint32_t >( m_uvOffset + uvs.size() * sizeof( glm::vec2 ) );
+        if ( !uvs.empty() )
+        {
+            m_uvOffset = m_normalOffset + m_numVertices * sizeof( glm::vec3 );
+        }
+        if ( !blendWeights.empty() )
+        {
+            m_blendWeightOffset = static_cast< uint32_t >( m_uvOffset + uvs.size() * sizeof( glm::vec2 ) );
+        }
+        if ( !tangents.empty() )
+        {
+            m_tangentOffset = static_cast< uint32_t >( m_blendWeightOffset + blendWeights.size() * 2 * sizeof( glm::vec4 ) );
+        }
     }
 
     void Model::FreeGeometry( bool cpuCopy, bool gpuCopy )
@@ -977,6 +1043,11 @@ namespace Progression
     uint32_t Model::GetUVOffset() const
     {
         return m_uvOffset;
+    }
+
+    uint32_t Model::GetTangentOffset() const
+    {
+        return m_tangentOffset;
     }
 
     uint32_t Model::GetBlendWeightOffset() const
