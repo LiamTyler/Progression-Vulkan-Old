@@ -59,6 +59,12 @@ namespace Gfx
         COMMAND_POOL_RESET_COMMAND_BUFFER = 1 << 1,
     } CommandPoolCreateFlagBits;
 
+    enum class CommandPoolQueueFamily
+    {
+        GRAPHICS,
+        COMPUTE
+    };
+
     typedef uint32_t CommandPoolCreateFlags;
 
     class CommandPool

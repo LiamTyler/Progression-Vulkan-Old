@@ -21,7 +21,8 @@ namespace Gfx
     {
         Device device;
         const auto& indices                     = g_renderState.physicalDeviceInfo.indices;
-        std::set< uint32_t> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
+        PG_ASSERT( indices.IsComplete() );
+        std::set< uint32_t> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily, indices.computeFamily };
 
         float queuePriority = 1.0f;
         std::vector< VkDeviceQueueCreateInfo > queueCreateInfos;
@@ -42,7 +43,7 @@ namespace Gfx
         createInfo.pEnabledFeatures        = &g_renderState.physicalDeviceInfo.deviceFeatures;
 
         auto extensions = VK_DEVICE_EXTENSIONS;
-        if (g_renderState.physicalDeviceInfo.ExtensionSupported( VK_EXT_DEBUG_MARKER_EXTENSION_NAME ) )
+        if ( g_renderState.physicalDeviceInfo.ExtensionSupported( VK_EXT_DEBUG_MARKER_EXTENSION_NAME ) )
 		{
 			extensions.push_back( VK_EXT_DEBUG_MARKER_EXTENSION_NAME );
 		}
@@ -64,6 +65,7 @@ namespace Gfx
 
         vkGetDeviceQueue( device.m_handle, indices.graphicsFamily, 0, &device.m_graphicsQueue );
         vkGetDeviceQueue( device.m_handle, indices.presentFamily,  0, &device.m_presentQueue );
+        vkGetDeviceQueue( device.m_handle, indices.computeFamily,  0, &device.m_computeQueue );
 
         return device;
     }
@@ -93,12 +95,16 @@ namespace Gfx
         vkQueueWaitIdle( m_graphicsQueue );
     }
 
-    CommandPool Device::NewCommandPool( CommandPoolCreateFlags flags, const std::string& name ) const
+    CommandPool Device::NewCommandPool( CommandPoolCreateFlags flags, CommandPoolQueueFamily family, const std::string& name ) const
     {
         VkCommandPoolCreateInfo poolInfo = {};
         poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        poolInfo.queueFamilyIndex = g_renderState.physicalDeviceInfo.indices.graphicsFamily;
         poolInfo.flags            = PGToVulkanCommandPoolCreateFlags( flags );
+        poolInfo.queueFamilyIndex = g_renderState.physicalDeviceInfo.indices.graphicsFamily;
+        if ( family == CommandPoolQueueFamily::COMPUTE )
+        {
+            poolInfo.queueFamilyIndex = g_renderState.physicalDeviceInfo.indices.computeFamily;
+        }
 
         CommandPool cmdPool;
         cmdPool.m_device = m_handle;
@@ -673,6 +679,22 @@ namespace Gfx
         submitInfo.pSignalSemaphores      = signalSemaphores;
 
         VkResult ret = vkQueueSubmit( m_graphicsQueue, 1, &submitInfo, g_renderState.inFlightFences[g_renderState.currentFrame].GetHandle() );
+        PG_ASSERT( ret == VK_SUCCESS );
+    }
+
+    void Device::SubmitComputeCommand( const CommandBuffer& cmdBuf ) const
+    {
+        VkCommandBuffer buff = cmdBuf.GetHandle();
+        VkSubmitInfo submitInfo = {};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount     = 1;
+        submitInfo.pCommandBuffers        = &buff;
+
+        VkSemaphore signalSemaphores[]    = { g_renderState.renderCompleteSemaphores[g_renderState.currentFrame].GetHandle() };
+        submitInfo.signalSemaphoreCount   = 1;
+        submitInfo.pSignalSemaphores      = signalSemaphores;
+
+        VkResult ret = vkQueueSubmit( m_computeQueue, 1, &submitInfo, g_renderState.computeFence.GetHandle() );
         PG_ASSERT( ret == VK_SUCCESS );
     }
 

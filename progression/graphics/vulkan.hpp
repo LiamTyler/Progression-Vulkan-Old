@@ -15,10 +15,11 @@ namespace Gfx
     {
         uint32_t graphicsFamily = ~0u;
         uint32_t presentFamily  = ~0u;
+        uint32_t computeFamily  = ~0u;
 
         bool IsComplete() const
         {
-            return graphicsFamily != ~0u && presentFamily != ~0u;
+            return graphicsFamily != ~0u && presentFamily != ~0u && computeFamily != ~0u;
         }
     };
 
@@ -60,13 +61,16 @@ namespace Gfx
         SwapChain swapChain;
         Texture depthTex;
         std::vector< VkFramebuffer > swapChainFramebuffers;
-        CommandPool commandPool;
+        CommandPool graphicsCommandPool;
         CommandPool transientCommandPool;
+        CommandPool computeCommandPool;
         std::vector< CommandBuffer > commandBuffers;
+        CommandBuffer computeCommandBuffer;
         
         std::vector< Semaphore > presentCompleteSemaphores;
         std::vector< Semaphore > renderCompleteSemaphores;
         std::vector< Fence > inFlightFences;
+        Fence computeFence;
 
         Device device;
         RenderPass renderPass;

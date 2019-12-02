@@ -809,7 +809,9 @@ namespace RenderSystem
 
         cmdBuf.EndRecording();
         g_renderState.device.SubmitRenderCommands( 1, &cmdBuf );
-
+        // g_renderState.computeFence.WaitFor();
+        // g_renderState.computeFence.Reset();
+        // g_renderState.device.SubmitComputeCommand( g_renderState.computeCommandBuffer );
         g_renderState.device.SubmitFrame( imageIndex );
     } 
 

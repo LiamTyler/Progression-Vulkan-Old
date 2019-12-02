@@ -154,30 +154,63 @@ static QueueFamilyIndices FindQueueFamilies( VkPhysicalDevice device, VkSurfaceK
     std::vector<VkQueueFamilyProperties> queueFamilies( queueFamilyCount );
     vkGetPhysicalDeviceQueueFamilyProperties( device, &queueFamilyCount, queueFamilies.data() );
 
-    int i = 0;
-    for ( const auto& queueFamily : queueFamilies )
+    for ( uint32_t i = 0; i < static_cast< uint32_t >( queueFamilies.size() ) && !indices.IsComplete(); ++i )
     {
         // check if the queue supports graphics operations
-        if ( queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT )
+        if ( queueFamilies[i].queueCount > 0 && queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT )
         {
-            indices.graphicsFamily = i;
+            // check if the queue supports presenting images to the surface
+            VkBool32 presentSupport = false;
+            vkGetPhysicalDeviceSurfaceSupportKHR( device, i, surface, &presentSupport );
+
+            if ( queueFamilies[i].queueCount > 0 && presentSupport )
+            {
+                indices.presentFamily = i;
+                indices.graphicsFamily = i;
+            }
         }
 
-        // check if the queue supports presenting images to the surface
-        VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR( device, i, surface, &presentSupport );
-
-        if ( queueFamily.queueCount > 0 && presentSupport )
+        // check for dedicated compute queue
+        if ( queueFamilies[i].queueCount > 0 && ( queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT ) && ( ( queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT ) == 0 ) )
         {
-            indices.presentFamily = i;
+            indices.computeFamily = i;
         }
+    }
 
-        if ( indices.IsComplete() )
+    // if there existed no queuefamily for both graphics and presenting, then look for separate ones
+    if ( indices.graphicsFamily == ~0u )
+    {
+        for ( uint32_t i = 0; i < static_cast< uint32_t >( queueFamilies.size() ) && !indices.IsComplete(); ++i )
         {
-            break;
-        }
+            // check if the queue supports graphics operations
+            if ( queueFamilies[i].queueCount > 0 && queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT )
+            {
+                indices.graphicsFamily = i;
+            }
 
-        i++;
+            // check if the queue supports presenting images to the surface
+            VkBool32 presentSupport = false;
+            vkGetPhysicalDeviceSurfaceSupportKHR( device, i, surface, &presentSupport );
+
+            if ( queueFamilies[i].queueCount > 0 && presentSupport )
+            {
+                indices.presentFamily = i;
+            }
+        }
+    }
+
+    // Look for first compute queue if no dedicated one exists
+    if ( !indices.IsComplete() )
+    {
+        for ( uint32_t i = 0; i < static_cast< uint32_t >( queueFamilies.size() ); ++i )
+        {
+            // check if the queue supports graphics operations
+            if ( queueFamilies[i].queueCount > 0 && queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT )
+            {
+                indices.computeFamily = i;
+                break;
+            }
+        }
     }
 
     return indices;
@@ -532,18 +565,20 @@ static bool CreateSwapChainFrameBuffers()
 
 static bool CreateCommandPoolAndBuffers()
 {
-    g_renderState.commandPool = g_renderState.device.NewCommandPool( COMMAND_POOL_RESET_COMMAND_BUFFER, "global" );
-    if ( !g_renderState.commandPool )
+    g_renderState.graphicsCommandPool  = g_renderState.device.NewCommandPool( COMMAND_POOL_RESET_COMMAND_BUFFER, CommandPoolQueueFamily::GRAPHICS, "global graphics" );
+    g_renderState.computeCommandPool   = g_renderState.device.NewCommandPool( COMMAND_POOL_RESET_COMMAND_BUFFER, CommandPoolQueueFamily::COMPUTE, "global compute" );
+    g_renderState.transientCommandPool = g_renderState.device.NewCommandPool( COMMAND_POOL_TRANSIENT, CommandPoolQueueFamily::GRAPHICS, "global graphics transient" );
+    if ( !g_renderState.graphicsCommandPool || !g_renderState.transientCommandPool || !g_renderState.computeCommandPool )
     {
         return false;
     }
+    g_renderState.computeCommandBuffer = g_renderState.computeCommandPool.NewCommandBuffer( "compute" );
 
     g_renderState.commandBuffers.resize( g_renderState.swapChain.images.size() );
-
     for ( size_t i = 0; i < g_renderState.commandBuffers.size(); ++i )
     {
         auto& cmdbuf = g_renderState.commandBuffers[i];
-        cmdbuf = g_renderState.commandPool.NewCommandBuffer( "Global " + std::to_string( i ) );
+        cmdbuf = g_renderState.graphicsCommandPool.NewCommandBuffer( "global " + std::to_string( i ) );
         if ( !cmdbuf )
         {
             return false;
@@ -553,16 +588,11 @@ static bool CreateCommandPoolAndBuffers()
     return true;
 }
 
-static bool CreateSemaphores()
+static bool CreateSynchronizationObjects()
 {
     g_renderState.renderCompleteSemaphores.resize( MAX_FRAMES_IN_FLIGHT );
     g_renderState.presentCompleteSemaphores.resize( MAX_FRAMES_IN_FLIGHT );
     g_renderState.inFlightFences.resize( MAX_FRAMES_IN_FLIGHT );
-
-    VkSemaphoreCreateInfo semInfo = {};
-    semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-    VkDevice dev = g_renderState.device.GetHandle();
 
     for ( size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
     {
@@ -570,6 +600,7 @@ static bool CreateSemaphores()
         g_renderState.renderCompleteSemaphores[i]  = g_renderState.device.NewSemaphore( "render complete " + std::to_string( i ) );
         g_renderState.inFlightFences[i]            = g_renderState.device.NewFence( true, "in flight " + std::to_string( i ) );
     }
+    g_renderState.computeFence = g_renderState.device.NewFence( true, "compute" );
 
     return true;
 }
@@ -602,13 +633,13 @@ bool SwapChain::Create( VkDevice dev )
     createInfo.imageUsage               = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
     const auto& indices = g_renderState.physicalDeviceInfo.indices;
-    uint32_t queueFamilyIndices[] = { indices.graphicsFamily, indices.presentFamily };
+    uint32_t queueFamilyIndices[] = { indices.graphicsFamily, indices.presentFamily, indices.computeFamily };
 
     if ( indices.graphicsFamily != indices.presentFamily )
     {
         LOG_WARN( "Graphics queue is not the same as the presentation queue! Possible performance drop" );
         createInfo.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
-        createInfo.queueFamilyIndexCount = 2;
+        createInfo.queueFamilyIndexCount = 3;
         createInfo.pQueueFamilyIndices   = queueFamilyIndices;
     }
     else
@@ -734,13 +765,11 @@ bool VulkanInit()
         return false;
     }
 
-    if ( !CreateSemaphores() )
+    if ( !CreateSynchronizationObjects() )
     {
-        LOG_ERR( "Could not create semaphores" );
+        LOG_ERR( "Could not create synchronization objects" );
         return false;
     }
-
-    g_renderState.transientCommandPool = g_renderState.device.NewCommandPool( COMMAND_POOL_TRANSIENT, "transient" );
 
     return true;
 }
@@ -756,10 +785,12 @@ void VulkanShutdown()
         g_renderState.renderCompleteSemaphores[i].Free();
         g_renderState.inFlightFences[i].Free();
     }
+    g_renderState.computeFence.Free();
 
     g_renderState.depthTex.Free();
 
-    g_renderState.commandPool.Free();
+    g_renderState.graphicsCommandPool.Free();
+    g_renderState.computeCommandPool.Free();
     g_renderState.transientCommandPool.Free();
     for ( auto framebuffer : g_renderState.swapChainFramebuffers )
     {

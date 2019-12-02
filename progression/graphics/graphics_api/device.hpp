@@ -23,7 +23,7 @@ namespace Gfx
 
         void Submit( const CommandBuffer& cmdBuf ) const;
         void WaitForIdle() const;
-        CommandPool NewCommandPool( CommandPoolCreateFlags flags = 0, const std::string& name = "" ) const;
+        CommandPool NewCommandPool( CommandPoolCreateFlags flags = 0, CommandPoolQueueFamily family = CommandPoolQueueFamily::GRAPHICS, const std::string& name = "" ) const;
         DescriptorPool NewDescriptorPool( int numPoolSizes, VkDescriptorPoolSize* poolSizes, uint32_t maxSets = 1, const std::string& name = "" ) const;
         std::vector< DescriptorSetLayout > NewDescriptorSetLayouts( const std::vector< DescriptorSetLayoutData >& layoutData ) const;
         void UpdateDescriptorSets( uint32_t count, const VkWriteDescriptorSet* writes ) const;
@@ -36,6 +36,7 @@ namespace Gfx
         Pipeline NewPipeline( const PipelineDescriptor& desc, const std::string& name = "" ) const;
         RenderPass NewRenderPass( const RenderPassDescriptor& desc, const std::string& name = "" ) const;
         void SubmitRenderCommands( int numBuffers, CommandBuffer* cmdBufs ) const;
+        void SubmitComputeCommand( const CommandBuffer& cmdBuf ) const;
         void SubmitFrame( uint32_t imageIndex ) const;
 
         void Copy( Buffer dst, Buffer src ) const;
@@ -49,6 +50,7 @@ namespace Gfx
         VkDevice m_handle        = VK_NULL_HANDLE;
         VkQueue  m_graphicsQueue = VK_NULL_HANDLE;
         VkQueue  m_presentQueue  = VK_NULL_HANDLE;
+        VkQueue  m_computeQueue  = VK_NULL_HANDLE;
     };
 
 } // namespace Gfx
