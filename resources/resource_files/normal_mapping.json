@@ -1,0 +1,25 @@
+{
+    "Script": {
+        "name": "cameraController",
+        "filename": "scripts/cameraController.lua"
+    },
+    "Image": {
+        "name": "brickwall",
+        "filename": "textures/brickwall.jpg"
+    },
+    "Image": {
+        "name": "brickwall_normal",
+        "filename": "textures/brickwall_normal.jpg"
+    },
+    "Image": {
+        "name": "blue",
+        "filename": "textures/blue.png"
+    },
+    "MTLFile": {
+        "filename": "materials/miscellaneous.mtl"
+    },
+    "Model": {
+        "name": "wall",
+        "filename": "models/plane.obj"
+    }
+}

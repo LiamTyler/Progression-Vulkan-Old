@@ -6,6 +6,7 @@
 #include "utils/fileIO.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
+#include <cctype>
 
 namespace Progression
 {
@@ -145,6 +146,19 @@ bool Material::Deserialize( char*& buffer )
     return true;
 }
 
+static bool IsWhiteSpace( const std::string& str )
+{
+    for ( size_t i = 0; i < str.length(); ++i )
+    {
+        if ( !std::isspace( str[i] ) )
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool Material::LoadMtlFile( std::vector< Material >& materials, const std::string& fname )
 {
     std::ifstream file( fname );
@@ -161,6 +175,11 @@ bool Material::LoadMtlFile( std::vector< Material >& materials, const std::strin
     std::string first;
     while ( std::getline( file, line ) )
     {
+        if ( IsWhiteSpace( line ) )
+        {
+            continue;
+        }
+
         std::istringstream ss( line );
         ss >> first;
         if ( first == "#" )
@@ -207,7 +226,24 @@ bool Material::LoadMtlFile( std::vector< Material >& materials, const std::strin
                 mat->map_Kd = Image::Load2DImageWithDefaultSettings( PG_RESOURCE_DIR + texName );
                 if ( !mat->map_Kd )
                 {
-                    LOG_ERR( "Failed to load texture with default settings while parsing MTL file." );
+                    LOG_ERR( "Failed to load diffuse texture with default settings while parsing MTL file." );
+                    return false;
+                }
+            }
+        }
+        else if ( first == "map_bump" )
+        {
+            std::string texName;
+            ss >> texName;
+            mat->map_Norm = ResourceManager::Get< Image >( texName );
+            if ( !mat->map_Norm )
+            {
+                // LOG_ERR("Failed to load map_Kd image '", texName, "' in mtl file '", fname, "'");
+                // return false;
+                mat->map_Norm = Image::Load2DImageWithDefaultSettings( PG_RESOURCE_DIR + texName );
+                if ( !mat->map_Norm )
+                {
+                    LOG_ERR( "Failed to load normal map with default settings while parsing MTL file." );
                     return false;
                 }
             }

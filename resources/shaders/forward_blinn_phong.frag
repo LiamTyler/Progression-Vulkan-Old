@@ -8,7 +8,9 @@
 layout( location = 0 ) out vec4 outColor;
 
 layout( location = 0 ) in vec3 posInWorldSpace;
-layout( location = 1 ) in mat3 TBN;
+//layout( location = 1 ) in mat3 TBN;
+layout( location = 1 ) in vec3 worldT;
+layout( location = 2 ) in vec3 worldN;
 layout( location = 4 ) in vec2 texCoord;
 
 
@@ -66,14 +68,19 @@ float ShadowAmount( in const vec3 fragWorldPos )
 void main()
 {
     // vec3 n = normalize( normalInWorldSpace );
-    vec3 n = normalize( TBN[2] );
+    vec3 n = normalize( worldN );
     if ( material.normalMapIndex != ~0u )
     {
         n = texture( textures[material.normalMapIndex], texCoord ).xyz;
         n = normalize( n * 2 - 1 );
+        vec3 N = normalize( worldN );
+        vec3 T = normalize( worldT );
+        vec3 B = normalize( cross( N, T ) );
+        mat3 TBN = mat3( T, B, N );
         n = normalize( TBN * n );
+        outColor = vec4( n, 1 );
+        return;
     }
-    
     
     vec3 e = normalize( sceneConstantBuffer.cameraPos.xyz - posInWorldSpace );
 

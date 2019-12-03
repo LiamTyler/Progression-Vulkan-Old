@@ -1,0 +1,41 @@
+{
+    "Fastfile": {
+        "filename": "normal_mapping.ff"
+    },
+    "Camera": {
+        "position": [ 0, 2, 5 ],
+        "rotation": [ 0, 0, 0 ],
+        "fov": 60,
+        "aspectRatio": 1.777777777,
+        "nearPlane": 0.1,
+        "farPlane": 100
+    },
+    "AmbientColor": {
+        "color": [ 1, 1, 1 ]
+    },
+    "_DirectionalLight": {
+        "colorAndIntensity": [ 1, 1, 1, 1 ],
+        "direction": [ 1, -1, 1 ]
+    },
+    "PointLight": {
+        "colorAndIntensity": [ 1, 1, 1, 4 ],
+        "positionAndRadius": [ 0, 2, 0, 10 ]
+    },
+    "Entity": {
+        "NameComponent": "floor",
+        "Transform": {
+            "position": [ 0, 0, 0 ],
+            "scale": [ 2, 2, 2 ]
+        },
+        "ModelRenderer": {
+            "model": "wall",
+            "material": "brickwall"
+        }
+    },
+    "Entity": {
+        "NameComponent": "camera",
+        "ScriptComponent": {
+            "script": "cameraController"
+        }
+    }
+}

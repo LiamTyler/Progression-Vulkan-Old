@@ -423,8 +423,8 @@ namespace Progression
                 {
                     const aiVector3D* pTangent = &paiMesh->mTangents[vIdx];
                     glm::vec3 t( pTangent->x, pTangent->y, pTangent->z );
-                    // const glm::vec3& n = normals[vIdx];
-                    // t = glm::normalize( t - n * glm::dot( n, t ) ); // does assimp orthogonalize the tangents automatically?
+                    const glm::vec3& n = normals[vIdx];
+                    t = glm::normalize( t - n * glm::dot( n, t ) ); // does assimp orthogonalize the tangents automatically?
                     tangents.emplace_back( t );
                 }
             }
