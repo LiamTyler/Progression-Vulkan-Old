@@ -617,7 +617,7 @@ namespace RenderSystem
 
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Shadow rigid models", glm::vec4( .2, .6, .4, 1 ) );
         cmdBuf.BindRenderPipeline( directionalShadow.pipeline );
-        cmdBuf.SetDepthBias( 1.25, 0, 1.75 );
+        cmdBuf.SetDepthBias( 2, 2, 9.5 ); // Values that 'worked' (removed many artifacts) epirically for sponza.json
         scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& modelRenderer, Transform& transform )
         {
             const auto& model = modelRenderer.model;

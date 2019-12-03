@@ -14,11 +14,11 @@
         "color": [ 1, 1, 1 ]
     },
     "_DirectionalLight": {
-        "colorAndIntensity": [ 1, 1, 1, 1 ],
+        "colorAndIntensity": [ 1, 1, 1, 0 ],
         "direction": [ 1, -1, 1 ]
     },
     "PointLight": {
-        "colorAndIntensity": [ 1, 1, 1, 4 ],
+        "colorAndIntensity": [ 1, 1, 1, 10 ],
         "positionAndRadius": [ 0, 2, 0, 10 ]
     },
     "Entity": {
