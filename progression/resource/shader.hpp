@@ -50,7 +50,7 @@ public:
     Shader( Shader&& shader );
     Shader& operator=( Shader&& shader );
 
-    bool Load( ResourceCreateInfo* createInfo );
+    bool Load( ResourceCreateInfo* createInfo ) override;
     void Move( std::shared_ptr< Resource > dst ) override;
     bool Serialize( std::ofstream& out ) const override;
     bool Deserialize( char*& buffer ) override;

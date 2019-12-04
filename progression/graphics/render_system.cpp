@@ -665,7 +665,6 @@ namespace RenderSystem
         PG_ASSERT( scene != nullptr );
         PG_ASSERT( scene->pointLights.size() < MAX_NUM_POINT_LIGHTS && scene->spotLights.size() < MAX_NUM_SPOT_LIGHTS );
         size_t currentFrame = g_renderState.currentFrame;
-        VkDevice dev = g_renderState.device.GetHandle();
         g_renderState.inFlightFences[currentFrame].WaitFor();
         g_renderState.inFlightFences[currentFrame].Reset();
 

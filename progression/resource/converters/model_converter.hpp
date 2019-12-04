@@ -7,8 +7,8 @@ class ModelConverter : public Converter
 public:
     ModelConverter( bool force_ = false, bool verbose_ = false );
 
-    AssetStatus CheckDependencies();
-    ConverterStatus Convert();
+    AssetStatus CheckDependencies() override;
+    ConverterStatus Convert() override;
     std::string GetName() const override;
 
     struct Progression::ModelCreateInfo createInfo;
