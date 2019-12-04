@@ -9,6 +9,7 @@
 #include "utils/serialize.hpp"
 #include "SPIRV-Reflect/spirv_reflect.h"
 #include "SPIRV-Reflect/common/output_stream.h"
+#include <algorithm>
 #include <sstream>
 
 /*

@@ -25,7 +25,11 @@ int main( int argc, char* argv[] )
     }
 
     g_converterMode = true;
-    PG::EngineInitialize( PG_ROOT_DIR "configs/offline.toml" );
+    if ( !PG::EngineInitialize( PG_ROOT_DIR "configs/offline.toml" ) )
+    {
+        LOG_ERR( "Could not initialize engine" );
+        return 0;
+    }
 
     namespace fs = std::filesystem;
     fs::create_directories( PG_RESOURCE_DIR "cache/shaders/" );

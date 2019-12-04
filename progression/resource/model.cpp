@@ -273,7 +273,7 @@ namespace Progression
                 if ( !ret )
                 {
                     LOG_ERR( "Failed to load texture '", name, "' with default settings" );
-                    return false;
+                    return nullptr;
                 }
                 return ret;
             }

@@ -8,6 +8,7 @@
 #include "graphics/vulkan.hpp"
 #include "utils/logger.hpp"
 #include <set>
+#include <algorithm>
 
 extern std::vector< const char* > VK_VALIDATION_LAYERS;
 extern std::vector< const char* > VK_DEVICE_EXTENSIONS;
