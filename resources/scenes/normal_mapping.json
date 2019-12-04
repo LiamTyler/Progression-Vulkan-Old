@@ -11,7 +11,7 @@
         "farPlane": 100
     },
     "AmbientColor": {
-        "color": [ 1, 1, 1 ]
+        "color": [ .1, .1, .1 ]
     },
     "_DirectionalLight": {
         "colorAndIntensity": [ 1, 1, 1, 0 ],

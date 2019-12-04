@@ -617,7 +617,7 @@ namespace RenderSystem
 
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Shadow rigid models", glm::vec4( .2, .6, .4, 1 ) );
         cmdBuf.BindRenderPipeline( directionalShadow.pipeline );
-        cmdBuf.SetDepthBias( 2, 2, 9.5 ); // Values that 'worked' (removed many artifacts) epirically for sponza.json
+        cmdBuf.SetDepthBias( 2, 0, 9.5 ); // Values that 'worked' (removed many artifacts) epirically for sponza.json
         scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& modelRenderer, Transform& transform )
         {
             const auto& model = modelRenderer.model;
@@ -745,7 +745,6 @@ namespace RenderSystem
                 const auto& mat  = modelRenderer.materials[mesh.materialIndex];
 
                 MaterialConstantBufferData mcbuf{};
-                mcbuf.Ka = glm::vec4( mat->Ka, 0 );
                 mcbuf.Kd = glm::vec4( mat->Kd, 0 );
                 mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
                 mcbuf.diffuseTexIndex = mat->map_Kd   ? mat->map_Kd->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
@@ -789,7 +788,6 @@ namespace RenderSystem
                 const auto& mat  = renderer.materials[mesh.materialIndex];
 
                 MaterialConstantBufferData mcbuf{};
-                mcbuf.Ka = glm::vec4( mat->Ka, 0 );
                 mcbuf.Kd = glm::vec4( mat->Kd, 0 );
                 mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
                 mcbuf.diffuseTexIndex = mat->map_Kd ? mat->map_Kd->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;

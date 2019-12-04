@@ -80,12 +80,13 @@ void main()
     
     vec3 e = normalize( sceneConstantBuffer.cameraPos.xyz - posInWorldSpace );
 
-    vec3 color = material.Ka.xyz * sceneConstantBuffer.ambientColor.xyz;
+    vec3 color = vec3( 0, 0, 0 );
     vec3 Kd    = material.Kd.xyz;
     if ( material.diffuseTexIndex != PG_INVALID_TEXTURE_INDEX )
     {
         Kd *= texture( textures[material.diffuseTexIndex], texCoord ).xyz;
     }
+    color += material.Kd.xyz * sceneConstantBuffer.ambientColor.xyz;
     
     vec3 lightColor = sceneConstantBuffer.dirLight.colorAndIntensity.w * sceneConstantBuffer.dirLight.colorAndIntensity.xyz;
     vec3 l = normalize( -sceneConstantBuffer.dirLight.direction.xyz );

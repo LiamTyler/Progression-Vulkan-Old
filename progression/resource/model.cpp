@@ -304,17 +304,11 @@ namespace Progression
             model->materials[mtlIdx]->name = name.C_Str();
 
             color = aiColor3D( 0.f, 0.f, 0.f );
-            pMaterial->Get( AI_MATKEY_COLOR_AMBIENT, color );
-            model->materials[mtlIdx]->Ka = { color.r, color.g, color.b };
-            color = aiColor3D( 0.f, 0.f, 0.f );
             pMaterial->Get( AI_MATKEY_COLOR_DIFFUSE, color );
             model->materials[mtlIdx]->Kd = { color.r, color.g, color.b };
             color = aiColor3D( 0.f, 0.f, 0.f );
             pMaterial->Get( AI_MATKEY_COLOR_SPECULAR, color );
             model->materials[mtlIdx]->Ks = { color.r, color.g, color.b };
-            color = aiColor3D( 0.f, 0.f, 0.f );
-            pMaterial->Get( AI_MATKEY_COLOR_EMISSIVE, color );
-            model->materials[mtlIdx]->Ke = { color.r, color.g, color.b };
             color = aiColor3D( 0.f, 0.f, 0.f );
             float Ns;
             pMaterial->Get( AI_MATKEY_SHININESS, Ns );

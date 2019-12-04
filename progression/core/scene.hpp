@@ -20,7 +20,7 @@ namespace Progression
 
         Camera camera;
         glm::vec3 backgroundColor = glm::vec3( 0, 0, 0 ); // currently not used-- hardcoded in vulkan.cpp
-        glm::vec3 ambientColor    = glm::vec3( 0, 0, 0 );
+        glm::vec3 ambientColor    = glm::vec3( .1f );
         DirectionalLight directionalLight;
         std::vector< PointLight > pointLights;
         std::vector< SpotLight > spotLights;

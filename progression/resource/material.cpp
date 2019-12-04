@@ -16,10 +16,8 @@ bool Material::Load( ResourceCreateInfo* createInfo )
     PG_ASSERT( createInfo );
     MaterialCreateInfo* info = static_cast< MaterialCreateInfo* >( createInfo );
     name     = info->name;
-    Ka       = info->Ka;
     Kd       = info->Kd;
     Ks       = info->Ks;
-    Ke       = info->Ke;
     Ns       = info->Ns;
     map_Kd   = ResourceManager::Get< Image >( info->map_Kd_name );
     map_Norm = ResourceManager::Get< Image >( info->map_Norm_name );
@@ -37,10 +35,8 @@ void Material::Move( std::shared_ptr< Resource > dst )
 bool Material::Serialize( std::ofstream& out ) const
 {
     serialize::Write( out, name );
-    serialize::Write( out, Ka );
     serialize::Write( out, Kd );
     serialize::Write( out, Ks );
-    serialize::Write( out, Ke );
     serialize::Write( out, Ns );
     bool hasDiffuseTexture = map_Kd != nullptr;
     serialize::Write( out, hasDiffuseTexture );
@@ -90,10 +86,8 @@ bool Material::Serialize( std::ofstream& out ) const
 bool Material::Deserialize( char*& buffer )
 {
     serialize::Read( buffer, name );
-    serialize::Read( buffer, Ka );
     serialize::Read( buffer, Kd );
     serialize::Read( buffer, Ks );
-    serialize::Read( buffer, Ke );
     serialize::Read( buffer, Ns );
     bool hasDiffuseTexture;
     serialize::Read( buffer, hasDiffuseTexture );
@@ -198,10 +192,6 @@ bool Material::LoadMtlFile( std::vector< Material >& materials, const std::strin
         {
             ss >> mat->Ns;
         }
-        else if ( first == "Ka" )
-        {
-            ss >> mat->Ka;
-        }
         else if ( first == "Kd" )
         {
             ss >> mat->Kd;
@@ -209,10 +199,6 @@ bool Material::LoadMtlFile( std::vector< Material >& materials, const std::strin
         else if ( first == "Ks" )
         {
             ss >> mat->Ks;
-        }
-        else if ( first == "Ke" )
-        {
-            ss >> mat->Ke;
         }
         else if ( first == "map_Kd" )
         {

@@ -10,10 +10,8 @@ namespace Progression
 class MaterialCreateInfo : public ResourceCreateInfo
 {
 public:
-    glm::vec3 Ka;
     glm::vec3 Kd;
     glm::vec3 Ks;
-    glm::vec3 Ke;
     float Ns;
     std::string map_Kd_name;
     std::string map_Norm_name;
@@ -30,10 +28,8 @@ public:
     bool Deserialize( char*& buffer ) override;
     static bool LoadMtlFile( std::vector< Material >& materials, const std::string& fname );
 
-    glm::vec3 Ka;
     glm::vec3 Kd;
     glm::vec3 Ks;
-    glm::vec3 Ke;
     float Ns;
     std::shared_ptr< Image > map_Kd   = nullptr;
     std::shared_ptr< Image > map_Norm = nullptr;

@@ -34,7 +34,6 @@ struct AnimatedObjectConstantBufferData
 
 struct MaterialConstantBufferData
 {
-    VEC4 Ka;
     VEC4 Kd;
     VEC4 Ks;
     UINT diffuseTexIndex;
