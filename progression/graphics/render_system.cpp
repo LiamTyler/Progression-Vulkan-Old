@@ -196,8 +196,8 @@ static bool InitShadowPassData()
 bool InitPostProcessRenderPass()
 {
     RenderPassDescriptor desc;
-    desc.colorAttachmentDescriptors[0].format     = VulkanToPGPixelFormat(g_renderState.swapChain.imageFormat);
-    desc.colorAttachmentDescriptors[0].clearColor = glm::vec4(.2, .2, .2, 1);
+    desc.colorAttachmentDescriptors[0].format     = VulkanToPGPixelFormat( g_renderState.swapChain.imageFormat );
+    desc.colorAttachmentDescriptors[0].clearColor = glm::vec4( .2, .2, .2, 1 );
     desc.colorAttachmentDescriptors[0].layout     = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
     desc.depthAttachmentDescriptor.format         = PixelFormat::DEPTH_32_FLOAT;
     desc.depthAttachmentDescriptor.loadAction     = LoadAction::CLEAR;
@@ -213,25 +213,22 @@ bool InitPostProcessRenderPass()
     return true;
 }
 
-
-
-
 static bool InitGBufferPassData()
 {
     RenderPassDescriptor desc;
-    desc.colorAttachmentDescriptors[0].format       = PixelFormat::R32_G32_B32_A32_FLOAT;
-    desc.colorAttachmentDescriptors[0].layout       = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
-    desc.colorAttachmentDescriptors[1].format       = PixelFormat::R32_G32_B32_A32_FLOAT;
-    desc.colorAttachmentDescriptors[1].layout       = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
-    desc.colorAttachmentDescriptors[2].format       = PixelFormat::R8_G8_B8_A8_UNORM;
-    desc.colorAttachmentDescriptors[2].layout       = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
-    desc.colorAttachmentDescriptors[3].format       = PixelFormat::R16_G16_B16_A16_FLOAT; //TODO!!! Reduce number of textures by packing both diffuse and specular into rgb and the specular exponent in a
-    desc.colorAttachmentDescriptors[3].layout       = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+    desc.colorAttachmentDescriptors[0].format  = PixelFormat::R32_G32_B32_A32_FLOAT;
+    desc.colorAttachmentDescriptors[0].layout  = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+    desc.colorAttachmentDescriptors[1].format  = PixelFormat::R32_G32_B32_A32_FLOAT;
+    desc.colorAttachmentDescriptors[1].layout  = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+    desc.colorAttachmentDescriptors[2].format  = PixelFormat::R8_G8_B8_A8_UNORM;
+    desc.colorAttachmentDescriptors[2].layout  = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+    desc.colorAttachmentDescriptors[3].format  = PixelFormat::R16_G16_B16_A16_FLOAT; //TODO!!! Reduce number of textures by packing both diffuse and specular into rgb and the specular exponent in a
+    desc.colorAttachmentDescriptors[3].layout  = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
 
-    desc.depthAttachmentDescriptor.format           = PixelFormat::DEPTH_32_FLOAT;
-    desc.depthAttachmentDescriptor.loadAction       = LoadAction::CLEAR;
-    desc.depthAttachmentDescriptor.storeAction      = StoreAction::STORE;
-    desc.depthAttachmentDescriptor.layout           = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+    desc.depthAttachmentDescriptor.format      = PixelFormat::DEPTH_32_FLOAT;
+    desc.depthAttachmentDescriptor.loadAction  = LoadAction::CLEAR;
+    desc.depthAttachmentDescriptor.storeAction = StoreAction::STORE;
+    desc.depthAttachmentDescriptor.layout      = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     gBufferRenderData.renderPass = g_renderState.device.NewRenderPass( desc, "gBuffer" );
     if ( !gBufferRenderData.renderPass )
@@ -294,10 +291,8 @@ static bool InitGBufferPassData()
         LOG_ERR( "Could not create gbuffer pipeline" );
         return false;
     }
-    
 
     ImageDescriptor info;
-
     info.type    = ImageType::TYPE_2D;
     info.width   = g_renderState.swapChain.extent.width;
     info.height  = g_renderState.swapChain.extent.height;
@@ -319,7 +314,6 @@ static bool InitGBufferPassData()
     attachments[3] = gBufferRenderData.gbuffer.specular.GetView();
     attachments[4] = g_renderState.depthTex.GetView();
    
-
     VkFramebufferCreateInfo framebufferInfo = {};
     framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebufferInfo.renderPass      = gBufferRenderData.renderPass.GetHandle();
@@ -337,14 +331,7 @@ static bool InitGBufferPassData()
     PG_DEBUG_MARKER_SET_FRAMEBUFFER_NAME( gBufferRenderData.frameBuffer, "gbuffer pass" );
 
     return true;
-
-    // |||               |||
-    // ||| LEFT OFF HERE |||
-    // VVV               VVV
 }
-
-
-
 
 
 namespace Progression
@@ -782,9 +769,57 @@ namespace RenderSystem
 
         ShadowPass( scene, cmdBuf );
 
-        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Render Scene", glm::vec4( .8, .8, .2, 1 ) );
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "GBuffer Pass", glm::vec4( .8, .8, .2, 1 ) );
+        cmdBuf.BeginRenderPass( gBufferRenderData.renderPass, gBufferRenderData.frameBuffer );
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "GBuffer -- Rigid Models", glm::vec4( .2, .8, .2, 1 ) );
+        cmdBuf.BindRenderPipeline( gBufferRenderData.pipeline );
+        cmdBuf.BindDescriptorSets( 1, &sceneDescriptorSets[imageIndex], gBufferRenderData.pipeline, PG_SCENE_CONSTANT_BUFFER_SET );
+        cmdBuf.BindDescriptorSets( 1, &textureDescriptorSets[imageIndex], gBufferRenderData.pipeline, PG_2D_TEXTURES_SET );
+
+        scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& modelRenderer, Transform& transform )
+        {
+            const auto& model = modelRenderer.model;
+            // TODO: Actually fix this for models without tangets as well
+            if ( model->GetTangentOffset() == ~0u )
+            {
+                return;
+            }
+            
+            auto M = transform.GetModelMatrix();
+            auto N = glm::transpose( glm::inverse( M ) );
+            ObjectConstantBufferData b;
+            b.M = M;
+            b.N = N;
+            vkCmdPushConstants( cmdBuf.GetHandle(), gBufferRenderData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( ObjectConstantBufferData ), &b );
+
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetUVOffset(), 2 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetTangentOffset(), 3 );
+            cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
+
+            for ( size_t i = 0; i < model->meshes.size(); ++i )
+            {
+                const auto& mesh = modelRenderer.model->meshes[i];
+                const auto& mat  = modelRenderer.materials[mesh.materialIndex];
+
+                MaterialConstantBufferData mcbuf{};
+                mcbuf.Kd = glm::vec4( mat->Kd, 0 );
+                mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
+                mcbuf.diffuseTexIndex = mat->map_Kd   ? mat->map_Kd->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
+                mcbuf.normalMapIndex  = mat->map_Norm ? mat->map_Norm->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
+                vkCmdPushConstants( cmdBuf.GetHandle(), gBufferRenderData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
+
+                PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
+                cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
+            }
+        });
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
+        cmdBuf.EndRenderPass();
+
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "GBuffer Pass", glm::vec4( .8, .8, .2, 1 ) );
         cmdBuf.BeginRenderPass( postProcessRenderData.renderPass, postProcessRenderData.frameBuffer );
-        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Render Rigid Models", glm::vec4( .2, .8, .2, 1 ) );
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "GBuffer -- Rigid Models", glm::vec4( .2, .8, .2, 1 ) );
         cmdBuf.BindRenderPipeline( s_rigidModelPipeline );
         cmdBuf.BindDescriptorSets( 1, &sceneDescriptorSets[imageIndex], s_rigidModelPipeline, PG_SCENE_CONSTANT_BUFFER_SET );
         cmdBuf.BindDescriptorSets( 1, &textureDescriptorSets[imageIndex], s_rigidModelPipeline, PG_2D_TEXTURES_SET );
@@ -794,7 +829,9 @@ namespace RenderSystem
             const auto& model = modelRenderer.model;
             // TODO: Actually fix this for models without tangets as well
             if ( model->GetTangentOffset() == ~0u )
+            {
                 return;
+            }
             
             auto M = transform.GetModelMatrix();
             auto N = glm::transpose( glm::inverse( M ) );
@@ -812,7 +849,6 @@ namespace RenderSystem
             for ( size_t i = 0; i < model->meshes.size(); ++i )
             {
                 const auto& mesh = modelRenderer.model->meshes[i];
-                // const auto& mat  = modelRenderer.materials[i];
                 const auto& mat  = modelRenderer.materials[mesh.materialIndex];
 
                 MaterialConstantBufferData mcbuf{};
@@ -879,14 +915,14 @@ namespace RenderSystem
         // Post Processing Render Pass
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Post Process", glm::vec4( .2, .2, 1, 1 ) );
         cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex] );
-
+        
         cmdBuf.BindRenderPipeline( postProcessRenderData.postPorcessingPipeline );
         cmdBuf.BindDescriptorSets( 1, &postProcessRenderData.textureToProcess, postProcessRenderData.postPorcessingPipeline, 0 );
         
         PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
         cmdBuf.BindVertexBuffer( postProcessRenderData.quadBuffer, 0, 0 );
         cmdBuf.Draw( 0, 6 );
-
+        
         cmdBuf.EndRenderPass();
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
 

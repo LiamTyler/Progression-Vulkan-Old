@@ -41,6 +41,7 @@ void main()
     {
         Kd *= texture( textures[material.diffuseTexIndex], texCoord ).xyz;
     }
+    outDiffuse = vec4( Kd, 0 );
     
     outSpecular = material.Ks;
 }
