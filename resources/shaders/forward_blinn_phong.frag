@@ -8,12 +8,8 @@
 layout( location = 0 ) out vec4 outColor;
 
 layout( location = 0 ) in vec3 posInWorldSpace;
-// layout( location = 1 ) in mat3 TBN;
-// layout( location = 1 ) in vec3 worldT;
-// layout( location = 2 ) in vec3 worldN;
-// layout( location = 3 ) in vec3 worldB;
-layout( location = 4 ) in vec2 texCoord;
-layout( location = 5 ) in mat3 TBN;
+layout( location = 1 ) in vec2 texCoord;
+layout( location = 2 ) in mat3 TBN;
 
 
 layout( set = PG_SCENE_CONSTANT_BUFFER_SET, binding = 0 ) uniform SceneConstantBufferUniform

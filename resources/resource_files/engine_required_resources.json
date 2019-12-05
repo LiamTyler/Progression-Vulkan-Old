@@ -8,6 +8,10 @@
         "filename": "shaders/forward_blinn_phong.frag"
     },
     "Shader": {
+        "name": "gBufferFrag",
+        "filename": "shaders/gbuffer.frag"
+    },
+    "Shader": {
         "name": "rigidModelsVert",
         "filename": "shaders/rigid_models.vert"
     },

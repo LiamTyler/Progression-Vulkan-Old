@@ -515,9 +515,11 @@ static bool CreateRenderPass()
     RenderPassDescriptor renderPassDesc;
     renderPassDesc.colorAttachmentDescriptors[0].format  = VulkanToPGPixelFormat( g_renderState.swapChain.imageFormat );
     renderPassDesc.colorAttachmentDescriptors[0].clearColor  = glm::vec4( .2, .2, .2, 1 );
+    renderPassDesc.colorAttachmentDescriptors[0].layout  = ImageLayout::PRESENT_SRC_KHR;
     renderPassDesc.depthAttachmentDescriptor.format      = PixelFormat::DEPTH_32_FLOAT;
     renderPassDesc.depthAttachmentDescriptor.loadAction  = LoadAction::CLEAR;
     renderPassDesc.depthAttachmentDescriptor.storeAction = StoreAction::DONT_CARE;
+    renderPassDesc.depthAttachmentDescriptor.layout      = ImageLayout::PRESENT_SRC_KHR;
 
     g_renderState.renderPass = g_renderState.device.NewRenderPass( renderPassDesc, "final output" );
     return g_renderState.renderPass;

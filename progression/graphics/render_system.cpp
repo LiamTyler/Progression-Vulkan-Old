@@ -71,7 +71,25 @@ static std::vector< Gfx::Buffer > s_gpuSpotLightBuffers;
 std::vector< DescriptorSet > sceneDescriptorSets;
 std::vector< DescriptorSet > textureDescriptorSets;
 
-struct OffScreenRenderData
+struct GBuffer
+{
+    Gfx::Texture positions;
+    Gfx::Texture normals;
+    Gfx::Texture diffuse;
+    Gfx::Texture specular;
+};
+
+struct GBufferRenderData
+{
+    Gfx::RenderPass renderPass;
+    GBuffer gbuffer;
+    VkFramebuffer frameBuffer;
+    Gfx::Pipeline pipeline;
+    Gfx::DescriptorSet descriptorSet;
+    std::vector< Gfx::DescriptorSetLayout > descriptorSetLayout;
+} gBufferRenderData;
+
+struct PostProcessRenderData
 {
     Gfx::RenderPass renderPass;
     Gfx::Texture colorAttachment;
@@ -80,86 +98,7 @@ struct OffScreenRenderData
     Gfx::Buffer quadBuffer;
     Gfx::DescriptorSet textureToProcess;
     std::vector< Gfx::DescriptorSetLayout > textureToProcessLayout;
-} offScreenRenderData;
-
-bool CreateOffScreenRenderPass()
-{
-    RenderPassDescriptor desc;
-    desc.colorAttachmentDescriptors[0].format     = VulkanToPGPixelFormat( g_renderState.swapChain.imageFormat );
-    desc.colorAttachmentDescriptors[0].clearColor = glm::vec4( .2, .2, .2, 1 );
-    desc.depthAttachmentDescriptor.format         = PixelFormat::DEPTH_32_FLOAT;
-    desc.depthAttachmentDescriptor.loadAction     = LoadAction::CLEAR;
-    desc.depthAttachmentDescriptor.storeAction    = StoreAction::STORE;
-    auto& pass = offScreenRenderData.renderPass;
-    pass.desc     = desc;
-    pass.m_device = g_renderState.device.GetHandle();
-
-    std::vector< VkAttachmentDescription > attachments;
-    std::vector< VkAttachmentReference > attachmentRefs;
-
-    const auto& attach = desc.colorAttachmentDescriptors[0];
-    attachments.push_back( {} );
-    attachments[0].format         = PGToVulkanPixelFormat( attach.format );
-    attachments[0].samples        = VK_SAMPLE_COUNT_1_BIT;
-    attachments[0].loadOp         = PGToVulkanLoadAction( attach.loadAction );
-    attachments[0].storeOp        = PGToVulkanStoreAction( attach.storeAction );
-    attachments[0].stencilLoadOp  = PGToVulkanLoadAction( LoadAction::DONT_CARE );
-    attachments[0].stencilStoreOp = PGToVulkanStoreAction( StoreAction::DONT_CARE );
-    attachments[0].initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-    attachments[0].finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-    attachmentRefs.push_back( {} );
-    attachmentRefs[0].attachment = 0;
-    attachmentRefs[0].layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    VkAttachmentDescription depthAttachment = {};
-    depthAttachment.format         = PGToVulkanPixelFormat( desc.depthAttachmentDescriptor.format );
-    depthAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
-    depthAttachment.loadOp         = PGToVulkanLoadAction( desc.depthAttachmentDescriptor.loadAction );
-    depthAttachment.storeOp        = PGToVulkanStoreAction( desc.depthAttachmentDescriptor.storeAction );
-    depthAttachment.stencilLoadOp  = PGToVulkanLoadAction( LoadAction::DONT_CARE );
-    depthAttachment.stencilStoreOp = PGToVulkanStoreAction( StoreAction::DONT_CARE );
-    depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-    depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkAttachmentReference depthAttachmentRef = {};
-    depthAttachmentRef.attachment = 1;
-    depthAttachmentRef.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    attachments.push_back( depthAttachment );
-
-    VkSubpassDescription subpass    = {};
-    subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount    = 1;
-    subpass.pColorAttachments       = attachmentRefs.data();
-    subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
-    VkSubpassDependency dependency = {};
-    dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass    = 0;
-    dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-    VkRenderPassCreateInfo renderPassInfo = {};
-    renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = static_cast< uint32_t >( attachments.size() );
-    renderPassInfo.pAttachments    = attachments.data();
-    renderPassInfo.subpassCount    = 1;
-    renderPassInfo.pSubpasses      = &subpass;
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies   = &dependency;
-
-    if ( vkCreateRenderPass( g_renderState.device.GetHandle(), &renderPassInfo, nullptr, &pass.m_handle ) != VK_SUCCESS )
-    {
-        pass.m_handle = VK_NULL_HANDLE;
-        LOG_ERR( "Could not create render pass" );
-        return false;
-    }
-    PG_DEBUG_MARKER_SET_RENDER_PASS_NAME( pass, "offscreen" );
-
-    return true;
-}
+} postProcessRenderData;
 
 struct ShadowRenderData
 {
@@ -180,57 +119,13 @@ static bool InitShadowPassData()
     desc.depthAttachmentDescriptor.format      = PixelFormat::DEPTH_32_FLOAT;
     desc.depthAttachmentDescriptor.loadAction  = LoadAction::CLEAR;
     desc.depthAttachmentDescriptor.storeAction = StoreAction::STORE;
-    auto& pass = directionalShadow.renderPass;
-    pass.desc     = desc;
-    pass.m_device = g_renderState.device.GetHandle();
-
-    std::vector< VkAttachmentDescription > attachments;
-    std::vector< VkAttachmentReference > attachmentRefs;
-
-    VkAttachmentDescription depthAttachment = {};
-    depthAttachment.format         = PGToVulkanPixelFormat( desc.depthAttachmentDescriptor.format );
-    depthAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
-    depthAttachment.loadOp         = PGToVulkanLoadAction( desc.depthAttachmentDescriptor.loadAction );
-    depthAttachment.storeOp        = PGToVulkanStoreAction( desc.depthAttachmentDescriptor.storeAction );
-    depthAttachment.stencilLoadOp  = PGToVulkanLoadAction( LoadAction::DONT_CARE );
-    depthAttachment.stencilStoreOp = PGToVulkanStoreAction( StoreAction::DONT_CARE );
-    depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-    depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-    VkAttachmentReference depthAttachmentRef = {};
-    depthAttachmentRef.attachment = 0;
-    depthAttachmentRef.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    attachments.push_back( depthAttachment );
-
-    VkSubpassDescription subpass    = {};
-    subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount    = 0;
-    subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
-    VkSubpassDependency dependency = {};
-    dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass    = 0;
-    dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-    VkRenderPassCreateInfo renderPassInfo = {};
-    renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = static_cast< uint32_t >( attachments.size() );
-    renderPassInfo.pAttachments    = attachments.data();
-    renderPassInfo.subpassCount    = 1;
-    renderPassInfo.pSubpasses      = &subpass;
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies   = &dependency;
-
-    if ( vkCreateRenderPass( g_renderState.device.GetHandle(), &renderPassInfo, nullptr, &pass.m_handle ) != VK_SUCCESS )
+    desc.depthAttachmentDescriptor.layout      = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+    
+    directionalShadow.renderPass = g_renderState.device.NewRenderPass( desc, "directionalShadow" );
+    if ( !directionalShadow.renderPass )
     {
-        pass.m_handle = VK_NULL_HANDLE;
-        LOG_ERR( "Could not create shadow render pass" );
         return false;
     }
-    PG_DEBUG_MARKER_SET_RENDER_PASS_NAME( pass, "directional shadow pass" );
 
     auto directionalShadowVert = ResourceManager::Get< Shader >( "directionalShadowVert" );
 
@@ -257,6 +152,7 @@ static bool InitShadowPassData()
     directionalShadowPipelineDesc.scissor          = scissor;
     directionalShadowPipelineDesc.shaders[0]       = directionalShadowVert.get();
     directionalShadowPipelineDesc.numShaders       = 1;
+    directionalShadowPipelineDesc.numColorAttachments = 0;
 
     directionalShadow.pipeline = g_renderState.device.NewPipeline( directionalShadowPipelineDesc, "directional shadow pass" );
     if ( !directionalShadow.pipeline )
@@ -296,6 +192,161 @@ static bool InitShadowPassData()
     return true;
 }
 
+
+bool InitPostProcessRenderPass()
+{
+    RenderPassDescriptor desc;
+    desc.colorAttachmentDescriptors[0].format     = VulkanToPGPixelFormat(g_renderState.swapChain.imageFormat);
+    desc.colorAttachmentDescriptors[0].clearColor = glm::vec4(.2, .2, .2, 1);
+    desc.colorAttachmentDescriptors[0].layout     = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+    desc.depthAttachmentDescriptor.format         = PixelFormat::DEPTH_32_FLOAT;
+    desc.depthAttachmentDescriptor.loadAction     = LoadAction::CLEAR;
+    desc.depthAttachmentDescriptor.storeAction    = StoreAction::STORE;
+    desc.depthAttachmentDescriptor.layout         = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    
+    postProcessRenderData.renderPass = g_renderState.device.NewRenderPass( desc, "postProcess" );
+    if ( !postProcessRenderData.renderPass )
+    {
+        return false;
+    }
+
+    return true;
+}
+
+
+
+
+static bool InitGBufferPassData()
+{
+    RenderPassDescriptor desc;
+    desc.colorAttachmentDescriptors[0].format       = PixelFormat::R32_G32_B32_A32_FLOAT;
+    desc.colorAttachmentDescriptors[0].layout       = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+    desc.colorAttachmentDescriptors[1].format       = PixelFormat::R32_G32_B32_A32_FLOAT;
+    desc.colorAttachmentDescriptors[1].layout       = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+    desc.colorAttachmentDescriptors[2].format       = PixelFormat::R8_G8_B8_A8_UINT;
+    desc.colorAttachmentDescriptors[2].layout       = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+    desc.colorAttachmentDescriptors[3].format       = PixelFormat::R16_G16_B16_A16_FLOAT; //TODO!!! Reduce number of textures by packing both diffuse and specular into rgb and the specular exponent in a
+    desc.colorAttachmentDescriptors[3].layout       = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+
+    desc.depthAttachmentDescriptor.format           = PixelFormat::DEPTH_32_FLOAT;
+    desc.depthAttachmentDescriptor.loadAction       = LoadAction::CLEAR;
+    desc.depthAttachmentDescriptor.storeAction      = StoreAction::STORE;
+    desc.depthAttachmentDescriptor.layout           = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+
+    gBufferRenderData.renderPass = g_renderState.device.NewRenderPass( desc, "gBuffer" );
+    if ( !gBufferRenderData.renderPass )
+    {
+        return false;
+    }
+
+    VertexBindingDescriptor bindingDesc[4];
+    bindingDesc[0].binding   = 0;
+    bindingDesc[0].stride    = sizeof( glm::vec3 );
+    bindingDesc[0].inputRate = VertexInputRate::PER_VERTEX;
+    bindingDesc[1].binding   = 1;
+    bindingDesc[1].stride    = sizeof( glm::vec3 );
+    bindingDesc[1].inputRate = VertexInputRate::PER_VERTEX;
+    bindingDesc[2].binding   = 2;
+    bindingDesc[2].stride    = sizeof( glm::vec2 );
+    bindingDesc[2].inputRate = VertexInputRate::PER_VERTEX;
+    bindingDesc[3].binding   = 3;
+    bindingDesc[3].stride    = sizeof( glm::vec3 );
+    bindingDesc[3].inputRate = VertexInputRate::PER_VERTEX;
+
+    VertexAttributeDescriptor attribDescs[4];
+    attribDescs[0].binding  = 0;
+    attribDescs[0].location = 0;
+    attribDescs[0].format   = BufferDataType::FLOAT3;
+    attribDescs[0].offset   = 0;
+    attribDescs[1].binding  = 1;
+    attribDescs[1].location = 1;
+    attribDescs[1].format   = BufferDataType::FLOAT3;
+    attribDescs[1].offset   = 0;
+    attribDescs[2].binding  = 2;
+    attribDescs[2].location = 2;
+    attribDescs[2].format   = BufferDataType::FLOAT2;
+    attribDescs[2].offset   = 0;
+    attribDescs[3].binding  = 3;
+    attribDescs[3].location = 3;
+    attribDescs[3].format   = BufferDataType::FLOAT3;
+    attribDescs[3].offset   = 0;
+
+    auto rigidModelsVert		= ResourceManager::Get< Shader >( "rigidModelsVert" );
+    auto gBufferFrag            = ResourceManager::Get< Shader >( "gBufferFrag" );
+
+    PipelineDescriptor pipelineDesc;
+    pipelineDesc.renderPass             = &gBufferRenderData.renderPass;
+    pipelineDesc.descriptorSetLayouts   = s_descriptorSetLayouts; //gBufferRenderData.descriptorSetLayout
+    pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 4, bindingDesc, 4, attribDescs );
+    pipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
+    pipelineDesc.viewport               = FullScreenViewport();
+    pipelineDesc.viewport.height        = -pipelineDesc.viewport.height;
+    pipelineDesc.viewport.y             = -pipelineDesc.viewport.height;
+    pipelineDesc.scissor                = FullScreenScissor();
+    pipelineDesc.shaders[0]             = rigidModelsVert.get();
+    pipelineDesc.shaders[1]             = gBufferFrag.get(); //forwardBlinnPhongFrag.get();
+    pipelineDesc.numShaders             = 2;
+    pipelineDesc.numColorAttachments    = 4;
+
+    gBufferRenderData.pipeline = g_renderState.device.NewPipeline( pipelineDesc, "gbuffer rigid model" );
+    if ( !gBufferRenderData.pipeline )
+    {
+        LOG_ERR( "Could not create gbuffer pipeline" );
+        return false;
+    }
+    
+
+    ImageDescriptor info;
+
+    info.type    = ImageType::TYPE_2D;
+    info.width   = g_renderState.swapChain.extent.width;
+    info.height  = g_renderState.swapChain.extent.height;
+    info.sampler = "nearest_clamped_nearest";
+    info.usage   = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    info.format                         = PixelFormat::R32_G32_B32_A32_FLOAT;
+    gBufferRenderData.gbuffer.positions = g_renderState.device.NewTexture( info, false, "gbuffer position" );
+    info.format                         = PixelFormat::R32_G32_B32_A32_FLOAT;
+    gBufferRenderData.gbuffer.normals   = g_renderState.device.NewTexture( info, false, "gbuffer normals" );
+    info.format                         = PixelFormat::R8_G8_B8_A8_UINT;
+    gBufferRenderData.gbuffer.diffuse   = g_renderState.device.NewTexture( info, false, "gbuffer diffuse" );
+    info.format                         = PixelFormat::R16_G16_B16_A16_FLOAT;
+    gBufferRenderData.gbuffer.specular  = g_renderState.device.NewTexture( info, false, "gbuffer specular" );
+
+    VkImageView attachments[5];
+    attachments[0] = gBufferRenderData.gbuffer.positions.GetView();
+    attachments[1] = gBufferRenderData.gbuffer.normals.GetView();
+    attachments[2] = gBufferRenderData.gbuffer.diffuse.GetView();
+    attachments[3] = gBufferRenderData.gbuffer.specular.GetView();
+    attachments[4] = g_renderState.depthTex.GetView();
+   
+
+    VkFramebufferCreateInfo framebufferInfo = {};
+    framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.renderPass      = gBufferRenderData.renderPass.GetHandle();
+    framebufferInfo.attachmentCount = 5;
+    framebufferInfo.pAttachments    = attachments;
+    framebufferInfo.width           = g_renderState.swapChain.extent.width;
+    framebufferInfo.height          = g_renderState.swapChain.extent.height;
+    framebufferInfo.layers          = 1;
+
+    if ( vkCreateFramebuffer( g_renderState.device.GetHandle(), &framebufferInfo, nullptr, &gBufferRenderData.frameBuffer ) != VK_SUCCESS )
+    {
+        LOG_ERR( "Could not create gbuffer framebuffer" );
+        return false;
+    }
+    PG_DEBUG_MARKER_SET_FRAMEBUFFER_NAME( gBufferRenderData.frameBuffer, "gbuffer pass" );
+
+    return true;
+
+    // |||               |||
+    // ||| LEFT OFF HERE |||
+    // VVV               VVV
+}
+
+
+
+
+
 namespace Progression
 {
 namespace RenderSystem
@@ -330,7 +381,7 @@ namespace RenderSystem
         s_descriptorPool = g_renderState.device.NewDescriptorPool( 3, poolSize, 3 * numImages, "render system" );
                 
 		// Post Processing
-        if ( !CreateOffScreenRenderPass() )
+        if ( !InitPostProcessRenderPass() )
         {
             return false;
         }
@@ -345,6 +396,12 @@ namespace RenderSystem
         s_descriptorSetLayouts = g_renderState.device.NewDescriptorSetLayouts( combined );
         sceneDescriptorSets    = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[0], "scene data" );
         textureDescriptorSets  = s_descriptorPool.NewDescriptorSets( numImages, s_descriptorSetLayouts[1], "textures" );
+
+        if ( !InitGBufferPassData() )
+        {
+            LOG_ERR( "Could not init gbuffer pass data" );
+            return false;
+        }
 
         auto dummyImage = ResourceManager::Get< Image >( "RENDER_SYSTEM_DUMMY_TEXTURE" );
         PG_ASSERT( dummyImage );
@@ -438,7 +495,7 @@ namespace RenderSystem
         attribDescs[3].offset   = 0;
 
         PipelineDescriptor pipelineDesc;
-        pipelineDesc.renderPass             = &offScreenRenderData.renderPass;
+        pipelineDesc.renderPass             = &postProcessRenderData.renderPass;
         pipelineDesc.descriptorSetLayouts   = s_descriptorSetLayouts;
         pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 4, bindingDesc, 4, attribDescs );
         pipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
@@ -449,6 +506,7 @@ namespace RenderSystem
         pipelineDesc.shaders[0]             = rigidModelsVert.get();
         pipelineDesc.shaders[1]             = forwardBlinnPhongFrag.get();
         pipelineDesc.numShaders             = 2;
+        pipelineDesc.numColorAttachments    = 1;
 
         s_rigidModelPipeline = g_renderState.device.NewPipeline( pipelineDesc, "rigid model" );
         if ( !s_rigidModelPipeline )
@@ -464,27 +522,27 @@ namespace RenderSystem
         info.height  = g_renderState.swapChain.extent.height;
         info.sampler = "nearest_clamped_nearest";
         info.usage   = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        offScreenRenderData.colorAttachment = g_renderState.device.NewTexture( info, false, "offscreen color attachment" );
+        postProcessRenderData.colorAttachment = g_renderState.device.NewTexture( info, false, "offscreen color attachment" );
 
         VkImageView attachments[2];
-        attachments[0] = offScreenRenderData.colorAttachment.GetView();
+        attachments[0] = postProcessRenderData.colorAttachment.GetView();
         attachments[1] = g_renderState.depthTex.GetView();
 
         VkFramebufferCreateInfo framebufferInfo = {};
         framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass      = offScreenRenderData.renderPass.GetHandle();
+        framebufferInfo.renderPass      = postProcessRenderData.renderPass.GetHandle();
         framebufferInfo.attachmentCount = 2;
         framebufferInfo.pAttachments    = attachments;
-        framebufferInfo.width           = offScreenRenderData.colorAttachment.GetWidth();
-        framebufferInfo.height          = offScreenRenderData.colorAttachment.GetHeight();
+        framebufferInfo.width           = postProcessRenderData.colorAttachment.GetWidth();
+        framebufferInfo.height          = postProcessRenderData.colorAttachment.GetHeight();
         framebufferInfo.layers          = 1;
 
-        if ( vkCreateFramebuffer( g_renderState.device.GetHandle(), &framebufferInfo, nullptr, &offScreenRenderData.frameBuffer ) != VK_SUCCESS )
+        if ( vkCreateFramebuffer( g_renderState.device.GetHandle(), &framebufferInfo, nullptr, &postProcessRenderData.frameBuffer ) != VK_SUCCESS )
         {
             LOG_ERR( "Could not create offscreen framebuffer" );
             return false;
         }
-        PG_DEBUG_MARKER_SET_FRAMEBUFFER_NAME( offScreenRenderData.frameBuffer, "offscreen pass (gbuffer)" );
+        PG_DEBUG_MARKER_SET_FRAMEBUFFER_NAME( postProcessRenderData.frameBuffer, "offscreen pass (gbuffer)" );
 
 		// Post Processing
 
@@ -496,8 +554,8 @@ namespace RenderSystem
         descriptorSetData.insert( descriptorSetData.end(), postProcessingFrag->reflectInfo.descriptorSetLayouts.begin(), postProcessingFrag->reflectInfo.descriptorSetLayouts.end() );
         combined = CombineDescriptorSetLayouts( descriptorSetData );
 
-        offScreenRenderData.textureToProcessLayout = g_renderState.device.NewDescriptorSetLayouts( combined );
-        offScreenRenderData.textureToProcess = s_descriptorPool.NewDescriptorSets( 1, offScreenRenderData.textureToProcessLayout[0], "post process" )[0];
+        postProcessRenderData.textureToProcessLayout = g_renderState.device.NewDescriptorSetLayouts( combined );
+        postProcessRenderData.textureToProcess = s_descriptorPool.NewDescriptorSets( 1, postProcessRenderData.textureToProcessLayout[0], "post process" )[0];
 
 		VertexBindingDescriptor postProcescsingBindingDesc[1];
         postProcescsingBindingDesc[0].binding = 0;
@@ -512,7 +570,7 @@ namespace RenderSystem
 
 		PipelineDescriptor postProcessingPipelineDesc;
         postProcessingPipelineDesc.renderPass	          = &g_renderState.renderPass;
-        postProcessingPipelineDesc.descriptorSetLayouts   = offScreenRenderData.textureToProcessLayout;
+        postProcessingPipelineDesc.descriptorSetLayouts   = postProcessRenderData.textureToProcessLayout;
         postProcessingPipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 1, postProcescsingBindingDesc, 1, postProcescsingAttribDescs.data() );
         postProcessingPipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
         postProcessingPipelineDesc.viewport               = FullScreenViewport();
@@ -520,21 +578,22 @@ namespace RenderSystem
         postProcessingPipelineDesc.shaders[0]	          = postProcessingVert.get();
         postProcessingPipelineDesc.shaders[1]			  = postProcessingFrag.get();
         postProcessingPipelineDesc.numShaders             = 2;
+        postProcessingPipelineDesc.numColorAttachments    = 1;
 
-		offScreenRenderData.postPorcessingPipeline = g_renderState.device.NewPipeline( postProcessingPipelineDesc , "post process");
-		if ( !offScreenRenderData.postPorcessingPipeline )
+		postProcessRenderData.postPorcessingPipeline = g_renderState.device.NewPipeline( postProcessingPipelineDesc , "post process");
+		if ( !postProcessRenderData.postPorcessingPipeline )
 		{
 			LOG_ERR( "Could not create post processing pipeline" );
 			return false;
 		}
 
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.sampler = offScreenRenderData.colorAttachment.GetSampler()->GetHandle();
-        imageInfo.imageView = offScreenRenderData.colorAttachment.GetView();
+        imageInfo.sampler = postProcessRenderData.colorAttachment.GetSampler()->GetHandle();
+        imageInfo.imageView = postProcessRenderData.colorAttachment.GetView();
 
         VkWriteDescriptorSet descriptorWrite[1] = {};
         descriptorWrite[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite[0].dstSet = offScreenRenderData.textureToProcess.GetHandle();
+        descriptorWrite[0].dstSet = postProcessRenderData.textureToProcess.GetHandle();
         descriptorWrite[0].dstBinding = 0;
         descriptorWrite[0].dstArrayElement = 0;
         descriptorWrite[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -553,7 +612,7 @@ namespace RenderSystem
             glm::vec3(  1, -1, 0 ),
         };
 
-        offScreenRenderData.quadBuffer = g_renderState.device.NewBuffer( sizeof( quadVerts ), quadVerts, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL, "RenderSystem Quad VBO" );
+        postProcessRenderData.quadBuffer = g_renderState.device.NewBuffer( sizeof( quadVerts ), quadVerts, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL, "RenderSystem Quad VBO" );
 
         if ( !InitShadowPassData() )
         {
@@ -587,15 +646,28 @@ namespace RenderSystem
         s_rigidModelPipeline.Free();
 
         // Free Post Processing Data
-        offScreenRenderData.colorAttachment.Free();
-        offScreenRenderData.renderPass.Free();
-        vkDestroyFramebuffer( g_renderState.device.GetHandle(), offScreenRenderData.frameBuffer, nullptr );
-        offScreenRenderData.postPorcessingPipeline.Free();
-        for ( auto& layout : offScreenRenderData.textureToProcessLayout )
+        postProcessRenderData.colorAttachment.Free();
+        postProcessRenderData.renderPass.Free();
+        vkDestroyFramebuffer( g_renderState.device.GetHandle(), postProcessRenderData.frameBuffer, nullptr );
+        postProcessRenderData.postPorcessingPipeline.Free();
+        for ( auto& layout : postProcessRenderData.textureToProcessLayout )
         {
             layout.Free();
         }
-        offScreenRenderData.quadBuffer.Free();
+        postProcessRenderData.quadBuffer.Free();
+
+        // Free GBuffer Data
+        gBufferRenderData.gbuffer.positions.Free();
+        gBufferRenderData.gbuffer.normals.Free();
+        gBufferRenderData.gbuffer.diffuse.Free();
+        gBufferRenderData.gbuffer.specular.Free();
+        gBufferRenderData.renderPass.Free();
+        vkDestroyFramebuffer( g_renderState.device.GetHandle(), gBufferRenderData.frameBuffer, nullptr );
+        gBufferRenderData.pipeline.Free();
+        for ( auto& layout : gBufferRenderData.descriptorSetLayout)
+        {
+            layout.Free();
+        }
     }
 
     void ShadowPass( Scene* scene, CommandBuffer& cmdBuf )
@@ -711,7 +783,7 @@ namespace RenderSystem
         ShadowPass( scene, cmdBuf );
 
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Render Scene", glm::vec4( .8, .8, .2, 1 ) );
-        cmdBuf.BeginRenderPass( offScreenRenderData.renderPass, offScreenRenderData.frameBuffer );
+        cmdBuf.BeginRenderPass( postProcessRenderData.renderPass, postProcessRenderData.frameBuffer );
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Render Rigid Models", glm::vec4( .2, .8, .2, 1 ) );
         cmdBuf.BindRenderPipeline( s_rigidModelPipeline );
         cmdBuf.BindDescriptorSets( 1, &sceneDescriptorSets[imageIndex], s_rigidModelPipeline, PG_SCENE_CONSTANT_BUFFER_SET );
@@ -808,11 +880,11 @@ namespace RenderSystem
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Post Process", glm::vec4( .2, .2, 1, 1 ) );
         cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex] );
 
-        cmdBuf.BindRenderPipeline( offScreenRenderData.postPorcessingPipeline );
-        cmdBuf.BindDescriptorSets( 1, &offScreenRenderData.textureToProcess, offScreenRenderData.postPorcessingPipeline, 0 );
+        cmdBuf.BindRenderPipeline( postProcessRenderData.postPorcessingPipeline );
+        cmdBuf.BindDescriptorSets( 1, &postProcessRenderData.textureToProcess, postProcessRenderData.postPorcessingPipeline, 0 );
         
         PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
-        cmdBuf.BindVertexBuffer( offScreenRenderData.quadBuffer, 0, 0 );
+        cmdBuf.BindVertexBuffer( postProcessRenderData.quadBuffer, 0, 0 );
         cmdBuf.Draw( 0, 6 );
 
         cmdBuf.EndRenderPass();

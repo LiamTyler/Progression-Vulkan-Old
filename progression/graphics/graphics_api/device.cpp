@@ -418,21 +418,31 @@ namespace Gfx
         // no depth or stencil buffer currently
 
         // blending for single attachment
-        VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
-        colorBlendAttachment.colorWriteMask =
-            VK_COLOR_COMPONENT_R_BIT |
-            VK_COLOR_COMPONENT_G_BIT |
-            VK_COLOR_COMPONENT_B_BIT |
-            VK_COLOR_COMPONENT_A_BIT;
-        colorBlendAttachment.blendEnable = VK_FALSE;
+        VkPipelineColorBlendAttachmentState colorBlendAttachment[8] = {};
+        for ( uint32_t i = 0; i < desc.numColorAttachments; ++i )
+        {
+            colorBlendAttachment[i].colorWriteMask =
+                VK_COLOR_COMPONENT_R_BIT |
+                VK_COLOR_COMPONENT_G_BIT |
+                VK_COLOR_COMPONENT_B_BIT |
+                VK_COLOR_COMPONENT_A_BIT;
+            colorBlendAttachment[i].blendEnable         = desc.colorAttachmentInfos[i].blendingEnabled;
+            colorBlendAttachment[i].srcColorBlendFactor = PGToVulkanBlendFactor( desc.colorAttachmentInfos[i].srcColorBlendFactor );
+            colorBlendAttachment[i].dstColorBlendFactor = PGToVulkanBlendFactor( desc.colorAttachmentInfos[i].dstColorBlendFactor );
+            colorBlendAttachment[i].srcAlphaBlendFactor = PGToVulkanBlendFactor( desc.colorAttachmentInfos[i].srcAlphaBlendFactor );
+            colorBlendAttachment[i].dstAlphaBlendFactor = PGToVulkanBlendFactor( desc.colorAttachmentInfos[i].dstAlphaBlendFactor );
+            colorBlendAttachment[i].colorBlendOp        = PGToVulkanBlendEquation( desc.colorAttachmentInfos[i].colorBlendEquation );
+            colorBlendAttachment[i].alphaBlendOp        = PGToVulkanBlendEquation( desc.colorAttachmentInfos[i].alphaBlendEquation );
+        }
+        
 
         // blending for all attachments / global settings
         VkPipelineColorBlendStateCreateInfo colorBlending = {};
         colorBlending.sType             = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
         colorBlending.logicOpEnable     = VK_FALSE;
         colorBlending.logicOp           = VK_LOGIC_OP_COPY;
-        colorBlending.attachmentCount   = 1;
-        colorBlending.pAttachments      = &colorBlendAttachment;
+        colorBlending.attachmentCount   = desc.numColorAttachments;
+        colorBlending.pAttachments      = colorBlendAttachment;
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
         pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -533,7 +543,7 @@ namespace Gfx
             attachments[i].stencilLoadOp  = PGToVulkanLoadAction( LoadAction::DONT_CARE );
             attachments[i].stencilStoreOp = PGToVulkanStoreAction( StoreAction::DONT_CARE );
             attachments[i].initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-            attachments[i].finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            attachments[i].finalLayout    = PGToVulkanImageLayout( attach.layout );  //VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
             attachmentRefs.push_back( {} );
             attachmentRefs[i].attachment = static_cast< uint32_t>( i );
@@ -548,10 +558,10 @@ namespace Gfx
         depthAttachment.stencilLoadOp  = PGToVulkanLoadAction( LoadAction::DONT_CARE );
         depthAttachment.stencilStoreOp = PGToVulkanStoreAction( StoreAction::DONT_CARE );
         depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-        depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        depthAttachment.finalLayout    = PGToVulkanImageLayout( desc.depthAttachmentDescriptor.layout );
 
         VkAttachmentReference depthAttachmentRef = {};
-        depthAttachmentRef.attachment = 1;
+        depthAttachmentRef.attachment = static_cast< uint32_t >( attachments.size() );
         depthAttachmentRef.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
         VkSubpassDescription subpass = {};

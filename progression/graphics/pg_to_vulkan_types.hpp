@@ -448,5 +448,10 @@ namespace Gfx
         return static_cast< VkAttachmentStoreOp >( op );
     }
 
+    constexpr VkImageLayout PGToVulkanImageLayout( ImageLayout op )
+    {
+        return static_cast< VkImageLayout >( op );
+    }
+
 } // namespace Gfx
 } // namespace Progression

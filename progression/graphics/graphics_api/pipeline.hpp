@@ -66,12 +66,12 @@ namespace Gfx
     class PipelineColorAttachmentInfo
     {
     public:
-        BlendFactor srcColorBlendFactor;
-        BlendFactor dstColorBlendFactor;
-        BlendFactor srcAlphaBlendFactor;
-        BlendFactor dstAlphaBlendFactor;
-        BlendEquation colorBlendEquation;
-        BlendEquation alphaBlendEquation;
+        BlendFactor srcColorBlendFactor  = BlendFactor::SRC_ALPHA;
+        BlendFactor dstColorBlendFactor  = BlendFactor::ONE_MINUS_SRC_ALPHA;
+        BlendFactor srcAlphaBlendFactor  = BlendFactor::SRC_ALPHA;
+        BlendFactor dstAlphaBlendFactor  = BlendFactor::ONE_MINUS_SRC_ALPHA;
+        BlendEquation colorBlendEquation = BlendEquation::ADD;
+        BlendEquation alphaBlendEquation = BlendEquation::ADD;
         bool blendingEnabled = false;
     };
 
@@ -166,7 +166,7 @@ namespace Gfx
         RasterizerInfo rasterizerInfo;
         PrimitiveType primitiveType = PrimitiveType::TRIANGLES;
         PipelineDepthInfo depthInfo;
-        uint8_t numColorAttachments = 0;
+        uint32_t numColorAttachments = 0;
         std::array< PipelineColorAttachmentInfo, 8 > colorAttachmentInfos;
     };
 
