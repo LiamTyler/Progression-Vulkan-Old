@@ -18,7 +18,7 @@ namespace TextureManager
     uint16_t GetOpenSlot( Texture* texture );
     void FreeSlot( uint16_t slot );
     void UpdateSampler( Texture* texture );
-    void UpdateDescriptors( const std::vector< DescriptorSet >& textureDescriptorSets );
+    void UpdateDescriptors( const DescriptorSet& textureDescriptorSet );
 
 } // namespace TextureManager
 } // namespace Gfx

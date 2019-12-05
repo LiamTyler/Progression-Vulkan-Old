@@ -12,12 +12,16 @@
         "filename": "shaders/gbuffer.frag"
     },
     "Shader": {
+        "name": "deferredLightingPassFrag",
+        "filename": "shaders/deferred_lighting_pass.frag"
+    },
+    "Shader": {
         "name": "rigidModelsVert",
         "filename": "shaders/rigid_models.vert"
     },
     "Shader": {
-        "name": "postProcessVert",
-        "filename": "shaders/post_process.vert"
+        "name": "fullScreenQuadVert",
+        "filename": "shaders/full_screen_quad.vert"
     },
     "Shader": {
         "name": "postProcessFrag",

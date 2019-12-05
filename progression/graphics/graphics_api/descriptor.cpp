@@ -97,7 +97,6 @@ namespace Gfx
         return combined;
     }
 
-
     void DescriptorPool::Free()
     {
         PG_ASSERT( m_handle != VK_NULL_HANDLE );
@@ -121,7 +120,24 @@ namespace Gfx
         PG_DEBUG_MARKER_IF_STR_NOT_EMPTY( name, for ( uint32_t i = 0; i < numLayouts; ++i ) { PG_DEBUG_MARKER_SET_DESC_SET_NAME( descriptorSets[i], name + " " + std::to_string( i ) ); } );
 
         return descriptorSets;
+    }
 
+    DescriptorSet DescriptorPool::NewDescriptorSet( const DescriptorSetLayout& layout, const std::string& name ) const
+    {
+        PG_ASSERT( m_handle != VK_NULL_HANDLE );
+        VkDescriptorSetAllocateInfo allocInfo = {};
+        allocInfo.sType                = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool       = m_handle;
+        allocInfo.descriptorSetCount   = 1;
+        VkDescriptorSetLayout vkLayout = layout.GetHandle();
+        allocInfo.pSetLayouts          = &vkLayout;
+
+        DescriptorSet descriptorSet;
+        VkResult res = vkAllocateDescriptorSets( m_device, &allocInfo, (VkDescriptorSet*) &descriptorSet );
+        PG_ASSERT( res == VK_SUCCESS );
+        PG_DEBUG_MARKER_IF_STR_NOT_EMPTY( name, PG_DEBUG_MARKER_SET_DESC_SET_NAME( descriptorSet, name ) );
+
+        return descriptorSet;
     }
     
     VkDescriptorPool DescriptorPool::GetHandle() const

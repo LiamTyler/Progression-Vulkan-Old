@@ -82,7 +82,7 @@ namespace TextureManager
         s_slotsAddedSinceLastUpdate.emplace_back( tex->GetShaderSlot(), info );
     }
 
-    void UpdateDescriptors( const std::vector< DescriptorSet >& textureDescriptorSets )
+    void UpdateDescriptors( const DescriptorSet& textureDescriptorSet )
     {
         if ( s_slotsAddedSinceLastUpdate.empty() )
         {
@@ -104,14 +104,11 @@ namespace TextureManager
             s_setWrites[i].pImageInfo       = &s_imageInfos[i];
         }
 
-        for ( size_t imageIndex = 0; imageIndex < textureDescriptorSets.size(); ++imageIndex )
+        for ( size_t i = 0; i < s_setWrites.size(); ++i )
         {
-            for ( size_t i = 0; i < s_setWrites.size(); ++i )
-            {
-                s_setWrites[i].dstSet = textureDescriptorSets[imageIndex].GetHandle();
-            }
-            vkUpdateDescriptorSets( g_renderState.device.GetHandle(), static_cast< uint32_t >( s_setWrites.size() ), s_setWrites.data(), 0, nullptr );
+            s_setWrites[i].dstSet = textureDescriptorSet.GetHandle();
         }
+        vkUpdateDescriptorSets( g_renderState.device.GetHandle(), static_cast< uint32_t >( s_setWrites.size() ), s_setWrites.data(), 0, nullptr );
 
         s_slotsAddedSinceLastUpdate.clear();
     }
