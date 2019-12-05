@@ -223,7 +223,7 @@ static bool InitGBufferPassData()
     desc.colorAttachmentDescriptors[0].layout       = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
     desc.colorAttachmentDescriptors[1].format       = PixelFormat::R32_G32_B32_A32_FLOAT;
     desc.colorAttachmentDescriptors[1].layout       = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
-    desc.colorAttachmentDescriptors[2].format       = PixelFormat::R8_G8_B8_A8_UINT;
+    desc.colorAttachmentDescriptors[2].format       = PixelFormat::R8_G8_B8_A8_UNORM;
     desc.colorAttachmentDescriptors[2].layout       = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
     desc.colorAttachmentDescriptors[3].format       = PixelFormat::R16_G16_B16_A16_FLOAT; //TODO!!! Reduce number of textures by packing both diffuse and specular into rgb and the specular exponent in a
     desc.colorAttachmentDescriptors[3].layout       = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
@@ -307,7 +307,7 @@ static bool InitGBufferPassData()
     gBufferRenderData.gbuffer.positions = g_renderState.device.NewTexture( info, false, "gbuffer position" );
     info.format                         = PixelFormat::R32_G32_B32_A32_FLOAT;
     gBufferRenderData.gbuffer.normals   = g_renderState.device.NewTexture( info, false, "gbuffer normals" );
-    info.format                         = PixelFormat::R8_G8_B8_A8_UINT;
+    info.format                         = PixelFormat::R8_G8_B8_A8_UNORM;
     gBufferRenderData.gbuffer.diffuse   = g_renderState.device.NewTexture( info, false, "gbuffer diffuse" );
     info.format                         = PixelFormat::R16_G16_B16_A16_FLOAT;
     gBufferRenderData.gbuffer.specular  = g_renderState.device.NewTexture( info, false, "gbuffer specular" );
