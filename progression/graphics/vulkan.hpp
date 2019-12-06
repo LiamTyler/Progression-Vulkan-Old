@@ -64,17 +64,15 @@ namespace Gfx
         CommandPool graphicsCommandPool;
         CommandPool transientCommandPool;
         CommandPool computeCommandPool;
-        std::vector< CommandBuffer > commandBuffers;
+        CommandBuffer graphicsCommandBuffer;
         CommandBuffer computeCommandBuffer;
         
-        std::vector< Semaphore > presentCompleteSemaphores;
-        std::vector< Semaphore > renderCompleteSemaphores;
-        std::vector< Fence > inFlightFences;
+        Semaphore presentCompleteSemaphore;
+        Semaphore renderCompleteSemaphore;
         Fence computeFence;
 
         Device device;
         RenderPass renderPass;
-        size_t currentFrame = 0;
     };
 
     extern RenderState g_renderState;

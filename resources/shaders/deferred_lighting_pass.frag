@@ -14,22 +14,22 @@ layout( set = PG_SCENE_CONSTANT_BUFFER_SET, binding = 0 ) uniform SceneConstantB
     SceneConstantBufferData sceneConstantBuffer;
 };
 
-layout( std140, set = PG_SCENE_CONSTANT_BUFFER_SET, binding = 1 ) buffer PointLights
+layout( std140, set = 3, binding = 1 ) buffer PointLights
 {
-   PointLight pointLights[];
+    PointLight pointLights[];
 };
 
-layout( std140, set = PG_SCENE_CONSTANT_BUFFER_SET, binding = 2 ) buffer SpotLights
+layout( std140, set = 3, binding = 2 ) buffer SpotLights
 {
-   SpotLight spotLights[];
+    SpotLight spotLights[];
 };
 
 layout( set = PG_2D_TEXTURES_SET, binding = 0 ) uniform sampler2D textures[PG_MAX_NUM_TEXTURES];
 
-layout( set = PG_2D_TEXTURES_SET, binding = 1 ) uniform sampler2D positionTex;
-layout( set = PG_2D_TEXTURES_SET, binding = 2 ) uniform sampler2D normalTex;
-layout( set = PG_2D_TEXTURES_SET, binding = 3 ) uniform sampler2D diffuseTex;
-layout( set = PG_2D_TEXTURES_SET, binding = 4 ) uniform sampler2D specularTex;
+layout( set = 2, binding = 0 ) uniform sampler2D positionTex;
+layout( set = 2, binding = 1 ) uniform sampler2D normalTex;
+layout( set = 2, binding = 2 ) uniform sampler2D diffuseTex;
+layout( set = 2, binding = 3 ) uniform sampler2D specularTex;
 
 float Attenuate( in const float distSquared, in const float radiusSquared )
 {
@@ -66,7 +66,7 @@ void main()
     vec3 n               = texture( normalTex,   UV ).xyz;
     vec3 Kd              = texture( diffuseTex,  UV ).xyz;
     vec4 Ks              = texture( specularTex, UV );
-    
+
     vec3 e     = normalize( sceneConstantBuffer.cameraPos.xyz - posInWorldSpace );
     vec3 color = vec3( 0, 0, 0 );
     
@@ -78,7 +78,7 @@ void main()
     vec3 l = normalize( -sceneConstantBuffer.dirLight.direction.xyz );
     vec3 h = normalize( l + e );
     
-    float S = 1 - ShadowAmount( posInWorldSpace );
+    float S = 1; //1 - ShadowAmount( posInWorldSpace );
     color += S * lightColor * Kd * max( 0.0, dot( l, n ) );
     if ( dot( l, n ) > PG_SHADER_EPSILON )
     {

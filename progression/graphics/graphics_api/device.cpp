@@ -543,7 +543,7 @@ namespace Gfx
             attachments[i].stencilLoadOp  = PGToVulkanLoadAction( LoadAction::DONT_CARE );
             attachments[i].stencilStoreOp = PGToVulkanStoreAction( StoreAction::DONT_CARE );
             attachments[i].initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-            attachments[i].finalLayout    = PGToVulkanImageLayout( attach.layout );  //VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            attachments[i].finalLayout    = PGToVulkanImageLayout( attach.finalLayout );  //VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
             attachmentRefs.push_back( {} );
             attachmentRefs[i].attachment = static_cast< uint32_t>( i );
@@ -558,7 +558,7 @@ namespace Gfx
         depthAttachment.stencilLoadOp  = PGToVulkanLoadAction( LoadAction::DONT_CARE );
         depthAttachment.stencilStoreOp = PGToVulkanStoreAction( StoreAction::DONT_CARE );
         depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-        depthAttachment.finalLayout    = PGToVulkanImageLayout( desc.depthAttachmentDescriptor.layout );
+        depthAttachment.finalLayout    = PGToVulkanImageLayout( desc.depthAttachmentDescriptor.finalLayout );
 
         VkAttachmentReference depthAttachmentRef = {};
         depthAttachmentRef.attachment = static_cast< uint32_t >( attachments.size() );
@@ -677,7 +677,7 @@ namespace Gfx
         VkSubmitInfo submitInfo = {};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        VkSemaphore waitSemaphores[]      = { g_renderState.presentCompleteSemaphores[g_renderState.currentFrame].GetHandle() };
+        VkSemaphore waitSemaphores[]      = { g_renderState.presentCompleteSemaphore.GetHandle() };
         VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
         submitInfo.waitSemaphoreCount     = 1;
         submitInfo.pWaitSemaphores        = waitSemaphores;
@@ -685,11 +685,11 @@ namespace Gfx
         submitInfo.commandBufferCount     = numBuffers;
         submitInfo.pCommandBuffers        = vkCmdBufs;
 
-        VkSemaphore signalSemaphores[]    = { g_renderState.renderCompleteSemaphores[g_renderState.currentFrame].GetHandle() };
+        VkSemaphore signalSemaphores[]    = { g_renderState.renderCompleteSemaphore.GetHandle() };
         submitInfo.signalSemaphoreCount   = 1;
         submitInfo.pSignalSemaphores      = signalSemaphores;
 
-        VkResult ret = vkQueueSubmit( m_graphicsQueue, 1, &submitInfo, g_renderState.inFlightFences[g_renderState.currentFrame].GetHandle() );
+        VkResult ret = vkQueueSubmit( m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE );
         PG_ASSERT( ret == VK_SUCCESS );
     }
 
@@ -701,7 +701,7 @@ namespace Gfx
         submitInfo.commandBufferCount     = 1;
         submitInfo.pCommandBuffers        = &buff;
 
-        VkSemaphore signalSemaphores[]    = { g_renderState.renderCompleteSemaphores[g_renderState.currentFrame].GetHandle() };
+        VkSemaphore signalSemaphores[]    = { g_renderState.renderCompleteSemaphore.GetHandle() };
         submitInfo.signalSemaphoreCount   = 1;
         submitInfo.pSignalSemaphores      = signalSemaphores;
 
@@ -711,7 +711,7 @@ namespace Gfx
 
     void Device::SubmitFrame( uint32_t imageIndex ) const
     {
-        VkSemaphore signalSemaphores[] = { g_renderState.renderCompleteSemaphores[g_renderState.currentFrame].GetHandle() };
+        VkSemaphore signalSemaphores[] = { g_renderState.renderCompleteSemaphore.GetHandle() };
         VkPresentInfoKHR presentInfo   = {};
         presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         presentInfo.waitSemaphoreCount = 1;
@@ -724,7 +724,6 @@ namespace Gfx
 
         vkQueuePresentKHR( m_presentQueue, &presentInfo );
         
-        g_renderState.currentFrame = ( g_renderState.currentFrame + 1 ) % MAX_FRAMES_IN_FLIGHT;
         vkDeviceWaitIdle( g_renderState.device.GetHandle() );
     }
 

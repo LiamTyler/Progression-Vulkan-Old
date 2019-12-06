@@ -50,11 +50,12 @@ namespace Gfx
     public:
         ColorAttachmentDescriptor() = default;
 
-        glm::vec4 clearColor    = glm::vec4( 0 );
-        LoadAction loadAction   = LoadAction::CLEAR;
-        StoreAction storeAction = StoreAction::STORE;
-        PixelFormat format      = PixelFormat::INVALID;
-        ImageLayout layout      = ImageLayout::UNDEFINED;
+        glm::vec4 clearColor      = glm::vec4( 0 );
+        LoadAction loadAction     = LoadAction::CLEAR;
+        StoreAction storeAction   = StoreAction::STORE;
+        PixelFormat format        = PixelFormat::INVALID;
+        ImageLayout initialLayout = ImageLayout::UNDEFINED;
+        ImageLayout finalLayout   = ImageLayout::UNDEFINED;
     };
 
     class DepthAttachmentDescriptor
@@ -62,11 +63,12 @@ namespace Gfx
     public:
         DepthAttachmentDescriptor() = default;
 
-        float clearValue        = 1.0f;
-        LoadAction loadAction   = LoadAction::CLEAR;
-        StoreAction storeAction = StoreAction::STORE;
-        PixelFormat format      = PixelFormat::INVALID;
-        ImageLayout layout      = ImageLayout::UNDEFINED;
+        float clearValue          = 1.0f;
+        LoadAction loadAction     = LoadAction::CLEAR;
+        StoreAction storeAction   = StoreAction::STORE;
+        PixelFormat format        = PixelFormat::INVALID;
+        ImageLayout initialLayout = ImageLayout::UNDEFINED;
+        ImageLayout finalLayout   = ImageLayout::UNDEFINED;
     };
 
     class RenderPassDescriptor

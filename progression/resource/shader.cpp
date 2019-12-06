@@ -362,7 +362,7 @@ namespace Progression
                 {
                     layout_binding.descriptorCount *= refl_binding.array.dims[i_dim];
                 }
-                layout_binding.stageFlags         = static_cast<VkShaderStageFlagBits >( module.shader_stage );
+                layout_binding.stageFlags         = static_cast< VkShaderStageFlagBits >( module.shader_stage ) | VK_SHADER_STAGE_ALL;
                 layout_binding.pImmutableSamplers = nullptr;
             }
 

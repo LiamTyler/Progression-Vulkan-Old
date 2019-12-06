@@ -13,15 +13,12 @@ layout( location = 0 ) in vec3 posInWorldSpace;
 layout( location = 1 ) in vec2 texCoord;
 layout( location = 2 ) in mat3 TBN;
 
-
-
 layout( set = PG_2D_TEXTURES_SET, binding = 0 ) uniform sampler2D textures[PG_MAX_NUM_TEXTURES];
 
 layout( std430, push_constant ) uniform MaterialConstantBufferUniform
 {
     layout( offset = PG_MATERIAL_PUSH_CONSTANT_OFFSET ) MaterialConstantBufferData material;
 };
-
 
 void main()
 {

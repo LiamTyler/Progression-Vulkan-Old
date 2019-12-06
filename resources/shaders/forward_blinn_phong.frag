@@ -19,12 +19,12 @@ layout( set = PG_SCENE_CONSTANT_BUFFER_SET, binding = 0 ) uniform SceneConstantB
 
 layout( std140, set = PG_SCENE_CONSTANT_BUFFER_SET, binding = 1 ) buffer PointLights
 {
-   PointLight pointLights[];
+    PointLight pointLights[];
 };
 
 layout( std140, set = PG_SCENE_CONSTANT_BUFFER_SET, binding = 2 ) buffer SpotLights
 {
-   SpotLight spotLights[];
+    SpotLight spotLights[];
 };
 
 layout( set = PG_2D_TEXTURES_SET, binding = 0 ) uniform sampler2D textures[PG_MAX_NUM_TEXTURES];

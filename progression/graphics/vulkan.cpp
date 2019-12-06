@@ -513,13 +513,14 @@ static bool PickPhysicalDevice()
 static bool CreateRenderPass()
 {
     RenderPassDescriptor renderPassDesc;
-    renderPassDesc.colorAttachmentDescriptors[0].format  = VulkanToPGPixelFormat( g_renderState.swapChain.imageFormat );
+    renderPassDesc.colorAttachmentDescriptors[0].format      = VulkanToPGPixelFormat( g_renderState.swapChain.imageFormat );
     renderPassDesc.colorAttachmentDescriptors[0].clearColor  = glm::vec4( .2, .2, .2, 1 );
-    renderPassDesc.colorAttachmentDescriptors[0].layout  = ImageLayout::PRESENT_SRC_KHR;
+    renderPassDesc.colorAttachmentDescriptors[0].finalLayout = ImageLayout::PRESENT_SRC_KHR;
     renderPassDesc.depthAttachmentDescriptor.format      = PixelFormat::DEPTH_32_FLOAT;
     renderPassDesc.depthAttachmentDescriptor.loadAction  = LoadAction::CLEAR;
     renderPassDesc.depthAttachmentDescriptor.storeAction = StoreAction::DONT_CARE;
-    renderPassDesc.depthAttachmentDescriptor.layout      = ImageLayout::PRESENT_SRC_KHR;
+    renderPassDesc.depthAttachmentDescriptor.finalLayout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    renderPassDesc.depthAttachmentDescriptor.finalLayout = ImageLayout::PRESENT_SRC_KHR;
 
     g_renderState.renderPass = g_renderState.device.NewRenderPass( renderPassDesc, "final output" );
     return g_renderState.renderPass;
@@ -577,15 +578,10 @@ static bool CreateCommandPoolAndBuffers()
     }
     g_renderState.computeCommandBuffer = g_renderState.computeCommandPool.NewCommandBuffer( "compute" );
 
-    g_renderState.commandBuffers.resize( g_renderState.swapChain.images.size() );
-    for ( size_t i = 0; i < g_renderState.commandBuffers.size(); ++i )
+    g_renderState.graphicsCommandBuffer = g_renderState.graphicsCommandPool.NewCommandBuffer( "global graphics" );
+    if ( !g_renderState.graphicsCommandBuffer )
     {
-        auto& cmdbuf = g_renderState.commandBuffers[i];
-        cmdbuf = g_renderState.graphicsCommandPool.NewCommandBuffer( "global " + std::to_string( i ) );
-        if ( !cmdbuf )
-        {
-            return false;
-        }
+        return false;
     }
 
     return true;
@@ -593,17 +589,9 @@ static bool CreateCommandPoolAndBuffers()
 
 static bool CreateSynchronizationObjects()
 {
-    g_renderState.renderCompleteSemaphores.resize( MAX_FRAMES_IN_FLIGHT );
-    g_renderState.presentCompleteSemaphores.resize( MAX_FRAMES_IN_FLIGHT );
-    g_renderState.inFlightFences.resize( MAX_FRAMES_IN_FLIGHT );
-
-    for ( size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
-    {
-        g_renderState.presentCompleteSemaphores[i] = g_renderState.device.NewSemaphore( "present complete " + std::to_string( i ) );
-        g_renderState.renderCompleteSemaphores[i]  = g_renderState.device.NewSemaphore( "render complete " + std::to_string( i ) );
-        g_renderState.inFlightFences[i]            = g_renderState.device.NewFence( true, "in flight " + std::to_string( i ) );
-    }
-    g_renderState.computeFence = g_renderState.device.NewFence( true, "compute" );
+    g_renderState.presentCompleteSemaphore = g_renderState.device.NewSemaphore( "present complete" );
+    g_renderState.renderCompleteSemaphore  = g_renderState.device.NewSemaphore( "render complete" );
+    g_renderState.computeFence             = g_renderState.device.NewFence( true, "compute" );
 
     return true;
 }
@@ -782,12 +770,8 @@ void VulkanShutdown()
     RenderSystem::FreeSamplers();
     VkDevice dev = g_renderState.device.GetHandle();
 
-    for ( size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
-    {
-        g_renderState.presentCompleteSemaphores[i].Free();
-        g_renderState.renderCompleteSemaphores[i].Free();
-        g_renderState.inFlightFences[i].Free();
-    }
+    g_renderState.presentCompleteSemaphore.Free();
+    g_renderState.renderCompleteSemaphore.Free();
     g_renderState.computeFence.Free();
 
     g_renderState.depthTex.Free();
