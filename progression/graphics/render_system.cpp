@@ -67,7 +67,7 @@ static Buffer s_gpuSceneConstantBuffers;
 static Buffer s_gpuPointLightBuffers;
 static Buffer s_gpuSpotLightBuffers;
 
-struct DescriptorSets
+struct
 {
     DescriptorSet scene;
     DescriptorSet arrayOfTextures;
@@ -76,11 +76,11 @@ struct DescriptorSets
     DescriptorSet postProcessInputColorTex;
 } descriptorSets;
 
-struct ShadowPassData
+struct
 {
     Gfx::RenderPass renderPass;
     Gfx::Texture    depthAttachment;
-    VkFramebuffer   frameBuffer;
+    Framebuffer   frameBuffer;
     Gfx::Pipeline   pipeline;
     glm::mat4       LSM;
 } shadowPassData;
@@ -93,25 +93,25 @@ struct GBuffer
     Gfx::Texture specular;
 };
 
-struct GBufferPassData
+struct
 {
     Gfx::RenderPass renderPass;
     GBuffer gbuffer;
-    VkFramebuffer frameBuffer;
+    Framebuffer frameBuffer;
     Gfx::Pipeline pipeline;
     std::vector< Gfx::DescriptorSetLayout > descriptorSetLayouts;
 } gBufferPassData;
 
-struct LightingPassData
+struct
 {
     Gfx::RenderPass renderPass;
     Gfx::Texture outputTexture;
-    VkFramebuffer frameBuffer;
+    Framebuffer frameBuffer;
     Gfx::Pipeline pipeline;
     std::vector< Gfx::DescriptorSetLayout > descriptorSetLayouts;
 } lightingPassData;
 
-struct PostProcessPassData
+struct
 {
 	Gfx::Pipeline pipeline;
     Gfx::Buffer quadBuffer;
@@ -179,24 +179,11 @@ static bool InitShadowPassData()
     info.usage   = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     shadowPassData.depthAttachment = g_renderState.device.NewTexture( info, true, "directional shadowmap" );
 
-    VkImageView frameBufferAttachments[1];
-    frameBufferAttachments[0] = shadowPassData.depthAttachment.GetView();
-
-    VkFramebufferCreateInfo framebufferInfo = {};
-    framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.renderPass      = shadowPassData.renderPass.GetHandle();
-    framebufferInfo.attachmentCount = 1;
-    framebufferInfo.pAttachments    = frameBufferAttachments;
-    framebufferInfo.width           = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
-    framebufferInfo.height          = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
-    framebufferInfo.layers          = 1;
-
-    if ( vkCreateFramebuffer( g_renderState.device.GetHandle(), &framebufferInfo, nullptr, &shadowPassData.frameBuffer ) != VK_SUCCESS )
+    shadowPassData.frameBuffer = g_renderState.device.NewFramebuffer( { &shadowPassData.depthAttachment }, shadowPassData.renderPass, "directional shadow pass" );
+    if ( !shadowPassData.frameBuffer )
     {
-        LOG_ERR( "Could not create shadow framebuffer" );
         return false;
     }
-    PG_DEBUG_MARKER_SET_FRAMEBUFFER_NAME( shadowPassData.frameBuffer, "directional shadow pass" );
 
     return true;
 }
@@ -300,28 +287,18 @@ static bool InitGBufferPassData()
     info.format                       = PixelFormat::R16_G16_B16_A16_FLOAT;
     gBufferPassData.gbuffer.specular  = g_renderState.device.NewTexture( info, false, "gbuffer specular" );
 
-    VkImageView attachments[5];
-    attachments[0] = gBufferPassData.gbuffer.positions.GetView();
-    attachments[1] = gBufferPassData.gbuffer.normals.GetView();
-    attachments[2] = gBufferPassData.gbuffer.diffuse.GetView();
-    attachments[3] = gBufferPassData.gbuffer.specular.GetView();
-    attachments[4] = g_renderState.depthTex.GetView();
-   
-    VkFramebufferCreateInfo framebufferInfo = {};
-    framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.renderPass      = gBufferPassData.renderPass.GetHandle();
-    framebufferInfo.attachmentCount = 5;
-    framebufferInfo.pAttachments    = attachments;
-    framebufferInfo.width           = g_renderState.swapChain.extent.width;
-    framebufferInfo.height          = g_renderState.swapChain.extent.height;
-    framebufferInfo.layers          = 1;
+    gBufferPassData.frameBuffer = g_renderState.device.NewFramebuffer( {
+        &gBufferPassData.gbuffer.positions,
+        &gBufferPassData.gbuffer.normals,
+        &gBufferPassData.gbuffer.diffuse,
+        &gBufferPassData.gbuffer.specular,
+        &g_renderState.depthTex
+        }, gBufferPassData.renderPass, "gbuffer pass" );
 
-    if ( vkCreateFramebuffer( g_renderState.device.GetHandle(), &framebufferInfo, nullptr, &gBufferPassData.frameBuffer ) != VK_SUCCESS )
+    if ( !gBufferPassData.frameBuffer )
     {
-        LOG_ERR( "Could not create gbuffer framebuffer" );
         return false;
     }
-    PG_DEBUG_MARKER_SET_FRAMEBUFFER_NAME( gBufferPassData.frameBuffer, "gbuffer pass" );
 
     return true;
 }
@@ -393,25 +370,11 @@ static bool InitLightingPassData()
     info.format  = PixelFormat::R8_G8_B8_A8_UNORM;
     lightingPassData.outputTexture = g_renderState.device.NewTexture( info, false, "lit scene" );
 
-    VkImageView attachments[2];
-    attachments[0] = lightingPassData.outputTexture.GetView();
-    attachments[1] = g_renderState.depthTex.GetView();
-   
-    VkFramebufferCreateInfo framebufferInfo = {};
-    framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.renderPass      = lightingPassData.renderPass.GetHandle();
-    framebufferInfo.attachmentCount = 2;
-    framebufferInfo.pAttachments    = attachments;
-    framebufferInfo.width           = g_renderState.swapChain.extent.width;
-    framebufferInfo.height          = g_renderState.swapChain.extent.height;
-    framebufferInfo.layers          = 1;
-
-    if ( vkCreateFramebuffer( g_renderState.device.GetHandle(), &framebufferInfo, nullptr, &lightingPassData.frameBuffer ) != VK_SUCCESS )
+    lightingPassData.frameBuffer = g_renderState.device.NewFramebuffer( { &lightingPassData.outputTexture, &g_renderState.depthTex }, lightingPassData.renderPass, "lighting pass" );
+    if ( !lightingPassData.frameBuffer )
     {
-        LOG_ERR( "Could not create gbuffer framebuffer" );
         return false;
     }
-    PG_DEBUG_MARKER_SET_FRAMEBUFFER_NAME( lightingPassData.frameBuffer, "lighting pass" );
 
     return true;
 }
@@ -656,6 +619,10 @@ namespace RenderSystem
             return false;
         }
 
+        s_gpuSceneConstantBuffers.Map();
+        s_gpuPointLightBuffers.Map();
+        s_gpuSpotLightBuffers.Map();
+
         return true;
     }
 
@@ -663,10 +630,14 @@ namespace RenderSystem
     {
         g_renderState.device.WaitForIdle();
 
+        s_gpuSceneConstantBuffers.UnMap();
+        s_gpuPointLightBuffers.UnMap();
+        s_gpuSpotLightBuffers.UnMap();
+
         shadowPassData.depthAttachment.Free();
         shadowPassData.renderPass.Free();
         shadowPassData.pipeline.Free();
-        vkDestroyFramebuffer( g_renderState.device.GetHandle(), shadowPassData.frameBuffer, nullptr );
+        shadowPassData.frameBuffer.Free();
 
         s_descriptorPool.Free();
 
@@ -680,7 +651,7 @@ namespace RenderSystem
         gBufferPassData.gbuffer.diffuse.Free();
         gBufferPassData.gbuffer.specular.Free();
         gBufferPassData.renderPass.Free();
-        vkDestroyFramebuffer( g_renderState.device.GetHandle(), gBufferPassData.frameBuffer, nullptr );
+        gBufferPassData.frameBuffer.Free();
         gBufferPassData.pipeline.Free();
         for ( auto& layout : gBufferPassData.descriptorSetLayouts )
         {
@@ -689,7 +660,7 @@ namespace RenderSystem
 
         lightingPassData.renderPass.Free();
         lightingPassData.outputTexture.Free();
-        vkDestroyFramebuffer( g_renderState.device.GetHandle(), lightingPassData.frameBuffer, nullptr );
+        lightingPassData.frameBuffer.Free();
         lightingPassData.pipeline.Free();
         for ( auto& layout : lightingPassData.descriptorSetLayouts )
         {
@@ -707,19 +678,7 @@ namespace RenderSystem
     void ShadowPass( Scene* scene, CommandBuffer& cmdBuf )
     {
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Shadow Pass", glm::vec4( .2, .2, .4, 1 ) );
-        // cmdBuf.BeginRenderPass( shadowPassData.renderPass, shadowPassData.frameBuffer );
-        VkRenderPassBeginInfo renderPassInfo = {};
-        renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass        = shadowPassData.renderPass.GetHandle();
-        renderPassInfo.framebuffer       = shadowPassData.frameBuffer;
-        renderPassInfo.renderArea.offset = { 0, 0 };
-        renderPassInfo.renderArea.extent = { DIRECTIONAL_SHADOW_MAP_RESOLUTION, DIRECTIONAL_SHADOW_MAP_RESOLUTION };
-
-        VkClearValue clearValues[1] = {};
-        clearValues[0].depthStencil = { 1.0f, 0 };
-        renderPassInfo.clearValueCount = 1;
-        renderPassInfo.pClearValues    = clearValues;
-        vkCmdBeginRenderPass( cmdBuf.GetHandle(), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
+        cmdBuf.BeginRenderPass( shadowPassData.renderPass, shadowPassData.frameBuffer, { DIRECTIONAL_SHADOW_MAP_RESOLUTION, DIRECTIONAL_SHADOW_MAP_RESOLUTION } );
 
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Shadow rigid models", glm::vec4( .2, .6, .4, 1 ) );
         cmdBuf.BindRenderPipeline( shadowPassData.pipeline );
@@ -742,25 +701,25 @@ namespace RenderSystem
         });
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
 
-        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Shadow animated models", glm::vec4( .6, .2, .4, 1 ) );
-        auto& animPipeline = AnimationSystem::renderData.animatedPipeline;
-        scene->registry.view< Animator, SkinnedRenderer, Transform >().each( [&]( Animator& animator, SkinnedRenderer& renderer, Transform& transform )
-        {
-            const auto& model = renderer.model;
-            auto MVP          = shadowPassData.LSM * transform.GetModelMatrix();
-            vkCmdPushConstants( cmdBuf.GetHandle(), animPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( glm::mat4 ), &MVP[0][0] );
-
-            cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
-            cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
-
-            for ( size_t i = 0; i < renderer.model->meshes.size(); ++i )
-            {
-                const auto& mesh = model->meshes[i];
-                PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
-                cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
-            }
-        });
-        PG_DEBUG_MARKER_END_REGION( cmdBuf );
+        // PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Shadow animated models", glm::vec4( .6, .2, .4, 1 ) );
+        // auto& animPipeline = AnimationSystem::renderData.animatedPipeline;
+        // scene->registry.view< Animator, SkinnedRenderer, Transform >().each( [&]( Animator& animator, SkinnedRenderer& renderer, Transform& transform )
+        // {
+        //     const auto& model = renderer.model;
+        //     auto MVP          = shadowPassData.LSM * transform.GetModelMatrix();
+        //     vkCmdPushConstants( cmdBuf.GetHandle(), animPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( glm::mat4 ), &MVP[0][0] );
+        // 
+        //     cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
+        //     cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
+        // 
+        //     for ( size_t i = 0; i < renderer.model->meshes.size(); ++i )
+        //     {
+        //         const auto& mesh = model->meshes[i];
+        //         PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
+        //         cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
+        //     }
+        // });
+        // PG_DEBUG_MARKER_END_REGION( cmdBuf );
 
         cmdBuf.EndRenderPass();
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
@@ -794,17 +753,9 @@ namespace RenderSystem
         scbuf.numPointLights = static_cast< uint32_t >( scene->pointLights.size() );
         scbuf.numSpotLights  = static_cast< uint32_t >( scene->spotLights.size() );
         scbuf.shadowTextureIndex = shadowPassData.depthAttachment.GetShaderSlot();
-        s_gpuSceneConstantBuffers.Map();
         memcpy( s_gpuSceneConstantBuffers.MappedPtr(), &scbuf, sizeof( SceneConstantBufferData ) );
-        s_gpuSceneConstantBuffers.UnMap();
-
-        s_gpuPointLightBuffers.Map();
         memcpy( s_gpuPointLightBuffers.MappedPtr(), scene->pointLights.data(), scene->pointLights.size() * sizeof( PointLight ) );
-        s_gpuPointLightBuffers.UnMap();
-
-        s_gpuSpotLightBuffers.Map();
         memcpy( s_gpuSpotLightBuffers.MappedPtr(), scene->spotLights.data(), scene->spotLights.size() * sizeof( SpotLight ) );
-        s_gpuSpotLightBuffers.UnMap();
 
         AnimationSystem::UploadToGpu( scene, imageIndex );
 
@@ -814,7 +765,7 @@ namespace RenderSystem
         ShadowPass( scene, cmdBuf );
 
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "GBuffer Pass", glm::vec4( .8, .8, .2, 1 ) );
-        cmdBuf.BeginRenderPass( gBufferPassData.renderPass, gBufferPassData.frameBuffer );
+        cmdBuf.BeginRenderPass( gBufferPassData.renderPass, gBufferPassData.frameBuffer, g_renderState.swapChain.extent );
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "GBuffer -- Rigid Models", glm::vec4( .2, .8, .2, 1 ) );
         cmdBuf.BindRenderPipeline( gBufferPassData.pipeline );
         cmdBuf.BindDescriptorSets( 1, &descriptorSets.scene, gBufferPassData.pipeline, PG_SCENE_CONSTANT_BUFFER_SET );
@@ -865,7 +816,7 @@ namespace RenderSystem
 
 
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Lighting Pass", glm::vec4( .8, 0, .8, 1 ) );
-        cmdBuf.BeginRenderPass( lightingPassData.renderPass, lightingPassData.frameBuffer );
+        cmdBuf.BeginRenderPass( lightingPassData.renderPass, lightingPassData.frameBuffer, g_renderState.swapChain.extent );
 
         cmdBuf.BindRenderPipeline( lightingPassData.pipeline );
         cmdBuf.BindDescriptorSets( 1, &descriptorSets.scene, lightingPassData.pipeline, PG_SCENE_CONSTANT_BUFFER_SET );
@@ -882,7 +833,7 @@ namespace RenderSystem
 
         // Post Processing Render Pass
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Post Process Pass", glm::vec4( .2, .2, 1, 1 ) );
-        cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex] );
+        cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex], g_renderState.swapChain.extent );
         
         cmdBuf.BindRenderPipeline( postProcessPassData.pipeline );
         cmdBuf.BindDescriptorSets( 1, &descriptorSets.postProcessInputColorTex, postProcessPassData.pipeline, 0 );

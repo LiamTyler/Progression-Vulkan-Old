@@ -73,7 +73,6 @@ namespace Gfx
 
     class RenderPassDescriptor
     {
-    friend class RenderPass;
     public:
         RenderPassDescriptor() = default;
 
@@ -93,7 +92,7 @@ namespace Gfx
 
         RenderPassDescriptor desc;
 
-    // private:
+    private:
         VkRenderPass m_handle = VK_NULL_HANDLE;
         VkDevice     m_device = VK_NULL_HANDLE;
     };

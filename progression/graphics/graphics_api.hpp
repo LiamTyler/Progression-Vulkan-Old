@@ -4,6 +4,7 @@
 #include "graphics/graphics_api/command_buffer.hpp"
 #include "graphics/graphics_api/descriptor.hpp"
 #include "graphics/graphics_api/device.hpp"
+#include "graphics/graphics_api/framebuffer.hpp"
 #include "graphics/graphics_api/pipeline.hpp"
 #include "graphics/graphics_api/render_pass.hpp"
 #include "graphics/graphics_api/sampler.hpp"

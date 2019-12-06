@@ -1,6 +1,7 @@
 #pragma once
 
 #include "graphics/graphics_api/render_pass.hpp"
+#include "graphics/graphics_api/framebuffer.hpp"
 #include "graphics/graphics_api/pipeline.hpp"
 #include <vulkan/vulkan.h>
 
@@ -29,7 +30,7 @@ namespace Gfx
         void Free();
         bool BeginRecording( CommandBufferUsage flags = 0 ) const;
         bool EndRecording() const;
-        void BeginRenderPass( const RenderPass& renderPass, VkFramebuffer framebuffer ) const;
+        void BeginRenderPass( const RenderPass& renderPass, const Framebuffer& framebuffer, const VkExtent2D& extent ) const;
         void EndRenderPass() const;
         void BindRenderPipeline( const Pipeline& pipeline ) const;
         void BindDescriptorSets( uint32_t numSets, DescriptorSet* sets, const Pipeline& pipeline, uint32_t firstSet = 0 ) const;

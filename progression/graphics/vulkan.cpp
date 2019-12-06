@@ -557,11 +557,11 @@ static bool CreateSwapChainFrameBuffers()
     for ( size_t i = 0; i < g_renderState.swapChain.images.size(); ++i )
     {
         attachments[0] = g_renderState.swapChain.imageViews[i];
-        if ( vkCreateFramebuffer( g_renderState.device.GetHandle(), &framebufferInfo, nullptr, &g_renderState.swapChainFramebuffers[i] ) != VK_SUCCESS )
+        g_renderState.swapChainFramebuffers[i] = g_renderState.device.NewFramebuffer( framebufferInfo, "swapchain " + std::to_string( i ) );
+        if ( !g_renderState.swapChainFramebuffers[i] )
         {
             return false;
         }
-        PG_DEBUG_MARKER_SET_FRAMEBUFFER_NAME( g_renderState.swapChainFramebuffers[i], "swapchain " + std::to_string( i ) );
     }
 
     return true;
@@ -781,7 +781,7 @@ void VulkanShutdown()
     g_renderState.transientCommandPool.Free();
     for ( auto framebuffer : g_renderState.swapChainFramebuffers )
     {
-        vkDestroyFramebuffer( dev, framebuffer, nullptr );
+        framebuffer.Free();
     }
 
     g_renderState.renderPass.Free();

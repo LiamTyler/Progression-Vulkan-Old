@@ -42,14 +42,14 @@ namespace Gfx
         return vkEndCommandBuffer( m_handle ) == VK_SUCCESS;
     }
 
-    void CommandBuffer::BeginRenderPass( const RenderPass& renderPass, VkFramebuffer framebuffer ) const
+    void CommandBuffer::BeginRenderPass( const RenderPass& renderPass, const Framebuffer& framebuffer, const VkExtent2D& extent ) const
     {
         VkRenderPassBeginInfo renderPassInfo = {};
         renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass        = renderPass.GetHandle();
-        renderPassInfo.framebuffer       = framebuffer;
+        renderPassInfo.framebuffer       = framebuffer.GetHandle();
         renderPassInfo.renderArea.offset = { 0, 0 };
-        renderPassInfo.renderArea.extent = g_renderState.swapChain.extent;
+        renderPassInfo.renderArea.extent = extent;
 
         VkClearValue clearValues[9] = {};
         size_t i = 0;

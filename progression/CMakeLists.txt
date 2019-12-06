@@ -29,6 +29,8 @@ set(
     graphics/graphics_api/descriptor.hpp
     graphics/graphics_api/device.cpp
     graphics/graphics_api/device.hpp
+    graphics/graphics_api/framebuffer.cpp
+    graphics/graphics_api/framebuffer.hpp
     graphics/graphics_api/pipeline.cpp
     graphics/graphics_api/pipeline.hpp
     graphics/graphics_api/render_pass.cpp

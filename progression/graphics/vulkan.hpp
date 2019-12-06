@@ -60,7 +60,7 @@ namespace Gfx
         PhysicalDeviceInfo physicalDeviceInfo;
         SwapChain swapChain;
         Texture depthTex;
-        std::vector< VkFramebuffer > swapChainFramebuffers;
+        std::vector< Framebuffer > swapChainFramebuffers;
         CommandPool graphicsCommandPool;
         CommandPool transientCommandPool;
         CommandPool computeCommandPool;

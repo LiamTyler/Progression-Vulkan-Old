@@ -542,8 +542,8 @@ namespace Gfx
             attachments[i].storeOp        = PGToVulkanStoreAction( attach.storeAction );
             attachments[i].stencilLoadOp  = PGToVulkanLoadAction( LoadAction::DONT_CARE );
             attachments[i].stencilStoreOp = PGToVulkanStoreAction( StoreAction::DONT_CARE );
-            attachments[i].initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-            attachments[i].finalLayout    = PGToVulkanImageLayout( attach.finalLayout );  //VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            attachments[i].initialLayout  = PGToVulkanImageLayout( attach.initialLayout );
+            attachments[i].finalLayout    = PGToVulkanImageLayout( attach.finalLayout );
 
             attachmentRefs.push_back( {} );
             attachmentRefs[i].attachment = static_cast< uint32_t>( i );
@@ -557,7 +557,7 @@ namespace Gfx
         depthAttachment.storeOp        = PGToVulkanStoreAction( desc.depthAttachmentDescriptor.storeAction );
         depthAttachment.stencilLoadOp  = PGToVulkanLoadAction( LoadAction::DONT_CARE );
         depthAttachment.stencilStoreOp = PGToVulkanStoreAction( StoreAction::DONT_CARE );
-        depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+        depthAttachment.initialLayout  = PGToVulkanImageLayout( desc.depthAttachmentDescriptor.initialLayout );
         depthAttachment.finalLayout    = PGToVulkanImageLayout( desc.depthAttachmentDescriptor.finalLayout );
 
         VkAttachmentReference depthAttachmentRef = {};
@@ -598,6 +598,49 @@ namespace Gfx
         PG_DEBUG_MARKER_IF_STR_NOT_EMPTY( name, PG_DEBUG_MARKER_SET_RENDER_PASS_NAME( pass, name ) );
 
         return pass;
+    }
+
+    Framebuffer Device::NewFramebuffer( const std::vector< Texture* >& attachments, const RenderPass& renderPass, const std::string& name ) const
+    {
+        PG_ASSERT( 0 < attachments.size() && attachments.size() <= 9 );
+        VkImageView frameBufferAttachments[9];
+        for ( size_t i = 0; i < attachments.size(); ++i )
+        {
+            PG_ASSERT( attachments[i] );
+            frameBufferAttachments[i] = attachments[i]->GetView();
+        }
+
+        VkFramebufferCreateInfo framebufferInfo = {};
+        framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass      = renderPass.GetHandle();
+        framebufferInfo.attachmentCount = static_cast< uint32_t >( attachments.size() );
+        framebufferInfo.pAttachments    = frameBufferAttachments;
+        framebufferInfo.width           = attachments[0]->GetWidth();
+        framebufferInfo.height          = attachments[0]->GetHeight();
+        framebufferInfo.layers          = 1;
+
+        Framebuffer ret;
+        ret.m_device = m_handle;
+        if ( vkCreateFramebuffer( m_handle, &framebufferInfo, nullptr, &ret.m_handle ) != VK_SUCCESS )
+        {
+            ret.m_handle = VK_NULL_HANDLE;
+        }
+        PG_DEBUG_MARKER_IF_STR_NOT_EMPTY( name, PG_DEBUG_MARKER_SET_FRAMEBUFFER_NAME( ret, name ) );
+
+        return ret;
+    }
+
+    Framebuffer Device::NewFramebuffer( const VkFramebufferCreateInfo& info, const std::string& name ) const
+    {
+        Framebuffer ret;
+        ret.m_device = m_handle;
+        if ( vkCreateFramebuffer( m_handle, &info, nullptr, &ret.m_handle ) != VK_SUCCESS )
+        {
+            ret.m_handle = VK_NULL_HANDLE;
+        }
+        PG_DEBUG_MARKER_IF_STR_NOT_EMPTY( name, PG_DEBUG_MARKER_SET_FRAMEBUFFER_NAME( ret, name ) );
+
+        return ret;
     }
 
     void Device::Copy( Buffer dst, Buffer src ) const
