@@ -88,6 +88,7 @@ namespace TextureManager
         {
             return;
         }
+
         s_setWrites.resize( s_slotsAddedSinceLastUpdate.size(), {} );
         s_imageInfos.resize( s_slotsAddedSinceLastUpdate.size() );
         for ( size_t i = 0; i < s_setWrites.size(); ++i )
@@ -96,18 +97,9 @@ namespace TextureManager
             s_imageInfos[i].imageView   = s_slotsAddedSinceLastUpdate[i].second.view;
             s_imageInfos[i].sampler     = s_slotsAddedSinceLastUpdate[i].second.sampler;
 
-            s_setWrites[i].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            s_setWrites[i].dstBinding       = 0;
-            s_setWrites[i].dstArrayElement  = static_cast< uint32_t >( s_slotsAddedSinceLastUpdate[i].first );
-            s_setWrites[i].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            s_setWrites[i].descriptorCount  = 1;
-            s_setWrites[i].pImageInfo       = &s_imageInfos[i];
+            s_setWrites[i] = WriteDescriptorSet( textureDescriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &s_imageInfos[i], 1, static_cast< uint32_t >( s_slotsAddedSinceLastUpdate[i].first ) );
         }
 
-        for ( size_t i = 0; i < s_setWrites.size(); ++i )
-        {
-            s_setWrites[i].dstSet = textureDescriptorSet.GetHandle();
-        }
         vkUpdateDescriptorSets( g_renderState.device.GetHandle(), static_cast< uint32_t >( s_setWrites.size() ), s_setWrites.data(), 0, nullptr );
 
         s_slotsAddedSinceLastUpdate.clear();

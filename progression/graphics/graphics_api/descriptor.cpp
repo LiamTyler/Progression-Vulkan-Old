@@ -19,6 +19,53 @@ namespace Gfx
         return m_handle != VK_NULL_HANDLE;
     }
 
+    VkWriteDescriptorSet WriteDescriptorSet( const DescriptorSet& set, VkDescriptorType type, uint32_t binding, VkDescriptorBufferInfo* bufferInfo, uint32_t descriptorCount, uint32_t arrayElement )
+    {
+		VkWriteDescriptorSet writeDescriptorSet {};
+		writeDescriptorSet.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeDescriptorSet.dstSet          = set.GetHandle();
+		writeDescriptorSet.descriptorType  = type;
+		writeDescriptorSet.dstBinding      = binding;
+		writeDescriptorSet.pBufferInfo     = bufferInfo;
+		writeDescriptorSet.descriptorCount = descriptorCount;
+        writeDescriptorSet.dstArrayElement = arrayElement;
+
+		return writeDescriptorSet;
+	}
+
+    VkWriteDescriptorSet WriteDescriptorSet( const DescriptorSet& set, VkDescriptorType type, uint32_t binding, VkDescriptorImageInfo* imageInfo, uint32_t descriptorCount, uint32_t arrayElement )
+    {
+		VkWriteDescriptorSet writeDescriptorSet {};
+		writeDescriptorSet.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeDescriptorSet.dstSet          = set.GetHandle();
+		writeDescriptorSet.descriptorType  = type;
+		writeDescriptorSet.dstBinding      = binding;
+		writeDescriptorSet.pImageInfo      = imageInfo;
+		writeDescriptorSet.descriptorCount = descriptorCount;
+        writeDescriptorSet.dstArrayElement = arrayElement;
+
+		return writeDescriptorSet;
+	}
+
+    VkDescriptorImageInfo DescriptorImageInfo( const Gfx::Texture& tex, VkImageLayout imageLayout )
+    {
+        VkDescriptorImageInfo imageInfo = {};
+        imageInfo.imageLayout = imageLayout;
+        imageInfo.sampler     = tex.GetSampler()->GetHandle();
+        imageInfo.imageView   = tex.GetView();
+
+        return imageInfo;
+    }
+
+    VkDescriptorBufferInfo DescriptorBufferInfo( const Gfx::Buffer& buffer, VkDeviceSize offset, VkDeviceSize range )
+    {
+        VkDescriptorBufferInfo info;
+        info.buffer = buffer.GetHandle();
+        info.offset = offset;
+        info.range  = range;
+
+        return info;
+    }
 
     void DescriptorSetLayout::Free()
     {

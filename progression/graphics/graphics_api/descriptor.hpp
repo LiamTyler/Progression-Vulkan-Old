@@ -1,5 +1,7 @@
 #pragma once
 
+#include "graphics/graphics_api/buffer.hpp"
+#include "graphics/graphics_api/texture.hpp"
 #include <string>
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -21,6 +23,11 @@ namespace Gfx
         VkDescriptorSet m_handle = VK_NULL_HANDLE;
     };
 
+    VkWriteDescriptorSet WriteDescriptorSet( const DescriptorSet& set, VkDescriptorType type, uint32_t binding, VkDescriptorBufferInfo* bufferInfo, uint32_t descriptorCount = 1, uint32_t arrayElement = 0 );
+    VkWriteDescriptorSet WriteDescriptorSet( const DescriptorSet& set, VkDescriptorType type, uint32_t binding, VkDescriptorImageInfo* imageInfo, uint32_t descriptorCount = 1, uint32_t arrayElement = 0 );
+    VkDescriptorImageInfo DescriptorImageInfo( const Gfx::Texture& tex, VkImageLayout imageLayout );
+    VkDescriptorBufferInfo DescriptorBufferInfo( const Gfx::Buffer& buffer, VkDeviceSize offset = 0, VkDeviceSize range = VK_WHOLE_SIZE );
+
 
     struct DescriptorSetLayoutData
     {
@@ -30,6 +37,7 @@ namespace Gfx
     };
 
     std::vector< DescriptorSetLayoutData > CombineDescriptorSetLayouts( std::vector< DescriptorSetLayoutData >& layoutDatas );
+
 
     class DescriptorSetLayout
     {

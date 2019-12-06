@@ -449,125 +449,55 @@ bool InitDescriptorPoolAndPrimarySets()
     descriptorSets.lights                   = s_descriptorPool.NewDescriptorSet( lightingPassData.descriptorSetLayouts[3], "scene lights" );
     descriptorSets.postProcessInputColorTex = s_descriptorPool.NewDescriptorSet( postProcessPassData.descriptorSetLayouts[0], "post process input tex" );
     
+    std::vector< VkWriteDescriptorSet > writeDescriptorSets;
+	std::vector< VkDescriptorImageInfo > imageDescriptors;
+	std::vector< VkDescriptorBufferInfo > bufferDescriptors;
+
     auto dummyImage = ResourceManager::Get< Image >( "RENDER_SYSTEM_DUMMY_TEXTURE" );
     PG_ASSERT( dummyImage );
-    VkDescriptorImageInfo imageInfo;
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    imageInfo.sampler     = dummyImage->GetTexture()->GetSampler()->GetHandle();
-    imageInfo.imageView   = dummyImage->GetTexture()->GetView();
-    std::vector< VkDescriptorImageInfo > imageInfos( PG_MAX_NUM_TEXTURES, imageInfo );
 
-    VkDescriptorBufferInfo bufferInfo = {};
-    bufferInfo.buffer = s_gpuSceneConstantBuffers.GetHandle();
-    bufferInfo.offset = 0;
-    bufferInfo.range  = VK_WHOLE_SIZE;
+    // GBuffer Pass (some shared with lighting pass)
+    imageDescriptors = std::vector< VkDescriptorImageInfo >( PG_MAX_NUM_TEXTURES, DescriptorImageInfo( *dummyImage->GetTexture(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) );
 
-    VkWriteDescriptorSet descriptorWrite[4] = {};
-    descriptorWrite[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite[0].dstSet           = descriptorSets.scene.GetHandle();
-    descriptorWrite[0].dstBinding       = 0;
-    descriptorWrite[0].dstArrayElement  = 0;
-    descriptorWrite[0].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptorWrite[0].descriptorCount  = 1;
-    descriptorWrite[0].pBufferInfo      = &bufferInfo;
+    bufferDescriptors =
+    {
+        DescriptorBufferInfo( s_gpuSceneConstantBuffers ),
+        DescriptorBufferInfo( s_gpuPointLightBuffers ),
+        DescriptorBufferInfo( s_gpuSpotLightBuffers ),
+    };
+    writeDescriptorSets =
+    {
+        WriteDescriptorSet( descriptorSets.scene, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0, &bufferDescriptors[0] ),
+        WriteDescriptorSet( descriptorSets.arrayOfTextures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, imageDescriptors.data(), static_cast< uint32_t >( imageDescriptors.size() ) ),
+        WriteDescriptorSet( descriptorSets.lights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &bufferDescriptors[1] ),
+        WriteDescriptorSet( descriptorSets.lights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2, &bufferDescriptors[2] ),
+    };
+    g_renderState.device.UpdateDescriptorSets( static_cast< uint32_t >( writeDescriptorSets.size() ), writeDescriptorSets.data() );
 
-    descriptorWrite[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite[1].dstSet           = descriptorSets.arrayOfTextures.GetHandle();
-    descriptorWrite[1].dstBinding       = 0;
-    descriptorWrite[1].dstArrayElement  = 0;
-    descriptorWrite[1].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptorWrite[1].descriptorCount  = static_cast< uint32_t >( imageInfos.size() );
-    descriptorWrite[1].pImageInfo       = imageInfos.data();
+    // Lighting Pass
+    imageDescriptors =
+    {
+        DescriptorImageInfo( gBufferPassData.gbuffer.positions, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( gBufferPassData.gbuffer.normals, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( gBufferPassData.gbuffer.diffuse, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( gBufferPassData.gbuffer.specular, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+    };
+    writeDescriptorSets =
+    {
+        WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageDescriptors[0] ),
+        WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, &imageDescriptors[1] ),
+        WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2, &imageDescriptors[2] ),
+        WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3, &imageDescriptors[3] ),
+    };
+    g_renderState.device.UpdateDescriptorSets( static_cast< uint32_t >( writeDescriptorSets.size() ), writeDescriptorSets.data() );
 
-    VkDescriptorBufferInfo bufferInfo2 = {};
-    bufferInfo2.buffer = s_gpuPointLightBuffers.GetHandle();
-    bufferInfo2.offset = 0;
-    bufferInfo2.range  = VK_WHOLE_SIZE;
-    descriptorWrite[2].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite[2].dstSet           = descriptorSets.lights.GetHandle();
-    descriptorWrite[2].dstBinding       = 1;
-    descriptorWrite[2].dstArrayElement  = 0;
-    descriptorWrite[2].descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    descriptorWrite[2].descriptorCount  = 1;
-    descriptorWrite[2].pBufferInfo      = &bufferInfo2;
-
-    VkDescriptorBufferInfo bufferInfo3 = {};
-    bufferInfo3.buffer = s_gpuSpotLightBuffers.GetHandle();
-    bufferInfo3.offset = 0;
-    bufferInfo3.range  = VK_WHOLE_SIZE;
-    descriptorWrite[3].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite[3].dstSet           = descriptorSets.lights.GetHandle();
-    descriptorWrite[3].dstBinding       = 2;
-    descriptorWrite[3].dstArrayElement  = 0;
-    descriptorWrite[3].descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    descriptorWrite[3].descriptorCount  = 1;
-    descriptorWrite[3].pBufferInfo      = &bufferInfo3;
-
-    g_renderState.device.UpdateDescriptorSets( 4, descriptorWrite );
-
-    // lighting pass shader
-    VkDescriptorImageInfo gbufferImageInfos[4];
-    gbufferImageInfos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    gbufferImageInfos[0].sampler     = gBufferPassData.gbuffer.positions.GetSampler()->GetHandle();
-    gbufferImageInfos[0].imageView   = gBufferPassData.gbuffer.positions.GetView();
-    gbufferImageInfos[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    gbufferImageInfos[1].sampler     = gBufferPassData.gbuffer.normals.GetSampler()->GetHandle();
-    gbufferImageInfos[1].imageView   = gBufferPassData.gbuffer.normals.GetView();
-    gbufferImageInfos[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    gbufferImageInfos[2].sampler     = gBufferPassData.gbuffer.diffuse.GetSampler()->GetHandle();
-    gbufferImageInfos[2].imageView   = gBufferPassData.gbuffer.diffuse.GetView();
-    gbufferImageInfos[3].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    gbufferImageInfos[3].sampler     = gBufferPassData.gbuffer.specular.GetSampler()->GetHandle();
-    gbufferImageInfos[3].imageView   = gBufferPassData.gbuffer.specular.GetView();
-
-    descriptorWrite[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite[0].dstSet           = descriptorSets.gBufferAttachments.GetHandle();
-    descriptorWrite[0].dstBinding       = 0;
-    descriptorWrite[0].dstArrayElement  = 0;
-    descriptorWrite[0].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptorWrite[0].descriptorCount  = 1;
-    descriptorWrite[0].pImageInfo       = &gbufferImageInfos[0];
-
-    descriptorWrite[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite[1].dstSet           = descriptorSets.gBufferAttachments.GetHandle();
-    descriptorWrite[1].dstBinding       = 1;
-    descriptorWrite[1].dstArrayElement  = 0;
-    descriptorWrite[1].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptorWrite[1].descriptorCount  = 1;
-    descriptorWrite[1].pImageInfo       = &gbufferImageInfos[1];
-
-    descriptorWrite[2].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite[2].dstSet           = descriptorSets.gBufferAttachments.GetHandle();
-    descriptorWrite[2].dstBinding       = 2;
-    descriptorWrite[2].dstArrayElement  = 0;
-    descriptorWrite[2].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptorWrite[2].descriptorCount  = 1;
-    descriptorWrite[2].pImageInfo       = &gbufferImageInfos[2];
-
-    descriptorWrite[3].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite[3].dstSet           = descriptorSets.gBufferAttachments.GetHandle();
-    descriptorWrite[3].dstBinding       = 3;
-    descriptorWrite[3].dstArrayElement  = 0;
-    descriptorWrite[3].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptorWrite[3].descriptorCount  = 1;
-    descriptorWrite[3].pImageInfo       = &gbufferImageInfos[3];
-
-    g_renderState.device.UpdateDescriptorSets( 4, descriptorWrite );
-
-    // post process shader
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    imageInfo.sampler     = lightingPassData.outputTexture.GetSampler()->GetHandle();
-    imageInfo.imageView   = lightingPassData.outputTexture.GetView();
-
-    descriptorWrite[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite[0].dstSet           = descriptorSets.postProcessInputColorTex.GetHandle();
-    descriptorWrite[0].dstBinding       = 0;
-    descriptorWrite[0].dstArrayElement  = 0;
-    descriptorWrite[0].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptorWrite[0].descriptorCount  = 1;
-    descriptorWrite[0].pImageInfo       = &imageInfo;
-
-    g_renderState.device.UpdateDescriptorSets( 1, descriptorWrite );
+    // Post Process Pass
+    VkDescriptorImageInfo imageInfo = DescriptorImageInfo( lightingPassData.outputTexture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+    writeDescriptorSets =
+    {
+        WriteDescriptorSet( descriptorSets.postProcessInputColorTex, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageInfo ),
+    };
+    g_renderState.device.UpdateDescriptorSets( static_cast< uint32_t >( writeDescriptorSets.size() ), writeDescriptorSets.data() );
 
     return true;
 }
