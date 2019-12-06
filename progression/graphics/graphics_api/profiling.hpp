@@ -23,3 +23,7 @@ namespace Profile
 } // namespace Profile
 } // namespace Gfx
 } // namespace Progression
+
+#define PG_PROFILE_RESET( cmdbuf ) Progression::Gfx::Profile::Reset( cmdbuf );
+#define PG_PROFILE_GET_RESULTS() Progression::Gfx::Profile::GetResults();
+#define PG_PROFILE_TIMESTAMP( cmdbuf, name ) Progression::Gfx::Profile::Timestamp( cmdbuf, name );

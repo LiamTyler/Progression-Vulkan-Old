@@ -695,8 +695,8 @@ namespace RenderSystem
 
         auto& cmdBuf = g_renderState.graphicsCommandBuffer;
         cmdBuf.BeginRecording();
-        Profile::Reset( cmdBuf );
-        Profile::Timestamp( cmdBuf, "frameStart" );
+        PG_PROFILE_RESET( cmdBuf );
+        PG_PROFILE_TIMESTAMP( cmdBuf, "frameStart" );
 
         ShadowPass( scene, cmdBuf );
 
@@ -780,14 +780,14 @@ namespace RenderSystem
         
         cmdBuf.EndRenderPass(); // end post process pass
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
-        Profile::Timestamp( cmdBuf, "frameEnd" );
+        PG_PROFILE_TIMESTAMP( cmdBuf, "frameEnd" );
 
         cmdBuf.EndRecording();
         g_renderState.device.SubmitRenderCommands( 1, &cmdBuf );
         g_renderState.device.SubmitFrame( imageIndex );
 
-        Profile::GetResults();
-        LOG( "time: ", Profile::GetDuration( "frameStart", "frameEnd" ) );
+        PG_PROFILE_GET_RESULTS();
+        //LOG( "time: ", Profile::GetDuration( "frameStart", "frameEnd" ) );
     } 
 
     void InitSamplers()

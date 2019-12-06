@@ -7,10 +7,16 @@
 #define MAX_NUM_QUERIES 100
 
 static std::vector< uint64_t > s_cpuQueries;
-static VkQueryPool s_queryPool;
+static VkQueryPool s_queryPool = VK_NULL_HANDLE;
 static float s_timestampPeriod;
 static std::unordered_map< std::string, int > s_nameToIndexMap;
 static uint32_t s_nextFreeIndex;
+
+#if !USING( SHIP_BUILD )
+#define PG_PROFILING IN_USE
+#else // #if !USING( SHIP_BUILD )
+#define PG_PROFILING NOT_USE
+#endif // #else // #if !USING( SHIP_BUILD )
 
 namespace Progression
 {
@@ -21,6 +27,9 @@ namespace Profile
 
     void Init()
     {
+        #if !USING( PG_PROFILING )
+            return;
+        #endif // #if !USING( SHIP_BUILD )
         VkQueryPoolCreateInfo createInfo = {};
         createInfo.sType        = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
         createInfo.pNext        = nullptr;
@@ -36,7 +45,10 @@ namespace Profile
 
     void Shutdown()
     {
-        vkDestroyQueryPool( g_renderState.device.GetHandle(), s_queryPool, nullptr );
+        if ( s_queryPool != VK_NULL_HANDLE )
+        {
+            vkDestroyQueryPool( g_renderState.device.GetHandle(), s_queryPool, nullptr );
+        }
     }
 
     void Reset( const CommandBuffer& cmdbuf )
@@ -59,12 +71,18 @@ namespace Profile
 
     uint64_t GetTimestamp( const std::string& name )
     {
+        #if !USING( PG_PROFILING )
+            return 0;
+        #endif // #if !USING( SHIP_BUILD )
         PG_ASSERT( s_nameToIndexMap.find( name ) != s_nameToIndexMap.end() );
         return s_cpuQueries[s_nameToIndexMap[name]];
     }
 
     float GetDuration( const std::string& start, const std::string& end )
     {
+        #if !USING( PG_PROFILING )
+            return 0;
+        #endif // #if !USING( SHIP_BUILD )
         return ( GetTimestamp( end ) - GetTimestamp( start ) ) / s_timestampPeriod / 1e6f;
     }
 
