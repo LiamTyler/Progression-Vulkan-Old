@@ -6,6 +6,7 @@
 #include "graphics/graphics_api/device.hpp"
 #include "graphics/graphics_api/framebuffer.hpp"
 #include "graphics/graphics_api/pipeline.hpp"
+#include "graphics/graphics_api/profiling.hpp"
 #include "graphics/graphics_api/render_pass.hpp"
 #include "graphics/graphics_api/sampler.hpp"
 #include "graphics/graphics_api/synchronization.hpp"

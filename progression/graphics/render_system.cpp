@@ -553,12 +553,16 @@ namespace RenderSystem
         s_gpuPointLightBuffers.Map();
         s_gpuSpotLightBuffers.Map();
 
+        Profile::Init();
+
         return true;
     }
 
     void Shutdown()
     {
         g_renderState.device.WaitForIdle();
+
+        Profile::Shutdown();
 
         s_gpuSceneConstantBuffers.UnMap();
         s_gpuPointLightBuffers.UnMap();
@@ -691,6 +695,8 @@ namespace RenderSystem
 
         auto& cmdBuf = g_renderState.graphicsCommandBuffer;
         cmdBuf.BeginRecording();
+        Profile::Reset( cmdBuf );
+        Profile::Timestamp( cmdBuf, "frameStart" );
 
         ShadowPass( scene, cmdBuf );
 
@@ -774,10 +780,14 @@ namespace RenderSystem
         
         cmdBuf.EndRenderPass(); // end post process pass
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
+        Profile::Timestamp( cmdBuf, "frameEnd" );
 
         cmdBuf.EndRecording();
         g_renderState.device.SubmitRenderCommands( 1, &cmdBuf );
         g_renderState.device.SubmitFrame( imageIndex );
+
+        Profile::GetResults();
+        LOG( "time: ", Profile::GetDuration( "frameStart", "frameEnd" ) );
     } 
 
     void InitSamplers()

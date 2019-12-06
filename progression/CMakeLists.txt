@@ -33,6 +33,8 @@ set(
     graphics/graphics_api/framebuffer.hpp
     graphics/graphics_api/pipeline.cpp
     graphics/graphics_api/pipeline.hpp
+    graphics/graphics_api/profiling.cpp
+    graphics/graphics_api/profiling.hpp
     graphics/graphics_api/render_pass.cpp
     graphics/graphics_api/render_pass.hpp
     graphics/graphics_api/sampler.cpp
