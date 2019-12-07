@@ -17,10 +17,10 @@ namespace AnimationSystem
 
     struct RenderData
     {
-        std::vector< Gfx::Buffer > gpuBoneBuffers;
+        Gfx::Buffer gpuBoneBuffer;
         Gfx::Pipeline animatedPipeline;
         std::vector< Gfx::DescriptorSetLayout > descriptorSetLayouts;
-        std::vector< Gfx::DescriptorSet > animationBonesDescriptorSets;
+        Gfx::DescriptorSet animationBonesDescriptorSet;
         Gfx::DescriptorPool descriptorPool;
     };
 
@@ -32,7 +32,7 @@ namespace AnimationSystem
 
     void Update( Scene* scene );
 
-    void UploadToGpu( Scene* scene, uint32_t frameIndex );
+    void UploadToGpu( Scene* scene );
 
     uint32_t AllocateGPUTransforms( uint32_t numTransforms );
 

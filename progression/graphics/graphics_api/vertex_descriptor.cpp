@@ -6,6 +6,21 @@ namespace Progression
 namespace Gfx
 {
 
+    VertexBindingDescriptor::VertexBindingDescriptor( uint32_t _binding, uint32_t _stride, VertexInputRate _inputRate ) :
+        binding( _binding ),
+        stride( _stride ),
+        inputRate( _inputRate )
+    {
+    }
+
+    VertexAttributeDescriptor::VertexAttributeDescriptor( uint32_t loc, uint32_t bind, BufferDataType _format, uint32_t _offset ) :
+        location( loc ),
+        binding( bind ),
+        format( _format ),
+        offset( _offset )
+    {
+    }
+
     VertexInputDescriptor VertexInputDescriptor::Create( uint8_t numBinding, VertexBindingDescriptor* bindingDesc,
                                                          uint8_t numAttrib, VertexAttributeDescriptor* attribDesc )
     {

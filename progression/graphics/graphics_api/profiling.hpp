@@ -10,7 +10,7 @@ namespace Gfx
 namespace Profile
 {
 
-    void Init();
+    bool Init();
     void Shutdown();
 
     void Reset( const CommandBuffer& cmdbuf );

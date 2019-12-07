@@ -27,19 +27,15 @@ RenderData renderData;
 bool Init()
 {
     s_freeList = { { 0, MAX_ANIMATOR_NUM_TRANSFORMS } };
-    uint32_t numFrames = Gfx::MAX_FRAMES_IN_FLIGHT + 1;
-    renderData.gpuBoneBuffers.resize( numFrames );
-    for ( size_t i = 0; i < renderData.gpuBoneBuffers.size(); ++i )
-    {
-        renderData.gpuBoneBuffers[i] = g_renderState.device.NewBuffer( sizeof( glm::mat4 ) * MAX_ANIMATOR_NUM_TRANSFORMS,
-            BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT, "Bone Transforms " + std::to_string( i ) );
-    }
+    renderData.gpuBoneBuffer = g_renderState.device.NewBuffer( sizeof( glm::mat4 ) * MAX_ANIMATOR_NUM_TRANSFORMS,
+        BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT, "Bone Transforms" );
+    renderData.gpuBoneBuffer.Map();
 
     VkDescriptorPoolSize poolSize[1] = {};
     poolSize[0].type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    poolSize[0].descriptorCount = 1 * numFrames;
+    poolSize[0].descriptorCount = 1;
 
-    renderData.descriptorPool = g_renderState.device.NewDescriptorPool( 1, poolSize, numFrames, "animation system" );
+    renderData.descriptorPool = g_renderState.device.NewDescriptorPool( 1, poolSize, 1, "animation system" );
 
     auto animatedModelsVert    = ResourceManager::Get< Shader >( "animatedModelsVert" );
     auto forwardBlinnPhongFrag = ResourceManager::Get< Shader >( "forwardBlinnPhongFrag" );
@@ -48,26 +44,20 @@ bool Init()
     descriptorSetData.insert( descriptorSetData.end(), forwardBlinnPhongFrag->reflectInfo.descriptorSetLayouts.begin(), forwardBlinnPhongFrag->reflectInfo.descriptorSetLayouts.end() );
     auto combined = CombineDescriptorSetLayouts( descriptorSetData );
 
-    renderData.descriptorSetLayouts         = g_renderState.device.NewDescriptorSetLayouts( combined );
-    renderData.animationBonesDescriptorSets = renderData.descriptorPool.NewDescriptorSets( numFrames, renderData.descriptorSetLayouts[2], "skeletal animation" );
+    renderData.descriptorSetLayouts        = g_renderState.device.NewDescriptorSetLayouts( combined );
+    renderData.animationBonesDescriptorSet = renderData.descriptorPool.NewDescriptorSet( renderData.descriptorSetLayouts[2], "skeletal animation" );
 
-    for ( uint32_t i = 0; i < numFrames; i++ )
+    std::vector< VkWriteDescriptorSet > writeDescriptorSets;
+	std::vector< VkDescriptorBufferInfo > bufferDescriptors;
+    bufferDescriptors =
     {
-        VkWriteDescriptorSet descriptorWrite      = {};
-        VkDescriptorBufferInfo boneDataBufferInfo = {};
-        boneDataBufferInfo.buffer        = renderData.gpuBoneBuffers[i].GetHandle();
-        boneDataBufferInfo.offset        = 0;
-        boneDataBufferInfo.range         = VK_WHOLE_SIZE;
-        descriptorWrite.sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet           = renderData.animationBonesDescriptorSets[i].GetHandle();
-        descriptorWrite.dstBinding       = 0;
-        descriptorWrite.dstArrayElement  = 0;
-        descriptorWrite.descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        descriptorWrite.descriptorCount  = 1;
-        descriptorWrite.pBufferInfo      = &boneDataBufferInfo;
-    
-        g_renderState.device.UpdateDescriptorSets( 1, &descriptorWrite );
-    }
+        DescriptorBufferInfo( renderData.gpuBoneBuffer ),
+    };
+    writeDescriptorSets =
+    {
+        WriteDescriptorSet( renderData.animationBonesDescriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, &bufferDescriptors[0] ),
+    };
+    g_renderState.device.UpdateDescriptorSets( static_cast< uint32_t >( writeDescriptorSets.size() ), writeDescriptorSets.data() );
 
     VertexBindingDescriptor bindingDesc[5];
     bindingDesc[0].binding   = 0;
@@ -131,10 +121,8 @@ bool Init()
 void Shutdown()
 {
     g_renderState.device.WaitForIdle();
-    for ( auto& buf : renderData.gpuBoneBuffers )
-    {
-        buf.Free();
-    }
+    renderData.gpuBoneBuffer.UnMap();
+    renderData.gpuBoneBuffer.Free();
     for ( auto& layout : renderData.descriptorSetLayouts )
     {
         layout.Free();
@@ -187,17 +175,15 @@ void Update( Scene* scene )
     });
 }
 
-void UploadToGpu( Scene* scene, uint32_t frameIndex )
+void UploadToGpu( Scene* scene )
 {
     scene->registry.view< Animator >().each([&]( const entt::entity e, Animator& comp )
     {
         if ( comp.animation && comp.animationTime < comp.animation->duration )
         {
             auto& boneTransforms = comp.transformBuffer;
-            renderData.gpuBoneBuffers[frameIndex].Map();
-            glm::mat4* ptr = (glm::mat4*) renderData.gpuBoneBuffers[frameIndex].MappedPtr();
+            glm::mat4* ptr = (glm::mat4*) renderData.gpuBoneBuffer.MappedPtr();
             memcpy( ptr + comp.GetTransformSlot(), boneTransforms.data(), boneTransforms.size() * sizeof( glm::mat4 ) );
-            renderData.gpuBoneBuffers[frameIndex].UnMap();
         }
     });
 }

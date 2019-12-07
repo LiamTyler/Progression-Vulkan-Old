@@ -163,21 +163,20 @@ static bool InitShadowPassData()
 
     auto directionalShadowVert = ResourceManager::Get< Shader >( "directionalShadowVert" );
 
-    VertexBindingDescriptor shadowPassDataBindingDesc[1];
-    shadowPassDataBindingDesc[0].binding   = 0;
-    shadowPassDataBindingDesc[0].stride    = sizeof( glm::vec3 );
-    shadowPassDataBindingDesc[0].inputRate = VertexInputRate::PER_VERTEX;
+    VertexBindingDescriptor shadowPassDataBindingDesc[] =
+    {
+        VertexBindingDescriptor( 0, sizeof( glm::vec3 ) ),
+    };
 
-    std::array< VertexAttributeDescriptor, 1 > shadowPassDataAttribDescs;
-    shadowPassDataAttribDescs[0].binding  = 0;
-    shadowPassDataAttribDescs[0].location = 0;
-    shadowPassDataAttribDescs[0].format   = BufferDataType::FLOAT3;
-    shadowPassDataAttribDescs[0].offset   = 0;
+    VertexAttributeDescriptor shadowPassDataAttribDescs[] =
+    {
+        VertexAttributeDescriptor( 0, 0, BufferDataType::FLOAT3, 0 ),
+    };
 
     PipelineDescriptor shadowPassDataPipelineDesc;
     shadowPassDataPipelineDesc.rasterizerInfo.depthBiasEnable = true;
     shadowPassDataPipelineDesc.renderPass       = &shadowPassData.renderPass;
-    shadowPassDataPipelineDesc.vertexDescriptor = VertexInputDescriptor::Create( 1, shadowPassDataBindingDesc, 1, shadowPassDataAttribDescs.data() );
+    shadowPassDataPipelineDesc.vertexDescriptor = VertexInputDescriptor::Create( 1, shadowPassDataBindingDesc, 1, shadowPassDataAttribDescs );
     shadowPassDataPipelineDesc.viewport         = Viewport( DIRECTIONAL_SHADOW_MAP_RESOLUTION, -DIRECTIONAL_SHADOW_MAP_RESOLUTION );
     shadowPassDataPipelineDesc.viewport.y       = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
     Scissor scissor                             = {};
@@ -236,6 +235,22 @@ static bool InitGBufferPassData()
     {
         return false;
     }
+
+    VertexBindingDescriptor bindingDesc[] =
+    {
+        VertexBindingDescriptor( 0, sizeof( glm::vec3 ) ),
+        VertexBindingDescriptor( 1, sizeof( glm::vec3 ) ),
+        VertexBindingDescriptor( 2, sizeof( glm::vec2 ) ),
+        VertexBindingDescriptor( 3, sizeof( glm::vec3 ) ),
+    };
+
+    VertexAttributeDescriptor attribDescs[] =
+    {
+        VertexAttributeDescriptor( 0, 0, BufferDataType::FLOAT3, 0 ),
+        VertexAttributeDescriptor( 1, 1, BufferDataType::FLOAT3, 0 ),
+        VertexAttributeDescriptor( 2, 2, BufferDataType::FLOAT2, 0 ),
+        VertexAttributeDescriptor( 3, 3, BufferDataType::FLOAT3, 0 ),
+    };
 
     VertexBindingDescriptor bindingDesc[4];
     bindingDesc[0].binding   = 0;
@@ -779,11 +794,15 @@ namespace RenderSystem
             return false;
         }
 
+        if ( !Profile::Init() )
+        {
+            LOG_ERR( "Could not initialize profiler" );
+            return false;
+        }
+
         s_gpuSceneConstantBuffers.Map();
         s_gpuPointLightBuffers.Map();
         s_gpuSpotLightBuffers.Map();
-
-        Profile::Init();
 
         return true;
     }
@@ -858,6 +877,33 @@ namespace RenderSystem
         }
         postProcessPassData.quadBuffer.Free();
     }
+    
+    void UpdateConstantBuffers( Scene* scene )
+    {
+        // TODO: Remove hardcoded directional shadow map
+        glm::vec3 pos( 0, 15, 0 );
+        auto V = glm::lookAt( pos, pos + glm::vec3( scene->directionalLight.direction ), glm::vec3( 0, 1, 0 ) );
+        float W = 25;
+        auto P = glm::ortho( -W, W, -W, W, 0.0f, 50.0f );
+        shadowPassData.LSM = P * V;
+
+        SceneConstantBufferData scbuf;
+        scbuf.V              = scene->camera.GetV();
+        scbuf.P              = scene->camera.GetP();
+        scbuf.VP             = scene->camera.GetVP();
+        scbuf.DLSM           = shadowPassData.LSM;
+        scbuf.cameraPos      = glm::vec4( scene->camera.position, 0 );        
+        scbuf.ambientColor   = glm::vec4( scene->ambientColor, 0 );
+        scbuf.dirLight       = scene->directionalLight;
+        scbuf.numPointLights = static_cast< uint32_t >( scene->pointLights.size() );
+        scbuf.numSpotLights  = static_cast< uint32_t >( scene->spotLights.size() );
+        scbuf.shadowTextureIndex = shadowPassData.depthAttachment.GetShaderSlot();
+        memcpy( s_gpuSceneConstantBuffers.MappedPtr(), &scbuf, sizeof( SceneConstantBufferData ) );
+        memcpy( s_gpuPointLightBuffers.MappedPtr(), scene->pointLights.data(), scene->pointLights.size() * sizeof( PointLight ) );
+        memcpy( s_gpuSpotLightBuffers.MappedPtr(), scene->spotLights.data(), scene->spotLights.size() * sizeof( SpotLight ) );
+
+        AnimationSystem::UploadToGpu( scene );
+    }
 
     void ShadowPass( Scene* scene, CommandBuffer& cmdBuf )
     {
@@ -911,82 +957,8 @@ namespace RenderSystem
         PG_PROFILE_TIMESTAMP( cmdBuf, "Shadow_End" );
     }
 
-    void SSAOPass( Scene* scene, CommandBuffer& cmdBuf )
+    void GBufferPass( Scene* scene, CommandBuffer& cmdBuf )
     {
-        PG_PROFILE_TIMESTAMP( cmdBuf, "SSAO_Start" );
-        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "SSAO", glm::vec4( .5, .5, .5, 1 ) );
-        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "SSAO Occlusion Pass", glm::vec4( .8, .5, .5, 1 ) );
-        cmdBuf.BeginRenderPass( ssaoPassData.renderPass, ssaoPassData.frameBuffer, g_renderState.swapChain.extent );
-        
-        cmdBuf.BindRenderPipeline( ssaoPassData.pipeline );
-        cmdBuf.BindDescriptorSets( 1, &descriptorSets.ssao, ssaoPassData.pipeline, 0 );
-        SSAOShaderData pushData;
-        pushData.V = scene->camera.GetV();
-        pushData.P = scene->camera.GetP();
-        vkCmdPushConstants( cmdBuf.GetHandle(), ssaoPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( SSAOShaderData ), &pushData );
-        PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
-        cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
-        cmdBuf.Draw( 0, 6 );
-        
-        cmdBuf.EndRenderPass();
-        PG_DEBUG_MARKER_END_REGION( cmdBuf );
-
-        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "SSAO Blur Pass", glm::vec4( .5, .5, .8, 1 ) );
-        cmdBuf.BeginRenderPass( ssaoBlurPassData.renderPass, ssaoBlurPassData.framebuffer, g_renderState.swapChain.extent );
-        
-        cmdBuf.BindRenderPipeline( ssaoBlurPassData.pipeline );
-        cmdBuf.BindDescriptorSets( 1, &descriptorSets.ssaoBlur, ssaoBlurPassData.pipeline, 0 );
-        PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
-        cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
-        cmdBuf.Draw( 0, 6 );
-        
-        cmdBuf.EndRenderPass();
-        PG_DEBUG_MARKER_END_REGION( cmdBuf );
-        PG_DEBUG_MARKER_END_REGION( cmdBuf );
-        PG_PROFILE_TIMESTAMP( cmdBuf, "SSAO_End" );
-    }
-
-    void Render( Scene* scene )
-    {
-        PG_ASSERT( scene != nullptr );
-        PG_ASSERT( scene->pointLights.size() < MAX_NUM_POINT_LIGHTS && scene->spotLights.size() < MAX_NUM_SPOT_LIGHTS );
-
-        auto imageIndex = g_renderState.swapChain.AcquireNextImage( g_renderState.presentCompleteSemaphore );
-
-        TextureManager::UpdateDescriptors( descriptorSets.arrayOfTextures );
-
-        // TODO: Remove hardcoded directional shadow map
-        glm::vec3 pos( 0, 15, 0 );
-        auto V = glm::lookAt( pos, pos + glm::vec3( scene->directionalLight.direction ), glm::vec3( 0, 1, 0 ) );
-        float W = 25;
-        auto P = glm::ortho( -W, W, -W, W, 0.0f, 50.0f );
-        shadowPassData.LSM = P * V;
-
-        // sceneConstantBuffer
-        SceneConstantBufferData scbuf;
-        scbuf.V              = scene->camera.GetV();
-        scbuf.P              = scene->camera.GetP();
-        scbuf.VP             = scene->camera.GetVP();
-        scbuf.DLSM           = shadowPassData.LSM;
-        scbuf.cameraPos      = glm::vec4( scene->camera.position, 0 );        
-        scbuf.ambientColor   = glm::vec4( scene->ambientColor, 0 );
-        scbuf.dirLight       = scene->directionalLight;
-        scbuf.numPointLights = static_cast< uint32_t >( scene->pointLights.size() );
-        scbuf.numSpotLights  = static_cast< uint32_t >( scene->spotLights.size() );
-        scbuf.shadowTextureIndex = shadowPassData.depthAttachment.GetShaderSlot();
-        memcpy( s_gpuSceneConstantBuffers.MappedPtr(), &scbuf, sizeof( SceneConstantBufferData ) );
-        memcpy( s_gpuPointLightBuffers.MappedPtr(), scene->pointLights.data(), scene->pointLights.size() * sizeof( PointLight ) );
-        memcpy( s_gpuSpotLightBuffers.MappedPtr(), scene->spotLights.data(), scene->spotLights.size() * sizeof( SpotLight ) );
-
-        AnimationSystem::UploadToGpu( scene, imageIndex );
-
-        auto& cmdBuf = g_renderState.graphicsCommandBuffer;
-        cmdBuf.BeginRecording();
-        PG_PROFILE_RESET( cmdBuf );
-        PG_PROFILE_TIMESTAMP( cmdBuf, "Frame_Start" );
-
-        ShadowPass( scene, cmdBuf );
-
         PG_PROFILE_TIMESTAMP( cmdBuf, "GBuffer_Start" );
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "GBuffer Pass", glm::vec4( .8, .8, .2, 1 ) );
         cmdBuf.BeginRenderPass( gBufferPassData.renderPass, gBufferPassData.frameBuffer, g_renderState.swapChain.extent );
@@ -1035,13 +1007,48 @@ namespace RenderSystem
         });
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
         
-        cmdBuf.EndRenderPass(); // end gbuffer pass
+        cmdBuf.EndRenderPass();
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
         PG_PROFILE_TIMESTAMP( cmdBuf, "GBuffer_End" );
+    }
 
-        SSAOPass( scene, cmdBuf );
+    void SSAOPass( Scene* scene, CommandBuffer& cmdBuf )
+    {
+        PG_PROFILE_TIMESTAMP( cmdBuf, "SSAO_Start" );
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "SSAO", glm::vec4( .5, .5, .5, 1 ) );
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "SSAO Occlusion Pass", glm::vec4( .8, .5, .5, 1 ) );
+        cmdBuf.BeginRenderPass( ssaoPassData.renderPass, ssaoPassData.frameBuffer, g_renderState.swapChain.extent );
+        
+        cmdBuf.BindRenderPipeline( ssaoPassData.pipeline );
+        cmdBuf.BindDescriptorSets( 1, &descriptorSets.ssao, ssaoPassData.pipeline, 0 );
+        SSAOShaderData pushData;
+        pushData.V = scene->camera.GetV();
+        pushData.P = scene->camera.GetP();
+        vkCmdPushConstants( cmdBuf.GetHandle(), ssaoPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( SSAOShaderData ), &pushData );
+        PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
+        cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
+        cmdBuf.Draw( 0, 6 );
+        
+        cmdBuf.EndRenderPass();
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
 
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "SSAO Blur Pass", glm::vec4( .5, .5, .8, 1 ) );
+        cmdBuf.BeginRenderPass( ssaoBlurPassData.renderPass, ssaoBlurPassData.framebuffer, g_renderState.swapChain.extent );
+        
+        cmdBuf.BindRenderPipeline( ssaoBlurPassData.pipeline );
+        cmdBuf.BindDescriptorSets( 1, &descriptorSets.ssaoBlur, ssaoBlurPassData.pipeline, 0 );
+        PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
+        cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
+        cmdBuf.Draw( 0, 6 );
+        
+        cmdBuf.EndRenderPass();
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
+        PG_PROFILE_TIMESTAMP( cmdBuf, "SSAO_End" );
+    }
 
+    void LightingPass( Scene* scene, CommandBuffer& cmdBuf )
+    {
         PG_PROFILE_TIMESTAMP( cmdBuf, "Lighting_Start" );
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Lighting Pass", glm::vec4( .8, 0, .8, 1 ) );
         cmdBuf.BeginRenderPass( lightingPassData.renderPass, lightingPassData.frameBuffer, g_renderState.swapChain.extent );
@@ -1057,13 +1064,16 @@ namespace RenderSystem
         cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
         cmdBuf.Draw( 0, 6 );
 
-        cmdBuf.EndRenderPass(); // end lighting pass
+        cmdBuf.EndRenderPass();
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
         PG_PROFILE_TIMESTAMP( cmdBuf, "Lighting_End" );
+    }
 
+    void PostProcessPass( Scene* scene, CommandBuffer& cmdBuf, uint32_t swapChainImageIndex )
+    {
         PG_PROFILE_TIMESTAMP( cmdBuf, "PostProcess_Start" );
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Post Process Pass", glm::vec4( .2, .2, 1, 1 ) );
-        cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex], g_renderState.swapChain.extent );
+        cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[swapChainImageIndex], g_renderState.swapChain.extent );
         
         cmdBuf.BindRenderPipeline( postProcessPassData.pipeline );
         cmdBuf.BindDescriptorSets( 1, &descriptorSets.postProcessInputColorTex, postProcessPassData.pipeline, 0 );
@@ -1075,19 +1085,38 @@ namespace RenderSystem
         cmdBuf.EndRenderPass(); // end post process pass
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
         PG_PROFILE_TIMESTAMP( cmdBuf, "PostProcess_End" );
+    }
+
+    void Render( Scene* scene )
+    {
+        PG_ASSERT( scene != nullptr );
+        PG_ASSERT( scene->pointLights.size() < MAX_NUM_POINT_LIGHTS && scene->spotLights.size() < MAX_NUM_SPOT_LIGHTS );
+
+        auto swapChainImageIndex = g_renderState.swapChain.AcquireNextImage( g_renderState.presentCompleteSemaphore );
+
+        TextureManager::UpdateDescriptors( descriptorSets.arrayOfTextures );
+
+        UpdateConstantBuffers( scene );
+
+        auto& cmdBuf = g_renderState.graphicsCommandBuffer;
+        cmdBuf.BeginRecording();
+        PG_PROFILE_RESET( cmdBuf );
+
+        PG_PROFILE_TIMESTAMP( cmdBuf, "Frame_Start" );
+
+        ShadowPass( scene, cmdBuf );
+        GBufferPass( scene, cmdBuf );
+        SSAOPass( scene, cmdBuf );
+        LightingPass( scene, cmdBuf );
+        PostProcessPass( scene, cmdBuf, swapChainImageIndex );
+
         PG_PROFILE_TIMESTAMP( cmdBuf, "Frame_End" );
 
         cmdBuf.EndRecording();
         g_renderState.device.SubmitRenderCommands( 1, &cmdBuf );
-        g_renderState.device.SubmitFrame( imageIndex );
+        g_renderState.device.SubmitFrame( swapChainImageIndex );
 
         PG_PROFILE_GET_RESULTS();
-        LOG( "Shadow time: ", Profile::GetDuration( "Shadow_Start", "Shadow_End" ) );
-        LOG( "GBuffer time: ", Profile::GetDuration( "GBuffer_Start", "GBuffer_End" ) );
-        LOG( "SSAO time: ", Profile::GetDuration( "SSAO_Start", "SSAO_End" ) );
-        LOG( "Lighting time: ", Profile::GetDuration( "Lighting_Start", "Lighting_End" ) );
-        LOG( "PostProcess time: ", Profile::GetDuration( "PostProcess_Start", "PostProcess_End" ) );
-        LOG( "Frame time: ", Profile::GetDuration( "Frame_Start", "Frame_End" ) );
     } 
 
     void InitSamplers()
