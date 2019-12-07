@@ -163,12 +163,12 @@ static bool InitShadowPassData()
 
     auto directionalShadowVert = ResourceManager::Get< Shader >( "directionalShadowVert" );
 
-    VertexBindingDescriptor shadowPassDataBindingDesc[] =
+    VertexBindingDescriptor bindingDescs[] =
     {
         VertexBindingDescriptor( 0, sizeof( glm::vec3 ) ),
     };
 
-    VertexAttributeDescriptor shadowPassDataAttribDescs[] =
+    VertexAttributeDescriptor attribDescs[] =
     {
         VertexAttributeDescriptor( 0, 0, BufferDataType::FLOAT3, 0 ),
     };
@@ -176,7 +176,7 @@ static bool InitShadowPassData()
     PipelineDescriptor shadowPassDataPipelineDesc;
     shadowPassDataPipelineDesc.rasterizerInfo.depthBiasEnable = true;
     shadowPassDataPipelineDesc.renderPass       = &shadowPassData.renderPass;
-    shadowPassDataPipelineDesc.vertexDescriptor = VertexInputDescriptor::Create( 1, shadowPassDataBindingDesc, 1, shadowPassDataAttribDescs );
+    shadowPassDataPipelineDesc.vertexDescriptor = VertexInputDescriptor::Create( 1, bindingDescs, 1, attribDescs );
     shadowPassDataPipelineDesc.viewport         = Viewport( DIRECTIONAL_SHADOW_MAP_RESOLUTION, -DIRECTIONAL_SHADOW_MAP_RESOLUTION );
     shadowPassDataPipelineDesc.viewport.y       = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
     Scissor scissor                             = {};
@@ -236,7 +236,7 @@ static bool InitGBufferPassData()
         return false;
     }
 
-    VertexBindingDescriptor bindingDesc[] =
+    VertexBindingDescriptor bindingDescs[] =
     {
         VertexBindingDescriptor( 0, sizeof( glm::vec3 ) ),
         VertexBindingDescriptor( 1, sizeof( glm::vec3 ) ),
@@ -252,38 +252,6 @@ static bool InitGBufferPassData()
         VertexAttributeDescriptor( 3, 3, BufferDataType::FLOAT3, 0 ),
     };
 
-    VertexBindingDescriptor bindingDesc[4];
-    bindingDesc[0].binding   = 0;
-    bindingDesc[0].stride    = sizeof( glm::vec3 );
-    bindingDesc[0].inputRate = VertexInputRate::PER_VERTEX;
-    bindingDesc[1].binding   = 1;
-    bindingDesc[1].stride    = sizeof( glm::vec3 );
-    bindingDesc[1].inputRate = VertexInputRate::PER_VERTEX;
-    bindingDesc[2].binding   = 2;
-    bindingDesc[2].stride    = sizeof( glm::vec2 );
-    bindingDesc[2].inputRate = VertexInputRate::PER_VERTEX;
-    bindingDesc[3].binding   = 3;
-    bindingDesc[3].stride    = sizeof( glm::vec3 );
-    bindingDesc[3].inputRate = VertexInputRate::PER_VERTEX;
-
-    VertexAttributeDescriptor attribDescs[4];
-    attribDescs[0].binding  = 0;
-    attribDescs[0].location = 0;
-    attribDescs[0].format   = BufferDataType::FLOAT3;
-    attribDescs[0].offset   = 0;
-    attribDescs[1].binding  = 1;
-    attribDescs[1].location = 1;
-    attribDescs[1].format   = BufferDataType::FLOAT3;
-    attribDescs[1].offset   = 0;
-    attribDescs[2].binding  = 2;
-    attribDescs[2].location = 2;
-    attribDescs[2].format   = BufferDataType::FLOAT2;
-    attribDescs[2].offset   = 0;
-    attribDescs[3].binding  = 3;
-    attribDescs[3].location = 3;
-    attribDescs[3].format   = BufferDataType::FLOAT3;
-    attribDescs[3].offset   = 0;
-
     auto vertShader = ResourceManager::Get< Shader >( "rigidModelsVert" );
     auto fragShader = ResourceManager::Get< Shader >( "gBufferFrag" );
 
@@ -295,7 +263,7 @@ static bool InitGBufferPassData()
     PipelineDescriptor pipelineDesc;
     pipelineDesc.renderPass             = &gBufferPassData.renderPass;
     pipelineDesc.descriptorSetLayouts   = gBufferPassData.descriptorSetLayouts;
-    pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 4, bindingDesc, 4, attribDescs );
+    pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 4, bindingDescs, 4, attribDescs );
     pipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
     pipelineDesc.viewport               = FullScreenViewport();
     pipelineDesc.viewport.height        = -pipelineDesc.viewport.height;
@@ -360,16 +328,15 @@ static bool InitSSAOPass()
     auto fragShader = ResourceManager::Get< Shader >( "ssao" );
     PG_ASSERT( vertShader && fragShader );
 
-    VertexBindingDescriptor bindingDescs[1];
-    bindingDescs[0].binding   = 0;
-    bindingDescs[0].stride    = sizeof( glm::vec3 );
-    bindingDescs[0].inputRate = VertexInputRate::PER_VERTEX;
+    VertexBindingDescriptor bindingDescs[] =
+    {
+        VertexBindingDescriptor( 0, sizeof( glm::vec3 ) ),
+    };
 
-    std::array< VertexAttributeDescriptor, 1 > attribDescs;
-    attribDescs[0].binding  = 0;
-    attribDescs[0].location = 0;
-    attribDescs[0].format   = BufferDataType::FLOAT3;
-    attribDescs[0].offset   = 0;
+    VertexAttributeDescriptor attribDescs[] =
+    {
+        VertexAttributeDescriptor( 0, 0, BufferDataType::FLOAT3, 0 ),
+    };
 
     std::vector< DescriptorSetLayoutData > descriptorSetData = vertShader->reflectInfo.descriptorSetLayouts;
     descriptorSetData.insert( descriptorSetData.end(), fragShader->reflectInfo.descriptorSetLayouts.begin(), fragShader->reflectInfo.descriptorSetLayouts.end() );
@@ -379,7 +346,7 @@ static bool InitSSAOPass()
     PipelineDescriptor pipelineDesc;
     pipelineDesc.renderPass           = &ssaoPassData.renderPass;
     pipelineDesc.descriptorSetLayouts = ssaoPassData.descriptorSetLayouts;
-    pipelineDesc.vertexDescriptor     = VertexInputDescriptor::Create( 1, bindingDescs, 1, attribDescs.data() );
+    pipelineDesc.vertexDescriptor     = VertexInputDescriptor::Create( 1, bindingDescs, 1, attribDescs );
     pipelineDesc.viewport             = FullScreenViewport();
     pipelineDesc.scissor              = FullScreenScissor();
     pipelineDesc.shaders[0]           = vertShader.get();
@@ -458,16 +425,15 @@ static bool InitSSAOBlurPassData()
     auto fragShader = ResourceManager::Get< Shader >( "ssaoBlur" );
     PG_ASSERT( vertShader && fragShader );
 
-    VertexBindingDescriptor bindingDescs[1];
-    bindingDescs[0].binding   = 0;
-    bindingDescs[0].stride    = sizeof( glm::vec3 );
-    bindingDescs[0].inputRate = VertexInputRate::PER_VERTEX;
+    VertexBindingDescriptor bindingDescs[] =
+    {
+        VertexBindingDescriptor( 0, sizeof( glm::vec3 ) ),
+    };
 
-    std::array< VertexAttributeDescriptor, 1 > attribDescs;
-    attribDescs[0].binding  = 0;
-    attribDescs[0].location = 0;
-    attribDescs[0].format   = BufferDataType::FLOAT3;
-    attribDescs[0].offset   = 0;
+    VertexAttributeDescriptor attribDescs[] =
+    {
+        VertexAttributeDescriptor( 0, 0, BufferDataType::FLOAT3, 0 ),
+    };
 
     std::vector< DescriptorSetLayoutData > descriptorSetData = vertShader->reflectInfo.descriptorSetLayouts;
     descriptorSetData.insert( descriptorSetData.end(), fragShader->reflectInfo.descriptorSetLayouts.begin(), fragShader->reflectInfo.descriptorSetLayouts.end() );
@@ -477,7 +443,7 @@ static bool InitSSAOBlurPassData()
     PipelineDescriptor pipelineDesc;
     pipelineDesc.renderPass           = &ssaoBlurPassData.renderPass;
     pipelineDesc.descriptorSetLayouts = ssaoBlurPassData.descriptorSetLayouts;
-    pipelineDesc.vertexDescriptor     = VertexInputDescriptor::Create( 1, bindingDescs, 1, attribDescs.data() );
+    pipelineDesc.vertexDescriptor     = VertexInputDescriptor::Create( 1, bindingDescs, 1, attribDescs );
     pipelineDesc.viewport             = FullScreenViewport();
     pipelineDesc.scissor              = FullScreenScissor();
     pipelineDesc.shaders[0]           = vertShader.get();
@@ -528,16 +494,15 @@ static bool InitLightingPassData()
         return false;
     }
 
-    VertexBindingDescriptor bindingDesc[1];
-    bindingDesc[0].binding   = 0;
-    bindingDesc[0].stride    = sizeof( glm::vec3 );
-    bindingDesc[0].inputRate = VertexInputRate::PER_VERTEX;
+    VertexBindingDescriptor bindingDescs[] =
+    {
+        VertexBindingDescriptor( 0, sizeof( glm::vec3 ) ),
+    };
 
-    VertexAttributeDescriptor attribDescs[1];
-    attribDescs[0].binding  = 0;
-    attribDescs[0].location = 0;
-    attribDescs[0].format   = BufferDataType::FLOAT3;
-    attribDescs[0].offset   = 0;
+    VertexAttributeDescriptor attribDescs[] =
+    {
+        VertexAttributeDescriptor( 0, 0, BufferDataType::FLOAT3, 0 ),
+    };
 
     auto vertShader	 = ResourceManager::Get< Shader >( "fullScreenQuadVert" );
     auto fragShader  = ResourceManager::Get< Shader >( "deferredLightingPassFrag" );
@@ -550,7 +515,7 @@ static bool InitLightingPassData()
     PipelineDescriptor pipelineDesc;
     pipelineDesc.renderPass                  = &lightingPassData.renderPass;
     pipelineDesc.descriptorSetLayouts        = lightingPassData.descriptorSetLayouts;
-    pipelineDesc.vertexDescriptor            = VertexInputDescriptor::Create( 1, bindingDesc, 1, attribDescs );
+    pipelineDesc.vertexDescriptor            = VertexInputDescriptor::Create( 1, bindingDescs, 1, attribDescs );
     pipelineDesc.rasterizerInfo.winding      = WindingOrder::COUNTER_CLOCKWISE;
     pipelineDesc.viewport                    = FullScreenViewport();
     pipelineDesc.scissor                     = FullScreenScissor();
@@ -588,16 +553,15 @@ static bool InitLightingPassData()
 
 bool InitPostProcessPassData()
 {
-	VertexBindingDescriptor postProcescsingBindingDesc[1];
-    postProcescsingBindingDesc[0].binding   = 0;
-    postProcescsingBindingDesc[0].stride    = sizeof( glm::vec3 );
-    postProcescsingBindingDesc[0].inputRate = VertexInputRate::PER_VERTEX;
+	VertexBindingDescriptor bindingDescs[] =
+    {
+        VertexBindingDescriptor( 0, sizeof( glm::vec3 ) ),
+    };
 
-	std::array< VertexAttributeDescriptor, 1 > postProcescsingAttribDescs;
-    postProcescsingAttribDescs[0].binding   = 0;
-    postProcescsingAttribDescs[0].location  = 0;
-    postProcescsingAttribDescs[0].format    = BufferDataType::FLOAT3;
-    postProcescsingAttribDescs[0].offset    = 0;
+    VertexAttributeDescriptor attribDescs[] =
+    {
+        VertexAttributeDescriptor( 0, 0, BufferDataType::FLOAT3, 0 ),
+    };
 
     auto vertShader = ResourceManager::Get< Shader >( "fullScreenQuadVert" );
     auto fragShader = ResourceManager::Get< Shader >( "postProcessFrag" );
@@ -610,7 +574,7 @@ bool InitPostProcessPassData()
 	PipelineDescriptor postProcessingPipelineDesc;
     postProcessingPipelineDesc.renderPass	          = &g_renderState.renderPass;
     postProcessingPipelineDesc.descriptorSetLayouts   = postProcessPassData.descriptorSetLayouts;
-    postProcessingPipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 1, postProcescsingBindingDesc, 1, postProcescsingAttribDescs.data() );
+    postProcessingPipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 1, bindingDescs, 1, attribDescs );
     postProcessingPipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
     postProcessingPipelineDesc.viewport               = FullScreenViewport();
     postProcessingPipelineDesc.scissor                = FullScreenScissor();

@@ -59,46 +59,27 @@ bool Init()
     };
     g_renderState.device.UpdateDescriptorSets( static_cast< uint32_t >( writeDescriptorSets.size() ), writeDescriptorSets.data() );
 
-    VertexBindingDescriptor bindingDesc[5];
-    bindingDesc[0].binding   = 0;
-    bindingDesc[0].stride    = sizeof( glm::vec3 );
-    bindingDesc[0].inputRate = VertexInputRate::PER_VERTEX;
-    bindingDesc[1].binding   = 1;
-    bindingDesc[1].stride    = sizeof( glm::vec3 );
-    bindingDesc[1].inputRate = VertexInputRate::PER_VERTEX;
-    bindingDesc[2].binding   = 2;
-    bindingDesc[2].stride    = sizeof( glm::vec2 );
-    bindingDesc[2].inputRate = VertexInputRate::PER_VERTEX;
-    bindingDesc[3].binding   = 3;
-    bindingDesc[3].stride    = 2 * sizeof( glm::vec4 );
-    bindingDesc[3].inputRate = VertexInputRate::PER_VERTEX;
-    
-    std::array< VertexAttributeDescriptor, 5 > attribDescs;
-    attribDescs[0].binding  = 0;
-    attribDescs[0].location = 0;
-    attribDescs[0].format   = BufferDataType::FLOAT3;
-    attribDescs[0].offset   = 0;
-    attribDescs[1].binding  = 1;
-    attribDescs[1].location = 1;
-    attribDescs[1].format   = BufferDataType::FLOAT3;
-    attribDescs[1].offset   = 0;
-    attribDescs[2].binding  = 2;
-    attribDescs[2].location = 2;
-    attribDescs[2].format   = BufferDataType::FLOAT2;
-    attribDescs[2].offset   = 0;
-    attribDescs[3].binding  = 3;
-    attribDescs[3].location = 3;
-    attribDescs[3].format   = BufferDataType::FLOAT4;
-    attribDescs[3].offset   = 0;
-    attribDescs[4].binding  = 3;
-    attribDescs[4].location = 4;
-    attribDescs[4].format   = BufferDataType::UINT4;
-    attribDescs[4].offset   = sizeof( glm::vec4 );
+    VertexBindingDescriptor bindingDescs[] =
+    {
+        VertexBindingDescriptor( 0, sizeof( glm::vec3 ) ),
+        VertexBindingDescriptor( 1, sizeof( glm::vec3 ) ),
+        VertexBindingDescriptor( 2, sizeof( glm::vec2 ) ),
+        VertexBindingDescriptor( 3, 2 * sizeof( glm::vec4 ) ),
+    };
+
+    VertexAttributeDescriptor attribDescs[] =
+    {
+        VertexAttributeDescriptor( 0, 0, BufferDataType::FLOAT3, 0 ),
+        VertexAttributeDescriptor( 1, 1, BufferDataType::FLOAT3, 0 ),
+        VertexAttributeDescriptor( 2, 2, BufferDataType::FLOAT2, 0 ),
+        VertexAttributeDescriptor( 3, 3, BufferDataType::FLOAT4, 0 ),
+        VertexAttributeDescriptor( 4, 3, BufferDataType::UINT4, sizeof( glm::vec4 ) ),
+    };
 
     PipelineDescriptor pipelineDesc;
     pipelineDesc.renderPass             = &g_renderState.renderPass;
     pipelineDesc.descriptorSetLayouts   = renderData.descriptorSetLayouts;
-    pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 4, bindingDesc, 5, attribDescs.data() );
+    pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 4, bindingDescs, 5, attribDescs );
     pipelineDesc.viewport               = FullScreenViewport();
     pipelineDesc.scissor                = FullScreenScissor();
     pipelineDesc.shaders[0]             = animatedModelsVert.get();
