@@ -18,13 +18,6 @@ static double s_timestampToMillisInv;
 std::string tmpFileName = "pg_profiling_log.txt";
 static std::ofstream s_outputFile;
 
-#if !USING( SHIP_BUILD )
-#define PG_PROFILING IN_USE
-#else // #if !USING( SHIP_BUILD )
-#define PG_PROFILING NOT_IN_USE
-#endif // #else // #if !USING( SHIP_BUILD )
-
-
 namespace Progression
 {
 namespace Gfx
