@@ -7,7 +7,7 @@
 layout( location = 0 ) out vec4 outPosition;
 layout( location = 1 ) out vec4 outNormal;
 layout( location = 2 ) out vec4 outDiffuse;
-layout( location = 3 ) out vec4 outSpecular;
+// layout( location = 3 ) out vec4 outSpecular;
 
 layout( location = 0 ) in vec3 posInWorldSpace;
 layout( location = 1 ) in vec2 texCoord;
@@ -40,5 +40,5 @@ void main()
     }
     outDiffuse = vec4( Kd, 0 );
     
-    outSpecular = material.Ks;
+    // outSpecular = material.Ks;
 }

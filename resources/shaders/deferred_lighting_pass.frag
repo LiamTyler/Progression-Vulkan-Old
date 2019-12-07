@@ -29,7 +29,7 @@ layout( set = PG_2D_TEXTURES_SET, binding = 0 ) uniform sampler2D textures[PG_MA
 layout( set = 2, binding = 0 ) uniform sampler2D positionTex;
 layout( set = 2, binding = 1 ) uniform sampler2D normalTex;
 layout( set = 2, binding = 2 ) uniform sampler2D diffuseTex;
-layout( set = 2, binding = 3 ) uniform sampler2D specularTex;
+// layout( set = 2, binding = 3 ) uniform sampler2D specularTex;
 layout( set = 2, binding = 4 ) uniform sampler2D ssaoTex;
 
 layout( std430, push_constant ) uniform SSAOToggle
@@ -70,8 +70,11 @@ void main()
 {
     vec3 posInWorldSpace = texture( positionTex, UV ).xyz;
     vec3 n               = texture( normalTex,   UV ).xyz;
-    vec3 Kd              = texture( diffuseTex,  UV ).xyz;
-    vec4 Ks              = texture( specularTex, UV );
+    vec4 packed = texture( diffuseTex,  UV );
+    vec3 Kd = packed.xyz;
+    vec4 Ks = packed.xyzw;
+    // vec3 Kd              = texture( diffuseTex,  UV ).xyz;
+    //vec4 Ks              = texture( specularTex, UV );
 
     vec3 e     = normalize( sceneConstantBuffer.cameraPos.xyz - posInWorldSpace );
     vec3 color = vec3( 0, 0, 0 );
