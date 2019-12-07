@@ -11,6 +11,8 @@
 
 #define PG_MATERIAL_PUSH_CONSTANT_OFFSET 192
 
+#define PG_SSAO_KERNEL_SIZE 64
+
 #ifdef PG_CPP_VERSION
 
 #define PG_NAMESPACE_BEGIN namespace Progression {

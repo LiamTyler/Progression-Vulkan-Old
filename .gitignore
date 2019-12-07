@@ -4,6 +4,7 @@ logs/
 a.out
 logs/
 *.vs*
+*.cap
 progression/core/platform_defines.hpp
 resources/sponza
 resources/cache

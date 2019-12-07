@@ -16,6 +16,14 @@
         "filename": "shaders/deferred_lighting_pass.frag"
     },
     "Shader": {
+        "name": "ssao",
+        "filename": "shaders/ssao.frag"
+    },
+    "Shader": {
+        "name": "ssaoBlur",
+        "filename": "shaders/ssaoBlur.frag"
+    },
+    "Shader": {
         "name": "rigidModelsVert",
         "filename": "shaders/rigid_models.vert"
     },

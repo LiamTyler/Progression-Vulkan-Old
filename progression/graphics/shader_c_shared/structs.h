@@ -40,4 +40,10 @@ struct MaterialConstantBufferData
     UINT normalMapIndex;
 };
 
+struct SSAOShaderData
+{
+    MAT4 V;
+    MAT4 P;
+};
+
 PG_NAMESPACE_END

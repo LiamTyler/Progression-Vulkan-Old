@@ -20,6 +20,7 @@
 #include "resource/shader.hpp"
 #include "utils/logger.hpp"
 #include <array>
+#include <random>
 #include <unordered_map>
 
 using namespace Progression;
@@ -72,50 +73,72 @@ struct
     DescriptorSet scene;
     DescriptorSet arrayOfTextures;
     DescriptorSet gBufferAttachments;
+    DescriptorSet ssao;
+    DescriptorSet ssaoBlur;
     DescriptorSet lights;
     DescriptorSet postProcessInputColorTex;
 } descriptorSets;
 
 struct
 {
-    Gfx::RenderPass renderPass;
-    Gfx::Texture    depthAttachment;
+    RenderPass renderPass;
+    Texture    depthAttachment;
     Framebuffer   frameBuffer;
-    Gfx::Pipeline   pipeline;
+    Pipeline   pipeline;
     glm::mat4       LSM;
 } shadowPassData;
 
 struct GBuffer
 {
-    Gfx::Texture positions;
-    Gfx::Texture normals;
-    Gfx::Texture diffuse;
-    Gfx::Texture specular;
+    Texture positions;
+    Texture normals;
+    Texture diffuse;
+    Texture specular;
 };
 
 struct
 {
-    Gfx::RenderPass renderPass;
+    RenderPass renderPass;
     GBuffer gbuffer;
     Framebuffer frameBuffer;
-    Gfx::Pipeline pipeline;
-    std::vector< Gfx::DescriptorSetLayout > descriptorSetLayouts;
+    Pipeline pipeline;
+    std::vector< DescriptorSetLayout > descriptorSetLayouts;
 } gBufferPassData;
 
 struct
 {
-    Gfx::RenderPass renderPass;
-    Gfx::Texture outputTexture;
+    RenderPass renderPass;
+    Texture texture;
+    Texture noise;
+    Buffer kernel;
     Framebuffer frameBuffer;
-    Gfx::Pipeline pipeline;
-    std::vector< Gfx::DescriptorSetLayout > descriptorSetLayouts;
+    Pipeline pipeline;
+    std::vector< DescriptorSetLayout > descriptorSetLayouts;
+} ssaoPassData;
+
+struct
+{
+    Pipeline pipeline;
+    RenderPass renderPass;
+    std::vector< DescriptorSetLayout > descriptorSetLayouts;
+    Texture outputTex;
+    Framebuffer framebuffer;
+} ssaoBlurPassData;
+
+struct
+{
+    RenderPass renderPass;
+    Texture outputTexture;
+    Framebuffer frameBuffer;
+    Pipeline pipeline;
+    std::vector< DescriptorSetLayout > descriptorSetLayouts;
 } lightingPassData;
 
 struct
 {
-	Gfx::Pipeline pipeline;
-    Gfx::Buffer quadBuffer;
-    std::vector< Gfx::DescriptorSetLayout > descriptorSetLayouts;
+	Pipeline pipeline;
+    Buffer quadBuffer;
+    std::vector< DescriptorSetLayout > descriptorSetLayouts;
 } postProcessPassData;
 
 #define MAX_NUM_POINT_LIGHTS 1024
@@ -130,7 +153,7 @@ static bool InitShadowPassData()
     desc.depthAttachmentDescriptor.storeAction = StoreAction::STORE;
     desc.depthAttachmentDescriptor.finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
     
-    shadowPassData.renderPass = g_renderState.device.NewRenderPass( desc, "shadowPassData" );
+    shadowPassData.renderPass = g_renderState.device.NewRenderPass( desc, "directional shadow" );
     if ( !shadowPassData.renderPass )
     {
         return false;
@@ -140,7 +163,7 @@ static bool InitShadowPassData()
 
     VertexBindingDescriptor shadowPassDataBindingDesc[1];
     shadowPassDataBindingDesc[0].binding   = 0;
-    shadowPassDataBindingDesc[0].stride    = sizeof(glm::vec3);
+    shadowPassDataBindingDesc[0].stride    = sizeof( glm::vec3 );
     shadowPassDataBindingDesc[0].inputRate = VertexInputRate::PER_VERTEX;
 
     std::array< VertexAttributeDescriptor, 1 > shadowPassDataAttribDescs;
@@ -203,6 +226,7 @@ static bool InitGBufferPassData()
     desc.depthAttachmentDescriptor.format      = PixelFormat::DEPTH_32_FLOAT;
     desc.depthAttachmentDescriptor.loadAction  = LoadAction::CLEAR;
     desc.depthAttachmentDescriptor.storeAction = StoreAction::STORE;
+    //desc.depthAttachmentDescriptor.finalLayout = ImageLayout::DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL;
     desc.depthAttachmentDescriptor.finalLayout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     gBufferPassData.renderPass = g_renderState.device.NewRenderPass( desc, "gBuffer" );
@@ -296,6 +320,172 @@ static bool InitGBufferPassData()
         }, gBufferPassData.renderPass, "gbuffer pass" );
 
     if ( !gBufferPassData.frameBuffer )
+    {
+        return false;
+    }
+
+    return true;
+}
+
+static bool InitSSAOPass()
+{
+    RenderPassDescriptor desc;
+    desc.colorAttachmentDescriptors[0].format      = PixelFormat::R8_UNORM;
+    desc.colorAttachmentDescriptors[0].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+    
+    ssaoPassData.renderPass = g_renderState.device.NewRenderPass( desc, "ssao" );
+    if ( !ssaoPassData.renderPass )
+    {
+        return false;
+    }
+
+    auto vertShader = ResourceManager::Get< Shader >( "fullScreenQuadVert" );
+    auto fragShader = ResourceManager::Get< Shader >( "ssao" );
+    PG_ASSERT( vertShader && fragShader );
+
+    VertexBindingDescriptor bindingDescs[1];
+    bindingDescs[0].binding   = 0;
+    bindingDescs[0].stride    = sizeof( glm::vec3 );
+    bindingDescs[0].inputRate = VertexInputRate::PER_VERTEX;
+
+    std::array< VertexAttributeDescriptor, 1 > attribDescs;
+    attribDescs[0].binding  = 0;
+    attribDescs[0].location = 0;
+    attribDescs[0].format   = BufferDataType::FLOAT3;
+    attribDescs[0].offset   = 0;
+
+    std::vector< DescriptorSetLayoutData > descriptorSetData = vertShader->reflectInfo.descriptorSetLayouts;
+    descriptorSetData.insert( descriptorSetData.end(), fragShader->reflectInfo.descriptorSetLayouts.begin(), fragShader->reflectInfo.descriptorSetLayouts.end() );
+    auto combined = CombineDescriptorSetLayouts( descriptorSetData );
+    ssaoPassData.descriptorSetLayouts = g_renderState.device.NewDescriptorSetLayouts( combined );
+
+    PipelineDescriptor pipelineDesc;
+    pipelineDesc.renderPass           = &ssaoPassData.renderPass;
+    pipelineDesc.descriptorSetLayouts = ssaoPassData.descriptorSetLayouts;
+    pipelineDesc.vertexDescriptor     = VertexInputDescriptor::Create( 1, bindingDescs, 1, attribDescs.data() );
+    pipelineDesc.viewport             = FullScreenViewport();
+    pipelineDesc.scissor              = FullScreenScissor();
+    pipelineDesc.shaders[0]           = vertShader.get();
+    pipelineDesc.shaders[1]           = fragShader.get();
+    pipelineDesc.numShaders           = 2;
+    pipelineDesc.numColorAttachments  = 1;
+
+    ssaoPassData.pipeline = g_renderState.device.NewPipeline( pipelineDesc, "SSAO pass" );
+    if ( !ssaoPassData.pipeline )
+    {
+        LOG_ERR( "Could not create SSAO pipeline" );
+        return false;
+    }
+
+    ImageDescriptor info;
+    info.type    = ImageType::TYPE_2D;
+    info.width   = g_renderState.swapChain.extent.width;
+    info.height  = g_renderState.swapChain.extent.height;
+    info.sampler = "nearest_clamped_nearest";
+    info.usage   = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    info.format  = PixelFormat::R8_UNORM;
+    ssaoPassData.texture = g_renderState.device.NewTexture( info, false, "ssao" );
+
+    ssaoPassData.frameBuffer = g_renderState.device.NewFramebuffer( { &ssaoPassData.texture }, ssaoPassData.renderPass, "ssao pass" );
+    if ( !ssaoPassData.frameBuffer )
+    {
+        return false;
+    }
+
+    std::uniform_real_distribution< float > randomFloats( 0.0f, 1.0f );
+    std::default_random_engine generator;
+    std::vector< glm::vec4 > kernel( PG_SSAO_KERNEL_SIZE );
+    for ( int i = 0; i < PG_SSAO_KERNEL_SIZE; ++i )
+    {
+        glm::vec3 sample( randomFloats( generator ) * 2 - 1, randomFloats( generator ) * 2 - 1, randomFloats( generator ) );
+        sample = glm::normalize( sample );
+        sample *= randomFloats( generator );
+        float scale = i / 64.0f;
+        float t = scale * scale;
+        scale = 0.1f + t * 0.9f;
+        kernel[i] = glm::vec4( scale * sample, 0 );
+    }
+    ssaoPassData.kernel = g_renderState.device.NewBuffer( sizeof( glm::vec4 ) * PG_SSAO_KERNEL_SIZE, kernel.data(),
+        BUFFER_TYPE_UNIFORM, MEMORY_TYPE_DEVICE_LOCAL, "SSAO Kernel" );
+
+    std::vector< glm::vec4 > noise;
+    for ( int i = 0; i < 16; ++i )
+    {
+        noise.emplace_back( randomFloats( generator ) * 2 - 1, randomFloats( generator ) * 2 - 1, 0, 0 );
+    }
+
+    info.type          = ImageType::TYPE_2D;
+    info.width         = 4;
+    info.height        = 4;
+    info.sampler       = "nearest_repeat_nearest";
+    info.usage         = VK_IMAGE_USAGE_SAMPLED_BIT;
+    info.format        = PixelFormat::R32_G32_B32_A32_FLOAT;
+    ssaoPassData.noise = g_renderState.device.NewTextureFromBuffer( info, noise.data(), false, "ssao noise" );
+
+    return true;
+}
+
+static bool InitSSAOBlurPassData()
+{
+    RenderPassDescriptor desc;
+    desc.colorAttachmentDescriptors[0].format      = PixelFormat::R8_UNORM;
+    desc.colorAttachmentDescriptors[0].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+
+    ssaoBlurPassData.renderPass = g_renderState.device.NewRenderPass( desc, "ssao blur" );
+    if ( !ssaoBlurPassData.renderPass )
+    {
+        return false;
+    }
+
+    auto vertShader = ResourceManager::Get< Shader >( "fullScreenQuadVert" );
+    auto fragShader = ResourceManager::Get< Shader >( "ssaoBlur" );
+    PG_ASSERT( vertShader && fragShader );
+
+    VertexBindingDescriptor bindingDescs[1];
+    bindingDescs[0].binding   = 0;
+    bindingDescs[0].stride    = sizeof( glm::vec3 );
+    bindingDescs[0].inputRate = VertexInputRate::PER_VERTEX;
+
+    std::array< VertexAttributeDescriptor, 1 > attribDescs;
+    attribDescs[0].binding  = 0;
+    attribDescs[0].location = 0;
+    attribDescs[0].format   = BufferDataType::FLOAT3;
+    attribDescs[0].offset   = 0;
+
+    std::vector< DescriptorSetLayoutData > descriptorSetData = vertShader->reflectInfo.descriptorSetLayouts;
+    descriptorSetData.insert( descriptorSetData.end(), fragShader->reflectInfo.descriptorSetLayouts.begin(), fragShader->reflectInfo.descriptorSetLayouts.end() );
+    auto combined = CombineDescriptorSetLayouts( descriptorSetData );
+    ssaoBlurPassData.descriptorSetLayouts = g_renderState.device.NewDescriptorSetLayouts( combined );
+
+    PipelineDescriptor pipelineDesc;
+    pipelineDesc.renderPass           = &ssaoBlurPassData.renderPass;
+    pipelineDesc.descriptorSetLayouts = ssaoBlurPassData.descriptorSetLayouts;
+    pipelineDesc.vertexDescriptor     = VertexInputDescriptor::Create( 1, bindingDescs, 1, attribDescs.data() );
+    pipelineDesc.viewport             = FullScreenViewport();
+    pipelineDesc.scissor              = FullScreenScissor();
+    pipelineDesc.shaders[0]           = vertShader.get();
+    pipelineDesc.shaders[1]           = fragShader.get();
+    pipelineDesc.numShaders           = 2;
+    pipelineDesc.numColorAttachments  = 1;
+
+    ssaoBlurPassData.pipeline = g_renderState.device.NewPipeline( pipelineDesc, "SSAO blur pass" );
+    if ( !ssaoBlurPassData.pipeline )
+    {
+        LOG_ERR( "Could not create SSAO blur pipeline" );
+        return false;
+    }
+
+    ImageDescriptor info;
+    info.type    = ImageType::TYPE_2D;
+    info.width   = g_renderState.swapChain.extent.width;
+    info.height  = g_renderState.swapChain.extent.height;
+    info.sampler = "nearest_clamped_nearest";
+    info.usage   = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    info.format  = PixelFormat::R8_UNORM;
+    ssaoBlurPassData.outputTex = g_renderState.device.NewTexture( info, false, "ssao blur" );
+
+    ssaoBlurPassData.framebuffer = g_renderState.device.NewFramebuffer( { &ssaoBlurPassData.outputTex }, ssaoBlurPassData.renderPass, "ssao blur pass" );
+    if ( !ssaoBlurPassData.framebuffer )
     {
         return false;
     }
@@ -437,16 +627,18 @@ bool InitPostProcessPassData()
 bool InitDescriptorPoolAndPrimarySets()
 {
     VkDescriptorPoolSize poolSize[3] = {};
-    poolSize[0] = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }; // scene const buffer
+    poolSize[0] = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2 }; // scene const buffer + ssao kernel
     poolSize[1] = { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2 }; // point and spot light buffers
-    poolSize[2] = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 5 }; // tex array + 4 gbuffer attachment sampler2Ds
+    poolSize[2] = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 9 }; // tex array + 4 gbuffer attachment sampler2Ds + 3 ssao
 
-    s_descriptorPool = g_renderState.device.NewDescriptorPool( 3, poolSize, 5, "render system" );
+    s_descriptorPool = g_renderState.device.NewDescriptorPool( 3, poolSize, 7, "render system" );
 
-    descriptorSets.scene                    = s_descriptorPool.NewDescriptorSet( lightingPassData.descriptorSetLayouts[0], "scene data" );
-    descriptorSets.arrayOfTextures          = s_descriptorPool.NewDescriptorSet( lightingPassData.descriptorSetLayouts[1], "array of textures" );
-    descriptorSets.gBufferAttachments       = s_descriptorPool.NewDescriptorSet( lightingPassData.descriptorSetLayouts[2], "gbuffer attachments" );
-    descriptorSets.lights                   = s_descriptorPool.NewDescriptorSet( lightingPassData.descriptorSetLayouts[3], "scene lights" );
+    descriptorSets.scene                    = s_descriptorPool.NewDescriptorSet( lightingPassData.descriptorSetLayouts[0],    "scene data" );
+    descriptorSets.arrayOfTextures          = s_descriptorPool.NewDescriptorSet( lightingPassData.descriptorSetLayouts[1],    "array of textures" );
+    descriptorSets.gBufferAttachments       = s_descriptorPool.NewDescriptorSet( lightingPassData.descriptorSetLayouts[2],    "gbuffer attachments" );
+    descriptorSets.ssao                     = s_descriptorPool.NewDescriptorSet( ssaoPassData.descriptorSetLayouts[0],        "ssao textures" );
+    descriptorSets.ssaoBlur                 = s_descriptorPool.NewDescriptorSet( ssaoBlurPassData.descriptorSetLayouts[0],    "ssao blur tex" );
+    descriptorSets.lights                   = s_descriptorPool.NewDescriptorSet( lightingPassData.descriptorSetLayouts[3],    "scene lights" );
     descriptorSets.postProcessInputColorTex = s_descriptorPool.NewDescriptorSet( postProcessPassData.descriptorSetLayouts[0], "post process input tex" );
     
     std::vector< VkWriteDescriptorSet > writeDescriptorSets;
@@ -471,6 +663,28 @@ bool InitDescriptorPoolAndPrimarySets()
         WriteDescriptorSet( descriptorSets.arrayOfTextures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, imageDescriptors.data(), static_cast< uint32_t >( imageDescriptors.size() ) ),
         WriteDescriptorSet( descriptorSets.lights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &bufferDescriptors[1] ),
         WriteDescriptorSet( descriptorSets.lights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2, &bufferDescriptors[2] ),
+    };
+    g_renderState.device.UpdateDescriptorSets( static_cast< uint32_t >( writeDescriptorSets.size() ), writeDescriptorSets.data() );
+
+    // SSAO Pass
+    bufferDescriptors =
+    {
+        DescriptorBufferInfo( ssaoPassData.kernel ),
+    };
+    imageDescriptors =
+    {
+        DescriptorImageInfo( gBufferPassData.gbuffer.positions, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( gBufferPassData.gbuffer.normals, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( ssaoPassData.noise, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( ssaoPassData.texture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+    };
+    writeDescriptorSets =
+    {
+        WriteDescriptorSet( descriptorSets.ssao, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageDescriptors[0] ),
+        WriteDescriptorSet( descriptorSets.ssao, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, &imageDescriptors[1] ),
+        WriteDescriptorSet( descriptorSets.ssao, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2, &imageDescriptors[2] ),
+        WriteDescriptorSet( descriptorSets.ssao, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3, &bufferDescriptors[0] ),
+        WriteDescriptorSet( descriptorSets.ssaoBlur, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageDescriptors[3] ),
     };
     g_renderState.device.UpdateDescriptorSets( static_cast< uint32_t >( writeDescriptorSets.size() ), writeDescriptorSets.data() );
 
@@ -522,6 +736,18 @@ namespace RenderSystem
         if ( !InitGBufferPassData() )
         {
             LOG_ERR( "Could not init gbuffer pass data" );
+            return false;
+        }
+
+        if ( !InitSSAOPass() )
+        {
+            LOG_ERR( "Could not init SSAO pass data" );
+            return false;
+        }
+
+        if ( !InitSSAOBlurPassData() )
+        {
+            LOG_ERR( "Could not init SSAO blur pass data" );
             return false;
         }
 
@@ -592,6 +818,17 @@ namespace RenderSystem
             layout.Free();
         }
 
+        ssaoPassData.renderPass.Free();
+        ssaoPassData.texture.Free();
+        ssaoPassData.frameBuffer.Free();
+        ssaoPassData.pipeline.Free();
+        ssaoPassData.kernel.Free();
+        ssaoPassData.noise.Free();
+        for ( auto& layout : ssaoPassData.descriptorSetLayouts )
+        {
+            layout.Free();
+        }
+
         lightingPassData.renderPass.Free();
         lightingPassData.outputTexture.Free();
         lightingPassData.frameBuffer.Free();
@@ -656,6 +893,39 @@ namespace RenderSystem
         // PG_DEBUG_MARKER_END_REGION( cmdBuf );
 
         cmdBuf.EndRenderPass();
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
+    }
+
+    void SSAOPass( Scene* scene, CommandBuffer& cmdBuf )
+    {
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "SSAO", glm::vec4( .5, .5, .5, 1 ) );
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "SSAO Occlusion Pass", glm::vec4( .8, .5, .5, 1 ) );
+        cmdBuf.BeginRenderPass( ssaoPassData.renderPass, ssaoPassData.frameBuffer, g_renderState.swapChain.extent );
+        
+        cmdBuf.BindRenderPipeline( ssaoPassData.pipeline );
+        cmdBuf.BindDescriptorSets( 1, &descriptorSets.ssao, ssaoPassData.pipeline, 0 );
+        SSAOShaderData pushData;
+        pushData.V = scene->camera.GetV();
+        pushData.P = scene->camera.GetP();
+        vkCmdPushConstants( cmdBuf.GetHandle(), ssaoPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( SSAOShaderData ), &pushData );
+        PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
+        cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
+        cmdBuf.Draw( 0, 6 );
+        
+        cmdBuf.EndRenderPass();
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
+
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "SSAO Blur Pass", glm::vec4( .5, .5, .8, 1 ) );
+        cmdBuf.BeginRenderPass( ssaoBlurPassData.renderPass, ssaoBlurPassData.framebuffer, g_renderState.swapChain.extent );
+        
+        cmdBuf.BindRenderPipeline( ssaoBlurPassData.pipeline );
+        cmdBuf.BindDescriptorSets( 1, &descriptorSets.ssaoBlur, ssaoBlurPassData.pipeline, 0 );
+        PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
+        cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
+        cmdBuf.Draw( 0, 6 );
+        
+        cmdBuf.EndRenderPass();
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
     }
 
@@ -750,6 +1020,8 @@ namespace RenderSystem
         cmdBuf.EndRenderPass(); // end gbuffer pass
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
 
+        SSAOPass( scene, cmdBuf );
+
 
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Lighting Pass", glm::vec4( .8, 0, .8, 1 ) );
         cmdBuf.BeginRenderPass( lightingPassData.renderPass, lightingPassData.frameBuffer, g_renderState.swapChain.extent );
@@ -767,7 +1039,6 @@ namespace RenderSystem
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
 
 
-        // Post Processing Render Pass
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Post Process Pass", glm::vec4( .2, .2, 1, 1 ) );
         cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex], g_renderState.swapChain.extent );
         
@@ -801,6 +1072,15 @@ namespace RenderSystem
         samplerDesc.wrapModeU = WrapMode::CLAMP_TO_EDGE;
         samplerDesc.wrapModeV = WrapMode::CLAMP_TO_EDGE;
         samplerDesc.wrapModeW = WrapMode::CLAMP_TO_EDGE;
+        AddSampler( samplerDesc );
+
+        samplerDesc.name      = "nearest_repeat_nearest";
+        samplerDesc.minFilter = FilterMode::NEAREST;
+        samplerDesc.magFilter = FilterMode::NEAREST;
+        samplerDesc.mipFilter = MipFilterMode::NEAREST;
+        samplerDesc.wrapModeU = WrapMode::REPEAT;
+        samplerDesc.wrapModeV = WrapMode::REPEAT;
+        samplerDesc.wrapModeW = WrapMode::REPEAT;
         AddSampler( samplerDesc );
 
         samplerDesc.name        = "shadow_map";

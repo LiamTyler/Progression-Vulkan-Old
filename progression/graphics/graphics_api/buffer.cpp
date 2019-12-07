@@ -22,7 +22,7 @@ namespace Gfx
 
     void Buffer::Map()
     {
-        vkMapMemory( m_device, m_memory, 0, m_length, 0, &m_mappedPtr );
+        vkMapMemory( m_device, m_memory, 0, VK_WHOLE_SIZE, 0, &m_mappedPtr );
     }
 
     void Buffer::UnMap()

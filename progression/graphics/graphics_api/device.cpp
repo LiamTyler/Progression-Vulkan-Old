@@ -268,7 +268,7 @@ namespace Gfx
     {
         bool isDepth = PixelFormatIsDepthFormat( desc.format );
         VkImageCreateInfo imageInfo = {};
-        imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         imageInfo.imageType     = PGToVulkanImageType( desc.type );
         imageInfo.extent.width  = desc.width;
         imageInfo.extent.height = desc.height;
@@ -316,6 +316,30 @@ namespace Gfx
             tex.m_textureSlot = TextureManager::GetOpenSlot( &tex );
         }
         PG_DEBUG_MARKER_IF_STR_NOT_EMPTY( name, PG_DEBUG_MARKER_SET_IMAGE_NAME( tex, name ) );
+
+        return tex;
+    }
+
+    Texture Device::NewTextureFromBuffer( ImageDescriptor& desc, void* data, bool managed, const std::string& name ) const
+    {
+        desc.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        Texture tex          = NewTexture( desc, managed, name );
+        size_t imSize        = desc.width * desc.height * desc.depth * desc.arrayLayers * SizeOfPixelFromat( desc.format );
+        Buffer stagingBuffer = NewBuffer( imSize, BUFFER_TYPE_TRANSFER_SRC, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
+        stagingBuffer.Map();
+        memcpy( stagingBuffer.MappedPtr(), data, imSize );
+        stagingBuffer.UnMap();
+
+        VkFormat vkFormat = PGToVulkanPixelFormat( desc.format );
+        PG_ASSERT( FormatSupported( vkFormat, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT ) );
+        
+        TransitionImageLayout( tex.GetHandle(), vkFormat, VK_IMAGE_LAYOUT_UNDEFINED,
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, tex.m_desc.mipLevels );
+        CopyBufferToImage( stagingBuffer, tex );
+        TransitionImageLayout( tex.GetHandle(), vkFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, tex.m_desc.mipLevels );
+
+        stagingBuffer.Free();
 
         return tex;
     }

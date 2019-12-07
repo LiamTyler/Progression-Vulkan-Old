@@ -28,8 +28,6 @@ uint32_t GetResourceTypeID()
 namespace Progression
 {
 
-class Texture;
-
 enum ResourceTypes
 {
     SHADER = 0,
