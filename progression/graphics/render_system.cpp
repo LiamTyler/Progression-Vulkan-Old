@@ -28,6 +28,8 @@ using namespace Gfx;
 
 static std::unordered_map< std::string, Gfx::Sampler > s_samplers;
 
+int g_ssaoOn = 0;
+
 namespace Progression
 {
 
@@ -629,7 +631,7 @@ bool InitDescriptorPoolAndPrimarySets()
     VkDescriptorPoolSize poolSize[3] = {};
     poolSize[0] = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2 }; // scene const buffer + ssao kernel
     poolSize[1] = { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2 }; // point and spot light buffers
-    poolSize[2] = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 9 }; // tex array + 4 gbuffer attachment sampler2Ds + 3 ssao
+    poolSize[2] = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }; // tex array + 4 gbuffer attachment sampler2Ds + 3 ssao
 
     s_descriptorPool = g_renderState.device.NewDescriptorPool( 3, poolSize, 7, "render system" );
 
@@ -692,9 +694,10 @@ bool InitDescriptorPoolAndPrimarySets()
     imageDescriptors =
     {
         DescriptorImageInfo( gBufferPassData.gbuffer.positions, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
-        DescriptorImageInfo( gBufferPassData.gbuffer.normals, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
-        DescriptorImageInfo( gBufferPassData.gbuffer.diffuse, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
-        DescriptorImageInfo( gBufferPassData.gbuffer.specular, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( gBufferPassData.gbuffer.normals,   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( gBufferPassData.gbuffer.diffuse,   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( gBufferPassData.gbuffer.specular,  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( ssaoBlurPassData.outputTex,        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
     };
     writeDescriptorSets =
     {
@@ -702,6 +705,7 @@ bool InitDescriptorPoolAndPrimarySets()
         WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, &imageDescriptors[1] ),
         WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2, &imageDescriptors[2] ),
         WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3, &imageDescriptors[3] ),
+        WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4, &imageDescriptors[4] ),
     };
     g_renderState.device.UpdateDescriptorSets( static_cast< uint32_t >( writeDescriptorSets.size() ), writeDescriptorSets.data() );
 
@@ -829,6 +833,15 @@ namespace RenderSystem
             layout.Free();
         }
 
+        ssaoBlurPassData.pipeline.Free();
+        ssaoBlurPassData.renderPass.Free();
+        ssaoBlurPassData.outputTex.Free();
+        ssaoBlurPassData.framebuffer.Free();
+        for ( auto& layout : ssaoBlurPassData.descriptorSetLayouts )
+        {
+            layout.Free();
+        }
+
         lightingPassData.renderPass.Free();
         lightingPassData.outputTexture.Free();
         lightingPassData.frameBuffer.Free();
@@ -848,6 +861,7 @@ namespace RenderSystem
 
     void ShadowPass( Scene* scene, CommandBuffer& cmdBuf )
     {
+        PG_PROFILE_TIMESTAMP( cmdBuf, "Shadow_Start" );
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Shadow Pass", glm::vec4( .2, .2, .4, 1 ) );
         cmdBuf.BeginRenderPass( shadowPassData.renderPass, shadowPassData.frameBuffer, { DIRECTIONAL_SHADOW_MAP_RESOLUTION, DIRECTIONAL_SHADOW_MAP_RESOLUTION } );
 
@@ -894,10 +908,12 @@ namespace RenderSystem
 
         cmdBuf.EndRenderPass();
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
+        PG_PROFILE_TIMESTAMP( cmdBuf, "Shadow_End" );
     }
 
     void SSAOPass( Scene* scene, CommandBuffer& cmdBuf )
     {
+        PG_PROFILE_TIMESTAMP( cmdBuf, "SSAO_Start" );
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "SSAO", glm::vec4( .5, .5, .5, 1 ) );
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "SSAO Occlusion Pass", glm::vec4( .8, .5, .5, 1 ) );
         cmdBuf.BeginRenderPass( ssaoPassData.renderPass, ssaoPassData.frameBuffer, g_renderState.swapChain.extent );
@@ -927,6 +943,7 @@ namespace RenderSystem
         cmdBuf.EndRenderPass();
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
+        PG_PROFILE_TIMESTAMP( cmdBuf, "SSAO_End" );
     }
 
     void Render( Scene* scene )
@@ -966,10 +983,11 @@ namespace RenderSystem
         auto& cmdBuf = g_renderState.graphicsCommandBuffer;
         cmdBuf.BeginRecording();
         PG_PROFILE_RESET( cmdBuf );
-        PG_PROFILE_TIMESTAMP( cmdBuf, "frameStart" );
+        PG_PROFILE_TIMESTAMP( cmdBuf, "Frame_Start" );
 
         ShadowPass( scene, cmdBuf );
 
+        PG_PROFILE_TIMESTAMP( cmdBuf, "GBuffer_Start" );
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "GBuffer Pass", glm::vec4( .8, .8, .2, 1 ) );
         cmdBuf.BeginRenderPass( gBufferPassData.renderPass, gBufferPassData.frameBuffer, g_renderState.swapChain.extent );
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "GBuffer -- Rigid Models", glm::vec4( .2, .8, .2, 1 ) );
@@ -1019,10 +1037,12 @@ namespace RenderSystem
         
         cmdBuf.EndRenderPass(); // end gbuffer pass
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
+        PG_PROFILE_TIMESTAMP( cmdBuf, "GBuffer_End" );
 
         SSAOPass( scene, cmdBuf );
 
 
+        PG_PROFILE_TIMESTAMP( cmdBuf, "Lighting_Start" );
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Lighting Pass", glm::vec4( .8, 0, .8, 1 ) );
         cmdBuf.BeginRenderPass( lightingPassData.renderPass, lightingPassData.frameBuffer, g_renderState.swapChain.extent );
 
@@ -1032,13 +1052,16 @@ namespace RenderSystem
         cmdBuf.BindDescriptorSets( 1, &descriptorSets.gBufferAttachments, lightingPassData.pipeline, 2 );
         cmdBuf.BindDescriptorSets( 1, &descriptorSets.lights, lightingPassData.pipeline, 3 );
         PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
+
+        vkCmdPushConstants( cmdBuf.GetHandle(), lightingPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( int ), &g_ssaoOn );
         cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
         cmdBuf.Draw( 0, 6 );
 
         cmdBuf.EndRenderPass(); // end lighting pass
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
+        PG_PROFILE_TIMESTAMP( cmdBuf, "Lighting_End" );
 
-
+        PG_PROFILE_TIMESTAMP( cmdBuf, "PostProcess_Start" );
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Post Process Pass", glm::vec4( .2, .2, 1, 1 ) );
         cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[imageIndex], g_renderState.swapChain.extent );
         
@@ -1051,14 +1074,20 @@ namespace RenderSystem
         
         cmdBuf.EndRenderPass(); // end post process pass
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
-        PG_PROFILE_TIMESTAMP( cmdBuf, "frameEnd" );
+        PG_PROFILE_TIMESTAMP( cmdBuf, "PostProcess_End" );
+        PG_PROFILE_TIMESTAMP( cmdBuf, "Frame_End" );
 
         cmdBuf.EndRecording();
         g_renderState.device.SubmitRenderCommands( 1, &cmdBuf );
         g_renderState.device.SubmitFrame( imageIndex );
 
         PG_PROFILE_GET_RESULTS();
-        //LOG( "time: ", Profile::GetDuration( "frameStart", "frameEnd" ) );
+        LOG( "Shadow time: ", Profile::GetDuration( "Shadow_Start", "Shadow_End" ) );
+        LOG( "GBuffer time: ", Profile::GetDuration( "GBuffer_Start", "GBuffer_End" ) );
+        LOG( "SSAO time: ", Profile::GetDuration( "SSAO_Start", "SSAO_End" ) );
+        LOG( "Lighting time: ", Profile::GetDuration( "Lighting_Start", "Lighting_End" ) );
+        LOG( "PostProcess time: ", Profile::GetDuration( "PostProcess_Start", "PostProcess_End" ) );
+        LOG( "Frame time: ", Profile::GetDuration( "Frame_Start", "Frame_End" ) );
     } 
 
     void InitSamplers()

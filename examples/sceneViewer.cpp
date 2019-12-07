@@ -3,6 +3,8 @@
 
 using namespace Progression;
 
+extern int g_ssaoOn;
+
 int main( int argc, char* argv[] )
 {
     if ( argc != 2 )
@@ -68,6 +70,11 @@ int main( int argc, char* argv[] )
             if ( PG::Input::GetKeyDown( PG::Key::ESC ) )
             {
                 PG::g_engineShutdown = true;
+            }
+
+            if ( PG::Input::GetKeyUp( PG::Key::O ) )
+            {
+                g_ssaoOn = !g_ssaoOn;
             }
 
             scene->Update();

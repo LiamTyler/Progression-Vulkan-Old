@@ -38,7 +38,8 @@ void main()
     vec3 B   = cross( N, T );
     mat3 TBN = mat3( T, B, N );
     
-    int unOccludedSamples = 0;
+    float occlusion = 0;
+    // float unOccludedSamples = 0;
     for ( int i = 0; i < PG_SSAO_KERNEL_SIZE; ++i )
     {
         vec3 offsetPos = fragPos + TBN * uboSSAOKernel.samples[i].xyz * SCALE_RADIUS;
@@ -50,11 +51,17 @@ void main()
         
         float offsetDepth = ( matrices.V * texture( worldPositions, projCoords.xy ) ).z;
         
-        if ( offsetPos.z + BIAS > offsetDepth )
-        {
-            unOccludedSamples += 1;
-        }
+        float rangeCheck = smoothstep(0.0f, 1.0f, SCALE_RADIUS / abs(fragPos.z - offsetDepth));
+		occlusion += (offsetDepth >= offsetPos.z + BIAS ? 1.0f : 0.0f) * rangeCheck;
+        
+        // float rangeCheck = smoothstep( 0.0f, 1.0f, SCALE_RADIUS / abs( fragPos.z - offsetDepth ) );
+		// unOccludedSamples += ( offsetDepth <= offsetPos.z + BIAS ? 1.0f : 0.0f ) * rangeCheck;
+        // if ( offsetPos.z + BIAS > offsetDepth )
+        // {
+        //     unOccludedSamples += 1;
+        // }
     }
     
-    occlusionFactor = unOccludedSamples / float( PG_SSAO_KERNEL_SIZE );
+    // occlusionFactor = unOccludedSamples / float( PG_SSAO_KERNEL_SIZE );
+    occlusionFactor = 1 - ( occlusion / float( PG_SSAO_KERNEL_SIZE ) );
 }

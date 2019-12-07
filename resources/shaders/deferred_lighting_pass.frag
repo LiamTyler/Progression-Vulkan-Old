@@ -30,6 +30,12 @@ layout( set = 2, binding = 0 ) uniform sampler2D positionTex;
 layout( set = 2, binding = 1 ) uniform sampler2D normalTex;
 layout( set = 2, binding = 2 ) uniform sampler2D diffuseTex;
 layout( set = 2, binding = 3 ) uniform sampler2D specularTex;
+layout( set = 2, binding = 4 ) uniform sampler2D ssaoTex;
+
+layout( std430, push_constant ) uniform SSAOToggle
+{
+    layout( offset = 0 ) int ssaoOn;
+};
 
 float Attenuate( in const float distSquared, in const float radiusSquared )
 {
@@ -71,7 +77,15 @@ void main()
     vec3 color = vec3( 0, 0, 0 );
     
     // ambient
-    color += Kd * sceneConstantBuffer.ambientColor.xyz;
+    float ambientOcclusion = 1;
+    if ( ssaoOn != 0 )
+    {
+        ambientOcclusion = texture( ssaoTex, UV ).r;
+    }
+    color += ambientOcclusion * ambientOcclusion * Kd * sceneConstantBuffer.ambientColor.xyz;
+    
+    // outColor = vec4( color, 1.0 );
+    // return;
     
     // directional light
     vec3 lightColor = sceneConstantBuffer.dirLight.colorAndIntensity.w * sceneConstantBuffer.dirLight.colorAndIntensity.xyz;

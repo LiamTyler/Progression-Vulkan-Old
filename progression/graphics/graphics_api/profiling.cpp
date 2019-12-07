@@ -15,7 +15,7 @@ static uint32_t s_nextFreeIndex;
 #if !USING( SHIP_BUILD )
 #define PG_PROFILING IN_USE
 #else // #if !USING( SHIP_BUILD )
-#define PG_PROFILING NOT_USE
+#define PG_PROFILING NOT_IN_USE
 #endif // #else // #if !USING( SHIP_BUILD )
 
 namespace Progression

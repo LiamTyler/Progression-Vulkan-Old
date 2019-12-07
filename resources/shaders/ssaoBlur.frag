@@ -10,7 +10,6 @@ layout( location = 0 ) out float outFragColor;
 #define BLUR_KERNEL_SIZE 2
 #define BLUR_KERNEL_TOTAL_SIZE ( 2 * BLUR_KERNEL_SIZE + 1 )
 
-
 void main()
 {
     vec2 texDims = vec2( 1.0 ) / textureSize( ssaoTex, 0 );
