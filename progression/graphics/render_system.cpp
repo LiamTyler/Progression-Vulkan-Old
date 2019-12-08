@@ -94,7 +94,7 @@ struct GBuffer
 {
     Texture positions;
     Texture normals;
-    Texture diffuse;
+    Texture diffuseAndSpecular;
     Texture specular;
 };
 
@@ -217,17 +217,14 @@ static bool InitGBufferPassData()
     RenderPassDescriptor desc;
     desc.colorAttachmentDescriptors[0].format      = PixelFormat::R32_G32_B32_A32_FLOAT;
     desc.colorAttachmentDescriptors[0].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
-    desc.colorAttachmentDescriptors[1].format      = PixelFormat::R32_G32_B32_A32_FLOAT;
+    desc.colorAttachmentDescriptors[1].format      = PixelFormat::R16_G16_B16_A16_FLOAT;
     desc.colorAttachmentDescriptors[1].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
-    desc.colorAttachmentDescriptors[2].format      = PixelFormat::R16_G16_B16_A16_FLOAT;
+    desc.colorAttachmentDescriptors[2].format      = PixelFormat::R16_G16_B16_A16_UINT;
     desc.colorAttachmentDescriptors[2].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
-    // desc.colorAttachmentDescriptors[3].format      = PixelFormat::R16_G16_B16_A16_FLOAT; //TODO!!! Reduce number of textures by packing both diffuse and specular into rgb and the specular exponent in a
-    // desc.colorAttachmentDescriptors[3].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
 
     desc.depthAttachmentDescriptor.format      = PixelFormat::DEPTH_32_FLOAT;
     desc.depthAttachmentDescriptor.loadAction  = LoadAction::CLEAR;
     desc.depthAttachmentDescriptor.storeAction = StoreAction::STORE;
-    //desc.depthAttachmentDescriptor.finalLayout = ImageLayout::DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL;
     desc.depthAttachmentDescriptor.finalLayout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     gBufferPassData.renderPass = g_renderState.device.NewRenderPass( desc, "gBuffer" );
@@ -272,7 +269,7 @@ static bool InitGBufferPassData()
     pipelineDesc.shaders[0]             = vertShader.get();
     pipelineDesc.shaders[1]             = fragShader.get();
     pipelineDesc.numShaders             = 2;
-    pipelineDesc.numColorAttachments    = 4;
+    pipelineDesc.numColorAttachments    = 3;
 
     gBufferPassData.pipeline = g_renderState.device.NewPipeline( pipelineDesc, "gbuffer rigid model" );
     if ( !gBufferPassData.pipeline )
@@ -287,20 +284,17 @@ static bool InitGBufferPassData()
     info.height  = g_renderState.swapChain.extent.height;
     info.sampler = "nearest_clamped_nearest";
     info.usage   = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    info.format                       = PixelFormat::R32_G32_B32_A32_FLOAT;
-    gBufferPassData.gbuffer.positions = g_renderState.device.NewTexture( info, false, "gbuffer position" );
-    info.format                       = PixelFormat::R32_G32_B32_A32_FLOAT;
-    gBufferPassData.gbuffer.normals   = g_renderState.device.NewTexture( info, false, "gbuffer normals" );
-    info.format                       = PixelFormat::R16_G16_B16_A16_FLOAT;
-    gBufferPassData.gbuffer.diffuse   = g_renderState.device.NewTexture( info, false, "gbuffer diffuse + specular" );
-    // info.format                       = PixelFormat::R16_G16_B16_A16_FLOAT;
-    // gBufferPassData.gbuffer.specular  = g_renderState.device.NewTexture( info, false, "gbuffer specular" );
+    info.format                                = PixelFormat::R32_G32_B32_A32_FLOAT;
+    gBufferPassData.gbuffer.positions          = g_renderState.device.NewTexture( info, false, "gbuffer position" );
+    info.format                                = PixelFormat::R16_G16_B16_A16_FLOAT;
+    gBufferPassData.gbuffer.normals            = g_renderState.device.NewTexture( info, false, "gbuffer normals" );
+    info.format                                = PixelFormat::R16_G16_B16_A16_UINT;
+    gBufferPassData.gbuffer.diffuseAndSpecular = g_renderState.device.NewTexture( info, false, "gbuffer diffuse + specular" );
 
     gBufferPassData.frameBuffer = g_renderState.device.NewFramebuffer( {
         &gBufferPassData.gbuffer.positions,
         &gBufferPassData.gbuffer.normals,
-        &gBufferPassData.gbuffer.diffuse,
-        //&gBufferPassData.gbuffer.specular,
+        &gBufferPassData.gbuffer.diffuseAndSpecular,
         &g_renderState.depthTex
         }, gBufferPassData.renderPass, "gbuffer pass" );
 
@@ -640,10 +634,10 @@ bool InitDescriptorPoolAndPrimarySets()
     };
     writeDescriptorSets =
     {
-        WriteDescriptorSet( descriptorSets.scene, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0, &bufferDescriptors[0] ),
-        WriteDescriptorSet( descriptorSets.arrayOfTextures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, imageDescriptors.data(), static_cast< uint32_t >( imageDescriptors.size() ) ),
-        WriteDescriptorSet( descriptorSets.lights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &bufferDescriptors[1] ),
-        WriteDescriptorSet( descriptorSets.lights, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2, &bufferDescriptors[2] ),
+        WriteDescriptorSet( descriptorSets.scene,           VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,          0, &bufferDescriptors[0] ),
+        WriteDescriptorSet( descriptorSets.arrayOfTextures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  0, imageDescriptors.data(), static_cast< uint32_t >( imageDescriptors.size() ) ),
+        WriteDescriptorSet( descriptorSets.lights,          VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,          1, &bufferDescriptors[1] ),
+        WriteDescriptorSet( descriptorSets.lights,          VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,          2, &bufferDescriptors[2] ),
     };
     g_renderState.device.UpdateDescriptorSets( static_cast< uint32_t >( writeDescriptorSets.size() ), writeDescriptorSets.data() );
 
@@ -655,16 +649,16 @@ bool InitDescriptorPoolAndPrimarySets()
     imageDescriptors =
     {
         DescriptorImageInfo( gBufferPassData.gbuffer.positions, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
-        DescriptorImageInfo( gBufferPassData.gbuffer.normals, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
-        DescriptorImageInfo( ssaoPassData.noise, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
-        DescriptorImageInfo( ssaoPassData.texture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( gBufferPassData.gbuffer.normals,   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( ssaoPassData.noise,                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( ssaoPassData.texture,              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
     };
     writeDescriptorSets =
     {
-        WriteDescriptorSet( descriptorSets.ssao, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageDescriptors[0] ),
-        WriteDescriptorSet( descriptorSets.ssao, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, &imageDescriptors[1] ),
-        WriteDescriptorSet( descriptorSets.ssao, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2, &imageDescriptors[2] ),
-        WriteDescriptorSet( descriptorSets.ssao, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3, &bufferDescriptors[0] ),
+        WriteDescriptorSet( descriptorSets.ssao,     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageDescriptors[0] ),
+        WriteDescriptorSet( descriptorSets.ssao,     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, &imageDescriptors[1] ),
+        WriteDescriptorSet( descriptorSets.ssao,     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2, &imageDescriptors[2] ),
+        WriteDescriptorSet( descriptorSets.ssao,     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         3, &bufferDescriptors[0] ),
         WriteDescriptorSet( descriptorSets.ssaoBlur, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageDescriptors[3] ),
     };
     g_renderState.device.UpdateDescriptorSets( static_cast< uint32_t >( writeDescriptorSets.size() ), writeDescriptorSets.data() );
@@ -672,19 +666,17 @@ bool InitDescriptorPoolAndPrimarySets()
     // Lighting Pass
     imageDescriptors =
     {
-        DescriptorImageInfo( gBufferPassData.gbuffer.positions, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
-        DescriptorImageInfo( gBufferPassData.gbuffer.normals,   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
-        DescriptorImageInfo( gBufferPassData.gbuffer.diffuse,   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
-        // DescriptorImageInfo( gBufferPassData.gbuffer.specular,  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
-        DescriptorImageInfo( ssaoBlurPassData.outputTex,        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( gBufferPassData.gbuffer.positions,          VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( gBufferPassData.gbuffer.normals,            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( gBufferPassData.gbuffer.diffuseAndSpecular, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( ssaoBlurPassData.outputTex,                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
     };
     writeDescriptorSets =
     {
         WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageDescriptors[0] ),
         WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, &imageDescriptors[1] ),
         WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2, &imageDescriptors[2] ),
-        // WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3, &imageDescriptors[3] ),
-        WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4, &imageDescriptors[4] ),
+        WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3, &imageDescriptors[3] ),
     };
     g_renderState.device.UpdateDescriptorSets( static_cast< uint32_t >( writeDescriptorSets.size() ), writeDescriptorSets.data() );
 
@@ -792,11 +784,9 @@ namespace RenderSystem
         s_gpuPointLightBuffers.Free();
         s_gpuSpotLightBuffers.Free();
 
-        // Free GBuffer Data
         gBufferPassData.gbuffer.positions.Free();
         gBufferPassData.gbuffer.normals.Free();
-        gBufferPassData.gbuffer.diffuse.Free();
-        gBufferPassData.gbuffer.specular.Free();
+        gBufferPassData.gbuffer.diffuseAndSpecular.Free();
         gBufferPassData.renderPass.Free();
         gBufferPassData.frameBuffer.Free();
         gBufferPassData.pipeline.Free();

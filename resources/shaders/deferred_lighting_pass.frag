@@ -28,9 +28,8 @@ layout( set = PG_2D_TEXTURES_SET, binding = 0 ) uniform sampler2D textures[PG_MA
 
 layout( set = 2, binding = 0 ) uniform sampler2D positionTex;
 layout( set = 2, binding = 1 ) uniform sampler2D normalTex;
-layout( set = 2, binding = 2 ) uniform sampler2D diffuseTex;
-// layout( set = 2, binding = 3 ) uniform sampler2D specularTex;
-layout( set = 2, binding = 4 ) uniform sampler2D ssaoTex;
+layout( set = 2, binding = 2 ) uniform usampler2D diffuseAndSpecularTex;
+layout( set = 2, binding = 3 ) uniform sampler2D ssaoTex;
 
 layout( std430, push_constant ) uniform SSAOToggle
 {
@@ -66,15 +65,28 @@ float ShadowAmount( in const vec3 fragWorldPos )
     return 0;
 }
 
+void UnpackShortToTwoFloats( in const uint packed, out float x, out float y )
+{
+    x = float( packed >> 8 ) / 255.0;
+    y = float( packed & 0xFF ) / 255.0;
+}
+
+void UnpackDiffuseAndSpecular( in const uvec4 packed, out vec3 Kd, out vec4 Ks )
+{
+    UnpackShortToTwoFloats( packed.x, Kd.x, Ks.x );
+    UnpackShortToTwoFloats( packed.y, Kd.y, Ks.y );
+    UnpackShortToTwoFloats( packed.z, Kd.z, Ks.z );
+    Ks.w = float( packed.w & 0xFFF ) / 0xFFFF;
+}
+
 void main()
 {
     vec3 posInWorldSpace = texture( positionTex, UV ).xyz;
     vec3 n               = texture( normalTex,   UV ).xyz;
-    vec4 packed = texture( diffuseTex,  UV );
-    vec3 Kd = packed.xyz;
-    vec4 Ks = packed.xyzw;
-    // vec3 Kd              = texture( diffuseTex,  UV ).xyz;
-    //vec4 Ks              = texture( specularTex, UV );
+    uvec4 packed = texture( diffuseAndSpecularTex,  UV );
+    vec3 Kd;
+    vec4 Ks;
+    UnpackDiffuseAndSpecular( packed, Kd, Ks );
 
     vec3 e     = normalize( sceneConstantBuffer.cameraPos.xyz - posInWorldSpace );
     vec3 color = vec3( 0, 0, 0 );
@@ -86,16 +98,13 @@ void main()
         ambientOcclusion = texture( ssaoTex, UV ).r;
     }
     color += ambientOcclusion * ambientOcclusion * Kd * sceneConstantBuffer.ambientColor.xyz;
-    
-    // outColor = vec4( color, 1.0 );
-    // return;
-    
+
     // directional light
     vec3 lightColor = sceneConstantBuffer.dirLight.colorAndIntensity.w * sceneConstantBuffer.dirLight.colorAndIntensity.xyz;
     vec3 l = normalize( -sceneConstantBuffer.dirLight.direction.xyz );
     vec3 h = normalize( l + e );
     
-    float S = 1; //1 - ShadowAmount( posInWorldSpace );
+    float S = 1 - ShadowAmount( posInWorldSpace );
     color += S * lightColor * Kd * max( 0.0, dot( l, n ) );
     if ( dot( l, n ) > PG_SHADER_EPSILON )
     {

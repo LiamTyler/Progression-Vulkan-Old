@@ -6,8 +6,7 @@
 
 layout( location = 0 ) out vec4 outPosition;
 layout( location = 1 ) out vec4 outNormal;
-layout( location = 2 ) out vec4 outDiffuse;
-// layout( location = 3 ) out vec4 outSpecular;
+layout( location = 2 ) out uvec4 outDiffuseAndSpecular;
 
 layout( location = 0 ) in vec3 posInWorldSpace;
 layout( location = 1 ) in vec2 texCoord;
@@ -19,6 +18,24 @@ layout( std430, push_constant ) uniform MaterialConstantBufferUniform
 {
     layout( offset = PG_MATERIAL_PUSH_CONSTANT_OFFSET ) MaterialConstantBufferData material;
 };
+
+uint PackTwoFloatsToShort( in const float x, in const float y )
+{
+    uint uX = uint( x * 0xFF );
+    uint uY = uint( y * 0xFF );
+    return ( uX << 8 ) | ( uY & 0xFF );
+}
+
+uvec4 PackDiffuseAndSpecular( in const vec3 Kd, in const vec4 Ks )
+{
+    uvec4 enc;
+    enc.x = PackTwoFloatsToShort( Kd.x, Ks.x );
+    enc.y = PackTwoFloatsToShort( Kd.y, Ks.y );
+    enc.z = PackTwoFloatsToShort( Kd.z, Ks.z );
+    enc.w = uint( Ks.w );
+    
+    return enc;
+}
 
 void main()
 {
@@ -38,7 +55,5 @@ void main()
     {
         Kd *= texture( textures[material.diffuseTexIndex], texCoord ).xyz;
     }
-    outDiffuse = vec4( Kd, 0 );
-    
-    // outSpecular = material.Ks;
+    outDiffuseAndSpecular = PackDiffuseAndSpecular( Kd, material.Ks );
 }
