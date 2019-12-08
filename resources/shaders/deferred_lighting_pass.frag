@@ -76,7 +76,7 @@ void UnpackDiffuseAndSpecular( in const uvec4 packed, out vec3 Kd, out vec4 Ks )
     UnpackShortToTwoFloats( packed.x, Kd.x, Ks.x );
     UnpackShortToTwoFloats( packed.y, Kd.y, Ks.y );
     UnpackShortToTwoFloats( packed.z, Kd.z, Ks.z );
-    Ks.w = float( packed.w & 0xFFF ) / 0xFFFF;
+    Ks.w = float( packed.w );
 }
 
 void main()
@@ -97,7 +97,7 @@ void main()
     {
         ambientOcclusion = texture( ssaoTex, UV ).r;
     }
-    color += ambientOcclusion * ambientOcclusion * Kd * sceneConstantBuffer.ambientColor.xyz;
+    color += ambientOcclusion * Kd * sceneConstantBuffer.ambientColor.xyz;
 
     // directional light
     vec3 lightColor = sceneConstantBuffer.dirLight.colorAndIntensity.w * sceneConstantBuffer.dirLight.colorAndIntensity.xyz;
