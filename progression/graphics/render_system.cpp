@@ -837,8 +837,7 @@ namespace RenderSystem
         // TODO: Remove hardcoded directional shadow map
         glm::vec3 pos( 0, 15, 0 );
         auto V = glm::lookAt( pos, pos + glm::vec3( scene->directionalLight.direction ), glm::vec3( 0, 1, 0 ) );
-        float W = 25;
-        auto P = glm::ortho( -W, W, -W, W, 0.0f, 50.0f );
+        auto P = glm::ortho< float >( -22, 18, -12, 8, 0.0f, 45.0f );
         shadowPassData.LSM = P * V;
 
         SceneConstantBufferData scbuf;

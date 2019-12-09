@@ -5,6 +5,9 @@
 #include "graphics/shader_c_shared/lights.h"
 #include "graphics/shader_c_shared/structs.h"
 
+#define PCF_HALF_WIDTH 1
+#define PCF_FULL_WIDTH ( 2 * PCF_HALF_WIDTH + 1 )
+
 layout( location = 0 ) in vec2 UV;
 
 layout( location = 0 ) out vec4 outColor;
@@ -55,14 +58,23 @@ float ShadowAmount( in const vec3 fragWorldPos )
     {
         return 0;
     }
-
-    float shadowMapDepth = texture( textures[sceneConstantBuffer.shadowTextureIndex], projCoords.xy ).r;
-    if ( shadowMapDepth < currentDepth )
+    
+    vec2 dUV = 1.0 / textureSize( textures[sceneConstantBuffer.shadowTextureIndex], 0 );
+    float totalShadowStrength = 0;
+    for ( int r = -PCF_HALF_WIDTH; r <= PCF_HALF_WIDTH; ++r )
     {
-        return 1.0;
+        for ( int c = -PCF_HALF_WIDTH; c <= PCF_HALF_WIDTH; ++c )
+        {
+            vec2 coords = projCoords.xy + vec2( c * dUV.x, r * dUV.y );
+            float d = texture( textures[sceneConstantBuffer.shadowTextureIndex], coords ).r;
+            if ( d < currentDepth )
+            {
+                totalShadowStrength += 1.0;
+            }
+        }
     }
     
-    return 0;
+    return totalShadowStrength / ( PCF_FULL_WIDTH * PCF_FULL_WIDTH );
 }
 
 void UnpackShortToTwoFloats( in const uint packed, out float x, out float y )
