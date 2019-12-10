@@ -3,7 +3,8 @@
 
 using namespace Progression;
 
-extern int g_ssaoOn;
+extern int g_debugLayer;
+bool g_paused = false;
 
 int main( int argc, char* argv[] )
 {
@@ -30,31 +31,6 @@ int main( int argc, char* argv[] )
             PG::EngineQuit();
             return 0;
         }
-    
-        /*
-        std::shared_ptr< Model > model = std::make_shared< Model >();
-        ModelCreateInfo info;
-        info.name = "sponza";
-        info.filename = PG_RESOURCE_DIR "Sponza-master/sponza.obj";
-        info.optimize = true;
-        if ( !model->Load( &info ) )
-        {
-            LOG_ERR( "Could not load the fbx file '", info.filename, "'" );
-            PG::EngineQuit();
-            return 0;
-        }
-
-        {
-            auto entity        = scene->registry.create();
-            auto& transform    = scene->registry.assign< Transform >( entity );
-            transform.position = glm::vec3( 0, 0, 0 );
-            // transform.rotation = glm::vec3( glm::radians( -90.0f ), glm::radians( 90.0f ), 0 );
-            transform.scale    = glm::vec3( .01f );
-            auto& renderer     = scene->registry.assign< ModelRenderer >( entity );
-            renderer.model     = model;
-            renderer.materials = model->materials;
-        }
-        */
 
         scene->Start();
 
@@ -72,12 +48,41 @@ int main( int argc, char* argv[] )
                 PG::g_engineShutdown = true;
             }
 
-            if ( PG::Input::GetKeyUp( PG::Key::O ) )
+            if ( PG::Input::GetKeyUp( PG::Key::K_0 ) )
             {
-                g_ssaoOn = !g_ssaoOn;
+                g_debugLayer = 0;
+            }
+            if ( PG::Input::GetKeyUp( PG::Key::K_1 ) )
+            {
+                g_debugLayer = 1;
+            }
+            if ( PG::Input::GetKeyUp( PG::Key::K_2 ) )
+            {
+                g_debugLayer = 2;
+            }
+            if ( PG::Input::GetKeyUp( PG::Key::K_3 ) )
+            {
+                g_debugLayer = 3;
+            }
+            if ( PG::Input::GetKeyUp( PG::Key::K_4 ) )
+            {
+                g_debugLayer = 4;
+            }
+            if ( PG::Input::GetKeyUp( PG::Key::K_5 ) )
+            {
+                g_debugLayer = 5;
+            }
+            
+            
+            if ( PG::Input::GetKeyUp( PG::Key::P ) )
+            {
+                g_paused = !g_paused;
             }
 
-            scene->Update();
+            if ( !g_paused )
+            {
+                scene->Update();
+            }
             RenderSystem::Render( scene );
 
             // std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );

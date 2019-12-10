@@ -59,8 +59,15 @@ namespace Progression
         camera_type["GetUpDir"]                 = &Camera::GetUpDir;
         camera_type["GetRightDir"]              = &Camera::GetRightDir;
 
+        sol::usertype< DirectionalLight > directional_light_type = lua.new_usertype< DirectionalLight >( "DirectionalLight" );
+        directional_light_type["colorAndIntensity"] = &DirectionalLight::colorAndIntensity;
+        directional_light_type["direction"] = &DirectionalLight::direction;
+
         sol::usertype< Scene > scene_type = lua.new_usertype< Scene >( "Scene" );
         scene_type["camera"] = &Scene::camera;
+        scene_type["directionalLight"] = &Scene::directionalLight;
+
+
     }
 
 } // namespace Progression

@@ -63,6 +63,7 @@ namespace Profile
         // read the log file back in and calculate average durations between timestamps with same prefix
         // expects that the durations the user cares about come in pairs.
         // Eg: "Frame_Start" + "Frame_End", "ShadowPass_Start" + "ShadowPass_End", etc
+        LOG( "Processing profiling timestamps..." );
         std::ifstream in( tmpFileName );
         struct Entry
         {

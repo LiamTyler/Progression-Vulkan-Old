@@ -259,6 +259,7 @@ namespace Progression
                 std::string basename = fs::path( name ).filename().string();
                 for( auto itEntry = fs::recursive_directory_iterator( PG_RESOURCE_DIR ); itEntry != fs::recursive_directory_iterator(); ++itEntry )
                 {
+                    std::string itFile = itEntry->path().filename().string();
                     if ( basename == itEntry->path().filename().string() )
                     {
                         fullPath = fs::absolute( itEntry->path() ).string();
@@ -279,7 +280,7 @@ namespace Progression
             }
             else
             {
-                LOG_ERR( "Could not find file '", name, "'" );
+                LOG_ERR( "Could not find image file '", name, "'" );
             }
         }
         else
@@ -399,6 +400,15 @@ namespace Progression
         Joint rootJointPlaceholder;
         rootJointPlaceholder.name = "___ROOT_BONE_PLACEHOLDER___";
         skeleton.joints.push_back( rootJointPlaceholder );
+        bool atLeastOneMeshHasUVs = false;
+        for ( size_t meshIdx = 0; meshIdx < meshes.size(); ++meshIdx )
+        {
+            const aiMesh* paiMesh = scene->mMeshes[meshIdx];
+            if ( paiMesh->HasTextureCoords( 0 ) )
+            {
+                atLeastOneMeshHasUVs = true;
+            }
+        }
         for ( size_t meshIdx = 0; meshIdx < meshes.size(); ++meshIdx )
         {
             const aiMesh* paiMesh = scene->mMeshes[meshIdx];
@@ -415,6 +425,9 @@ namespace Progression
                 {
                     const aiVector3D* pTexCoord = &paiMesh->mTextureCoords[0][vIdx];
                     uvs.emplace_back( pTexCoord->x, pTexCoord->y );
+                } else if ( atLeastOneMeshHasUVs )
+                {
+                    uvs.emplace_back( 0, 0 );
                 }
                 if ( paiMesh->HasTangentsAndBitangents() )
                 {
@@ -852,6 +865,7 @@ namespace Progression
             aabb.min = glm::min( aabb.min, vertex );
             aabb.max = glm::max( aabb.max, vertex );
         }
+        aabb.extent = 0.5f * ( aabb.max - aabb.min );
     }
 
     void Model::UploadToGpu()

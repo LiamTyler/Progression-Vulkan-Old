@@ -2,7 +2,11 @@
     "Script": {
         "name": "cameraController",
         "filename": "scripts/cameraController.lua"
-    },  
+    },
+    "Script": {
+        "name": "lightController",
+        "filename": "scripts/lightController.lua"
+    },      
     "MTLFile": {
         "filename": "materials/miscellaneous.mtl"
     },

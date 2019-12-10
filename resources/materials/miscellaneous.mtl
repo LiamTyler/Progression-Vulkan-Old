@@ -22,6 +22,12 @@ Kd 1 1 1
 Ks 0.3 0.3 0.3
 Ns 50
 
+newmtl gray 
+Ka 0 0 0
+Kd .7 .7 .7
+Ks 0 0 0
+Ns 50
+
 newmtl floor 
 Ka 0 0 0
 Kd 1 1 1

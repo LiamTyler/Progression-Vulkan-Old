@@ -28,7 +28,7 @@ using namespace Gfx;
 
 static std::unordered_map< std::string, Gfx::Sampler > s_samplers;
 
-int g_ssaoOn = 0;
+int g_debugLayer = 0;
 
 namespace Progression
 {
@@ -914,9 +914,12 @@ namespace RenderSystem
     void UpdateConstantBuffers( Scene* scene )
     {
         // TODO: Remove hardcoded directional shadow map
-        glm::vec3 pos( 0, 15, 0 );
+        glm::vec3 pos( 0, 20, 10 );
+        //auto entity = GetEntityByName( scene->registry, "camera" );
+        //auto scriptData = scene->registry.get< ScriptComponent >( entity ).GetScriptData( "lightController" );
+        //const glm::vec3& pos = scriptData->env["position"];
         auto V = glm::lookAt( pos, pos + glm::vec3( scene->directionalLight.direction ), glm::vec3( 0, 1, 0 ) );
-        auto P = glm::ortho< float >( -22, 18, -12, 8, 0.0f, 45.0f );
+        auto P = glm::ortho< float >( -20, 20, -20, 20, 0.0f, 60.0f );
         shadowPassData.LSM = P * V;
 
         SceneConstantBufferData scbuf;
@@ -1096,7 +1099,7 @@ namespace RenderSystem
         cmdBuf.BindDescriptorSets( 1, &descriptorSets.lights, lightingPassData.pipeline, 3 );
         PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
 
-        vkCmdPushConstants( cmdBuf.GetHandle(), lightingPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( int ), &g_ssaoOn );
+        vkCmdPushConstants( cmdBuf.GetHandle(), lightingPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( int ), &g_debugLayer );
         cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
         cmdBuf.Draw( 0, 6 );
 

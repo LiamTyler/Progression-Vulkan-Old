@@ -32,9 +32,9 @@ layout( set = 2, binding = 1 ) uniform sampler2D normalTex;
 layout( set = 2, binding = 2 ) uniform usampler2D diffuseAndSpecularTex;
 layout( set = 2, binding = 3 ) uniform sampler2D ssaoTex;
 
-layout( std430, push_constant ) uniform SSAOToggle
+layout( std430, push_constant ) uniform DebugSwitch
 {
-    layout( offset = 0 ) int ssaoOn;
+    layout( offset = 0 ) int debugLayer;
 };
 
 void UnpackShortToTwoFloats( in const uint packed, out float x, out float y )
@@ -59,13 +59,34 @@ void main()
     vec3 Kd;
     vec4 Ks;
     UnpackDiffuseAndSpecular( packed, Kd, Ks );
+    
+    if ( debugLayer == 2 )
+    {
+        outColor = vec4( posInWorldSpace, 1 );
+        return;
+    }
+    else if ( debugLayer == 3 )
+    {
+        outColor = vec4( n, 1 );
+        return;
+    }
+    else if ( debugLayer == 4 )
+    {
+        outColor = vec4( Kd, 1 );
+        return;
+    }
+    else if ( debugLayer == 5 )
+    {
+        outColor = vec4( vec3( texture( ssaoTex, UV ).r ), 1 );
+        return;
+    }
 
     vec3 e     = normalize( sceneConstantBuffer.cameraPos.xyz - posInWorldSpace );
     vec3 color = vec3( 0, 0, 0 );
     
     // ambient
     float ambientOcclusion = 1;
-    if ( ssaoOn != 0 )
+    if ( debugLayer == 1 )
     {
         ambientOcclusion = texture( ssaoTex, UV ).r;
     }
@@ -77,7 +98,8 @@ void main()
     vec3 h = normalize( l + e );
     
     // float S = 1 - ShadowAmount( posInWorldSpace );
-    float S = 1 - ShadowAmount( sceneConstantBuffer.DLSM * vec4( posInWorldSpace, 1 ), textures[sceneConstantBuffer.shadowTextureIndex] );
+    float S = 1;
+    // float S = 1 - ShadowAmount( sceneConstantBuffer.DLSM * vec4( posInWorldSpace, 1 ), textures[sceneConstantBuffer.shadowTextureIndex] );
     color += S * lightColor * Kd * max( 0.0, dot( l, n ) );
     if ( dot( l, n ) > PG_SHADER_EPSILON )
     {

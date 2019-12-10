@@ -61,8 +61,13 @@ function Update()
     if Input.GetKeyUp( Key.S ) and velocity.z == -1 then
         velocity.z = 0
     end
+    
     if Input.GetKeyUp( Key.LEFT_SHIFT ) then
         currentSpeed = regularSpeed
+    end
+    
+    if Input.GetKeyUp( Key.L ) then
+        print( camera.position )
     end
     
     local dMouse    = -Input:GetMouseChange()
