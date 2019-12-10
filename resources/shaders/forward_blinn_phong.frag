@@ -4,6 +4,7 @@
 #include "graphics/shader_c_shared/defines.h"
 #include "graphics/shader_c_shared/lights.h"
 #include "graphics/shader_c_shared/structs.h"
+#include "lighting_functions.h"
 
 layout( location = 0 ) out vec4 outColor;
 
@@ -17,12 +18,12 @@ layout( set = PG_SCENE_CONSTANT_BUFFER_SET, binding = 0 ) uniform SceneConstantB
     SceneConstantBufferData sceneConstantBuffer;
 };
 
-layout( std140, set = PG_SCENE_CONSTANT_BUFFER_SET, binding = 1 ) buffer PointLights
+layout( std140, set = 3, binding = 1 ) buffer PointLights
 {
     PointLight pointLights[];
 };
 
-layout( std140, set = PG_SCENE_CONSTANT_BUFFER_SET, binding = 2 ) buffer SpotLights
+layout( std140, set = 3, binding = 2 ) buffer SpotLights
 {
     SpotLight spotLights[];
 };
@@ -34,38 +35,8 @@ layout( std430, push_constant ) uniform MaterialConstantBufferUniform
     layout( offset = PG_MATERIAL_PUSH_CONSTANT_OFFSET ) MaterialConstantBufferData material;
 };
 
-float Attenuate( in const float distSquared, in const float radiusSquared )
-{
-    float frac = distSquared / radiusSquared;
-    float atten = max( 0, 1 - frac * frac );
-    return (atten * atten) / ( 1.0 + distSquared );
-}
-
-float ShadowAmount( in const vec3 fragWorldPos )
-{
-    vec4 posInLightSpace = sceneConstantBuffer.DLSM * vec4( fragWorldPos, 1 );
-    vec3 ndc             = posInLightSpace.xyz / posInLightSpace.w;
-    vec3 projCoords      = .5 * ndc + vec3( .5 );
-    projCoords.y         = 1 - projCoords.y; // Account for flip in projection matrix
-    float currentDepth   = ndc.z; // Already between 0 and 1
-    
-    if ( currentDepth > 1 )
-    {
-        return 0;
-    }
-
-    float shadowMapDepth = texture( textures[sceneConstantBuffer.shadowTextureIndex], projCoords.xy ).r;
-    if ( shadowMapDepth < currentDepth )
-    {
-        return 1.0;
-    }
-    
-    return 0;
-}
-
 void main()
 {
-    // vec3 n = normalize( normalInWorldSpace );
     vec3 n = normalize( TBN[2] );
     if ( material.normalMapIndex != PG_INVALID_TEXTURE_INDEX )
     {
@@ -80,7 +51,12 @@ void main()
     vec3 Kd    = material.Kd.xyz;
     if ( material.diffuseTexIndex != PG_INVALID_TEXTURE_INDEX )
     {
-        Kd *= texture( textures[material.diffuseTexIndex], texCoord ).xyz;
+        vec4 diffuseCol = texture( textures[material.diffuseTexIndex], texCoord );
+        if ( diffuseCol.a < 0.01 )
+        {
+            discard;
+        }
+        Kd *= diffuseCol.xyz;
     }
     color += material.Kd.xyz * sceneConstantBuffer.ambientColor.xyz;
     
@@ -88,7 +64,7 @@ void main()
     vec3 l = normalize( -sceneConstantBuffer.dirLight.direction.xyz );
     vec3 h = normalize( l + e );
     
-    float S = 1 - ShadowAmount( posInWorldSpace );
+    float S = 1 - ShadowAmount( sceneConstantBuffer.DLSM * vec4( posInWorldSpace, 1 ), textures[sceneConstantBuffer.shadowTextureIndex] );
     color += S * lightColor * Kd * max( 0.0, dot( l, n ) );
     if ( dot( l, n ) > PG_SHADER_EPSILON )
     {

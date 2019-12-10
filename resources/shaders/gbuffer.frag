@@ -53,7 +53,13 @@ void main()
     vec3 Kd    = material.Kd.xyz;
     if ( material.diffuseTexIndex != PG_INVALID_TEXTURE_INDEX )
     {
-        Kd *= texture( textures[material.diffuseTexIndex], texCoord ).xyz;
+        // Kd *= texture( textures[material.diffuseTexIndex], texCoord ).xyz;
+        vec4 diff = texture( textures[material.diffuseTexIndex], texCoord );
+        if ( diff.a < 0.01 )
+        {
+            discard;
+        }
+        Kd *= diff.xyz;
     }
     outDiffuseAndSpecular = PackDiffuseAndSpecular( Kd, material.Ks );
 }

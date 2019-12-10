@@ -36,10 +36,10 @@ static bool PreprocessShader( const std::string& filename, std::string& text, st
         return false;
     }
 
-    static std::array< std::string, 3 > includeDirs =
+    static std::vector< std::string > includeDirs =
     {
         PG_ROOT_DIR "progression/",
-        PG_RESOURCE_DIR "shaders/"
+        PG_RESOURCE_DIR "shaders/",
         PG_RESOURCE_DIR,
         PG_ROOT_DIR,
     };

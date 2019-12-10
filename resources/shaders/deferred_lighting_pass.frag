@@ -4,9 +4,7 @@
 #include "graphics/shader_c_shared/defines.h"
 #include "graphics/shader_c_shared/lights.h"
 #include "graphics/shader_c_shared/structs.h"
-
-#define PCF_HALF_WIDTH 1
-#define PCF_FULL_WIDTH ( 2 * PCF_HALF_WIDTH + 1 )
+#include "lighting_functions.h"
 
 layout( location = 0 ) in vec2 UV;
 
@@ -38,44 +36,6 @@ layout( std430, push_constant ) uniform SSAOToggle
 {
     layout( offset = 0 ) int ssaoOn;
 };
-
-float Attenuate( in const float distSquared, in const float radiusSquared )
-{
-    float frac = distSquared / radiusSquared;
-    float atten = max( 0, 1 - frac * frac );
-    return (atten * atten) / ( 1.0 + distSquared );
-}
-
-float ShadowAmount( in const vec3 fragWorldPos )
-{
-    vec4 posInLightSpace = sceneConstantBuffer.DLSM * vec4( fragWorldPos, 1 );
-    vec3 ndc             = posInLightSpace.xyz / posInLightSpace.w;
-    vec3 projCoords      = .5 * ndc + vec3( .5 );
-    projCoords.y         = 1 - projCoords.y; // Account for flip in projection matrix
-    float currentDepth   = ndc.z; // Already between 0 and 1
-    
-    if ( currentDepth > 1 )
-    {
-        return 0;
-    }
-    
-    vec2 dUV = 1.0 / textureSize( textures[sceneConstantBuffer.shadowTextureIndex], 0 );
-    float totalShadowStrength = 0;
-    for ( int r = -PCF_HALF_WIDTH; r <= PCF_HALF_WIDTH; ++r )
-    {
-        for ( int c = -PCF_HALF_WIDTH; c <= PCF_HALF_WIDTH; ++c )
-        {
-            vec2 coords = projCoords.xy + vec2( c * dUV.x, r * dUV.y );
-            float d = texture( textures[sceneConstantBuffer.shadowTextureIndex], coords ).r;
-            if ( d < currentDepth )
-            {
-                totalShadowStrength += 1.0;
-            }
-        }
-    }
-    
-    return totalShadowStrength / ( PCF_FULL_WIDTH * PCF_FULL_WIDTH );
-}
 
 void UnpackShortToTwoFloats( in const uint packed, out float x, out float y )
 {
@@ -116,7 +76,8 @@ void main()
     vec3 l = normalize( -sceneConstantBuffer.dirLight.direction.xyz );
     vec3 h = normalize( l + e );
     
-    float S = 1 - ShadowAmount( posInWorldSpace );
+    // float S = 1 - ShadowAmount( posInWorldSpace );
+    float S = 1 - ShadowAmount( sceneConstantBuffer.DLSM * vec4( posInWorldSpace, 1 ), textures[sceneConstantBuffer.shadowTextureIndex] );
     color += S * lightColor * Kd * max( 0.0, dot( l, n ) );
     if ( dot( l, n ) > PG_SHADER_EPSILON )
     {

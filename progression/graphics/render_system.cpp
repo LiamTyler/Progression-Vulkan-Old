@@ -140,6 +140,7 @@ struct
 {
     RenderPass renderPass;
     Pipeline pipeline;
+    std::vector< DescriptorSetLayout > descriptorSetLayouts;
 } transparencyPassData;
 
 struct
@@ -480,6 +481,7 @@ static bool InitLightingPassData()
 {
     RenderPassDescriptor desc;
     desc.colorAttachmentDescriptors[0].format      = PixelFormat::R8_G8_B8_A8_UNORM;
+    // desc.colorAttachmentDescriptors[0].finalLayout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
     desc.colorAttachmentDescriptors[0].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
 
     desc.depthAttachmentDescriptor.format        = PixelFormat::DEPTH_32_FLOAT;
@@ -545,6 +547,74 @@ static bool InitLightingPassData()
     lightingPassData.frameBuffer = g_renderState.device.NewFramebuffer( { &lightingPassData.outputTexture, &g_renderState.depthTex }, lightingPassData.renderPass, "lighting pass" );
     if ( !lightingPassData.frameBuffer )
     {
+        return false;
+    }
+
+    return true;
+}
+
+static bool InitTransparencyPassData()
+{
+    return true;
+    RenderPassDescriptor desc;
+    desc.colorAttachmentDescriptors[0].format        = PixelFormat::R8_G8_B8_A8_UNORM;
+    desc.colorAttachmentDescriptors[0].loadAction    = LoadAction::LOAD;
+    desc.colorAttachmentDescriptors[0].initialLayout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
+    desc.colorAttachmentDescriptors[0].finalLayout   = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+
+    desc.depthAttachmentDescriptor.format        = PixelFormat::DEPTH_32_FLOAT;
+    desc.depthAttachmentDescriptor.loadAction    = LoadAction::LOAD;
+    desc.depthAttachmentDescriptor.storeAction   = StoreAction::STORE;
+    desc.depthAttachmentDescriptor.initialLayout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    desc.depthAttachmentDescriptor.finalLayout   = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    transparencyPassData.renderPass = g_renderState.device.NewRenderPass( desc, "transparency pass" );
+    if ( !transparencyPassData.renderPass )
+    {
+        return false;
+    }
+    VertexBindingDescriptor bindingDescs[] =
+    {
+        VertexBindingDescriptor( 0, sizeof( glm::vec3 ) ),
+        VertexBindingDescriptor( 1, sizeof( glm::vec3 ) ),
+        VertexBindingDescriptor( 2, sizeof( glm::vec2 ) ),
+        VertexBindingDescriptor( 3, sizeof( glm::vec3 ) ),
+    };
+
+    VertexAttributeDescriptor attribDescs[] =
+    {
+        VertexAttributeDescriptor( 0, 0, BufferDataType::FLOAT3, 0 ),
+        VertexAttributeDescriptor( 1, 1, BufferDataType::FLOAT3, 0 ),
+        VertexAttributeDescriptor( 2, 2, BufferDataType::FLOAT2, 0 ),
+        VertexAttributeDescriptor( 3, 3, BufferDataType::FLOAT3, 0 ),
+    };
+
+    auto vertShader = ResourceManager::Get< Shader >( "rigidModelsVert" );
+    auto fragShader = ResourceManager::Get< Shader >( "forwardBlinnPhongFrag" );
+
+    std::vector< DescriptorSetLayoutData > descriptorSetData = vertShader->reflectInfo.descriptorSetLayouts;
+    descriptorSetData.insert( descriptorSetData.end(), fragShader->reflectInfo.descriptorSetLayouts.begin(), fragShader->reflectInfo.descriptorSetLayouts.end() );
+    auto combined = CombineDescriptorSetLayouts( descriptorSetData );
+    transparencyPassData.descriptorSetLayouts = g_renderState.device.NewDescriptorSetLayouts( combined );
+
+    PipelineDescriptor pipelineDesc;
+    pipelineDesc.renderPass             = &transparencyPassData.renderPass;
+    pipelineDesc.descriptorSetLayouts   = transparencyPassData.descriptorSetLayouts;
+    pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 4, bindingDescs, 4, attribDescs );
+    pipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
+    pipelineDesc.viewport               = FullScreenViewport();
+    pipelineDesc.viewport.height        = -pipelineDesc.viewport.height;
+    pipelineDesc.viewport.y             = -pipelineDesc.viewport.height;
+    pipelineDesc.scissor                = FullScreenScissor();
+    pipelineDesc.shaders[0]             = vertShader.get();
+    pipelineDesc.shaders[1]             = fragShader.get();
+    pipelineDesc.numShaders             = 2;
+    pipelineDesc.numColorAttachments    = 1;
+
+    transparencyPassData.pipeline = g_renderState.device.NewPipeline( pipelineDesc, "transparency rigid model" );
+    if ( !transparencyPassData.pipeline )
+    {
+        LOG_ERR( "Could not create transparency pipeline" );
         return false;
     }
 
@@ -738,6 +808,12 @@ namespace RenderSystem
             return false;
         }
 
+        if ( !InitTransparencyPassData() )
+        {
+            LOG_ERR( "Could not init transparent pass data" );
+            return false;
+        }
+
         if ( !InitPostProcessPassData() )
         {
             LOG_ERR( "Could not init post process data" );
@@ -771,6 +847,14 @@ namespace RenderSystem
 
     void Shutdown()
     {
+        auto freeDescriptorSetLayouts = []( auto& layoutVector )
+        {
+            for ( auto& layout : layoutVector )
+            {
+                layout.Free();
+            }
+        };
+
         g_renderState.device.WaitForIdle();
 
         Profile::Shutdown();
@@ -796,10 +880,7 @@ namespace RenderSystem
         gBufferPassData.renderPass.Free();
         gBufferPassData.frameBuffer.Free();
         gBufferPassData.pipeline.Free();
-        for ( auto& layout : gBufferPassData.descriptorSetLayouts )
-        {
-            layout.Free();
-        }
+        freeDescriptorSetLayouts( gBufferPassData.descriptorSetLayouts );
 
         ssaoPassData.renderPass.Free();
         ssaoPassData.texture.Free();
@@ -807,34 +888,26 @@ namespace RenderSystem
         ssaoPassData.pipeline.Free();
         ssaoPassData.kernel.Free();
         ssaoPassData.noise.Free();
-        for ( auto& layout : ssaoPassData.descriptorSetLayouts )
-        {
-            layout.Free();
-        }
+        freeDescriptorSetLayouts( ssaoPassData.descriptorSetLayouts );
 
         ssaoBlurPassData.pipeline.Free();
         ssaoBlurPassData.renderPass.Free();
         ssaoBlurPassData.outputTex.Free();
         ssaoBlurPassData.framebuffer.Free();
-        for ( auto& layout : ssaoBlurPassData.descriptorSetLayouts )
-        {
-            layout.Free();
-        }
+        freeDescriptorSetLayouts( ssaoBlurPassData.descriptorSetLayouts );
 
         lightingPassData.renderPass.Free();
         lightingPassData.outputTexture.Free();
         lightingPassData.frameBuffer.Free();
         lightingPassData.pipeline.Free();
-        for ( auto& layout : lightingPassData.descriptorSetLayouts )
-        {
-            layout.Free();
-        }
+        freeDescriptorSetLayouts( lightingPassData.descriptorSetLayouts );
+
+        // transparencyPassData.renderPass.Free();
+        // transparencyPassData.pipeline.Free();
+        // freeDescriptorSetLayouts( transparencyPassData.descriptorSetLayouts );
 
         postProcessPassData.pipeline.Free();
-        for ( auto& layout : postProcessPassData.descriptorSetLayouts )
-        {
-            layout.Free();
-        }
+        freeDescriptorSetLayouts( postProcessPassData.descriptorSetLayouts );
         postProcessPassData.quadBuffer.Free();
     }
     
@@ -952,10 +1025,10 @@ namespace RenderSystem
             {
                 const auto& mesh = modelRenderer.model->meshes[i];
                 const auto& mat  = modelRenderer.materials[mesh.materialIndex];
-                if ( mat->transparent )
-                {
-                    continue;
-                }
+                // if ( mat->transparent )
+                // {
+                //     continue;
+                // }
 
                 MaterialConstantBufferData mcbuf{};
                 mcbuf.Kd = glm::vec4( mat->Kd, 0 );
@@ -1036,11 +1109,12 @@ namespace RenderSystem
     {
         PG_PROFILE_TIMESTAMP( cmdBuf, "Transparency_Start" );
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Transparency Pass", glm::vec4( .8, .8, .2, 1 ) );
-        cmdBuf.BeginRenderPass( gBufferPassData.renderPass, gBufferPassData.frameBuffer, g_renderState.swapChain.extent );
+        cmdBuf.BeginRenderPass( transparencyPassData.renderPass, lightingPassData.frameBuffer, g_renderState.swapChain.extent );
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Transparency -- Rigid Models", glm::vec4( .2, .8, .2, 1 ) );
-        cmdBuf.BindRenderPipeline( gBufferPassData.pipeline );
-        cmdBuf.BindDescriptorSets( 1, &descriptorSets.scene, gBufferPassData.pipeline, PG_SCENE_CONSTANT_BUFFER_SET );
-        cmdBuf.BindDescriptorSets( 1, &descriptorSets.arrayOfTextures, gBufferPassData.pipeline, PG_2D_TEXTURES_SET );
+        cmdBuf.BindRenderPipeline( transparencyPassData.pipeline );
+        cmdBuf.BindDescriptorSets( 1, &descriptorSets.scene, transparencyPassData.pipeline, PG_SCENE_CONSTANT_BUFFER_SET );
+        cmdBuf.BindDescriptorSets( 1, &descriptorSets.arrayOfTextures, transparencyPassData.pipeline, PG_2D_TEXTURES_SET );
+        cmdBuf.BindDescriptorSets( 1, &descriptorSets.lights, transparencyPassData.pipeline, 3 );
 
         scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& modelRenderer, Transform& transform )
         {
@@ -1056,7 +1130,7 @@ namespace RenderSystem
             ObjectConstantBufferData b;
             b.M = M;
             b.N = N;
-            vkCmdPushConstants( cmdBuf.GetHandle(), gBufferPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( ObjectConstantBufferData ), &b );
+            vkCmdPushConstants( cmdBuf.GetHandle(), transparencyPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( ObjectConstantBufferData ), &b );
 
             cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
@@ -1078,7 +1152,7 @@ namespace RenderSystem
                 mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
                 mcbuf.diffuseTexIndex = mat->map_Kd   ? mat->map_Kd->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
                 mcbuf.normalMapIndex  = mat->map_Norm ? mat->map_Norm->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
-                vkCmdPushConstants( cmdBuf.GetHandle(), gBufferPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
+                vkCmdPushConstants( cmdBuf.GetHandle(), transparencyPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
 
                 PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
                 cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
@@ -1130,6 +1204,7 @@ namespace RenderSystem
         GBufferPass( scene, cmdBuf );
         SSAOPass( scene, cmdBuf );
         DeferredLightingPass( scene, cmdBuf );
+        // TransparencyPass( scene, cmdBuf );
         PostProcessPass( scene, cmdBuf, swapChainImageIndex );
 
         PG_PROFILE_TIMESTAMP( cmdBuf, "Frame_End" );
