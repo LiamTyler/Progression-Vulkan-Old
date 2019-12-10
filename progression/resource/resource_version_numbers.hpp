@@ -2,7 +2,7 @@
 
 #define PG_RESOURCE_IMAGE_VERSION       3  // Samplers names changed
 
-#define PG_RESOURCE_MATERIAL_VERSION    3  // Got rid of Ka and Ke
+#define PG_RESOURCE_MATERIAL_VERSION    4  // Adding transparency flag
 
 #define PG_RESOURCE_MODEL_VERSION       2  // Adding tangents
 

@@ -13,6 +13,7 @@ public:
     glm::vec3 Kd;
     glm::vec3 Ks;
     float Ns;
+    bool transparent = false;
     std::string map_Kd_name;
     std::string map_Norm_name;
 };
@@ -31,6 +32,7 @@ public:
     glm::vec3 Kd;
     glm::vec3 Ks;
     float Ns;
+    bool transparent = false;
     std::shared_ptr< Image > map_Kd   = nullptr;
     std::shared_ptr< Image > map_Norm = nullptr;
 };

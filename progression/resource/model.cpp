@@ -312,7 +312,10 @@ namespace Progression
             color = aiColor3D( 0.f, 0.f, 0.f );
             float Ns;
             pMaterial->Get( AI_MATKEY_SHININESS, Ns );
-            model->materials[mtlIdx]->Ns = Ns;
+            model->materials[mtlIdx]->Ns = Ns;;
+            float d = 0;
+            pMaterial->Get( AI_MATKEY_OPACITY, d );
+            model->materials[mtlIdx]->transparent = d == 1.0f;
 
             if ( pMaterial->GetTextureCount( aiTextureType_DIFFUSE ) > 0 )
             {

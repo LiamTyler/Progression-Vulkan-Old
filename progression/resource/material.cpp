@@ -15,12 +15,13 @@ bool Material::Load( ResourceCreateInfo* createInfo )
 {
     PG_ASSERT( createInfo );
     MaterialCreateInfo* info = static_cast< MaterialCreateInfo* >( createInfo );
-    name     = info->name;
-    Kd       = info->Kd;
-    Ks       = info->Ks;
-    Ns       = info->Ns;
-    map_Kd   = ResourceManager::Get< Image >( info->map_Kd_name );
-    map_Norm = ResourceManager::Get< Image >( info->map_Norm_name );
+    name        = info->name;
+    Kd          = info->Kd;
+    Ks          = info->Ks;
+    Ns          = info->Ns;
+    transparent = info->transparent;
+    map_Kd      = ResourceManager::Get< Image >( info->map_Kd_name );
+    map_Norm    = ResourceManager::Get< Image >( info->map_Norm_name );
 
     return true;
 }
@@ -38,6 +39,7 @@ bool Material::Serialize( std::ofstream& out ) const
     serialize::Write( out, Kd );
     serialize::Write( out, Ks );
     serialize::Write( out, Ns );
+    serialize::Write( out, transparent );
     bool hasDiffuseTexture = map_Kd != nullptr;
     serialize::Write( out, hasDiffuseTexture );
     if ( hasDiffuseTexture )
@@ -89,6 +91,7 @@ bool Material::Deserialize( char*& buffer )
     serialize::Read( buffer, Kd );
     serialize::Read( buffer, Ks );
     serialize::Read( buffer, Ns );
+    serialize::Read( buffer, transparent );
     bool hasDiffuseTexture;
     serialize::Read( buffer, hasDiffuseTexture );
     if ( hasDiffuseTexture )
@@ -188,10 +191,6 @@ bool Material::LoadMtlFile( std::vector< Material >& materials, const std::strin
             mat = &materials[materials.size() - 1];
             mat->name = name;
         }
-        else if ( first == "Ns" )
-        {
-            ss >> mat->Ns;
-        }
         else if ( first == "Kd" )
         {
             ss >> mat->Kd;
@@ -199,6 +198,19 @@ bool Material::LoadMtlFile( std::vector< Material >& materials, const std::strin
         else if ( first == "Ks" )
         {
             ss >> mat->Ks;
+        }
+        else if ( first == "Ns" )
+        {
+            ss >> mat->Ns;
+        }
+        else if ( first == "d" )
+        {
+            float d;
+            ss >> d;
+            if ( d == 1.0f )
+            {
+                mat->transparent = true;
+            }
         }
         else if ( first == "map_Kd" )
         {

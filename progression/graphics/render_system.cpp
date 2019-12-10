@@ -138,6 +138,12 @@ struct
 
 struct
 {
+    RenderPass renderPass;
+    Pipeline pipeline;
+} transparencyPassData;
+
+struct
+{
 	Pipeline pipeline;
     Buffer quadBuffer;
     std::vector< DescriptorSetLayout > descriptorSetLayouts;
@@ -946,6 +952,10 @@ namespace RenderSystem
             {
                 const auto& mesh = modelRenderer.model->meshes[i];
                 const auto& mat  = modelRenderer.materials[mesh.materialIndex];
+                if ( mat->transparent )
+                {
+                    continue;
+                }
 
                 MaterialConstantBufferData mcbuf{};
                 mcbuf.Kd = glm::vec4( mat->Kd, 0 );
@@ -1000,7 +1010,7 @@ namespace RenderSystem
         PG_PROFILE_TIMESTAMP( cmdBuf, "SSAO_End" );
     }
 
-    void LightingPass( Scene* scene, CommandBuffer& cmdBuf )
+    void DeferredLightingPass( Scene* scene, CommandBuffer& cmdBuf )
     {
         PG_PROFILE_TIMESTAMP( cmdBuf, "Lighting_Start" );
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Lighting Pass", glm::vec4( .8, 0, .8, 1 ) );
@@ -1020,6 +1030,65 @@ namespace RenderSystem
         cmdBuf.EndRenderPass();
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
         PG_PROFILE_TIMESTAMP( cmdBuf, "Lighting_End" );
+    }
+
+    void TransparencyPass( Scene* scene, CommandBuffer& cmdBuf )
+    {
+        PG_PROFILE_TIMESTAMP( cmdBuf, "Transparency_Start" );
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Transparency Pass", glm::vec4( .8, .8, .2, 1 ) );
+        cmdBuf.BeginRenderPass( gBufferPassData.renderPass, gBufferPassData.frameBuffer, g_renderState.swapChain.extent );
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Transparency -- Rigid Models", glm::vec4( .2, .8, .2, 1 ) );
+        cmdBuf.BindRenderPipeline( gBufferPassData.pipeline );
+        cmdBuf.BindDescriptorSets( 1, &descriptorSets.scene, gBufferPassData.pipeline, PG_SCENE_CONSTANT_BUFFER_SET );
+        cmdBuf.BindDescriptorSets( 1, &descriptorSets.arrayOfTextures, gBufferPassData.pipeline, PG_2D_TEXTURES_SET );
+
+        scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& modelRenderer, Transform& transform )
+        {
+            const auto& model = modelRenderer.model;
+            // TODO: Actually fix this for models without tangets as well
+            if ( model->GetTangentOffset() == ~0u )
+            {
+                return;
+            }
+            
+            auto M = transform.GetModelMatrix();
+            auto N = glm::transpose( glm::inverse( M ) );
+            ObjectConstantBufferData b;
+            b.M = M;
+            b.N = N;
+            vkCmdPushConstants( cmdBuf.GetHandle(), gBufferPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( ObjectConstantBufferData ), &b );
+
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetUVOffset(), 2 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetTangentOffset(), 3 );
+            cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
+
+            for ( size_t i = 0; i < model->meshes.size(); ++i )
+            {
+                const auto& mesh = modelRenderer.model->meshes[i];
+                const auto& mat  = modelRenderer.materials[mesh.materialIndex];
+                if ( !mat->transparent )
+                {
+                    continue;
+                }
+
+                MaterialConstantBufferData mcbuf{};
+                mcbuf.Kd = glm::vec4( mat->Kd, 0 );
+                mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
+                mcbuf.diffuseTexIndex = mat->map_Kd   ? mat->map_Kd->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
+                mcbuf.normalMapIndex  = mat->map_Norm ? mat->map_Norm->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
+                vkCmdPushConstants( cmdBuf.GetHandle(), gBufferPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
+
+                PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
+                cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
+            }
+        });
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
+        
+        cmdBuf.EndRenderPass();
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
+        PG_PROFILE_TIMESTAMP( cmdBuf, "Transparency_End" );
     }
 
     void PostProcessPass( Scene* scene, CommandBuffer& cmdBuf, uint32_t swapChainImageIndex )
@@ -1060,7 +1129,7 @@ namespace RenderSystem
         ShadowPass( scene, cmdBuf );
         GBufferPass( scene, cmdBuf );
         SSAOPass( scene, cmdBuf );
-        LightingPass( scene, cmdBuf );
+        DeferredLightingPass( scene, cmdBuf );
         PostProcessPass( scene, cmdBuf, swapChainImageIndex );
 
         PG_PROFILE_TIMESTAMP( cmdBuf, "Frame_End" );
