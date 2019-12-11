@@ -11,7 +11,7 @@
         "farPlane": 100
     },
     "AmbientColor": {
-        "color": [ 1, 1, 1 ]
+        "color": [ 1, 1, 1   ]
     },
     "DirectionalLight": {
         "colorAndIntensity": [ 1, 1, 1, 1 ],
@@ -45,8 +45,7 @@
             "scale": [ 0.01, 0.01, 0.01 ]
         },
         "ModelRenderer": {
-            "model": "sponza",
-            "material": "gray"
+            "model": "sponza"
         }
     },
     "Entity": {

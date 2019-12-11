@@ -51,46 +51,54 @@ void UnpackDiffuseAndSpecular( in const uvec4 packed, out vec3 Kd, out vec4 Ks )
     Ks.w = float( packed.w );
 }
 
+vec2 signNotZero( vec2 v )
+{
+    return vec2( ( v.x >= 0.0 ) ? 1.0 : -1.0, ( v.y >= 0.0 ) ? 1.0 : -1.0 );
+}
+
+vec2 unorm8x3_to_snorm12x2(vec3 u)
+{
+    u *= 255.0;
+    u.y *= (1.0 / 16.0);
+    vec2 s = vec2(u.x * 16.0 + floor(u.y), fract(u.y) * (16.0 * 256.0) + u.z);
+    return clamp(s * (1.0 / 2047.0) - 1.0, vec2(-1.0), vec2(1.0));
+}
+
+vec3 oct_to_float32x3( vec2 e )
+{
+    vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+    if (v.z < 0) v.xy = (1.0 - abs(v.yx)) * signNotZero(v.xy);
+    return normalize(v);
+}
+
+
+vec3 GetNormal()
+{
+    //return texture( normalTex,   UV ).xyz;
+    vec3 packed = texture( normalTex, UV ).xyz;
+    vec3 n = oct_to_float32x3( unorm8x3_to_snorm12x2( packed ) );
+    //n.xy = unorm8x3_to_snorm12x2( packed );
+    //n.z  = sqrt( 1 - ( n.x * n.x + n.y * n.y ) );
+    return n;
+}
+
 void main()
 {
     vec3 posInWorldSpace = texture( positionTex, UV ).xyz;
-    vec3 n               = texture( normalTex,   UV ).xyz;
+    vec3 n               = GetNormal();
+    //outColor = vec4( n, 1 );
+    //return;
     uvec4 packed = texture( diffuseAndSpecularTex,  UV );
     vec3 Kd;
     vec4 Ks;
     UnpackDiffuseAndSpecular( packed, Kd, Ks );
-    
-    if ( debugLayer == 2 )
-    {
-        outColor = vec4( posInWorldSpace, 1 );
-        return;
-    }
-    else if ( debugLayer == 3 )
-    {
-        outColor = vec4( n, 1 );
-        return;
-    }
-    else if ( debugLayer == 4 )
-    {
-        outColor = vec4( Kd, 1 );
-        return;
-    }
-    else if ( debugLayer == 5 )
-    {
-        outColor = vec4( vec3( texture( ssaoTex, UV ).r ), 1 );
-        return;
-    }
 
     vec3 e     = normalize( sceneConstantBuffer.cameraPos.xyz - posInWorldSpace );
     vec3 color = vec3( 0, 0, 0 );
     
     // ambient
-    float ambientOcclusion = 1;
-    if ( debugLayer == 1 )
-    {
-        ambientOcclusion = texture( ssaoTex, UV ).r;
-    }
-    color += ambientOcclusion * Kd * sceneConstantBuffer.ambientColor.xyz;
+    // color += 1 * Kd * sceneConstantBuffer.ambientColor.xyz;
+    color += texture( ssaoTex, UV ).r * Kd * sceneConstantBuffer.ambientColor.xyz;
 
     // directional light
     vec3 lightColor = sceneConstantBuffer.dirLight.colorAndIntensity.w * sceneConstantBuffer.dirLight.colorAndIntensity.xyz;
@@ -98,8 +106,7 @@ void main()
     vec3 h = normalize( l + e );
     
     // float S = 1 - ShadowAmount( posInWorldSpace );
-    float S = 1;
-    // float S = 1 - ShadowAmount( sceneConstantBuffer.DLSM * vec4( posInWorldSpace, 1 ), textures[sceneConstantBuffer.shadowTextureIndex] );
+    float S = 1 - ShadowAmount( sceneConstantBuffer.DLSM * vec4( posInWorldSpace, 1 ), textures[sceneConstantBuffer.shadowTextureIndex] );
     color += S * lightColor * Kd * max( 0.0, dot( l, n ) );
     if ( dot( l, n ) > PG_SHADER_EPSILON )
     {

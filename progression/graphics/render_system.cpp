@@ -224,7 +224,7 @@ static bool InitGBufferPassData()
     RenderPassDescriptor desc;
     desc.colorAttachmentDescriptors[0].format      = PixelFormat::R32_G32_B32_A32_FLOAT;
     desc.colorAttachmentDescriptors[0].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
-    desc.colorAttachmentDescriptors[1].format      = PixelFormat::R16_G16_B16_A16_FLOAT;
+    desc.colorAttachmentDescriptors[1].format      = PixelFormat::R8_G8_B8_A8_UNORM; // R16_G16_B16_A16_FLOAT // R8_G8_B8_A8_UNORM
     desc.colorAttachmentDescriptors[1].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
     desc.colorAttachmentDescriptors[2].format      = PixelFormat::R16_G16_B16_A16_UINT;
     desc.colorAttachmentDescriptors[2].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
@@ -293,7 +293,7 @@ static bool InitGBufferPassData()
     info.usage   = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     info.format                                = PixelFormat::R32_G32_B32_A32_FLOAT;
     gBufferPassData.gbuffer.positions          = g_renderState.device.NewTexture( info, false, "gbuffer position" );
-    info.format                                = PixelFormat::R16_G16_B16_A16_FLOAT;
+    info.format                                = PixelFormat::R8_G8_B8_A8_UNORM; // R16_G16_B16_A16_FLOAT // R8_G8_B8_A8_UNORM
     gBufferPassData.gbuffer.normals            = g_renderState.device.NewTexture( info, false, "gbuffer normals" );
     info.format                                = PixelFormat::R16_G16_B16_A16_UINT;
     gBufferPassData.gbuffer.diffuseAndSpecular = g_renderState.device.NewTexture( info, false, "gbuffer diffuse + specular" );
