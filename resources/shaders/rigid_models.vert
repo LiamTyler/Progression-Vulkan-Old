@@ -27,10 +27,10 @@ void main()
     posInWorldSpace = ( perObjectData.M * vec4( inPosition, 1 ) ).xyz;
     texCoord        = inTexCoord;
     
-    vec3 worldT = normalize( ( perObjectData.M * vec4( inTangent - inNormal * dot(inTangent,inNormal), 0 ) ).xyz ); // Force orthogonal tangent by subtracting rejection (NOTE: could safely omit for performance)
+    vec3 worldT = normalize( ( perObjectData.M * vec4( inTangent, 0 ) ).xyz );
     vec3 worldN = normalize( ( perObjectData.N * vec4( inNormal,  0 ) ).xyz );
-    vec3 worldB = cross( worldN, worldT );      // Don't have to normalize if worldT and worldN are unit length
-    TBN         = mat3( worldT, worldB, worldN );    // Matrix is orthonormal
+    vec3 worldB = cross( worldN, worldT );
+    TBN         = mat3( worldT, worldB, worldN );
     
     gl_Position = sceneConstantBuffer.VP * perObjectData.M * vec4( inPosition, 1.0 );
 }

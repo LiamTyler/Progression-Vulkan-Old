@@ -5,33 +5,27 @@
 - Windows build: [![Build status](https://ci.appveyor.com/api/projects/status/3badv9456nqrow5f?svg=true)](https://ci.appveyor.com/project/LiamTyler/progression)
 
 ## Description
-A C++ game engine I have been developing for Linux and Windows. 
+A C++ game engine I have been developing for Linux and Windows. See [here](https://liamtyler.github.io/portfolio/Progression/) for more details.
 
-## Features
-- OpenGL rendering system
-- Forward and Tiled deferred rendering pipelines
-- Entity component architecture
-- Resource manager with custom model format for optimized loading
-- Scene file loading 
-- Basic positional audio
-- Window management
-- Keyboard and mouse handling
+## Some Key Features
+- Vulkan rendering system
+- Deferred rendering pipeline
+- SSAO
+- Normal mapping
+- Lua scripting system
+- Skeletal animation system
+- Serialized asset pipeline system
+- Entity component system
 
-## Installing + Configuring
+## Installing + Building
+This engine requires C++ 2017, and has only been tested on MSVC 2019 and GCC 9
 ```
 git clone --recursive https://github.com/LiamTyler/Progression.git
-cd deferred-starter
+cd Progression 
 mkdir build
 cd build
-cmake ..
+(linux) cmake -DCMAKE_BUILD_TYPE=[Debug/Release/Ship] ..
+(windows) cmake -G "Visual Studio 16 2016" -A x64 ..
 ```
 
-CMake Options:
-- PROGRESSION_BUILD_EXAMPLES (defaults to on)
-- PROGRESSION_BUILD_TOOLS (defaults to on)
-- PROGRESSION_AUDIO (defaults to off, requires OpenAL and sndfile)
-
-## Compiling
-For Linux: just do a `make -j`
-
-For Windows: I always do `cmake -G "Visual Studio 15 2017 Win64" ..` instead of `cmake ..` to get the 64 bit version. Then open up the solution file, switch to Release mode, and build like normal in VS
+Note with building with gcc: gcc actually seems to timeout while doing a max parallel build of assimp with "make -j", so I do have to do "make -j6" instead

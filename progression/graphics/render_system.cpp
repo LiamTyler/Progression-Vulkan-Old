@@ -383,20 +383,19 @@ static bool InitSSAOPass()
     for ( int i = 0; i < PG_SSAO_KERNEL_SIZE; ++i )
     {
         glm::vec3 sample( randomFloats( generator ) * 2 - 1, randomFloats( generator ) * 2 - 1, randomFloats( generator ) );
-        sample = glm::normalize( sample );
-        sample *= randomFloats( generator );
-        float scale = i / 64.0f;
-        float t = scale * scale;
-        scale = 0.1f + t * 0.9f;
-        kernel[i] = glm::vec4( scale * sample, 0 );
+        sample      = randomFloats( generator ) * glm::normalize( sample );
+        float scale = i / (float) PG_SSAO_KERNEL_SIZE;
+        float t     = scale * scale;
+        scale       = 0.1f + t * 0.9f;
+        kernel[i]   = glm::vec4( scale * sample, 0 );
     }
     ssaoPassData.kernel = g_renderState.device.NewBuffer( sizeof( glm::vec4 ) * PG_SSAO_KERNEL_SIZE, kernel.data(),
         BUFFER_TYPE_UNIFORM, MEMORY_TYPE_DEVICE_LOCAL, "SSAO Kernel" );
 
-    std::vector< glm::vec4 > noise;
+    std::vector< glm::vec4 > noise( 16 );
     for ( int i = 0; i < 16; ++i )
     {
-        noise.emplace_back( randomFloats( generator ) * 2 - 1, randomFloats( generator ) * 2 - 1, 0, 0 );
+        noise[i] = glm::vec4( randomFloats( generator ) * 2 - 1, randomFloats( generator ) * 2 - 1, 0, 0 );
     }
 
     info.type          = ImageType::TYPE_2D;
