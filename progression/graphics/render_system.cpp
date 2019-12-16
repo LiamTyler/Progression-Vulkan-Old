@@ -199,7 +199,6 @@ static bool InitShadowPassData()
     shadowPassDataPipelineDesc.scissor          = scissor;
     shadowPassDataPipelineDesc.shaders[0]       = vertShader.get();
     shadowPassDataPipelineDesc.numShaders       = 1;
-    shadowPassDataPipelineDesc.numColorAttachments = 0;
 
     shadowPassData.pipeline = g_renderState.device.NewPipeline( shadowPassDataPipelineDesc, "directional shadow pass" );
     if ( !shadowPassData.pipeline )
@@ -284,7 +283,6 @@ static bool InitGBufferPassData()
     pipelineDesc.shaders[0]             = vertShader.get();
     pipelineDesc.shaders[1]             = fragShader.get();
     pipelineDesc.numShaders             = 2;
-    pipelineDesc.numColorAttachments    = 3;
 
     gBufferPassData.pipeline = g_renderState.device.NewPipeline( pipelineDesc, "gbuffer rigid model" );
     if ( !gBufferPassData.pipeline )
@@ -361,7 +359,6 @@ static bool InitSSAOPass()
     pipelineDesc.shaders[0]           = vertShader.get();
     pipelineDesc.shaders[1]           = fragShader.get();
     pipelineDesc.numShaders           = 2;
-    pipelineDesc.numColorAttachments  = 1;
 
     ssaoPassData.pipeline = g_renderState.device.NewPipeline( pipelineDesc, "SSAO pass" );
     if ( !ssaoPassData.pipeline )
@@ -457,7 +454,6 @@ static bool InitSSAOBlurPassData()
     pipelineDesc.shaders[0]           = vertShader.get();
     pipelineDesc.shaders[1]           = fragShader.get();
     pipelineDesc.numShaders           = 2;
-    pipelineDesc.numColorAttachments  = 1;
 
     ssaoBlurPassData.pipeline = g_renderState.device.NewPipeline( pipelineDesc, "SSAO blur pass" );
     if ( !ssaoBlurPassData.pipeline )
@@ -532,7 +528,6 @@ static bool InitLightingPassData()
     pipelineDesc.shaders[0]                  = vertShader.get();
     pipelineDesc.shaders[1]                  = fragShader.get();
     pipelineDesc.numShaders                  = 2;
-    pipelineDesc.numColorAttachments         = 1;
     pipelineDesc.depthInfo.depthWriteEnabled = false;
     pipelineDesc.depthInfo.depthTestEnabled  = false;
 
@@ -605,7 +600,6 @@ static bool InitBackgroundPassData()
     pipelineDesc.shaders[0]             = vertShader.get();
     pipelineDesc.shaders[1]             = fragShader.get();
     pipelineDesc.numShaders             = 2;
-    pipelineDesc.numColorAttachments    = 1;
     pipelineDesc.depthInfo.compareFunc  = CompareFunction::EQUAL;
 
     backgroundPassData.pipeline = g_renderState.device.NewPipeline( pipelineDesc, "background pass" );
@@ -673,7 +667,6 @@ static bool InitTransparencyPassData()
     pipelineDesc.shaders[0]             = vertShader.get();
     pipelineDesc.shaders[1]             = fragShader.get();
     pipelineDesc.numShaders             = 2;
-    pipelineDesc.numColorAttachments    = 1;
 
     transparencyPassData.pipeline = g_renderState.device.NewPipeline( pipelineDesc, "transparency rigid model" );
     if ( !transparencyPassData.pipeline )
@@ -715,7 +708,6 @@ bool InitPostProcessPassData()
     postProcessingPipelineDesc.shaders[0]	          = vertShader.get();
     postProcessingPipelineDesc.shaders[1]			  = fragShader.get();
     postProcessingPipelineDesc.numShaders             = 2;
-    postProcessingPipelineDesc.numColorAttachments    = 1;
 
 	postProcessPassData.pipeline = g_renderState.device.NewPipeline( postProcessingPipelineDesc , "post process" );
 	if ( !postProcessPassData.pipeline )
@@ -1020,7 +1012,7 @@ namespace RenderSystem
         {
             const auto& model = modelRenderer.model;
             auto MVP = shadowPassData.LSM * transform.GetModelMatrix();
-            vkCmdPushConstants( cmdBuf.GetHandle(), shadowPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( glm::mat4 ), &MVP[0][0] );
+            cmdBuf.PushConstants( shadowPassData.pipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( glm::mat4 ), &MVP[0][0] );
 
             cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
             cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
@@ -1040,7 +1032,7 @@ namespace RenderSystem
         // {
         //     const auto& model = renderer.model;
         //     auto MVP          = shadowPassData.LSM * transform.GetModelMatrix();
-        //     vkCmdPushConstants( cmdBuf.GetHandle(), animPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( glm::mat4 ), &MVP[0][0] );
+        //     cmdBuf.PushConstants( shadowPassData.pipeline, animPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( glm::mat4 ), &MVP[0][0] );
         // 
         //     cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
         //     cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
@@ -1080,10 +1072,8 @@ namespace RenderSystem
             
             auto M = transform.GetModelMatrix();
             auto N = glm::transpose( glm::inverse( M ) );
-            ObjectConstantBufferData b;
-            b.M = M;
-            b.N = N;
-            vkCmdPushConstants( cmdBuf.GetHandle(), gBufferPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( ObjectConstantBufferData ), &b );
+            ObjectConstantBufferData b{ M, N };
+            cmdBuf.PushConstants( gBufferPassData.pipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( ObjectConstantBufferData ), &b );
 
             cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
@@ -1105,7 +1095,7 @@ namespace RenderSystem
                 mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
                 mcbuf.diffuseTexIndex = mat->map_Kd   ? mat->map_Kd->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
                 mcbuf.normalMapIndex  = mat->map_Norm ? mat->map_Norm->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
-                vkCmdPushConstants( cmdBuf.GetHandle(), gBufferPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
+                cmdBuf.PushConstants( gBufferPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
 
                 PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
                 cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
@@ -1127,10 +1117,8 @@ namespace RenderSystem
         
         cmdBuf.BindRenderPipeline( ssaoPassData.pipeline );
         cmdBuf.BindDescriptorSets( 1, &descriptorSets.ssao, ssaoPassData.pipeline, 0 );
-        SSAOShaderData pushData;
-        pushData.V = scene->camera.GetV();
-        pushData.P = scene->camera.GetP();
-        vkCmdPushConstants( cmdBuf.GetHandle(), ssaoPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( SSAOShaderData ), &pushData );
+        SSAOShaderData pushData{ scene->camera.GetV(), scene->camera.GetP() };
+        cmdBuf.PushConstants( ssaoPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( SSAOShaderData ), &pushData );
         PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
         cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
         cmdBuf.Draw( 0, 6 );
@@ -1166,7 +1154,7 @@ namespace RenderSystem
         cmdBuf.BindDescriptorSets( 1, &descriptorSets.lights, lightingPassData.pipeline, 3 );
         PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
 
-        vkCmdPushConstants( cmdBuf.GetHandle(), lightingPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( int ), &g_debugLayer );
+        cmdBuf.PushConstants( lightingPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( int ), &g_debugLayer );
         cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
         cmdBuf.Draw( 0, 6 );
 
@@ -1184,7 +1172,7 @@ namespace RenderSystem
         cmdBuf.BindRenderPipeline( backgroundPassData.pipeline );
         PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
 
-        vkCmdPushConstants( cmdBuf.GetHandle(), backgroundPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( glm::vec4 ), glm::value_ptr( scene->backgroundColor ) );
+        cmdBuf.PushConstants( backgroundPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( glm::vec4 ), glm::value_ptr( scene->backgroundColor ) );
         cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
         cmdBuf.Draw( 0, 6 );
 
@@ -1215,10 +1203,8 @@ namespace RenderSystem
             
             auto M = transform.GetModelMatrix();
             auto N = glm::transpose( glm::inverse( M ) );
-            ObjectConstantBufferData b;
-            b.M = M;
-            b.N = N;
-            vkCmdPushConstants( cmdBuf.GetHandle(), transparencyPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( ObjectConstantBufferData ), &b );
+            ObjectConstantBufferData b{ M, N };
+            cmdBuf.PushConstants( transparencyPassData.pipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( ObjectConstantBufferData ), &b );
 
             cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
@@ -1240,7 +1226,7 @@ namespace RenderSystem
                 mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
                 mcbuf.diffuseTexIndex = mat->map_Kd   ? mat->map_Kd->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
                 mcbuf.normalMapIndex  = mat->map_Norm ? mat->map_Norm->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
-                vkCmdPushConstants( cmdBuf.GetHandle(), transparencyPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
+                cmdBuf.PushConstants( transparencyPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
 
                 PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
                 cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );

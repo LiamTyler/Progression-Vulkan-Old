@@ -39,11 +39,13 @@ namespace Gfx
         void BindIndexBuffer( const Buffer& buffer, IndexType indexType, size_t offset = 0 ) const;
         void PipelineBarrier( VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage,
                               const VkImageMemoryBarrier& barrier ) const;
-        void SetViewport( const Viewport& viewport );
-        void SetScissor( const Scissor& scissor );
-        void SetDepthBias( float constant, float clamp, float slope );
+        void SetViewport( const Viewport& viewport ) const;
+        void SetScissor( const Scissor& scissor ) const;
+        void SetDepthBias( float constant, float clamp, float slope ) const;
+        
+        void PushConstants( const Pipeline& pipeline, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, void* data ) const;
 
-        void Copy( const Buffer& dst, const Buffer& src );
+        void Copy( const Buffer& dst, const Buffer& src ) const;
 
         void Draw( uint32_t firstVert, uint32_t vertCount, uint32_t instanceCount = 1, uint32_t firstInstance = 0 ) const;
         void DrawIndexed( uint32_t firstIndex, uint32_t indexCount, int vertexOffset = 0, uint32_t firstInstance = 0, uint32_t instanceCount = 1 ) const;

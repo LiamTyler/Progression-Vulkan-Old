@@ -166,7 +166,6 @@ namespace Gfx
         RasterizerInfo rasterizerInfo;
         PrimitiveType primitiveType = PrimitiveType::TRIANGLES;
         PipelineDepthInfo depthInfo;
-        uint32_t numColorAttachments = 0;
         std::array< PipelineColorAttachmentInfo, 8 > colorAttachmentInfos;
     };
 

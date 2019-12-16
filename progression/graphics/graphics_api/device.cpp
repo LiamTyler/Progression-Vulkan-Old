@@ -442,8 +442,14 @@ namespace Gfx
         // no depth or stencil buffer currently
 
         // blending for single attachment
+        uint32_t numColorAttachments = 0;
+        for ( const auto& attach : desc.renderPass->desc.colorAttachmentDescriptors )
+        {
+            numColorAttachments += attach.format != PixelFormat::INVALID;
+        }
+
         VkPipelineColorBlendAttachmentState colorBlendAttachment[8] = {};
-        for ( uint32_t i = 0; i < desc.numColorAttachments; ++i )
+        for ( uint32_t i = 0; i < numColorAttachments; ++i )
         {
             colorBlendAttachment[i].colorWriteMask =
                 VK_COLOR_COMPONENT_R_BIT |
@@ -465,7 +471,7 @@ namespace Gfx
         colorBlending.sType             = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
         colorBlending.logicOpEnable     = VK_FALSE;
         colorBlending.logicOp           = VK_LOGIC_OP_COPY;
-        colorBlending.attachmentCount   = desc.numColorAttachments;
+        colorBlending.attachmentCount   = numColorAttachments;
         colorBlending.pAttachments      = colorBlendAttachment;
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};

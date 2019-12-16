@@ -85,7 +85,6 @@ bool Init()
     pipelineDesc.shaders[0]             = animatedModelsVert.get();
     pipelineDesc.shaders[1]             = forwardBlinnPhongFrag.get();
     pipelineDesc.numShaders             = 2;
-    pipelineDesc.numColorAttachments    = 1;
 
     return true;
 

@@ -115,7 +115,7 @@ namespace Gfx
         vkCmdPipelineBarrier( m_handle, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier );
     }
 
-    void CommandBuffer::SetViewport( const Viewport& viewport )
+    void CommandBuffer::SetViewport( const Viewport& viewport ) const
     {
         VkViewport v;
         v.x        = viewport.x;
@@ -127,7 +127,7 @@ namespace Gfx
         vkCmdSetViewport( m_handle, 0, 1, &v );
     }
 
-    void CommandBuffer::SetScissor( const Scissor& scissor )
+    void CommandBuffer::SetScissor( const Scissor& scissor ) const
     {
         VkRect2D s;
         s.offset.x      = scissor.x;
@@ -137,12 +137,17 @@ namespace Gfx
         vkCmdSetScissor( m_handle, 0, 1, &s );
     }
 
-    void CommandBuffer::SetDepthBias( float constant, float clamp, float slope )
+    void CommandBuffer::SetDepthBias( float constant, float clamp, float slope ) const
     {
         vkCmdSetDepthBias( m_handle, constant, clamp, slope );
     }
 
-    void CommandBuffer::Copy( const Buffer& dst, const Buffer& src )
+    void CommandBuffer::PushConstants( const Pipeline& pipeline, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, void* data ) const
+    {
+        vkCmdPushConstants( m_handle, pipeline.GetLayoutHandle(), stageFlags, offset, size, data );
+    }
+
+    void CommandBuffer::Copy( const Buffer& dst, const Buffer& src ) const
     {
         VkBufferCopy copyRegion = {};
         copyRegion.size = src.GetLength();
