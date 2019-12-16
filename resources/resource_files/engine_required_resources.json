@@ -21,7 +21,7 @@
     },
     "Shader": {
         "name": "ssaoBlur",
-        "filename": "shaders/ssaoBlur.frag"
+        "filename": "shaders/ssao_blur.frag"
     },
     "Shader": {
         "name": "rigidModelsVert",
@@ -38,6 +38,14 @@
     "Shader": {
         "name": "directionalShadowVert",
         "filename": "shaders/directional_shadow.vert"
+    },
+    "Shader": {
+        "name": "backgroundSolidColorVert",
+        "filename": "shaders/background_solid_color.vert"
+    },
+    "Shader": {
+        "name": "backgroundSolidColorFrag",
+        "filename": "shaders/background_solid_color.frag"
     },
     "Image": {
         "name": "RENDER_SYSTEM_DUMMY_TEXTURE",

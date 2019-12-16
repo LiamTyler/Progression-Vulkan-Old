@@ -140,6 +140,12 @@ struct
 {
     RenderPass renderPass;
     Pipeline pipeline;
+} backgroundPassData;
+
+struct
+{
+    RenderPass renderPass;
+    Pipeline pipeline;
     std::vector< DescriptorSetLayout > descriptorSetLayouts;
 } transparencyPassData;
 
@@ -168,7 +174,8 @@ static bool InitShadowPassData()
         return false;
     }
 
-    auto directionalShadowVert = ResourceManager::Get< Shader >( "directionalShadowVert" );
+    auto vertShader = ResourceManager::Get< Shader >( "directionalShadowVert" );
+    PG_ASSERT( vertShader );
 
     VertexBindingDescriptor bindingDescs[] =
     {
@@ -190,7 +197,7 @@ static bool InitShadowPassData()
     scissor.width                               = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
     scissor.height                              = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
     shadowPassDataPipelineDesc.scissor          = scissor;
-    shadowPassDataPipelineDesc.shaders[0]       = directionalShadowVert.get();
+    shadowPassDataPipelineDesc.shaders[0]       = vertShader.get();
     shadowPassDataPipelineDesc.numShaders       = 1;
     shadowPassDataPipelineDesc.numColorAttachments = 0;
 
@@ -258,6 +265,7 @@ static bool InitGBufferPassData()
 
     auto vertShader = ResourceManager::Get< Shader >( "rigidModelsVert" );
     auto fragShader = ResourceManager::Get< Shader >( "gBufferFrag" );
+    PG_ASSERT( vertShader && fragShader );
 
     std::vector< DescriptorSetLayoutData > descriptorSetData = vertShader->reflectInfo.descriptorSetLayouts;
     descriptorSetData.insert( descriptorSetData.end(), fragShader->reflectInfo.descriptorSetLayouts.begin(), fragShader->reflectInfo.descriptorSetLayouts.end() );
@@ -480,8 +488,8 @@ static bool InitLightingPassData()
 {
     RenderPassDescriptor desc;
     desc.colorAttachmentDescriptors[0].format      = PixelFormat::R8_G8_B8_A8_UNORM;
-    // desc.colorAttachmentDescriptors[0].finalLayout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
-    desc.colorAttachmentDescriptors[0].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+    desc.colorAttachmentDescriptors[0].finalLayout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
+    //desc.colorAttachmentDescriptors[0].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
 
     desc.depthAttachmentDescriptor.format        = PixelFormat::DEPTH_32_FLOAT;
     desc.depthAttachmentDescriptor.loadAction    = LoadAction::LOAD;
@@ -507,6 +515,7 @@ static bool InitLightingPassData()
 
     auto vertShader	 = ResourceManager::Get< Shader >( "fullScreenQuadVert" );
     auto fragShader  = ResourceManager::Get< Shader >( "deferredLightingPassFrag" );
+    PG_ASSERT( vertShader && fragShader );
 
     std::vector< DescriptorSetLayoutData > descriptorSetData = vertShader->reflectInfo.descriptorSetLayouts;
     descriptorSetData.insert( descriptorSetData.end(), fragShader->reflectInfo.descriptorSetLayouts.begin(), fragShader->reflectInfo.descriptorSetLayouts.end() );
@@ -552,9 +561,65 @@ static bool InitLightingPassData()
     return true;
 }
 
+static bool InitBackgroundPassData()
+{
+    RenderPassDescriptor desc;
+    desc.colorAttachmentDescriptors[0].format        = PixelFormat::R8_G8_B8_A8_UNORM;
+    desc.colorAttachmentDescriptors[0].loadAction    = LoadAction::LOAD;
+    desc.colorAttachmentDescriptors[0].initialLayout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
+    desc.colorAttachmentDescriptors[0].finalLayout   = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+
+    desc.depthAttachmentDescriptor.format        = PixelFormat::DEPTH_32_FLOAT;
+    desc.depthAttachmentDescriptor.loadAction    = LoadAction::LOAD;
+    desc.depthAttachmentDescriptor.storeAction   = StoreAction::STORE;
+    desc.depthAttachmentDescriptor.initialLayout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    desc.depthAttachmentDescriptor.finalLayout   = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    backgroundPassData.renderPass = g_renderState.device.NewRenderPass( desc, "background pass" );
+    if ( !backgroundPassData.renderPass )
+    {
+        return false;
+    }
+
+    VertexBindingDescriptor bindingDescs[] =
+    {
+        VertexBindingDescriptor( 0, sizeof( glm::vec3 ) ),
+    };
+
+    VertexAttributeDescriptor attribDescs[] =
+    {
+        VertexAttributeDescriptor( 0, 0, BufferDataType::FLOAT3, 0 ),
+    };
+
+    auto vertShader = ResourceManager::Get< Shader >( "backgroundSolidColorVert" );
+    auto fragShader = ResourceManager::Get< Shader >( "backgroundSolidColorFrag" );
+    PG_ASSERT( vertShader && fragShader );
+
+    PipelineDescriptor pipelineDesc;
+    pipelineDesc.renderPass             = &backgroundPassData.renderPass;
+    pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( ARRAY_COUNT( bindingDescs ), bindingDescs, ARRAY_COUNT( attribDescs ), attribDescs );
+    pipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
+    pipelineDesc.viewport               = FullScreenViewport();
+    pipelineDesc.scissor                = FullScreenScissor();
+    pipelineDesc.scissor                = FullScreenScissor();
+    pipelineDesc.shaders[0]             = vertShader.get();
+    pipelineDesc.shaders[1]             = fragShader.get();
+    pipelineDesc.numShaders             = 2;
+    pipelineDesc.numColorAttachments    = 1;
+    pipelineDesc.depthInfo.compareFunc  = CompareFunction::EQUAL;
+
+    backgroundPassData.pipeline = g_renderState.device.NewPipeline( pipelineDesc, "background pass" );
+    if ( !backgroundPassData.pipeline )
+    {
+        LOG_ERR( "Could not create background pass pipeline" );
+        return false;
+    }
+
+    return true;
+}
+
 static bool InitTransparencyPassData()
 {
-    return true;
     RenderPassDescriptor desc;
     desc.colorAttachmentDescriptors[0].format        = PixelFormat::R8_G8_B8_A8_UNORM;
     desc.colorAttachmentDescriptors[0].loadAction    = LoadAction::LOAD;
@@ -807,9 +872,9 @@ namespace RenderSystem
             return false;
         }
 
-        if ( !InitTransparencyPassData() )
+        if ( !InitBackgroundPassData() )
         {
-            LOG_ERR( "Could not init transparent pass data" );
+            LOG_ERR( "Could not init background pass data" );
             return false;
         }
 
@@ -900,6 +965,9 @@ namespace RenderSystem
         lightingPassData.frameBuffer.Free();
         lightingPassData.pipeline.Free();
         freeDescriptorSetLayouts( lightingPassData.descriptorSetLayouts );
+
+        backgroundPassData.renderPass.Free();
+        backgroundPassData.pipeline.Free();
 
         // transparencyPassData.renderPass.Free();
         // transparencyPassData.pipeline.Free();
@@ -1107,6 +1175,24 @@ namespace RenderSystem
         PG_PROFILE_TIMESTAMP( cmdBuf, "Lighting_End" );
     }
 
+    void BackgroundPass( Scene* scene, CommandBuffer& cmdBuf )
+    {
+        PG_PROFILE_TIMESTAMP( cmdBuf, "Background_Start" );
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Background Pass", glm::vec4( .2, .8, .8, 1 ) );
+        cmdBuf.BeginRenderPass( backgroundPassData.renderPass, lightingPassData.frameBuffer, g_renderState.swapChain.extent );
+
+        cmdBuf.BindRenderPipeline( backgroundPassData.pipeline );
+        PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
+
+        vkCmdPushConstants( cmdBuf.GetHandle(), backgroundPassData.pipeline.GetLayoutHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( glm::vec4 ), glm::value_ptr( scene->backgroundColor ) );
+        cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
+        cmdBuf.Draw( 0, 6 );
+
+        cmdBuf.EndRenderPass();
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
+        PG_PROFILE_TIMESTAMP( cmdBuf, "Background_End" );
+    }
+
     void TransparencyPass( Scene* scene, CommandBuffer& cmdBuf )
     {
         PG_PROFILE_TIMESTAMP( cmdBuf, "Transparency_Start" );
@@ -1206,7 +1292,7 @@ namespace RenderSystem
         GBufferPass( scene, cmdBuf );
         SSAOPass( scene, cmdBuf );
         DeferredLightingPass( scene, cmdBuf );
-        // TransparencyPass( scene, cmdBuf );
+        BackgroundPass( scene, cmdBuf );
         PostProcessPass( scene, cmdBuf, swapChainImageIndex );
 
         PG_PROFILE_TIMESTAMP( cmdBuf, "Frame_End" );

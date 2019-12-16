@@ -115,7 +115,7 @@ static void ParseBackgroundColor( rapidjson::Value& v, Scene* scene )
 {
     PG_ASSERT( v.HasMember( "color" ) );
     auto& member           = v["color"];
-    scene->backgroundColor = ParseVec3( member );
+    scene->backgroundColor = ParseVec4( member );
 }
 
 static void ParseAmbientColor( rapidjson::Value& v, Scene* scene )
