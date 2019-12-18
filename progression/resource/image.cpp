@@ -81,8 +81,8 @@ bool Image::Load( ResourceCreateInfo* createInfo )
     name                  = info->name;
     m_flags               = info->flags;
     PG_ASSERT( ( m_flags & IMAGE_CREATE_TEXTURE_ON_LOAD ) || !( m_flags & IMAGE_FREE_CPU_COPY_ON_LOAD ) );
-    PG_ASSERT( !( !info->filename.empty() && !info->skyboxFilenames.empty() ), "Can't specify both a single file and skybox images to load" );
-    PG_ASSERT( !info->filename.empty() || info->skyboxFilenames.size() == 6, "Must specify single file or 6 skybox files to load" );
+    PG_ASSERT( !( !info->filename.empty() && !info->cubeMapFilenames.empty() ), "Can't specify both a single file and cubemap images to load" );
+    PG_ASSERT( !info->filename.empty() || info->cubeMapFilenames.size() == 6, "Must specify single file or 6 cubemap files to load" );
 
     std::vector< std::string > filenames;
     if ( !info->filename.empty() )
@@ -91,7 +91,7 @@ bool Image::Load( ResourceCreateInfo* createInfo )
     }
     else
     {
-        filenames = info->skyboxFilenames;
+        filenames = info->cubeMapFilenames;
     }
     int numImages = static_cast< int >( filenames.size() );
     std::vector< ImageDescriptor > imageDescs( numImages );

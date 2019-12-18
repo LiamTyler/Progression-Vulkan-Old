@@ -25,7 +25,7 @@ static std::string GetContentFastFileName( ImageCreateInfo& createInfo )
     }
     else
     {
-        fs::path filePath = fs::absolute( createInfo.skyboxFilenames[0] );
+        fs::path filePath = fs::absolute( createInfo.cubeMapFilenames[0] );
         hash     = std::to_string( std::hash< std::string >{}( filePath.string() ) );
         baseName = "skybox_" + filePath.filename().string();
     }
@@ -90,7 +90,7 @@ AssetStatus ImageConverter::CheckDependencies()
     {
         auto timestamp = Timestamp( m_outputContentFile );
         IF_VERBOSE_MODE( LOG( "Image FFI timestamp: ", timestamp ) );
-        for ( const auto& fname : createInfo.skyboxFilenames )
+        for ( const auto& fname : createInfo.cubeMapFilenames )
         {
             auto ts = Timestamp( fname ) ;
             if ( timestamp < ts )

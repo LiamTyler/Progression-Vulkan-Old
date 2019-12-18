@@ -99,17 +99,28 @@ static std::unordered_map< std::string, Gfx::PixelFormat > pixelFormatMap =
 
 static void ParseImage( rapidjson::Value& value, FastfileConverter* conv )
 {
+    static FunctionMapper< void, std::vector< std::string >& > cubemapParser(
+    {
+        { "right",  []( rapidjson::Value& v, std::vector< std::string >& files ) { files[0] = v.GetString(); } },
+        { "left",   []( rapidjson::Value& v, std::vector< std::string >& files ) { files[1] = v.GetString(); } },
+        { "top",    []( rapidjson::Value& v, std::vector< std::string >& files ) { files[2] = v.GetString(); } },
+        { "bottom", []( rapidjson::Value& v, std::vector< std::string >& files ) { files[3] = v.GetString(); } },
+        { "back",   []( rapidjson::Value& v, std::vector< std::string >& files ) { files[4] = v.GetString(); } },
+        { "front",  []( rapidjson::Value& v, std::vector< std::string >& files ) { files[5] = v.GetString(); } },
+    });
+
     ImageConverter converter( conv->force, conv->verbose );
     static FunctionMapper< void, ImageCreateInfo& > mapping(
     {
         { "name",            []( rapidjson::Value& v, ImageCreateInfo& i ) { i.name     = v.GetString(); } },
         { "filename",        []( rapidjson::Value& v, ImageCreateInfo& i ) { i.filename = PG_RESOURCE_DIR + std::string( v.GetString() ); } },
-        { "skyboxFilenames", []( rapidjson::Value& v, ImageCreateInfo& i )
+        { "cubeMapFilenames", []( rapidjson::Value& v, ImageCreateInfo& i )
             {
-                PG_ASSERT( v.IsArray() && v.Size() == 6, "Please provide an array of 6 filenames for a skybox" );
-                for ( const auto& e : v.GetArray() )
+                cubemapParser.ForEachMember( v, i.cubeMapFilenames );
+                for ( auto& file : i.cubeMapFilenames )
                 {
-                    i.skyboxFilenames.push_back( PG_RESOURCE_DIR + std::string( e.GetString() ) );
+                    PG_ASSERT( file != "", "Please specify all 6 faces for cubemap" );
+                    file = PG_RESOURCE_DIR + file;
                 }
             }
         },
