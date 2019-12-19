@@ -125,6 +125,13 @@ static void ParseAmbientColor( rapidjson::Value& v, Scene* scene )
     scene->ambientColor = ParseVec3( member );
 }
 
+static void ParseSkybox( rapidjson::Value& v, Scene* scene )
+{
+    PG_ASSERT( v.IsString() );
+    scene->skybox = ResourceManager::Get< Image >( v.GetString() );
+    PG_ASSERT( scene->skybox, "Could not find skybox with name '" + std::string( v.GetString() ) + "'" );
+}
+
 namespace Progression
 {
 
@@ -160,6 +167,7 @@ Scene* Scene::Load( const std::string& filename )
         { "PointLight",       ParsePointLight },
         { "SpotLight",        ParseSpotLight },
         { "Fastfile",         ParseFastfile },
+        { "Skybox",           ParseSkybox },
     });
 
     mapping.ForEachMember( document, std::move( scene ) );

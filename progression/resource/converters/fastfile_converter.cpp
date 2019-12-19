@@ -116,6 +116,8 @@ static void ParseImage( rapidjson::Value& value, FastfileConverter* conv )
         { "filename",        []( rapidjson::Value& v, ImageCreateInfo& i ) { i.filename = PG_RESOURCE_DIR + std::string( v.GetString() ); } },
         { "cubeMapFilenames", []( rapidjson::Value& v, ImageCreateInfo& i )
             {
+                i.cubeMapFilenames.clear();
+                i.cubeMapFilenames.resize( 6 );
                 cubemapParser.ForEachMember( v, i.cubeMapFilenames );
                 for ( auto& file : i.cubeMapFilenames )
                 {

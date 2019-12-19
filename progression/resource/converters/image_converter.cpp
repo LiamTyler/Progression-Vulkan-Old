@@ -51,7 +51,7 @@ ImageConverter::ImageConverter( bool f, bool v )
 
 AssetStatus ImageConverter::CheckDependencies()
 {
-    PG_ASSERT( !createInfo.filename.empty() || !createInfo.skyboxFilenames.empty() );
+    PG_ASSERT( !createInfo.filename.empty() || !createInfo.cubeMapFilenames.empty() );
 
     // Add an empty image to the manager to notify other resources that an image with this
     // name has already been loaded

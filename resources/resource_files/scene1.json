@@ -3,31 +3,27 @@
         "name": "cameraController",
         "filename": "scripts/cameraController.lua"
     },
-    "_Image": {
-        "name": "floor",
-        "filename": "textures/metal2.jpg"
-    },
-    "Image": {
-        "name": "chaletTex",
-        "filename": "textures/chalet.jpg"
-    },
     "MTLFile": {
         "filename": "materials/miscellaneous.mtl"
-    },
-    "Model": {
-        "name": "chalet",
-        "filename": "models/chalet2.obj"
     },
     "Model": {
         "name": "floor",
         "filename": "models/plane.obj"
     },
     "Model": {
-        "name": "dragon",
-        "filename": "dragon/Dragon_Baked_Actions_fbx_7.4_binary.fbx"
-    },
-    "Model": {
         "name": "cube",
         "filename": "models/cube.obj"
+    },
+    "Image": {
+        "name": "waterSkybox",
+        "generateMipmaps": false,
+        "cubeMapFilenames": {
+            "right": "textures/skybox/water/right.jpg",
+            "left": "textures/skybox/water/left.jpg",
+            "top": "textures/skybox/water/top.jpg",
+            "bottom": "textures/skybox/water/bottom.jpg",
+            "back": "textures/skybox/water/back.jpg",
+            "front": "textures/skybox/water/front.jpg"
+        }
     }
 }

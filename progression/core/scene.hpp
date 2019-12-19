@@ -7,6 +7,7 @@
 
 namespace Progression
 {
+    class Image;
     class Scene
     {
     public:
@@ -21,6 +22,7 @@ namespace Progression
         Camera camera;
         glm::vec4 backgroundColor = glm::vec4( 0, 0, 0, 1 );
         glm::vec3 ambientColor    = glm::vec3( .1f );
+        std::shared_ptr< Image > skybox;
         DirectionalLight directionalLight;
         std::vector< PointLight > pointLights;
         std::vector< SpotLight > spotLights;

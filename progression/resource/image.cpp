@@ -337,8 +337,8 @@ void Image::UploadToGpu()
 
     m_texture = device.NewTexture( m_texture.m_desc );
     PG_DEBUG_MARKER_SET_IMAGE_NAME( m_texture, name );
-    TransitionImageLayout( m_texture.GetHandle(), vkFormat, VK_IMAGE_LAYOUT_UNDEFINED,
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_texture.m_desc.mipLevels );
+    // TransitionImageLayout( m_texture.GetHandle(), vkFormat, VK_IMAGE_LAYOUT_UNDEFINED,
+    //                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_texture.m_desc.mipLevels );
     device.CopyBufferToImage( stagingBuffer, m_texture );
     if ( generateMips )
     {
