@@ -281,7 +281,10 @@ namespace Gfx
         imageInfo.usage         = desc.usage;
         imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
         imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
-        imageInfo.flags         = 0;
+        if ( desc.arrayLayers == 6 )
+        {
+            imageInfo.flags         = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+        }
 
         Texture tex;
         tex.m_device  = m_handle;
@@ -310,7 +313,7 @@ namespace Gfx
         }
         VkFormat vkFormat = PGToVulkanPixelFormat( desc.format );
         PG_ASSERT( FormatSupported( vkFormat, features ) );
-        tex.m_imageView = CreateImageView( tex.m_image, vkFormat, isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT, desc.mipLevels );
+        tex.m_imageView = CreateImageView( tex.m_image, vkFormat, isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT, desc.mipLevels, desc.arrayLayers );
         if ( managed )
         {
             tex.m_textureSlot = TextureManager::GetOpenSlot( &tex );
@@ -710,6 +713,45 @@ namespace Gfx
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             1,
             &region
+        );
+
+        cmdBuf.EndRecording();
+        g_renderState.device.Submit( cmdBuf );
+        g_renderState.device.WaitForIdle();
+        cmdBuf.Free();
+    }
+
+    void Device::CopyBufferToImage2( const Buffer& buffer, const Texture& tex ) const
+    {
+        CommandBuffer cmdBuf = g_renderState.transientCommandPool.NewCommandBuffer();
+        cmdBuf.BeginRecording( COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT );
+
+        std::vector< VkBufferImageCopy > bufferCopyRegions;
+		uint32_t offset = 0;
+
+        for ( uint32_t face = 0; face < tex.GetArrayLayers(); ++face )
+        {
+            size_t sizeOfFace = tex.GetWidth() * tex.GetHeight() * tex.GetDepth() * SizeOfPixelFromat( tex.GetPixelFormat() );
+            VkBufferImageCopy region               = {};
+            region.bufferOffset                    = face * sizeOfFace;
+            region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.mipLevel       = 0;
+            region.imageSubresource.baseArrayLayer = face;
+            region.imageSubresource.layerCount     = 1;
+            region.imageExtent.width               = tex.GetWidth();
+            region.imageExtent.height              = tex.GetHeight();
+            region.imageExtent.depth               = tex.GetDepth();
+
+            bufferCopyRegions.push_back( region );
+        }
+
+        vkCmdCopyBufferToImage(
+            cmdBuf.GetHandle(),
+            buffer.GetHandle(),
+            tex.GetHandle(),
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            static_cast< uint32_t >( bufferCopyRegions.size() ),
+            bufferCopyRegions.data()
         );
 
         cmdBuf.EndRecording();

@@ -103,8 +103,8 @@ static void ParseImage( rapidjson::Value& value, FastfileConverter* conv )
     {
         { "right",  []( rapidjson::Value& v, std::vector< std::string >& files ) { files[0] = v.GetString(); } },
         { "left",   []( rapidjson::Value& v, std::vector< std::string >& files ) { files[1] = v.GetString(); } },
-        { "top",    []( rapidjson::Value& v, std::vector< std::string >& files ) { files[2] = v.GetString(); } },
-        { "bottom", []( rapidjson::Value& v, std::vector< std::string >& files ) { files[3] = v.GetString(); } },
+        { "top",    []( rapidjson::Value& v, std::vector< std::string >& files ) { files[3] = v.GetString(); } },
+        { "bottom", []( rapidjson::Value& v, std::vector< std::string >& files ) { files[2] = v.GetString(); } },
         { "back",   []( rapidjson::Value& v, std::vector< std::string >& files ) { files[4] = v.GetString(); } },
         { "front",  []( rapidjson::Value& v, std::vector< std::string >& files ) { files[5] = v.GetString(); } },
     });

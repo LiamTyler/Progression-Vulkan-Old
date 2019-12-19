@@ -334,12 +334,21 @@ void Image::UploadToGpu()
     {
         m_texture.m_desc.mipLevels = static_cast< uint32_t >( 1 + std::floor( std::log2( std::max( m_texture.m_desc.width, m_texture.m_desc.height ) ) ) );
     }
+    bool isTex2D = m_texture.m_desc.arrayLayers == 1;
 
-    m_texture = device.NewTexture( m_texture.m_desc );
-    PG_DEBUG_MARKER_SET_IMAGE_NAME( m_texture, name );
-    // TransitionImageLayout( m_texture.GetHandle(), vkFormat, VK_IMAGE_LAYOUT_UNDEFINED,
-    //                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_texture.m_desc.mipLevels );
-    device.CopyBufferToImage( stagingBuffer, m_texture );
+    m_texture = device.NewTexture( m_texture.m_desc, isTex2D, name );
+    TransitionImageLayout( m_texture.GetHandle(), vkFormat, VK_IMAGE_LAYOUT_UNDEFINED,
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_texture.m_desc.mipLevels, m_texture.m_desc.arrayLayers );
+    
+    if ( isTex2D )
+    {
+        device.CopyBufferToImage( stagingBuffer, m_texture );
+    }
+    else
+    {
+        device.CopyBufferToImage2( stagingBuffer, m_texture );
+    }
+
     if ( generateMips )
     {
         m_texture.GenerateMipMaps();
@@ -348,7 +357,7 @@ void Image::UploadToGpu()
     else
     {
         TransitionImageLayout( m_texture.GetHandle(), vkFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_texture.m_desc.mipLevels );
+                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_texture.m_desc.mipLevels, m_texture.m_desc.arrayLayers );
     }
 
     stagingBuffer.Free();

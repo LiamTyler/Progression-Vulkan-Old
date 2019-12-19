@@ -47,6 +47,14 @@
         "name": "backgroundSolidColorFrag",
         "filename": "shaders/background_solid_color.frag"
     },
+    "Shader": {
+        "name": "backgroundSkyboxVert",
+        "filename": "shaders/background_skybox.vert"
+    },
+    "Shader": {
+        "name": "backgroundSkyboxFrag",
+        "filename": "shaders/background_skybox.frag"
+    },
     "Image": {
         "name": "RENDER_SYSTEM_DUMMY_TEXTURE",
         "filename": "textures/render_system_dummy_texture.png",

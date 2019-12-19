@@ -78,6 +78,7 @@ struct
     DescriptorSet ssao;
     DescriptorSet ssaoBlur;
     DescriptorSet lights;
+    DescriptorSet background;
     DescriptorSet postProcessInputColorTex;
 } descriptorSets;
 
@@ -140,6 +141,8 @@ struct
 {
     RenderPass renderPass;
     Pipeline pipeline;
+    Buffer cubeBuffer;
+    std::vector< DescriptorSetLayout > descriptorSetLayouts;
 } backgroundPassData;
 
 struct
@@ -586,16 +589,25 @@ static bool InitBackgroundPassData()
         VertexAttributeDescriptor( 0, 0, BufferDataType::FLOAT3, 0 ),
     };
 
-    auto vertShader = ResourceManager::Get< Shader >( "backgroundSolidColorVert" );
-    auto fragShader = ResourceManager::Get< Shader >( "backgroundSolidColorFrag" );
+    //auto vertShader = ResourceManager::Get< Shader >( "backgroundSolidColorVert" );
+    //auto fragShader = ResourceManager::Get< Shader >( "backgroundSolidColorFrag" );
+    auto vertShader = ResourceManager::Get< Shader >( "backgroundSkyboxVert" );
+    auto fragShader = ResourceManager::Get< Shader >( "backgroundSkyboxFrag" );
     PG_ASSERT( vertShader && fragShader );
+
+    std::vector< DescriptorSetLayoutData > descriptorSetData = vertShader->reflectInfo.descriptorSetLayouts;
+    descriptorSetData.insert( descriptorSetData.end(), fragShader->reflectInfo.descriptorSetLayouts.begin(), fragShader->reflectInfo.descriptorSetLayouts.end() );
+    auto combined = CombineDescriptorSetLayouts( descriptorSetData );
+    backgroundPassData.descriptorSetLayouts = g_renderState.device.NewDescriptorSetLayouts( combined );
 
     PipelineDescriptor pipelineDesc;
     pipelineDesc.renderPass             = &backgroundPassData.renderPass;
+    pipelineDesc.descriptorSetLayouts   = backgroundPassData.descriptorSetLayouts;
     pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( ARRAY_COUNT( bindingDescs ), bindingDescs, ARRAY_COUNT( attribDescs ), attribDescs );
-    pipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
+    pipelineDesc.rasterizerInfo.winding = WindingOrder::CLOCKWISE;
     pipelineDesc.viewport               = FullScreenViewport();
-    pipelineDesc.scissor                = FullScreenScissor();
+    pipelineDesc.viewport.height        = -pipelineDesc.viewport.height;
+    pipelineDesc.viewport.y             = -pipelineDesc.viewport.height;
     pipelineDesc.scissor                = FullScreenScissor();
     pipelineDesc.shaders[0]             = vertShader.get();
     pipelineDesc.shaders[1]             = fragShader.get();
@@ -608,6 +620,32 @@ static bool InitBackgroundPassData()
         LOG_ERR( "Could not create background pass pipeline" );
         return false;
     }
+
+    glm::vec3 verts[] =
+    {
+        glm::vec3( -1, -1, -1 ), glm::vec3( -1,  1, -1 ), glm::vec3(  1,  1, -1 ), // front
+        glm::vec3( -1, -1, -1 ), glm::vec3(  1,  1, -1 ), glm::vec3(  1, -1, -1 ), // front
+
+        //glm::vec3( -1, -1, 1 ), glm::vec3( -1,  1, 1 ), glm::vec3(  1,  1, 1 ), // back
+        //glm::vec3( -1, -1, 1 ), glm::vec3(  1,  1, 1 ), glm::vec3(  1, -1, 1 ), // back
+
+        glm::vec3( -1, 1, 1 ), glm::vec3( -1,  -1, 1 ), glm::vec3(  1,  -1, 1 ), // back
+        glm::vec3( -1, 1, 1 ), glm::vec3(  1,  -1, 1 ), glm::vec3(  1, 1, 1 ), // back
+
+        glm::vec3( -1, -1, 1 ), glm::vec3( -1,  1, 1 ),  glm::vec3( -1,  1, -1 ), // left
+        glm::vec3( -1, -1, 1 ), glm::vec3( -1,  1, -1 ), glm::vec3( -1, -1, -1 ), // left
+
+        glm::vec3( 1, -1, -1 ), glm::vec3( 1,  1, -1 ), glm::vec3(  1,  1, 1 ), // right
+        glm::vec3( 1, -1, -1 ), glm::vec3(  1,  1, 1 ), glm::vec3(  1, -1, 1 ), // right
+
+        glm::vec3( -1, -1, 1 ), glm::vec3( -1, -1, -1 ), glm::vec3(  1,  -1, -1 ), // top
+        glm::vec3( -1, -1, 1 ), glm::vec3(  1, -1, -1 ), glm::vec3(  1, -1, 1 ), // top
+
+        glm::vec3( -1, 1, -1 ), glm::vec3( -1, 1, 1 ), glm::vec3(  1, 1, -1 ), // bottom
+        glm::vec3( 1, 1, -1 ), glm::vec3(  -1, 1, 1 ), glm::vec3(  1, 1, 1 ), // bottom
+    };
+
+    backgroundPassData.cubeBuffer = g_renderState.device.NewBuffer( sizeof( verts ), verts, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL, "RenderSystem Cube VBO" );
 
     return true;
 }
@@ -716,7 +754,7 @@ bool InitPostProcessPassData()
 		return false;
 	}
 
-    glm::vec3 quadVerts[] =
+    glm::vec3 verts[] =
     {
         glm::vec3( -1, -1, 0 ),
         glm::vec3( -1,  1, 0 ),
@@ -726,7 +764,7 @@ bool InitPostProcessPassData()
         glm::vec3(  1, -1, 0 ),
     };
 
-    postProcessPassData.quadBuffer = g_renderState.device.NewBuffer( sizeof( quadVerts ), quadVerts, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL, "RenderSystem Quad VBO" );
+    postProcessPassData.quadBuffer = g_renderState.device.NewBuffer( sizeof( verts ), verts, BUFFER_TYPE_VERTEX, MEMORY_TYPE_DEVICE_LOCAL, "RenderSystem Quad VBO" );
 
     return true;
 }
@@ -736,9 +774,9 @@ bool InitDescriptorPoolAndPrimarySets()
     VkDescriptorPoolSize poolSize[3] = {};
     poolSize[0] = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2 }; // scene const buffer + ssao kernel
     poolSize[1] = { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2 }; // point and spot light buffers
-    poolSize[2] = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }; // tex array + 4 gbuffer attachment sampler2Ds + 3 ssao
+    poolSize[2] = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 11 }; // tex array + 4 gbuffer attachment sampler2Ds + 3 ssao + 1 skybox
 
-    s_descriptorPool = g_renderState.device.NewDescriptorPool( 3, poolSize, 7, "render system" );
+    s_descriptorPool = g_renderState.device.NewDescriptorPool( 3, poolSize, 8, "render system" );
 
     descriptorSets.scene                    = s_descriptorPool.NewDescriptorSet( lightingPassData.descriptorSetLayouts[0],    "scene data" );
     descriptorSets.arrayOfTextures          = s_descriptorPool.NewDescriptorSet( lightingPassData.descriptorSetLayouts[1],    "array of textures" );
@@ -747,6 +785,7 @@ bool InitDescriptorPoolAndPrimarySets()
     descriptorSets.ssaoBlur                 = s_descriptorPool.NewDescriptorSet( ssaoBlurPassData.descriptorSetLayouts[0],    "ssao blur tex" );
     descriptorSets.lights                   = s_descriptorPool.NewDescriptorSet( lightingPassData.descriptorSetLayouts[3],    "scene lights" );
     descriptorSets.postProcessInputColorTex = s_descriptorPool.NewDescriptorSet( postProcessPassData.descriptorSetLayouts[0], "post process input tex" );
+    descriptorSets.background               = s_descriptorPool.NewDescriptorSet( backgroundPassData.descriptorSetLayouts[0], "background skybox tex" );
     
     std::vector< VkWriteDescriptorSet > writeDescriptorSets;
 	std::vector< VkDescriptorImageInfo > imageDescriptors;
@@ -1170,11 +1209,17 @@ namespace RenderSystem
         cmdBuf.BeginRenderPass( backgroundPassData.renderPass, lightingPassData.frameBuffer, g_renderState.swapChain.extent );
 
         cmdBuf.BindRenderPipeline( backgroundPassData.pipeline );
-        PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
+        PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw Skybox", glm::vec4( 0 ) );
+        glm::mat4 VP = scene->camera.GetP() * glm::mat4( glm::mat3( scene->camera.GetV() ) );
+        cmdBuf.PushConstants( backgroundPassData.pipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( glm::mat4 ), glm::value_ptr( VP ) );
+        cmdBuf.BindDescriptorSets( 1, &descriptorSets.background, backgroundPassData.pipeline );
+        cmdBuf.BindVertexBuffer( backgroundPassData.cubeBuffer, 0, 0 );
+        cmdBuf.Draw( 0, 36 );
 
-        cmdBuf.PushConstants( backgroundPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( glm::vec4 ), glm::value_ptr( scene->backgroundColor ) );
-        cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
-        cmdBuf.Draw( 0, 6 );
+        //PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw Background Color Quad", glm::vec4( 0 ) );
+        //cmdBuf.PushConstants( backgroundPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( glm::vec4 ), glm::value_ptr( scene->backgroundColor ) );
+        //cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
+        // cmdBuf.Draw( 0, 6 );
 
         cmdBuf.EndRenderPass();
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
@@ -1265,6 +1310,12 @@ namespace RenderSystem
         auto swapChainImageIndex = g_renderState.swapChain.AcquireNextImage( g_renderState.presentCompleteSemaphore );
 
         TextureManager::UpdateDescriptors( descriptorSets.arrayOfTextures );
+
+        {
+            VkDescriptorImageInfo imageDesc = DescriptorImageInfo( *scene->skybox->GetTexture(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+            VkWriteDescriptorSet writeSet = WriteDescriptorSet( descriptorSets.background, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageDesc );
+            g_renderState.device.UpdateDescriptorSets( 1, &writeSet );
+        }
 
         UpdateConstantBuffers( scene );
 

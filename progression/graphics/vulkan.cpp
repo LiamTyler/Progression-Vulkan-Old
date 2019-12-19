@@ -813,7 +813,7 @@ uint32_t FindMemoryType( uint32_t typeFilter, VkMemoryPropertyFlags properties )
     return ~0u;
 }
 
-void TransitionImageLayout( VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels )
+void TransitionImageLayout( VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels, uint32_t layers )
 {
     CommandBuffer cmdBuf = g_renderState.transientCommandPool.NewCommandBuffer();
     cmdBuf.BeginRecording( COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT );
@@ -829,7 +829,7 @@ void TransitionImageLayout( VkImage image, VkFormat format, VkImageLayout oldLay
     barrier.subresourceRange.baseMipLevel   = 0;
     barrier.subresourceRange.levelCount     = mipLevels;
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount     = 1;
+    barrier.subresourceRange.layerCount     = layers;
     barrier.srcAccessMask                   = 0;
     barrier.dstAccessMask                   = 0;
     PG_UNUSED( format );
@@ -869,12 +869,17 @@ bool FormatSupported( VkFormat format, VkFormatFeatureFlags requestedSupport )
     return ( props.optimalTilingFeatures & requestedSupport ) == requestedSupport;
 }
 
-VkImageView CreateImageView( VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels )
+VkImageView CreateImageView( VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels, uint32_t layers )
 {
     VkImageViewCreateInfo viewCreateInfo = {};
     viewCreateInfo.sType        = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewCreateInfo.image        = image;
+    PG_ASSERT( layers == 1 || layers == 6 );
     viewCreateInfo.viewType     = VK_IMAGE_VIEW_TYPE_2D;
+    if ( layers == 6 )
+    {
+        viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+    }
     viewCreateInfo.format       = format;
     viewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
     viewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -886,7 +891,7 @@ VkImageView CreateImageView( VkImage image, VkFormat format, VkImageAspectFlags 
     viewCreateInfo.subresourceRange.baseMipLevel   = 0;
     viewCreateInfo.subresourceRange.levelCount     = mipLevels;
     viewCreateInfo.subresourceRange.baseArrayLayer = 0;
-    viewCreateInfo.subresourceRange.layerCount     = 1;
+    viewCreateInfo.subresourceRange.layerCount     = layers;
 
     VkImageView view;
     VkResult res = vkCreateImageView( g_renderState.device.GetHandle(), &viewCreateInfo, nullptr, &view );
