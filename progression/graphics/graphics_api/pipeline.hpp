@@ -156,8 +156,7 @@ namespace Gfx
     class PipelineDescriptor
     {
     public:
-        uint8_t numShaders = 0;
-        std::array< Shader*, 3 > shaders;
+        std::array< Shader*, 3 > shaders = { nullptr };
         VertexInputDescriptor vertexDescriptor;
         Viewport viewport;
         Scissor scissor;

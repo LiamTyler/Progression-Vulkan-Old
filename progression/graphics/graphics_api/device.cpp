@@ -384,11 +384,10 @@ namespace Gfx
         p.m_desc   = desc;
         p.m_device = m_handle;
 
-        std::vector< VkPipelineShaderStageCreateInfo > shaderStages( desc.numShaders );
-        for ( int i = 0; i < desc.numShaders; ++i )
+        std::vector< VkPipelineShaderStageCreateInfo > shaderStages;
+        for ( int i = 0; i < static_cast< int >( desc.shaders.size() ) && desc.shaders[i]; ++i )
         {
-            PG_ASSERT( desc.shaders[i] );
-            shaderStages[i] = desc.shaders[i]->GetVkPipelineShaderStageCreateInfo();
+            shaderStages.push_back( desc.shaders[i]->GetVkPipelineShaderStageCreateInfo() );
         }
         std::vector< VkDynamicState > dynamicStates;
 
@@ -488,7 +487,7 @@ namespace Gfx
         pipelineLayoutInfo.pSetLayouts            = layouts.data();
 
         std::vector< VkPushConstantRange > pushConstants;
-        for ( int i = 0; i < desc.numShaders; ++i )
+        for ( int i = 0; i < static_cast< int >( shaderStages.size() ); ++i )
         {
             for ( const auto& range : desc.shaders[i]->reflectInfo.pushConstants )
             {

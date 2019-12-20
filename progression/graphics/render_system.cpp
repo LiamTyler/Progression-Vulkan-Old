@@ -202,7 +202,6 @@ static bool InitShadowPassData()
     scissor.height                              = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
     shadowPassDataPipelineDesc.scissor          = scissor;
     shadowPassDataPipelineDesc.shaders[0]       = vertShader.get();
-    shadowPassDataPipelineDesc.numShaders       = 1;
 
     shadowPassData.pipeline = g_renderState.device.NewPipeline( shadowPassDataPipelineDesc, "directional shadow pass" );
     if ( !shadowPassData.pipeline )
@@ -286,7 +285,6 @@ static bool InitGBufferPassData()
     pipelineDesc.scissor                = FullScreenScissor();
     pipelineDesc.shaders[0]             = vertShader.get();
     pipelineDesc.shaders[1]             = fragShader.get();
-    pipelineDesc.numShaders             = 2;
 
     gBufferPassData.pipeline = g_renderState.device.NewPipeline( pipelineDesc, "gbuffer rigid model" );
     if ( !gBufferPassData.pipeline )
@@ -362,7 +360,6 @@ static bool InitSSAOPass()
     pipelineDesc.scissor              = FullScreenScissor();
     pipelineDesc.shaders[0]           = vertShader.get();
     pipelineDesc.shaders[1]           = fragShader.get();
-    pipelineDesc.numShaders           = 2;
 
     ssaoPassData.pipeline = g_renderState.device.NewPipeline( pipelineDesc, "SSAO pass" );
     if ( !ssaoPassData.pipeline )
@@ -457,7 +454,6 @@ static bool InitSSAOBlurPassData()
     pipelineDesc.scissor              = FullScreenScissor();
     pipelineDesc.shaders[0]           = vertShader.get();
     pipelineDesc.shaders[1]           = fragShader.get();
-    pipelineDesc.numShaders           = 2;
 
     ssaoBlurPassData.pipeline = g_renderState.device.NewPipeline( pipelineDesc, "SSAO blur pass" );
     if ( !ssaoBlurPassData.pipeline )
@@ -531,7 +527,6 @@ static bool InitLightingPassData()
     pipelineDesc.scissor                     = FullScreenScissor();
     pipelineDesc.shaders[0]                  = vertShader.get();
     pipelineDesc.shaders[1]                  = fragShader.get();
-    pipelineDesc.numShaders                  = 2;
     pipelineDesc.depthInfo.depthWriteEnabled = false;
     pipelineDesc.depthInfo.depthTestEnabled  = false;
 
@@ -602,7 +597,7 @@ static bool InitBackgroundPassData()
     pipelineDesc.scissor                = FullScreenScissor();
     pipelineDesc.shaders[0]             = vertShader.get();
     pipelineDesc.shaders[1]             = fragShader.get();
-    pipelineDesc.numShaders             = 2;
+
     pipelineDesc.depthInfo.compareFunc  = CompareFunction::LEQUAL;
 
     backgroundPassData.solidColorPipeline = g_renderState.device.NewPipeline( pipelineDesc, "background pass solid color" );
@@ -629,7 +624,6 @@ static bool InitBackgroundPassData()
     pipelineDesc.scissor                = FullScreenScissor();
     pipelineDesc.shaders[0]             = vertShader.get();
     pipelineDesc.shaders[1]             = fragShader.get();
-    pipelineDesc.numShaders             = 2;
 
     backgroundPassData.skyboxPipeline = g_renderState.device.NewPipeline( pipelineDesc, "background pass skybox" );
     if ( !backgroundPassData.skyboxPipeline )
@@ -718,7 +712,6 @@ static bool InitTransparencyPassData()
     pipelineDesc.scissor                = FullScreenScissor();
     pipelineDesc.shaders[0]             = vertShader.get();
     pipelineDesc.shaders[1]             = fragShader.get();
-    pipelineDesc.numShaders             = 2;
 
     transparencyPassData.pipeline = g_renderState.device.NewPipeline( pipelineDesc, "transparency rigid model" );
     if ( !transparencyPassData.pipeline )
@@ -759,7 +752,6 @@ bool InitPostProcessPassData()
     postProcessingPipelineDesc.scissor                = FullScreenScissor();
     postProcessingPipelineDesc.shaders[0]	          = vertShader.get();
     postProcessingPipelineDesc.shaders[1]			  = fragShader.get();
-    postProcessingPipelineDesc.numShaders             = 2;
 
 	postProcessPassData.pipeline = g_renderState.device.NewPipeline( postProcessingPipelineDesc , "post process" );
 	if ( !postProcessPassData.pipeline )

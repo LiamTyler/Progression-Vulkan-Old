@@ -84,7 +84,6 @@ bool Init()
     pipelineDesc.scissor                = FullScreenScissor();
     pipelineDesc.shaders[0]             = animatedModelsVert.get();
     pipelineDesc.shaders[1]             = forwardBlinnPhongFrag.get();
-    pipelineDesc.numShaders             = 2;
 
     return true;
 
