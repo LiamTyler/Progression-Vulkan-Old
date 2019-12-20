@@ -140,9 +140,10 @@ struct
 struct
 {
     RenderPass renderPass;
-    Pipeline pipeline;
+    Pipeline skyboxPipeline;
     Buffer cubeBuffer;
-    std::vector< DescriptorSetLayout > descriptorSetLayouts;
+    std::vector< DescriptorSetLayout > skyboxDescriptorSetLayouts;
+    Pipeline solidColorPipeline;
 } backgroundPassData;
 
 struct
@@ -589,21 +590,38 @@ static bool InitBackgroundPassData()
         VertexAttributeDescriptor( 0, 0, BufferDataType::FLOAT3, 0 ),
     };
 
-    //auto vertShader = ResourceManager::Get< Shader >( "backgroundSolidColorVert" );
-    //auto fragShader = ResourceManager::Get< Shader >( "backgroundSolidColorFrag" );
-    auto vertShader = ResourceManager::Get< Shader >( "backgroundSkyboxVert" );
-    auto fragShader = ResourceManager::Get< Shader >( "backgroundSkyboxFrag" );
+    auto vertShader = ResourceManager::Get< Shader >( "backgroundSolidColorVert" );
+    auto fragShader = ResourceManager::Get< Shader >( "backgroundSolidColorFrag" );
+    PG_ASSERT( vertShader && fragShader );
+
+    PipelineDescriptor pipelineDesc;
+    pipelineDesc.renderPass             = &backgroundPassData.renderPass;
+    pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( ARRAY_COUNT( bindingDescs ), bindingDescs, ARRAY_COUNT( attribDescs ), attribDescs );
+    pipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
+    pipelineDesc.viewport               = FullScreenViewport();
+    pipelineDesc.scissor                = FullScreenScissor();
+    pipelineDesc.shaders[0]             = vertShader.get();
+    pipelineDesc.shaders[1]             = fragShader.get();
+    pipelineDesc.numShaders             = 2;
+    pipelineDesc.depthInfo.compareFunc  = CompareFunction::LEQUAL;
+
+    backgroundPassData.solidColorPipeline = g_renderState.device.NewPipeline( pipelineDesc, "background pass solid color" );
+    if ( !backgroundPassData.solidColorPipeline )
+    {
+        LOG_ERR( "Could not create background pass solid color pipeline" );
+        return false;
+    }
+
+    vertShader = ResourceManager::Get< Shader >( "backgroundSkyboxVert" );
+    fragShader = ResourceManager::Get< Shader >( "backgroundSkyboxFrag" );
     PG_ASSERT( vertShader && fragShader );
 
     std::vector< DescriptorSetLayoutData > descriptorSetData = vertShader->reflectInfo.descriptorSetLayouts;
     descriptorSetData.insert( descriptorSetData.end(), fragShader->reflectInfo.descriptorSetLayouts.begin(), fragShader->reflectInfo.descriptorSetLayouts.end() );
     auto combined = CombineDescriptorSetLayouts( descriptorSetData );
-    backgroundPassData.descriptorSetLayouts = g_renderState.device.NewDescriptorSetLayouts( combined );
+    backgroundPassData.skyboxDescriptorSetLayouts = g_renderState.device.NewDescriptorSetLayouts( combined );
 
-    PipelineDescriptor pipelineDesc;
-    pipelineDesc.renderPass             = &backgroundPassData.renderPass;
-    pipelineDesc.descriptorSetLayouts   = backgroundPassData.descriptorSetLayouts;
-    pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( ARRAY_COUNT( bindingDescs ), bindingDescs, ARRAY_COUNT( attribDescs ), attribDescs );
+    pipelineDesc.descriptorSetLayouts   = backgroundPassData.skyboxDescriptorSetLayouts;
     pipelineDesc.rasterizerInfo.winding = WindingOrder::CLOCKWISE;
     pipelineDesc.viewport               = FullScreenViewport();
     pipelineDesc.viewport.height        = -pipelineDesc.viewport.height;
@@ -612,12 +630,11 @@ static bool InitBackgroundPassData()
     pipelineDesc.shaders[0]             = vertShader.get();
     pipelineDesc.shaders[1]             = fragShader.get();
     pipelineDesc.numShaders             = 2;
-    pipelineDesc.depthInfo.compareFunc  = CompareFunction::EQUAL;
 
-    backgroundPassData.pipeline = g_renderState.device.NewPipeline( pipelineDesc, "background pass" );
-    if ( !backgroundPassData.pipeline )
+    backgroundPassData.skyboxPipeline = g_renderState.device.NewPipeline( pipelineDesc, "background pass skybox" );
+    if ( !backgroundPassData.skyboxPipeline )
     {
-        LOG_ERR( "Could not create background pass pipeline" );
+        LOG_ERR( "Could not create background pass skybox pipeline" );
         return false;
     }
 
@@ -625,9 +642,6 @@ static bool InitBackgroundPassData()
     {
         glm::vec3( -1, -1, -1 ), glm::vec3( -1,  1, -1 ), glm::vec3(  1,  1, -1 ), // front
         glm::vec3( -1, -1, -1 ), glm::vec3(  1,  1, -1 ), glm::vec3(  1, -1, -1 ), // front
-
-        //glm::vec3( -1, -1, 1 ), glm::vec3( -1,  1, 1 ), glm::vec3(  1,  1, 1 ), // back
-        //glm::vec3( -1, -1, 1 ), glm::vec3(  1,  1, 1 ), glm::vec3(  1, -1, 1 ), // back
 
         glm::vec3( -1, 1, 1 ), glm::vec3( -1,  -1, 1 ), glm::vec3(  1,  -1, 1 ), // back
         glm::vec3( -1, 1, 1 ), glm::vec3(  1,  -1, 1 ), glm::vec3(  1, 1, 1 ), // back
@@ -785,7 +799,7 @@ bool InitDescriptorPoolAndPrimarySets()
     descriptorSets.ssaoBlur                 = s_descriptorPool.NewDescriptorSet( ssaoBlurPassData.descriptorSetLayouts[0],    "ssao blur tex" );
     descriptorSets.lights                   = s_descriptorPool.NewDescriptorSet( lightingPassData.descriptorSetLayouts[3],    "scene lights" );
     descriptorSets.postProcessInputColorTex = s_descriptorPool.NewDescriptorSet( postProcessPassData.descriptorSetLayouts[0], "post process input tex" );
-    descriptorSets.background               = s_descriptorPool.NewDescriptorSet( backgroundPassData.descriptorSetLayouts[0], "background skybox tex" );
+    descriptorSets.background               = s_descriptorPool.NewDescriptorSet( backgroundPassData.skyboxDescriptorSetLayouts[0], "background skybox tex" );
     
     std::vector< VkWriteDescriptorSet > writeDescriptorSets;
 	std::vector< VkDescriptorImageInfo > imageDescriptors;
@@ -998,8 +1012,10 @@ namespace RenderSystem
         freeDescriptorSetLayouts( lightingPassData.descriptorSetLayouts );
 
         backgroundPassData.renderPass.Free();
-        backgroundPassData.pipeline.Free();
-
+        backgroundPassData.cubeBuffer.Free();
+        backgroundPassData.solidColorPipeline.Free();
+        backgroundPassData.skyboxPipeline.Free();
+        freeDescriptorSetLayouts( backgroundPassData.skyboxDescriptorSetLayouts );
         // transparencyPassData.renderPass.Free();
         // transparencyPassData.pipeline.Free();
         // freeDescriptorSetLayouts( transparencyPassData.descriptorSetLayouts );
@@ -1009,8 +1025,18 @@ namespace RenderSystem
         postProcessPassData.quadBuffer.Free();
     }
     
-    void UpdateConstantBuffers( Scene* scene )
+    void UpdateBuffersAndTextures( Scene* scene )
     {
+        TextureManager::UpdateDescriptors( descriptorSets.arrayOfTextures );
+
+        // skybox texture
+        if ( scene->skybox )
+        {
+            VkDescriptorImageInfo imageDesc = DescriptorImageInfo( *scene->skybox->GetTexture(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+            VkWriteDescriptorSet writeSet = WriteDescriptorSet( descriptorSets.background, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageDesc );
+            g_renderState.device.UpdateDescriptorSets( 1, &writeSet );
+        }
+
         // TODO: Remove hardcoded directional shadow map
         glm::vec3 pos( 0, 20, 10 );
         //auto entity = GetEntityByName( scene->registry, "camera" );
@@ -1208,18 +1234,24 @@ namespace RenderSystem
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Background Pass", glm::vec4( .2, .8, .8, 1 ) );
         cmdBuf.BeginRenderPass( backgroundPassData.renderPass, lightingPassData.frameBuffer, g_renderState.swapChain.extent );
 
-        cmdBuf.BindRenderPipeline( backgroundPassData.pipeline );
-        PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw Skybox", glm::vec4( 0 ) );
-        glm::mat4 VP = scene->camera.GetP() * glm::mat4( glm::mat3( scene->camera.GetV() ) );
-        cmdBuf.PushConstants( backgroundPassData.pipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( glm::mat4 ), glm::value_ptr( VP ) );
-        cmdBuf.BindDescriptorSets( 1, &descriptorSets.background, backgroundPassData.pipeline );
-        cmdBuf.BindVertexBuffer( backgroundPassData.cubeBuffer, 0, 0 );
-        cmdBuf.Draw( 0, 36 );
-
-        //PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw Background Color Quad", glm::vec4( 0 ) );
-        //cmdBuf.PushConstants( backgroundPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( glm::vec4 ), glm::value_ptr( scene->backgroundColor ) );
-        //cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
-        // cmdBuf.Draw( 0, 6 );
+        if ( scene->skybox )
+        {
+            cmdBuf.BindRenderPipeline( backgroundPassData.skyboxPipeline );
+            PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw Skybox", glm::vec4( 0 ) );
+            glm::mat4 VP = scene->camera.GetP() * glm::mat4( glm::mat3( scene->camera.GetV() ) );
+            cmdBuf.PushConstants( backgroundPassData.skyboxPipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( glm::mat4 ), glm::value_ptr( VP ) );
+            cmdBuf.BindDescriptorSets( 1, &descriptorSets.background, backgroundPassData.skyboxPipeline );
+            cmdBuf.BindVertexBuffer( backgroundPassData.cubeBuffer, 0, 0 );
+            cmdBuf.Draw( 0, 36 );
+        }
+        else
+        {
+            cmdBuf.BindRenderPipeline( backgroundPassData.solidColorPipeline );
+            PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw Background Color Quad", glm::vec4( 0 ) );
+            cmdBuf.PushConstants( backgroundPassData.solidColorPipeline, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( glm::vec4 ), glm::value_ptr( scene->backgroundColor ) );
+            cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
+            cmdBuf.Draw( 0, 6 );
+        }
 
         cmdBuf.EndRenderPass();
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
@@ -1309,15 +1341,7 @@ namespace RenderSystem
 
         auto swapChainImageIndex = g_renderState.swapChain.AcquireNextImage( g_renderState.presentCompleteSemaphore );
 
-        TextureManager::UpdateDescriptors( descriptorSets.arrayOfTextures );
-
-        {
-            VkDescriptorImageInfo imageDesc = DescriptorImageInfo( *scene->skybox->GetTexture(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-            VkWriteDescriptorSet writeSet = WriteDescriptorSet( descriptorSets.background, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageDesc );
-            g_renderState.device.UpdateDescriptorSets( 1, &writeSet );
-        }
-
-        UpdateConstantBuffers( scene );
+        UpdateBuffersAndTextures( scene );
 
         auto& cmdBuf = g_renderState.graphicsCommandBuffer;
         cmdBuf.BeginRecording();

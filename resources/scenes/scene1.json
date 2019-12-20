@@ -11,7 +11,7 @@
         "farPlane": 100
     },
     "BackgroundColor": {
-        "color": [ 0, 1, 0, 1 ]
+        "color": [ 0.2, 0.2, 0.2, 1 ]
     },
     "AmbientColor": {
         "color": [ 1, 1, 1 ]
