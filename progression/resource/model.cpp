@@ -327,10 +327,20 @@ namespace Progression
                     return false;
                 }
             }
+
             // Assimp doesnt seem to support the OBJ PBR extension for actual normal maps, so use
-            // "map_bump" instead which turns into aiTextureType_HEIGHT
-            PG_ASSERT( pMaterial->GetTextureCount( aiTextureType_NORMALS ) == 0 );
-            if ( pMaterial->GetTextureCount( aiTextureType_HEIGHT ) > 0 )
+            // "map_bump" instead which turns into aiTextureType_HEIGHT. For FBX though it actually
+            // uses the aiTextureType_NORMALS though
+            if ( pMaterial->GetTextureCount( aiTextureType_NORMALS ) > 0 )
+            {
+                PG_ASSERT( pMaterial->GetTextureCount( aiTextureType_NORMALS ) == 1, "Can't have more than 1 normal map per material" );
+                model->materials[mtlIdx]->map_Norm = LoadAssimpTexture( pMaterial, aiTextureType_NORMALS );
+                if ( !model->materials[mtlIdx]->map_Norm )
+                {
+                    return false;
+                }
+            }
+            else if ( pMaterial->GetTextureCount( aiTextureType_HEIGHT ) > 0 )
             {
                 PG_ASSERT( pMaterial->GetTextureCount( aiTextureType_HEIGHT ) == 1, "Can't have more than 1 normal map per material" );
                 model->materials[mtlIdx]->map_Norm = LoadAssimpTexture( pMaterial, aiTextureType_HEIGHT );

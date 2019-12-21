@@ -91,22 +91,7 @@ struct
     glm::mat4       LSM;
 } shadowPassData;
 
-struct GBuffer
-{
-    Texture positions;
-    Texture normals;
-    Texture diffuseAndSpecular;
-    Texture specular;
-};
-
-struct
-{
-    RenderPass renderPass;
-    GBuffer gbuffer;
-    Framebuffer frameBuffer;
-    Pipeline pipeline;
-    std::vector< DescriptorSetLayout > descriptorSetLayouts;
-} gBufferPassData;
+struct RenderSystem::GBufferPassData gBufferPassData;
 
 struct
 {
@@ -1153,6 +1138,55 @@ namespace RenderSystem
                 mcbuf.diffuseTexIndex = mat->map_Kd   ? mat->map_Kd->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
                 mcbuf.normalMapIndex  = mat->map_Norm ? mat->map_Norm->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
                 cmdBuf.PushConstants( gBufferPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
+
+                PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
+                cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
+            }
+        });
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
+
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "GBuffer animated models", glm::vec4( .8, .2, .2, 1 ) );
+        auto& animPipeline = AnimationSystem::renderData.animatedPipeline;
+        cmdBuf.BindRenderPipeline( animPipeline );
+        cmdBuf.BindDescriptorSets( 1, &descriptorSets.scene, animPipeline, PG_SCENE_CONSTANT_BUFFER_SET );
+        cmdBuf.BindDescriptorSets( 1, &descriptorSets.arrayOfTextures, animPipeline, PG_2D_TEXTURES_SET );
+        cmdBuf.BindDescriptorSets( 1, &AnimationSystem::renderData.animationBonesDescriptorSet, animPipeline, PG_BONE_TRANSFORMS_SET );
+        scene->registry.view< Animator, SkinnedRenderer, Transform >().each( [&]( Animator& animator, SkinnedRenderer& renderer, Transform& transform )
+        {
+            const auto& model = renderer.model;
+            // TODO: Actually fix this for models without tangets as well
+            if ( model->GetTangentOffset() == ~0u )
+            {
+                return;
+            }
+            
+            auto M = transform.GetModelMatrix();
+            auto N = glm::transpose( glm::inverse( M ) );
+            AnimatedObjectConstantBufferData b{ M, N, animator.GetTransformSlot() };
+            cmdBuf.PushConstants( animPipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( AnimatedObjectConstantBufferData ), &b );
+
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetUVOffset(), 2 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetTangentOffset(), 3 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetBlendWeightOffset(), 4 );
+            cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
+
+            for ( size_t i = 0; i < model->meshes.size(); ++i )
+            {
+                const auto& mesh = renderer.model->meshes[i];
+                const auto& mat  = renderer.materials[mesh.materialIndex];
+                // if ( mat->transparent )
+                // {
+                //     continue;
+                // }
+
+                MaterialConstantBufferData mcbuf{};
+                mcbuf.Kd = glm::vec4( mat->Kd, 0 );
+                mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
+                mcbuf.diffuseTexIndex = mat->map_Kd   ? mat->map_Kd->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
+                mcbuf.normalMapIndex  = mat->map_Norm ? mat->map_Norm->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
+                cmdBuf.PushConstants( animPipeline, VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
 
                 PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
                 cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );

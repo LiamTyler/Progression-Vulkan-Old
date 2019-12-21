@@ -11,12 +11,12 @@
         "filename": "models/plane.obj"
     },
     "Model": {
-        "name": "cube",
-        "filename": "models/cube.obj"
+        "name": "dragon",
+        "filename": "dragon/Dragon_Baked_Actions_fbx_7.4_binary.fbx"
     },
     "Image": {
         "name": "waterSkybox",
-        "generateMipmaps": true,
+        "generateMipmaps": false,
         "cubeMapFilenames": {
             "right": "textures/skybox/water/right.jpg",
             "left": "textures/skybox/water/left.jpg",

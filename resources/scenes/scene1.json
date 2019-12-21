@@ -33,6 +33,20 @@
         }
     },
     "Entity": {
+        "NameComponent": "dragon",
+        "Transform": {
+            "position": [ 0, 0, 0 ],
+            "rotation": [ -90, 0, 0 ],
+            "scale": [ 0.1, 0.1, 0.1 ]
+        },
+        "SkinnedRenderer": {
+            "model": "dragon"
+        },
+        "Animator": {
+            "model": "dragon"
+        }
+    },
+    "Entity": {
         "ScriptComponent": {
             "script": "cameraController"
         }

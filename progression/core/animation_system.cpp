@@ -5,6 +5,7 @@
 #include "components/animation_component.hpp"
 #include "components/skinned_renderer.hpp"
 #include "graphics/debug_marker.hpp"
+#include "graphics/render_system.hpp"
 #include "graphics/vulkan.hpp"
 #include "resource/resource_manager.hpp"
 #include "resource/shader.hpp"
@@ -13,6 +14,8 @@
 #include <list>
 
 using namespace Progression::Gfx;
+
+extern struct Progression::RenderSystem::GBufferPassData gBufferPassData;
 
 static std::list< std::pair< uint32_t, uint32_t > > s_freeList;
 
@@ -37,11 +40,11 @@ bool Init()
 
     renderData.descriptorPool = g_renderState.device.NewDescriptorPool( 1, poolSize, 1, "animation system" );
 
-    auto animatedModelsVert    = ResourceManager::Get< Shader >( "animatedModelsVert" );
-    auto forwardBlinnPhongFrag = ResourceManager::Get< Shader >( "forwardBlinnPhongFrag" );
+    auto vertShader = ResourceManager::Get< Shader >( "animatedModelsVert" );
+    auto fragShader = ResourceManager::Get< Shader >( "gBufferFrag" );
 
-    std::vector< DescriptorSetLayoutData > descriptorSetData = animatedModelsVert->reflectInfo.descriptorSetLayouts;
-    descriptorSetData.insert( descriptorSetData.end(), forwardBlinnPhongFrag->reflectInfo.descriptorSetLayouts.begin(), forwardBlinnPhongFrag->reflectInfo.descriptorSetLayouts.end() );
+    std::vector< DescriptorSetLayoutData > descriptorSetData = vertShader->reflectInfo.descriptorSetLayouts;
+    descriptorSetData.insert( descriptorSetData.end(), fragShader->reflectInfo.descriptorSetLayouts.begin(), fragShader->reflectInfo.descriptorSetLayouts.end() );
     auto combined = CombineDescriptorSetLayouts( descriptorSetData );
 
     renderData.descriptorSetLayouts        = g_renderState.device.NewDescriptorSetLayouts( combined );
@@ -64,7 +67,8 @@ bool Init()
         VertexBindingDescriptor( 0, sizeof( glm::vec3 ) ),
         VertexBindingDescriptor( 1, sizeof( glm::vec3 ) ),
         VertexBindingDescriptor( 2, sizeof( glm::vec2 ) ),
-        VertexBindingDescriptor( 3, 2 * sizeof( glm::vec4 ) ),
+        VertexBindingDescriptor( 3, sizeof( glm::vec3 ) ),
+        VertexBindingDescriptor( 4, 2 * sizeof( glm::vec4 ) ),
     };
 
     VertexAttributeDescriptor attribDescs[] =
@@ -72,20 +76,21 @@ bool Init()
         VertexAttributeDescriptor( 0, 0, BufferDataType::FLOAT3, 0 ),
         VertexAttributeDescriptor( 1, 1, BufferDataType::FLOAT3, 0 ),
         VertexAttributeDescriptor( 2, 2, BufferDataType::FLOAT2, 0 ),
-        VertexAttributeDescriptor( 3, 3, BufferDataType::FLOAT4, 0 ),
-        VertexAttributeDescriptor( 4, 3, BufferDataType::UINT4, sizeof( glm::vec4 ) ),
+        VertexAttributeDescriptor( 3, 3, BufferDataType::FLOAT3, 0 ),
+        VertexAttributeDescriptor( 4, 4, BufferDataType::FLOAT4, 0 ),
+        VertexAttributeDescriptor( 5, 4, BufferDataType::UINT4, sizeof( glm::vec4 ) ),
     };
 
     PipelineDescriptor pipelineDesc;
-    pipelineDesc.renderPass             = &g_renderState.renderPass;
+    pipelineDesc.renderPass             = &gBufferPassData.renderPass;
     pipelineDesc.descriptorSetLayouts   = renderData.descriptorSetLayouts;
-    pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 4, bindingDescs, 5, attribDescs );
+    pipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 5, bindingDescs, 6, attribDescs );
     pipelineDesc.viewport               = FullScreenViewport();
+    pipelineDesc.viewport.height        = -pipelineDesc.viewport.height;
+    pipelineDesc.viewport.y             = -pipelineDesc.viewport.height;
     pipelineDesc.scissor                = FullScreenScissor();
-    pipelineDesc.shaders[0]             = animatedModelsVert.get();
-    pipelineDesc.shaders[1]             = forwardBlinnPhongFrag.get();
-
-    return true;
+    pipelineDesc.shaders[0]             = vertShader.get();
+    pipelineDesc.shaders[1]             = fragShader.get();
 
     renderData.animatedPipeline = g_renderState.device.NewPipeline( pipelineDesc, "animation" );
     if ( !renderData.animatedPipeline )
@@ -107,7 +112,7 @@ void Shutdown()
         layout.Free();
     }
     renderData.descriptorPool.Free();
-    //renderData.animatedPipeline.Free();
+    renderData.animatedPipeline.Free();
 }
 
 void Update( Scene* scene )
@@ -156,6 +161,8 @@ void Update( Scene* scene )
 
 void UploadToGpu( Scene* scene )
 {
+    //std::vector< glm::mat4 > idents( MAX_ANIMATOR_NUM_TRANSFORMS, glm::mat4( 1 ) );
+    //memcpy( renderData.gpuBoneBuffer.MappedPtr(), idents.data(), idents.size() * sizeof( glm::mat4 ) );
     scene->registry.view< Animator >().each([&]( const entt::entity e, Animator& comp )
     {
         if ( comp.animation && comp.animationTime < comp.animation->duration )

@@ -1,6 +1,8 @@
 #pragma once
 
+#include "graphics/graphics_api.hpp"
 #include <string>
+#include <vector>
 
 namespace Progression
 {
@@ -16,6 +18,24 @@ namespace Gfx
 
 namespace RenderSystem
 {
+
+    // placed here for sharing between the animation system and render system
+    struct GBuffer
+    {
+        Gfx::Texture positions;
+        Gfx::Texture normals;
+        Gfx::Texture diffuseAndSpecular;
+        Gfx::Texture specular;
+    };
+
+    struct GBufferPassData
+    {
+        Gfx::RenderPass renderPass;
+        GBuffer gbuffer;
+        Gfx::Framebuffer frameBuffer;
+        Gfx::Pipeline pipeline;
+        std::vector< Gfx::DescriptorSetLayout > descriptorSetLayouts;
+    };
 
     bool Init();
 
