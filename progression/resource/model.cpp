@@ -76,13 +76,15 @@ public:
     bool operator==( const Vertex& other ) const
     {
         return vertex == other.vertex && normal == other.normal && uv == other.uv &&
-               blendWeight.weights == other.blendWeight.weights && blendWeight.joints == other.blendWeight.joints;
+               blendWeight.weights == other.blendWeight.weights && 
+               blendWeight.joints == other.blendWeight.joints && tangent == other.tangent;
     }
 
     glm::vec3 vertex = glm::vec3( 0 );
     glm::vec3 normal = glm::vec3( 0 );
     glm::vec2 uv     = glm::vec2( 0 );
     Progression::BlendWeight blendWeight;
+    glm::vec3 tangent = glm::vec3( 0 );
 };
 
 namespace Progression
@@ -915,7 +917,7 @@ namespace Progression
         if ( !blendWeights.empty() )
         {
             m_blendWeightOffset = offset;
-            offset += static_cast< uint32_t >( blendWeights.size() * sizeof( glm::vec2 ) );
+            offset += static_cast< uint32_t >( blendWeights.size() * 2 * sizeof( glm::vec4 ) );
         }
         if ( !tangents.empty() )
         {
@@ -933,6 +935,7 @@ namespace Progression
             uvs           = std::vector< glm::vec2 >();
             indices       = std::vector< uint32_t >();
             blendWeights  = std::vector< BlendWeight >();
+            tangents      = std::vector< glm::vec3 >();
         }
 
         if ( gpuCopy )
@@ -946,7 +949,7 @@ namespace Progression
                 indexBuffer.Free();
             }
             m_numVertices = 0;
-            m_normalOffset = m_uvOffset = m_blendWeightOffset = ~0u;
+            m_normalOffset = m_uvOffset = m_blendWeightOffset = m_tangentOffset = ~0u;
         }
     }
 
@@ -963,6 +966,7 @@ namespace Progression
         bool hasNormals      = !normals.empty();
         bool hasUVs          = !uvs.empty();
         bool hasBlendWeights = !blendWeights.empty();
+        bool hasTangents     = !tangents.empty();
         for ( size_t i = 0; i < vertices.size(); ++i )
         {
             Vertex v;
@@ -979,6 +983,10 @@ namespace Progression
             {
                 v.blendWeight = blendWeights[i];
             }
+            if ( hasTangents )
+            {
+                v.tangent = tangents[i];
+            }
 
             interleavedVerts.push_back( v );
         }
@@ -986,6 +994,7 @@ namespace Progression
         normals.clear();
         uvs.clear();
         blendWeights.clear();
+        tangents.clear();
 
         for ( auto& mesh : meshes )
         {
@@ -1050,6 +1059,10 @@ namespace Progression
                     PG_ASSERT( sum > 0 );
                     data.weights /= sum;
                     blendWeights.emplace_back( data );
+                }
+                if ( hasTangents )
+                {
+                    tangents.emplace_back( v.tangent );
                 }
             }
         }

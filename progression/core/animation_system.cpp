@@ -161,8 +161,6 @@ void Update( Scene* scene )
 
 void UploadToGpu( Scene* scene )
 {
-    //std::vector< glm::mat4 > idents( MAX_ANIMATOR_NUM_TRANSFORMS, glm::mat4( 1 ) );
-    //memcpy( renderData.gpuBoneBuffer.MappedPtr(), idents.data(), idents.size() * sizeof( glm::mat4 ) );
     scene->registry.view< Animator >().each([&]( const entt::entity e, Animator& comp )
     {
         if ( comp.animation && comp.animationTime < comp.animation->duration )

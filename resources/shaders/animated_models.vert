@@ -31,27 +31,13 @@ layout( set = 2, binding = 0 ) buffer BoneTransforms
 
 void main()
 {
-    // mat4 BoneTransform = boneTransforms[inBoneJoints[0]] * inBoneWeights[0];
-    // BoneTransform     += boneTransforms[inBoneJoints[1]] * inBoneWeights[1];
-    // BoneTransform     += boneTransforms[inBoneJoints[2]] * inBoneWeights[2];
-    // BoneTransform     += boneTransforms[inBoneJoints[3]] * inBoneWeights[3];
-    // vec4 localPos    = BoneTransform * vec4( inPosition, 1 );
-    // vec4 localNormal = BoneTransform * vec4( inNormal, 0 );
     uint offset = perObjectData.boneTransformIdx;
-    //vec4 localPos    = vec4( inPosition, 1 );
-    //vec4 localNormal = vec4( inNormal, 0 );
-    
-    vec4 localPos    = vec4( 0 );
-    vec4 localNormal = vec4( 0 );
-    localPos += inBoneWeights[0] * boneTransforms[offset + inBoneJoints[0]] * vec4( inPosition, 1 );
-    localPos += inBoneWeights[1] * boneTransforms[offset + inBoneJoints[1]] * vec4( inPosition, 1 );
-    localPos += inBoneWeights[2] * boneTransforms[offset + inBoneJoints[2]] * vec4( inPosition, 1 );
-    localPos += inBoneWeights[3] * boneTransforms[offset + inBoneJoints[3]] * vec4( inPosition, 1 );
-    
-    localNormal += inBoneWeights[0] * boneTransforms[offset + inBoneJoints[0]] * vec4( inNormal, 0 );
-    localNormal += inBoneWeights[1] * boneTransforms[offset + inBoneJoints[1]] * vec4( inNormal, 0 );
-    localNormal += inBoneWeights[2] * boneTransforms[offset + inBoneJoints[2]] * vec4( inNormal, 0 );
-    localNormal += inBoneWeights[3] * boneTransforms[offset + inBoneJoints[3]] * vec4( inNormal, 0 );
+    mat4 BoneTransform = boneTransforms[offset + inBoneJoints[0]] * inBoneWeights[0];
+    BoneTransform     += boneTransforms[offset + inBoneJoints[1]] * inBoneWeights[1];
+    BoneTransform     += boneTransforms[offset + inBoneJoints[2]] * inBoneWeights[2];
+    BoneTransform     += boneTransforms[offset + inBoneJoints[3]] * inBoneWeights[3];
+    vec4 localPos      = BoneTransform * vec4( inPosition, 1 );
+    vec4 localNormal   = BoneTransform * vec4( inNormal, 0 );
 
     texCoord            = inTexCoord;
     gl_Position         = sceneConstantBuffer.VP * perObjectData.M * localPos;
