@@ -324,30 +324,17 @@ void Image::UploadToGpu()
     PG_ASSERT( FormatSupported( vkFormat, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT ) );
 
     bool generateMips = m_flags & IMAGE_GENERATE_MIPMAPS;
-    if ( Gfx::PixelFormatIsCompressed( m_texture.m_desc.format ) && generateMips )
-    {
-        LOG_WARN( "Cannot generate mips for a compressed texture" );
-        generateMips = false;
-    }
-
     if ( generateMips )
     {
         m_texture.m_desc.mipLevels = static_cast< uint32_t >( 1 + std::floor( std::log2( std::max( m_texture.m_desc.width, m_texture.m_desc.height ) ) ) );
     }
-    bool isTex2D = m_texture.m_desc.arrayLayers == 1;
 
+    bool isTex2D = m_texture.m_desc.arrayLayers == 1;
     m_texture = device.NewTexture( m_texture.m_desc, isTex2D, name );
     TransitionImageLayout( m_texture.GetHandle(), vkFormat, VK_IMAGE_LAYOUT_UNDEFINED,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_texture.m_desc.mipLevels, m_texture.m_desc.arrayLayers );
     
-    if ( isTex2D )
-    {
-        device.CopyBufferToImage( stagingBuffer, m_texture );
-    }
-    else
-    {
-        device.CopyBufferToImage2( stagingBuffer, m_texture );
-    }
+    device.CopyBufferToImage( stagingBuffer, m_texture );
 
     if ( generateMips )
     {

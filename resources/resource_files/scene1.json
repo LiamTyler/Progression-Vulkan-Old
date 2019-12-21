@@ -16,7 +16,7 @@
     },
     "Image": {
         "name": "waterSkybox",
-        "generateMipmaps": false,
+        "generateMipmaps": true,
         "cubeMapFilenames": {
             "right": "textures/skybox/water/right.jpg",
             "left": "textures/skybox/water/left.jpg",

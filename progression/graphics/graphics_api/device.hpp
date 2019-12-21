@@ -45,7 +45,6 @@ namespace Gfx
 
         void Copy( Buffer dst, Buffer src ) const;
         void CopyBufferToImage( const Buffer& buffer, const Texture& tex ) const;
-        void CopyBufferToImage2( const Buffer& buffer, const Texture& tex ) const;
 
         VkDevice GetHandle() const;
         VkQueue GraphicsQueue() const;

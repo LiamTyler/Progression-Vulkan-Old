@@ -694,37 +694,6 @@ namespace Gfx
         CommandBuffer cmdBuf = g_renderState.transientCommandPool.NewCommandBuffer();
         cmdBuf.BeginRecording( COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT );
 
-        VkBufferImageCopy region               = {};
-        region.bufferOffset                    = 0;
-        region.bufferRowLength                 = 0;
-        region.bufferImageHeight               = 0;
-        region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.imageSubresource.mipLevel       = 0;
-        region.imageSubresource.baseArrayLayer = 0;
-        region.imageSubresource.layerCount     = 1;
-        region.imageOffset                     = { 0, 0, 0 };
-        region.imageExtent                     = { tex.GetWidth(), tex.GetHeight(), 1 };
-
-        vkCmdCopyBufferToImage(
-            cmdBuf.GetHandle(),
-            buffer.GetHandle(),
-            tex.GetHandle(),
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            1,
-            &region
-        );
-
-        cmdBuf.EndRecording();
-        g_renderState.device.Submit( cmdBuf );
-        g_renderState.device.WaitForIdle();
-        cmdBuf.Free();
-    }
-
-    void Device::CopyBufferToImage2( const Buffer& buffer, const Texture& tex ) const
-    {
-        CommandBuffer cmdBuf = g_renderState.transientCommandPool.NewCommandBuffer();
-        cmdBuf.BeginRecording( COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT );
-
         std::vector< VkBufferImageCopy > bufferCopyRegions;
 		uint32_t offset = 0;
 

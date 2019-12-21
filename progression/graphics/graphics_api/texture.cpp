@@ -261,55 +261,59 @@ namespace Gfx
         barrier.subresourceRange.layerCount = 1;
         barrier.subresourceRange.levelCount = 1;
 
-        int32_t mipWidth  = m_desc.width;
-        int32_t mipHeight = m_desc.height;
-
-        for ( uint32_t i = 1; i < m_desc.mipLevels; ++i )
+        for ( uint32_t face = 0; face < m_desc.arrayLayers; ++face )
         {
-            barrier.subresourceRange.baseMipLevel = i - 1;
+            barrier.subresourceRange.baseArrayLayer = face;
+            int32_t mipWidth  = m_desc.width;
+            int32_t mipHeight = m_desc.height;
+
+            for ( uint32_t i = 1; i < m_desc.mipLevels; ++i )
+            {
+                barrier.subresourceRange.baseMipLevel = i - 1;
+                barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+                barrier.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+                barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+                cmdBuf.PipelineBarrier( VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, barrier );
+
+                VkImageBlit blit = {};
+                blit.srcOffsets[0] = { 0, 0, 0 };
+                blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
+                blit.srcSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+                blit.srcSubresource.mipLevel       = i - 1;
+                blit.srcSubresource.baseArrayLayer = face;
+                blit.srcSubresource.layerCount     = 1;
+                blit.dstOffsets[0] = { 0, 0, 0 };
+                blit.dstOffsets[1] = { mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 };
+                blit.dstSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+                blit.dstSubresource.mipLevel       = i;
+                blit.dstSubresource.baseArrayLayer = face;
+                blit.dstSubresource.layerCount     = 1;
+
+                vkCmdBlitImage( cmdBuf.GetHandle(),
+                    m_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    1, &blit,
+                    VK_FILTER_LINEAR );
+
+                barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+                barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+                cmdBuf.PipelineBarrier( VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, barrier );
+
+                if ( mipWidth > 1 ) mipWidth /= 2;
+                if ( mipHeight > 1 ) mipHeight /= 2;
+            }
+
+            barrier.subresourceRange.baseMipLevel = m_desc.mipLevels - 1;
             barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            barrier.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-
-            cmdBuf.PipelineBarrier( VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, barrier );
-
-            VkImageBlit blit = {};
-            blit.srcOffsets[0] = { 0, 0, 0 };
-            blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
-            blit.srcSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-            blit.srcSubresource.mipLevel       = i - 1;
-            blit.srcSubresource.baseArrayLayer = 0;
-            blit.srcSubresource.layerCount     = 1;
-            blit.dstOffsets[0] = { 0, 0, 0 };
-            blit.dstOffsets[1] = { mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 };
-            blit.dstSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-            blit.dstSubresource.mipLevel       = i;
-            blit.dstSubresource.baseArrayLayer = 0;
-            blit.dstSubresource.layerCount     = 1;
-
-            vkCmdBlitImage( cmdBuf.GetHandle(),
-                m_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                1, &blit,
-                VK_FILTER_LINEAR );
-
-            barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
             barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
             cmdBuf.PipelineBarrier( VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, barrier );
-
-            if ( mipWidth > 1 ) mipWidth /= 2;
-            if ( mipHeight > 1 ) mipHeight /= 2;
         }
-
-        barrier.subresourceRange.baseMipLevel = m_desc.mipLevels - 1;
-        barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        cmdBuf.PipelineBarrier( VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, barrier );
 
         cmdBuf.EndRecording();
 

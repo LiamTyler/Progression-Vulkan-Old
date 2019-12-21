@@ -530,7 +530,7 @@ static bool InitLightingPassData()
     pipelineDesc.depthInfo.depthWriteEnabled = false;
     pipelineDesc.depthInfo.depthTestEnabled  = false;
 
-    lightingPassData.pipeline = g_renderState.device.NewPipeline( pipelineDesc, "gbuffer rigid model" );
+    lightingPassData.pipeline = g_renderState.device.NewPipeline( pipelineDesc, "lighting pass rigid model" );
     if ( !lightingPassData.pipeline )
     {
         LOG_ERR( "Could not create lighting pass pipeline" );
