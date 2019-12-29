@@ -1,5 +1,6 @@
 #include "utils/logger.hpp"
 #include "core/unused.hpp"
+#include <filesystem>
 
 Logger g_Logger;
 
@@ -20,39 +21,19 @@ void Logger::Init( const std::string& filename, bool useColors )
     PG_MAYBE_UNUSED( useColors );
 
 #if !USING( SHIP_BUILD )
-    m_useColors = useColors;
-
-    if ( filename == "" )
+    std::filesystem::create_directory( PG_ROOT_DIR "logs" );
+    AddLocation( "stdout", &std::cout, useColors );
+    if ( filename != "" )
     {
-        return;
+        AddLocation( "configFileOutput", filename );
     }
-
-    m_outputFile.open( filename );
-    if ( !m_outputFile )
-    {
-        LOG_ERR( "Failed to open log file: '" + filename + "'" );
-    }
+    
 #endif // #if !USING( SHIP_BUILD )
 }
 
 void Logger::Shutdown()
 {
 #if !USING( SHIP_BUILD )
-    if ( m_outputFile )
-    {
-        m_outputFile.close();
-    }
+    outputs.clear();
 #endif // #if !USING( SHIP_BUILD )
-}
-
-std::ostream& Logger::OutputLocation()
-{
-    if ( m_outputFile )
-    {
-        return m_outputFile;
-    }
-    else
-    {
-        return std::cout;
-    }
 }

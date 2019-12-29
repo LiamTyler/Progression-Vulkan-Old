@@ -82,8 +82,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     switch ( messageType )
     {
         case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
-            messageTypeString = "General";
-            break;
+            return VK_FALSE;
         case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:
             messageTypeString = "Validation";
             break;
@@ -703,10 +702,6 @@ bool VulkanInit()
         LOG_ERR( "Could not find any suitable GPU device to use" );
         return false;
     }
-    else
-    {
-        LOG( "Using device: ", g_renderState.physicalDeviceInfo.name );
-    }
 
     g_renderState.device = Device::CreateDefault();
     if ( !g_renderState.device )
@@ -716,6 +711,7 @@ bool VulkanInit()
     }
 
     DebugMarker::Init( g_renderState.device.GetHandle(), g_renderState.physicalDeviceInfo.device );
+    LOG( "Using device: ", g_renderState.physicalDeviceInfo.name );
 
     // PG_DEBUG_MARKER_SET_PHYSICAL_DEVICE_NAME( g_renderState.physicalDeviceInfo.device, g_renderState.physicalDeviceInfo.name );
     PG_DEBUG_MARKER_SET_INSTANCE_NAME( g_renderState.instance, "global" );

@@ -47,6 +47,12 @@ namespace DebugMarker
 			// Set flag if at least one function pointer is present
 			s_active = ( vkDebugMarkerSetObjectName != VK_NULL_HANDLE );
 		}
+
+        // the RenderDoc terminal doesn't support outputting colors
+        if ( s_active )
+        {
+            g_Logger.GetLocation( "stdout" )->colored = false;
+        }
 	}
 
     bool IsActive()

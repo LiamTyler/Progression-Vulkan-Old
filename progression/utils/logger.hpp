@@ -5,6 +5,7 @@
 #include <iostream>
 #include <mutex>
 #include <string>
+#include <vector>
 
 #if USING( SHIP_BUILD )
 
@@ -47,6 +48,39 @@ public:
     Emphasis emphasis;
 };
 
+class LoggerOutputLocation
+{
+public:
+    LoggerOutputLocation( const std::string& _name, std::ostream* out, bool useColors = true, bool _isFile = false ) :
+        name( _name ),
+        output( out ),
+        colored( useColors ),
+        isFile( _isFile )
+    {
+    }
+
+    LoggerOutputLocation( const std::string& _name, const std::string& filename ) :
+        name( _name ),
+        output( new std::ofstream( filename ) ),
+        colored( false ),
+        isFile( true )
+    {
+    }
+
+    ~LoggerOutputLocation()
+    {
+        if ( isFile && output )
+        {
+            delete output;
+        }
+    }
+
+    std::string name;
+    std::ostream* output;
+    bool colored;
+    bool isFile;
+};
+
 class Logger
 {
 public:
@@ -61,6 +95,51 @@ public:
 
     void Init( const std::string& filename = "", bool useColors = true );
     void Shutdown();
+
+    void AddLocation( const std::string& name, std::ostream* output, bool useColors = true, bool isFile = false )
+    {
+        outputs.emplace_back( name, output, useColors, isFile );
+    }
+
+    void AddLocation( const std::string& name, const std::string& filename )
+    {
+        outputs.emplace_back( name, filename );
+        if ( !outputs[outputs.size() - 1].output || !( ( std::ofstream*) outputs[outputs.size() - 1].output )->is_open() )
+        {
+            outputs.pop_back();
+            std::cout << "Failed to open logging location '" << filename << "'" << std::endl;
+        }
+    }
+
+    LoggerOutputLocation* GetLocation( const std::string& name )
+    {
+        for ( auto& output : outputs )
+        {
+            if ( output.name == name )
+            {
+                return &output;
+            }
+        }
+
+        return nullptr;
+    }
+
+    void RemoveLocation( const std::string& name )
+    {
+        size_t index = -1;
+        for ( size_t i = 0; i < outputs.size(); ++i )
+        {
+            if ( name == outputs[i].name )
+            {
+                index = i;
+                break;
+            }
+        }
+        if ( index != -1 )
+        {
+            outputs.erase( outputs.begin() + index );
+        }
+    }
 
     template < typename T >
     void PrintArgs( std::ostream& out, T t )
@@ -97,34 +176,25 @@ public:
         }
 
         m_lock.lock();
-        if ( m_outputFile.is_open() )
+        for ( const auto& output : outputs )
         {
-            PrintArgs( m_outputFile, severity, args... );
-            m_outputFile << std::endl;
-        }
-        else
-        {
-            if ( m_useColors )
+            if ( output.colored )
             {
                 std::cout << mod << severity;
-                PrintArgs( std::cout, args... );
-                std::cout << PrintModifier() << std::endl;
+                PrintArgs( *output.output, std::forward< Args >( args )... );
+                *output.output << "\033[0m" << std::endl;
             }
             else
             {
-                PrintArgs( std::cout, severity, std::forward< Args >( args )... );
-                std::cout << std::endl;
+                PrintArgs( *output.output, severity, std::forward< Args >( args )... );
+                *output.output << std::endl;
             }
         }
         m_lock.unlock();
     }
 
-    void UseColors( bool b ) { m_useColors = b; }
-    std::ostream& OutputLocation();
-
 private:
-    bool m_useColors;
-    std::ofstream m_outputFile;
+    std::vector< LoggerOutputLocation > outputs;
     std::mutex m_lock;
 };
 
