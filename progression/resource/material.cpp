@@ -238,7 +238,7 @@ bool Material::LoadMtlFile( std::vector< Material >& materials, const std::strin
             {
                 // LOG_ERR("Failed to load map_Kd image '", texName, "' in mtl file '", fname, "'");
                 // return false;
-                mat->map_Norm = Image::Load2DImageWithDefaultSettings( PG_RESOURCE_DIR + texName );
+                mat->map_Norm = Image::Load2DImageWithDefaultSettings( PG_RESOURCE_DIR + texName, ImageSemantic::NORMAL );
                 if ( !mat->map_Norm )
                 {
                     LOG_ERR( "Failed to load normal map with default settings while parsing MTL file." );

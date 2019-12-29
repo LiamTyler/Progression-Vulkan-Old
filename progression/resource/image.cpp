@@ -57,13 +57,14 @@ Image& Image::operator=( Image&& src )
     return *this;
 }
 
-std::shared_ptr< Image > Image::Load2DImageWithDefaultSettings( const std::string& filename )
+std::shared_ptr< Image > Image::Load2DImageWithDefaultSettings( const std::string& filename, ImageSemantic semantic )
 {
     ImageCreateInfo info;
     info.filename = filename;
     info.name     = std::filesystem::path( filename ).stem().string();
     info.flags    = IMAGE_FLIP_VERTICALLY | IMAGE_CREATE_TEXTURE_ON_LOAD | IMAGE_GENERATE_MIPMAPS;
     info.sampler  = "linear_repeat_linear";
+    info.semantic = semantic;
     std::shared_ptr< Image > image = std::make_shared< Image >();
     if ( !image->Load( &info ) )
     {
@@ -103,10 +104,21 @@ bool Image::Load( ResourceCreateInfo* createInfo )
         std::string ext = std::filesystem::path( file ).extension().string();
         if ( ext == ".jpg" || ext == ".png" || ext == ".tga" || ext == ".bmp" )
         {
+            // Force RGB textures to be RGBA since most GPUs don't support RGB optimial
+            // texture formats: https://vulkan.gpuinfo.org/
+            int width, height, numComponents, forceNumComponents;
+            auto ret = stbi_info( file.c_str(), &width, &height, &numComponents );
+            if ( numComponents == 3 )
+            {
+                forceNumComponents = 4;
+            }
+            else
+            {
+                forceNumComponents = numComponents;
+            }
+
             stbi_set_flip_vertically_on_load( info->flags & IMAGE_FLIP_VERTICALLY );
-            int width, height, numComponents;
-            unsigned char* pixels = stbi_load( file.c_str(), &width, &height, &numComponents, 4 );
-            numComponents = 4;
+            unsigned char* pixels = stbi_load( file.c_str(), &width, &height, &numComponents, forceNumComponents );
 
             if ( !pixels )
             {
@@ -128,10 +140,20 @@ bool Image::Load( ResourceCreateInfo* createInfo )
             {
                 PixelFormat::R8_UNORM,
                 PixelFormat::R8_G8_UNORM,
-                PixelFormat::R8_G8_B8_UNORM,
                 PixelFormat::R8_G8_B8_A8_UNORM,
+                PixelFormat::R8_G8_B8_A8_UNORM,
+                PixelFormat::R8_SRGB,
+                PixelFormat::R8_G8_SRGB,
+                PixelFormat::R8_G8_B8_A8_SRGB,
+                PixelFormat::R8_G8_B8_A8_SRGB,
+
             };
-            imageDescs[i].format = componentsToFormat[numComponents - 1];
+            int formatIndex = forceNumComponents - 1;
+            if ( info->semantic == ImageSemantic::DIFFUSE )
+            {
+                formatIndex += 4;
+            }
+            imageDescs[i].format = componentsToFormat[formatIndex];
         }
         else
         {

@@ -1,6 +1,6 @@
 #pragma once
 
-#define PG_RESOURCE_IMAGE_VERSION       3  // Samplers names changed
+#define PG_RESOURCE_IMAGE_VERSION       4  // Image semantics added to figure out whether to use sRGB formats or not
 
 #define PG_RESOURCE_MATERIAL_VERSION    4  // Adding transparency flag
 

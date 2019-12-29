@@ -97,6 +97,12 @@ static std::unordered_map< std::string, Gfx::PixelFormat > pixelFormatMap =
     { "BC7_SRGB", Gfx::PixelFormat::BC7_SRGB },
 };
 
+static std::unordered_map< std::string, ImageSemantic > imageSemanticMap =
+{
+    { "DIFFUSE", ImageSemantic::DIFFUSE },
+    { "NORMAL", ImageSemantic::NORMAL }
+};
+
 static void ParseImage( rapidjson::Value& value, FastfileConverter* conv )
 {
     static FunctionMapper< void, std::vector< std::string >& > cubemapParser(
@@ -112,8 +118,8 @@ static void ParseImage( rapidjson::Value& value, FastfileConverter* conv )
     ImageConverter converter( conv->force, conv->verbose );
     static FunctionMapper< void, ImageCreateInfo& > mapping(
     {
-        { "name",            []( rapidjson::Value& v, ImageCreateInfo& i ) { i.name     = v.GetString(); } },
-        { "filename",        []( rapidjson::Value& v, ImageCreateInfo& i ) { i.filename = PG_RESOURCE_DIR + std::string( v.GetString() ); } },
+        { "name",             []( rapidjson::Value& v, ImageCreateInfo& i ) { i.name     = v.GetString(); } },
+        { "filename",         []( rapidjson::Value& v, ImageCreateInfo& i ) { i.filename = PG_RESOURCE_DIR + std::string( v.GetString() ); } },
         { "cubeMapFilenames", []( rapidjson::Value& v, ImageCreateInfo& i )
             {
                 i.cubeMapFilenames.clear();
@@ -123,6 +129,20 @@ static void ParseImage( rapidjson::Value& value, FastfileConverter* conv )
                 {
                     PG_ASSERT( file != "", "Please specify all 6 faces for cubemap" );
                     file = PG_RESOURCE_DIR + file;
+                }
+            }
+        },
+        { "semantic", []( rapidjson::Value& v, ImageCreateInfo& i )
+            {
+                std::string semanticName = v.GetString();
+                auto it = imageSemanticMap.find( semanticName );
+                if ( it == imageSemanticMap.end() )
+                {
+                    LOG_WARN( "No image semantic found matching '", semanticName, "'" );
+                }
+                else
+                {
+                    i.semantic = it->second;
                 }
             }
         },

@@ -16,6 +16,12 @@ enum ImageFlagBits
     IMAGE_GENERATE_MIPMAPS       = 1 << 3,
 };
 
+enum class ImageSemantic
+{
+    DIFFUSE,
+    NORMAL
+};
+
 typedef uint32_t ImageFlags;
 
 struct ImageCreateInfo : public ResourceCreateInfo
@@ -24,6 +30,7 @@ struct ImageCreateInfo : public ResourceCreateInfo
     std::vector< std::string > cubeMapFilenames; // right, left, top, bottom, back, front
     std::string sampler        = "";
     ImageFlags flags           = 0;
+    ImageSemantic semantic     = ImageSemantic::DIFFUSE;
     Gfx::PixelFormat dstFormat = Gfx::PixelFormat::INVALID;
 };
 
@@ -36,7 +43,7 @@ public:
     Image( Image&& src );
     Image& operator=( Image&& src );
 
-    static std::shared_ptr< Image > Load2DImageWithDefaultSettings( const std::string& filename );
+    static std::shared_ptr< Image > Load2DImageWithDefaultSettings( const std::string& filename, ImageSemantic semantic = ImageSemantic::DIFFUSE );
     bool Load( ResourceCreateInfo* createInfo ) override;
     void Move( std::shared_ptr< Resource > dst ) override;
     bool Serialize( std::ofstream& outFile ) const override;

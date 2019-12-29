@@ -272,7 +272,12 @@ namespace Progression
                     
             if ( fullPath != "" )
             {
-                auto ret = Image::Load2DImageWithDefaultSettings( fullPath );
+                ImageSemantic semantic = ImageSemantic::NORMAL;
+                if ( texType == aiTextureType_DIFFUSE )
+                {
+                    semantic = ImageSemantic::DIFFUSE;
+                }
+                auto ret = Image::Load2DImageWithDefaultSettings( fullPath, semantic );
                 if ( !ret )
                 {
                     LOG_ERR( "Failed to load texture '", name, "' with default settings" );
