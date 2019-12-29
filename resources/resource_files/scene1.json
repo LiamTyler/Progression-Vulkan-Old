@@ -11,8 +11,16 @@
         "filename": "models/plane.obj"
     },
     "Model": {
+        "name": "cube",
+        "filename": "models/cube.obj"
+    },
+    "Model": {
         "name": "dragon",
         "filename": "dragon/Dragon_Baked_Actions_fbx_7.4_binary.fbx"
+    },
+    "Model": {
+        "name": "arm",
+        "filename": "models/primitive.fbx"
     },
     "Image": {
         "name": "waterSkybox",

@@ -40,6 +40,10 @@
         "filename": "shaders/directional_shadow.vert"
     },
     "Shader": {
+        "name": "directionalShadowAnimatedVert",
+        "filename": "shaders/directional_shadow_animated.vert"
+    },
+    "Shader": {
         "name": "backgroundSolidColorVert",
         "filename": "shaders/background_solid_color.vert"
     },

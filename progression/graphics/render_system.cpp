@@ -85,10 +85,12 @@ struct
 struct
 {
     RenderPass renderPass;
-    Texture    depthAttachment;
-    Framebuffer   frameBuffer;
-    Pipeline   pipeline;
-    glm::mat4       LSM;
+    Texture depthAttachment;
+    Framebuffer frameBuffer;
+    Pipeline rigidPipeline;
+    Pipeline animatedPipeline;
+    glm::mat4 LSM;
+    std::vector< DescriptorSetLayout > animatedDescriptorSetLayouts;
 } shadowPassData;
 
 struct RenderSystem::GBufferPassData gBufferPassData;
@@ -169,29 +171,47 @@ static bool InitShadowPassData()
     VertexBindingDescriptor bindingDescs[] =
     {
         VertexBindingDescriptor( 0, sizeof( glm::vec3 ) ),
+        VertexBindingDescriptor( 1, 2 * sizeof( glm::vec4 ) ),
     };
 
     VertexAttributeDescriptor attribDescs[] =
     {
         VertexAttributeDescriptor( 0, 0, BufferDataType::FLOAT3, 0 ),
+        VertexAttributeDescriptor( 1, 1, BufferDataType::FLOAT4, 0 ),
+        VertexAttributeDescriptor( 2, 1, BufferDataType::UINT4, sizeof( glm::vec4 ) ),
     };
 
     PipelineDescriptor shadowPassDataPipelineDesc;
     shadowPassDataPipelineDesc.rasterizerInfo.depthBiasEnable = true;
-    shadowPassDataPipelineDesc.renderPass       = &shadowPassData.renderPass;
-    shadowPassDataPipelineDesc.vertexDescriptor = VertexInputDescriptor::Create( 1, bindingDescs, 1, attribDescs );
-    shadowPassDataPipelineDesc.viewport         = Viewport( DIRECTIONAL_SHADOW_MAP_RESOLUTION, -DIRECTIONAL_SHADOW_MAP_RESOLUTION );
-    shadowPassDataPipelineDesc.viewport.y       = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
-    Scissor scissor                             = {};
-    scissor.width                               = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
-    scissor.height                              = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
-    shadowPassDataPipelineDesc.scissor          = scissor;
-    shadowPassDataPipelineDesc.shaders[0]       = vertShader.get();
+    shadowPassDataPipelineDesc.renderPass             = &shadowPassData.renderPass;
+    shadowPassDataPipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 1, bindingDescs, 1, attribDescs );
+    shadowPassDataPipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
+    shadowPassDataPipelineDesc.rasterizerInfo.cullFace = CullFace::NONE;
+    shadowPassDataPipelineDesc.viewport               = Viewport( DIRECTIONAL_SHADOW_MAP_RESOLUTION, -DIRECTIONAL_SHADOW_MAP_RESOLUTION );
+    shadowPassDataPipelineDesc.viewport.y             = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
+    shadowPassDataPipelineDesc.scissor                = Scissor( DIRECTIONAL_SHADOW_MAP_RESOLUTION, DIRECTIONAL_SHADOW_MAP_RESOLUTION );
+    shadowPassDataPipelineDesc.shaders[0]             = vertShader.get();
 
-    shadowPassData.pipeline = g_renderState.device.NewPipeline( shadowPassDataPipelineDesc, "directional shadow pass" );
-    if ( !shadowPassData.pipeline )
+    shadowPassData.rigidPipeline = g_renderState.device.NewPipeline( shadowPassDataPipelineDesc, "directional shadow pass rigid" );
+    if ( !shadowPassData.rigidPipeline )
     {
-        LOG_ERR( "Could not create directional shadow pipeline" );
+        LOG_ERR( "Could not create directional shadow rigid pipeline" );
+        return false;
+    }
+
+    vertShader = ResourceManager::Get< Shader >( "directionalShadowAnimatedVert" );
+    PG_ASSERT( vertShader );
+
+    shadowPassData.animatedDescriptorSetLayouts = g_renderState.device.NewDescriptorSetLayouts( vertShader->reflectInfo.descriptorSetLayouts );
+
+    shadowPassDataPipelineDesc.descriptorSetLayouts = shadowPassData.animatedDescriptorSetLayouts;
+    shadowPassDataPipelineDesc.vertexDescriptor     = VertexInputDescriptor::Create( 2, bindingDescs, 3, attribDescs );
+    shadowPassDataPipelineDesc.shaders[0]           = vertShader.get();
+
+    shadowPassData.animatedPipeline = g_renderState.device.NewPipeline( shadowPassDataPipelineDesc, "directional shadow pass animated" );
+    if ( !shadowPassData.animatedPipeline )
+    {
+        LOG_ERR( "Could not create directional shadow animated pipeline" );
         return false;
     }
  
@@ -951,8 +971,10 @@ namespace RenderSystem
 
         shadowPassData.depthAttachment.Free();
         shadowPassData.renderPass.Free();
-        shadowPassData.pipeline.Free();
+        shadowPassData.rigidPipeline.Free();
+        shadowPassData.animatedPipeline.Free();
         shadowPassData.frameBuffer.Free();
+        freeDescriptorSetLayouts( shadowPassData.animatedDescriptorSetLayouts );
 
         s_descriptorPool.Free();
 
@@ -1020,7 +1042,7 @@ namespace RenderSystem
         //auto scriptData = scene->registry.get< ScriptComponent >( entity ).GetScriptData( "lightController" );
         //const glm::vec3& pos = scriptData->env["position"];
         auto V = glm::lookAt( pos, pos + glm::vec3( scene->directionalLight.direction ), glm::vec3( 0, 1, 0 ) );
-        auto P = glm::ortho< float >( -20, 20, -20, 20, 0.0f, 60.0f );
+        auto P = glm::ortho< float >( -30, 30, -30, 30, 0.0f, 100.0f );
         shadowPassData.LSM = P * V;
 
         SceneConstantBufferData scbuf;
@@ -1048,45 +1070,48 @@ namespace RenderSystem
         cmdBuf.BeginRenderPass( shadowPassData.renderPass, shadowPassData.frameBuffer, { DIRECTIONAL_SHADOW_MAP_RESOLUTION, DIRECTIONAL_SHADOW_MAP_RESOLUTION } );
 
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Shadow rigid models", glm::vec4( .2, .6, .4, 1 ) );
-        cmdBuf.BindRenderPipeline( shadowPassData.pipeline );
-        cmdBuf.SetDepthBias( 2, 0, 9.5 ); // Values that 'worked' (removed many artifacts) epirically for sponza.json
-        scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& modelRenderer, Transform& transform )
+        cmdBuf.BindRenderPipeline( shadowPassData.rigidPipeline );
+        cmdBuf.SetDepthBias( 2, 0, 9 ); // Values that 'worked' (removed many artifacts) epirically for sponza.json
+        scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& renderer, Transform& transform )
         {
-            const auto& model = modelRenderer.model;
+            const auto& model = renderer.model;
             auto MVP = shadowPassData.LSM * transform.GetModelMatrix();
-            cmdBuf.PushConstants( shadowPassData.pipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( glm::mat4 ), &MVP[0][0] );
-
-            cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
+            cmdBuf.PushConstants( shadowPassData.rigidPipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( glm::mat4 ), &MVP[0][0] );
+        
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetVertexOffset(), 0 );
             cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
-
+        
             for ( size_t i = 0; i < model->meshes.size(); ++i )
             {
-                const auto& mesh = modelRenderer.model->meshes[i];
+                const auto& mesh = model->meshes[i];
                 PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
                 cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
             }
         });
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
 
-        // PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Shadow animated models", glm::vec4( .6, .2, .4, 1 ) );
-        // auto& animPipeline = AnimationSystem::renderData.animatedPipeline;
-        // scene->registry.view< Animator, SkinnedRenderer, Transform >().each( [&]( Animator& animator, SkinnedRenderer& renderer, Transform& transform )
-        // {
-        //     const auto& model = renderer.model;
-        //     auto MVP          = shadowPassData.LSM * transform.GetModelMatrix();
-        //     cmdBuf.PushConstants( shadowPassData.pipeline, animPipeline.GetLayoutHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( glm::mat4 ), &MVP[0][0] );
-        // 
-        //     cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
-        //     cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
-        // 
-        //     for ( size_t i = 0; i < renderer.model->meshes.size(); ++i )
-        //     {
-        //         const auto& mesh = model->meshes[i];
-        //         PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
-        //         cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
-        //     }
-        // });
-        // PG_DEBUG_MARKER_END_REGION( cmdBuf );
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Shadow animated models", glm::vec4( .6, .2, .4, 1 ) );
+        cmdBuf.BindRenderPipeline( shadowPassData.animatedPipeline );
+        cmdBuf.SetDepthBias( 2, 0, 9 ); // Values that 'worked' (removed many artifacts) epirically for sponza.json
+        cmdBuf.BindDescriptorSets( 1, &AnimationSystem::renderData.animationBonesDescriptorSet, shadowPassData.animatedPipeline, PG_BONE_TRANSFORMS_SET );
+        scene->registry.view< Animator, SkinnedRenderer, Transform >().each( [&]( Animator& animator, SkinnedRenderer& renderer, Transform& transform )
+        {
+            const auto& model = renderer.model;
+            AnimatedShadowPerObjectData pushData{ shadowPassData.LSM * transform.GetModelMatrix(), animator.GetTransformSlot() };
+            cmdBuf.PushConstants( shadowPassData.animatedPipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( AnimatedShadowPerObjectData ), &pushData );
+        
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetVertexOffset(), 0 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetBlendWeightOffset(), 1 );
+            cmdBuf.BindIndexBuffer(  model->indexBuffer, model->GetIndexType() );
+        
+            for ( size_t i = 0; i < model->meshes.size(); ++i )
+            {
+                const auto& mesh = model->meshes[i];
+                PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
+                cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
+            }
+        });
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
 
         cmdBuf.EndRenderPass();
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
@@ -1117,7 +1142,7 @@ namespace RenderSystem
             ObjectConstantBufferData b{ M, N };
             cmdBuf.PushConstants( gBufferPassData.pipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( ObjectConstantBufferData ), &b );
 
-            cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetVertexOffset(), 0 );
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetUVOffset(), 2 );
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetTangentOffset(), 3 );
@@ -1165,7 +1190,7 @@ namespace RenderSystem
             AnimatedObjectConstantBufferData b{ M, N, animator.GetTransformSlot() };
             cmdBuf.PushConstants( animPipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( AnimatedObjectConstantBufferData ), &b );
 
-            cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetVertexOffset(), 0 );
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetUVOffset(), 2 );
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetTangentOffset(), 3 );
@@ -1309,7 +1334,7 @@ namespace RenderSystem
             ObjectConstantBufferData b{ M, N };
             cmdBuf.PushConstants( transparencyPassData.pipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( ObjectConstantBufferData ), &b );
 
-            cmdBuf.BindVertexBuffer( model->vertexBuffer, 0, 0 );
+            cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetVertexOffset(), 0 );
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetUVOffset(), 2 );
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetTangentOffset(), 3 );
@@ -1336,6 +1361,8 @@ namespace RenderSystem
             }
         });
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
+
+        // transparent animated models?
         
         cmdBuf.EndRenderPass();
         PG_DEBUG_MARKER_END_REGION( cmdBuf );

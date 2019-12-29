@@ -35,7 +35,7 @@
     "Entity": {
         "NameComponent": "dragon",
         "Transform": {
-            "position": [ 0, 0, 0 ],
+            "position": [ 0, -1, 1 ],
             "rotation": [ 0, 0, 0 ],
             "scale": [ 0.001, 0.001, 0.001 ]
         },
@@ -44,6 +44,32 @@
         },
         "Animator": {
             "model": "dragon"
+        }
+    },
+    "_Entity": {
+        "NameComponent": "arm",
+        "Transform": {
+            "position": [ 0, -1, 0 ],
+            "rotation": [ 0, 0, 0 ],
+            "scale": [ 0.01, 0.01, 0.01 ]
+        },
+        "SkinnedRenderer": {
+            "model": "arm",
+            "material": "red"
+        },
+        "Animator": {
+            "model": "arm"
+        }
+    },
+    "Entity": {
+        "NameComponent": "cube",
+        "Transform": {
+            "position": [ -4, 0, 0 ],
+            "scale": [ 1, 1, 1 ]
+        },
+        "ModelRenderer": {
+            "model": "cube",
+            "material": "green"
         }
     },
     "Entity": {

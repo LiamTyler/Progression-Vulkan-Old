@@ -32,6 +32,12 @@ struct AnimatedObjectConstantBufferData
     UINT boneTransformIdx;
 };
 
+struct AnimatedShadowPerObjectData
+{
+    MAT4 MVP;
+    UINT boneTransformIdx;
+};
+
 struct MaterialConstantBufferData
 {
     VEC4 Kd;

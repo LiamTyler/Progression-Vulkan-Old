@@ -24,7 +24,7 @@ layout( std430, push_constant ) uniform PerObjectData
     AnimatedObjectConstantBufferData perObjectData;
 };
 
-layout( set = 2, binding = 0 ) buffer BoneTransforms
+layout( set = PG_BONE_TRANSFORMS_SET, binding = 0 ) buffer BoneTransforms
 {
    mat4 boneTransforms[];
 };
