@@ -1381,7 +1381,7 @@ namespace RenderSystem
         cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
         cmdBuf.Draw( 0, 6 );
         
-        cmdBuf.EndRenderPass(); // end post process pass
+        //cmdBuf.EndRenderPass(); // end post process pass
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
         PG_PROFILE_TIMESTAMP( cmdBuf, "PostProcess_End" );
     }
@@ -1390,7 +1390,7 @@ namespace RenderSystem
     {
         PG_PROFILE_TIMESTAMP( cmdBuf, "UI_Start" );
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "UI Pass", glm::vec4( .4, .7, 9, 1 ) );
-        cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[swapChainImageIndex], g_renderState.swapChain.extent );
+        //cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[swapChainImageIndex], g_renderState.swapChain.extent );
         
         UIOverlay::Draw( cmdBuf );
         
