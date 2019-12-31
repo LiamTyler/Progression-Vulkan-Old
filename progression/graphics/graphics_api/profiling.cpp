@@ -1,5 +1,6 @@
 #include "graphics/graphics_api/profiling.hpp"
 #include "core/assert.hpp"
+#include "core/time.hpp"
 #include "graphics/vulkan.hpp"
 #include "utils/logger.hpp"
 #include <algorithm>
@@ -9,6 +10,7 @@
 #include <vector>
 
 #define MAX_NUM_QUERIES 100
+#define MILLISECONDS_BETWEEN_SAMPLES 100
 
 static std::vector< uint64_t > s_cpuQueries;
 static VkQueryPool s_queryPool = VK_NULL_HANDLE;
@@ -17,6 +19,7 @@ static uint32_t s_nextFreeIndex;
 static double s_timestampToMillisInv;
 std::string tmpFileName = "pg_profiling_log.txt";
 static std::ofstream s_outputFile;
+static float s_lastSampledTime;
 
 namespace Progression
 {
@@ -30,6 +33,7 @@ namespace Profile
         #if !USING( PG_PROFILING )
             return true;
         #endif // #if !USING( SHIP_BUILD )
+        s_lastSampledTime = 0;
         VkQueryPoolCreateInfo createInfo = {};
         createInfo.sType        = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
         createInfo.pNext        = nullptr;
@@ -67,8 +71,9 @@ namespace Profile
         std::ifstream in( tmpFileName );
         struct Entry
         {
+            std::string name;
             double totalTime = 0;
-            int count       = 0;
+            int count        = 0;
         };
         struct LogTimestamp
         {
@@ -126,10 +131,19 @@ namespace Profile
             return;
         }
 
-        LOG( "Profiling timestamps: " );
-        for ( const auto& [ name, entry ] : pairings )
+        // display from lowest time to highest
+        std::vector< Entry > entries;
+        for ( auto& [ name, entry ] : pairings )
         {
-            LOG( name, ": ", entry.totalTime * s_timestampToMillisInv / entry.count );
+            entry.name = name;
+            entries.push_back( entry );
+        }
+        std::sort( entries.begin(), entries.end(), []( const Entry& lhs, const Entry& rhs ){ return lhs.totalTime / lhs.count < rhs.totalTime  / rhs.count; } );
+
+        LOG( "Profiling timestamps: " );
+        for ( const auto& entry : entries )
+        {
+            LOG( entry.name, ": ", entry.totalTime * s_timestampToMillisInv / entry.count );
         }
     }
 
@@ -141,13 +155,19 @@ namespace Profile
 
     void GetResults()
     {
-        vkGetQueryPoolResults( g_renderState.device.GetHandle(), s_queryPool, 0, s_nextFreeIndex, s_cpuQueries.size() * sizeof( uint64_t ),
-            s_cpuQueries.data(), sizeof( uint64_t ), VK_QUERY_RESULT_WAIT_BIT | VK_QUERY_RESULT_64_BIT );
-        for ( const auto& [ name, index ] : s_nameToIndexMap )
+        float currentTime = Time::Time();
+        if ( currentTime >= s_lastSampledTime + MILLISECONDS_BETWEEN_SAMPLES )
         {
-            s_outputFile << name << " " << s_cpuQueries[s_nameToIndexMap[name]] << "\n";
+            s_lastSampledTime = currentTime;
+            vkGetQueryPoolResults( g_renderState.device.GetHandle(), s_queryPool, 0, s_nextFreeIndex, s_cpuQueries.size() * sizeof( uint64_t ),
+                s_cpuQueries.data(), sizeof( uint64_t ), VK_QUERY_RESULT_WAIT_BIT | VK_QUERY_RESULT_64_BIT );
+        
+            for ( const auto& [ name, index ] : s_nameToIndexMap )
+            {
+                s_outputFile << name << " " << s_cpuQueries[s_nameToIndexMap[name]] << "\n";
+            }
+            s_outputFile << "\n";
         }
-        s_outputFile << "\n";
     }
     
     void Timestamp( const CommandBuffer& cmdbuf, const std::string& name )

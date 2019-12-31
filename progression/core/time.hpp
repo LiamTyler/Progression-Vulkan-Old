@@ -9,7 +9,7 @@ namespace Time
 {
 
     void Reset();
-    float Time();
+    float Time(); // milliseconds since initialization
     float DeltaTime();
     void StartFrame();
     void EndFrame();
