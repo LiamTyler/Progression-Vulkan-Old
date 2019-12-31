@@ -25,6 +25,12 @@ static Pipeline s_pipeline;
 static Buffer s_VBO, s_IBO;
 static int s_vertexCount = 0, s_indexCount = 0;
 
+struct UISettings
+{
+    bool check1;
+    float slider1;
+} uiSettings;
+
 struct PushConstBlock
 {
 	glm::vec2 scale;
@@ -199,12 +205,21 @@ namespace UIOverlay
 		io.DeltaTime    = Time::DeltaTime();
         auto mousePos   = Input::GetMousePosition();
 		io.MousePos     = ImVec2( mousePos.x, mousePos.y );
-		io.MouseDown[0] = Input::GetMouseButtonDown( MouseButton::LEFT );
-		io.MouseDown[1] = Input::GetMouseButtonDown( MouseButton::RIGHT );
+		io.MouseDown[0] = Input::GetMouseButtonHeld( MouseButton::LEFT );
+		io.MouseDown[1] = Input::GetMouseButtonHeld( MouseButton::RIGHT );
 
         // draw
         ImGui::NewFrame();
-        ImGui::ShowDemoWindow();
+
+        ImGui::SetNextWindowSize(ImVec2(200, 200), ImGuiCond_FirstUseEver );
+		ImGui::Begin("Example settings");
+		ImGui::Checkbox("Render models", &uiSettings.check1 );
+		ImGui::SliderFloat("Light speed", &uiSettings.slider1, 0.1f, 1.0f);
+		ImGui::End();
+        
+		ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver );
+		ImGui::ShowDemoWindow();
+        // ImGui::ShowDemoWindow();
 
         // Render to generate draw buffers
 		ImGui::Render();

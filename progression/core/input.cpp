@@ -2,13 +2,20 @@
 #include "core/window.hpp"
 #include "core/lua.hpp"
 
-static bool s_keysDown[GLFW_KEY_LAST + 1]                 = { 0 };
-static bool s_keysUp[GLFW_KEY_LAST + 1]                   = { 0 };
-static bool s_mouseButtonDown[GLFW_MOUSE_BUTTON_LAST + 1] = { 0 };
-static bool s_mouseButtonUp[GLFW_MOUSE_BUTTON_LAST + 1]   = { 0 };
 static glm::vec2 s_lastCursorPos                         = glm::ivec2( 0 );
 static glm::vec2 s_currentCursorPos                      = glm::ivec2( 0 );
 static glm::vec2 s_scrollOffset                          = glm::ivec2( 0 );
+
+enum KeyStatus : uint8_t
+{
+    KEY_RELEASED = 0, // first frame key released
+    KEY_FREE     = 1, // all frames key is released besides first
+    KEY_PRESSED  = 2, // first frame key pressed
+    KEY_HELD     = 3, // all frames key is pressed besides first
+};
+
+static uint8_t s_keyStatus[GLFW_KEY_LAST + 1];
+static uint8_t s_mouseButtonStatus[GLFW_MOUSE_BUTTON_LAST + 1];
 
 static void KeyCallback( GLFWwindow* window, int key, int scancode, int action, int mods )
 {
@@ -24,12 +31,11 @@ static void KeyCallback( GLFWwindow* window, int key, int scancode, int action, 
 
     if ( action == GLFW_PRESS )
     {
-        s_keysDown[key] = true;
+        s_keyStatus[key] = KEY_PRESSED;
     }
     else if ( action == GLFW_RELEASE )
     {
-        s_keysUp[key]   = true;
-        s_keysDown[key] = false;
+        s_keyStatus[key] = KEY_RELEASED;
     }
 }
 
@@ -45,12 +51,11 @@ static void MouseButtonCallback( GLFWwindow* window, int button, int action, int
     PG_UNUSED( mods );
     if ( action == GLFW_PRESS )
     {
-        s_mouseButtonDown[button] = true;
+        s_mouseButtonStatus[button] = KEY_PRESSED;
     }
     else if ( action == GLFW_RELEASE )
     {
-        s_mouseButtonUp[button]   = true;
-        s_mouseButtonDown[button] = false;
+        s_mouseButtonStatus[button] = KEY_RELEASED;
     }
 }
 
@@ -79,6 +84,16 @@ namespace Input
         glfwSetKeyCallback( window, KeyCallback );
         glfwSetScrollCallback( window, ScrollCallback );
 
+        for ( int i = 0; i < GLFW_KEY_LAST + 1; ++i )
+        {
+            s_keyStatus[i] = KEY_FREE;
+        }
+
+        for ( int i = 0; i < GLFW_MOUSE_BUTTON_LAST + 1; ++i )
+        {
+            s_mouseButtonStatus[i] = KEY_FREE;
+        }
+
         PollEvents();
     }
 
@@ -89,11 +104,15 @@ namespace Input
 
     void PollEvents()
     {
-        // Reset all of the states for the next frame
-        memset( s_keysDown, false, sizeof( s_keysDown ) );
-        memset( s_keysUp, false, sizeof( s_keysUp ) );
-        memset( s_mouseButtonDown, false, sizeof( s_mouseButtonDown ) );
-        memset( s_mouseButtonUp, false, sizeof( s_mouseButtonUp ) );
+        for ( int i = 0; i < GLFW_KEY_LAST + 1; ++i )
+        {
+            s_keyStatus[i] += s_keyStatus[i] == KEY_RELEASED || s_keyStatus[i] == KEY_PRESSED;
+        }
+
+        for ( int i = 0; i < GLFW_MOUSE_BUTTON_LAST + 1; ++i )
+        {
+            s_mouseButtonStatus[i] += s_mouseButtonStatus[i] == KEY_RELEASED || s_mouseButtonStatus[i] == KEY_PRESSED;
+        }
         s_lastCursorPos = s_currentCursorPos;
         s_scrollOffset  = glm::vec2( 0 );
         glfwPollEvents();
@@ -101,22 +120,32 @@ namespace Input
 
     bool GetKeyDown( Key k )
     {
-        return s_keysDown[static_cast< int >( k )];
+        return s_keyStatus[static_cast< int >( k )] == KEY_PRESSED;
     }
 
     bool GetKeyUp( Key k )
     {
-        return s_keysUp[static_cast< int >( k )];
+        return s_keyStatus[static_cast< int >( k )] == KEY_RELEASED;
+    }
+
+    bool GetKeyHeld( Key k )
+    {
+        return s_keyStatus[static_cast< int >( k )] == KEY_PRESSED || s_keyStatus[static_cast< int >( k )] == KEY_HELD;
     }
 
     bool GetMouseButtonDown( MouseButton b )
     {
-        return s_mouseButtonDown[static_cast< int >( b )];
+        return s_mouseButtonStatus[static_cast< int >( b )] == KEY_PRESSED;
     }
 
     bool GetMouseButtonUp( MouseButton b )
     {
-        return s_mouseButtonUp[static_cast< int >( b )];
+        return s_mouseButtonStatus[static_cast< int >( b )] == KEY_RELEASED;
+    }
+
+    bool GetMouseButtonHeld( MouseButton b )
+    {
+        return s_mouseButtonStatus[static_cast< int >( b )] == KEY_PRESSED || s_mouseButtonStatus[static_cast< int >( b )] == KEY_HELD;
     }
 
     glm::vec2 GetMousePosition()
@@ -147,8 +176,10 @@ void RegisterLuaFunctions_Input( lua_State* L )
     auto input = lua["Input"].get_or_create< sol::table >();
     input.set_function( "GetKeyDown", &GetKeyDown );
     input.set_function( "GetKeyUp", &GetKeyUp );
+    input.set_function( "GetKeyHeld", &GetKeyHeld );
     input.set_function( "GetMouseButtonDown", &GetMouseButtonDown );
     input.set_function( "GetMouseButtonUp", &GetMouseButtonUp );
+    input.set_function( "GetMouseButtonHeld", &GetMouseButtonHeld );
     input.set_function( "GetMousePosition", &GetMousePosition );
     input.set_function( "GetMouseChange", &GetMouseChange );
     input.set_function( "GetScrollChange", &GetScrollChange );
