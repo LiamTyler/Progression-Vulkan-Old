@@ -107,10 +107,7 @@ void Shutdown()
     g_renderState.device.WaitForIdle();
     renderData.gpuBoneBuffer.UnMap();
     renderData.gpuBoneBuffer.Free();
-    for ( auto& layout : renderData.descriptorSetLayouts )
-    {
-        layout.Free();
-    }
+    FreeDescriptorSetLayouts( renderData.descriptorSetLayouts );
     renderData.descriptorPool.Free();
     renderData.animatedPipeline.Free();
 }

@@ -165,6 +165,7 @@ namespace Gfx
         RasterizerInfo rasterizerInfo;
         PrimitiveType primitiveType = PrimitiveType::TRIANGLES;
         PipelineDepthInfo depthInfo;
+        std::vector< VkDynamicState > dynamicStates;
         std::array< PipelineColorAttachmentInfo, 8 > colorAttachmentInfos;
     };
 

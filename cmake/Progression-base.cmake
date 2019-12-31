@@ -39,6 +39,7 @@ set(PROGRESSION_INCLUDE_DIRS
     ${PROGRESSION_DIR}/ext/entt/src
     ${PROGRESSION_DIR}/ext/glfw/include
     ${PROGRESSION_DIR}/ext/assimp/include
+    ${PROGRESSION_DIR}/ext/imgui
     ${PROGRESSION_DIR}/progression
     ${Vulkan_INCLUDE_DIRS}
 )

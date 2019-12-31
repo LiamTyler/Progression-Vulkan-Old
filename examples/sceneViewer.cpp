@@ -22,7 +22,7 @@ int main( int argc, char* argv[] )
 
     {
         Window* window = GetMainWindow();
-        window->SetRelativeMouse( true );
+        // window->SetRelativeMouse( true );
     
         Scene* scene = Scene::Load( argv[1] );
         if ( !scene )

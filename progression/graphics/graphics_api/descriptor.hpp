@@ -28,7 +28,6 @@ namespace Gfx
     VkDescriptorImageInfo DescriptorImageInfo( const Gfx::Texture& tex, VkImageLayout imageLayout );
     VkDescriptorBufferInfo DescriptorBufferInfo( const Gfx::Buffer& buffer, VkDeviceSize offset = 0, VkDeviceSize range = VK_WHOLE_SIZE );
 
-
     struct DescriptorSetLayoutData
     {
         uint32_t setNumber;
@@ -53,6 +52,9 @@ namespace Gfx
         VkDescriptorSetLayout m_handle = VK_NULL_HANDLE;
         VkDevice m_device              = VK_NULL_HANDLE;
     };
+
+    void FreeDescriptorSetLayouts( size_t numLayouts, DescriptorSetLayout* layouts );
+    void FreeDescriptorSetLayouts( std::vector< DescriptorSetLayout >& layouts );
 
 
     class DescriptorPool 

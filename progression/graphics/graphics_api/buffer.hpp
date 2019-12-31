@@ -116,7 +116,8 @@ namespace Gfx
         void Free();
         void Map();
         void UnMap();
-        void Bind( size_t offset = 0 ) const;
+        void BindMemory( size_t offset = 0 ) const;
+        bool Flush( size_t size = VK_WHOLE_SIZE, size_t offset = 0 );
         char* MappedPtr() const;
         size_t GetLength() const;
         MemoryType GetMemoryType() const;

@@ -59,6 +59,14 @@
         "name": "backgroundSkyboxFrag",
         "filename": "shaders/background_skybox.frag"
     },
+    "Shader": {
+        "name": "uiVert",
+        "filename": "shaders/ui/ui.vert"
+    },
+    "Shader": {
+        "name": "uiFrag",
+        "filename": "shaders/ui/ui.frag"
+    },
     "Image": {
         "name": "RENDER_SYSTEM_DUMMY_TEXTURE",
         "filename": "textures/render_system_dummy_texture.png",

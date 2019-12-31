@@ -389,7 +389,7 @@ namespace Gfx
         {
             shaderStages.push_back( desc.shaders[i]->GetVkPipelineShaderStageCreateInfo() );
         }
-        std::vector< VkDynamicState > dynamicStates;
+        std::vector< VkDynamicState > dynamicStates = desc.dynamicStates;
 
         VkViewport viewport;
         viewport.x        = desc.viewport.x;

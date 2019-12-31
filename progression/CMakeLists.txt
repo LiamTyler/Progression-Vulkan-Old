@@ -43,6 +43,8 @@ set(
     graphics/graphics_api/synchronization.hpp
     graphics/graphics_api/texture.cpp
     graphics/graphics_api/texture.hpp
+    graphics/graphics_api/ui.cpp
+    graphics/graphics_api/ui.hpp
     graphics/graphics_api/vertex_descriptor.cpp
     graphics/graphics_api/vertex_descriptor.hpp
     
@@ -121,7 +123,7 @@ set(
     resource/converters/model_converter.hpp
     resource/converters/script_converter.hpp
     resource/converters/shader_converter.hpp
-)	
+)
 
 set(
 	EXTERNALS
@@ -138,6 +140,12 @@ set(
     ../ext/SPIRV-Reflect/spirv_reflect.c
     ../ext/SPIRV-Reflect/common/output_stream.cpp
     ../ext/SPIRV-Reflect/common/output_stream.h
+    
+    ../ext/imgui/imgui.h
+    ../ext/imgui/imgui.cpp
+    ../ext/imgui/imgui_widgets.cpp
+    ../ext/imgui/imgui_draw.cpp
+    ../ext/imgui/imgui_demo.cpp
 )
 
 set(

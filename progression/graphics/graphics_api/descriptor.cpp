@@ -144,6 +144,19 @@ namespace Gfx
         return combined;
     }
 
+    void FreeDescriptorSetLayouts( size_t numLayouts, DescriptorSetLayout* layouts )
+    {
+        for ( size_t i = 0; i < numLayouts; ++i )
+        {
+            layouts[i].Free();
+        }
+    }
+
+    void FreeDescriptorSetLayouts( std::vector< DescriptorSetLayout >& layouts )
+    {
+        FreeDescriptorSetLayouts( layouts.size(), layouts.data() );
+    }
+
     void DescriptorPool::Free()
     {
         PG_ASSERT( m_handle != VK_NULL_HANDLE );

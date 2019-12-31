@@ -944,6 +944,12 @@ namespace RenderSystem
             return false;
         }
 
+        if ( !UIOverlay::Init() )
+        {
+            LOG_ERR( "Could not initialize the UIOverlay" );
+            return false;
+        }
+
         s_gpuSceneConstantBuffers.Map();
         s_gpuPointLightBuffers.Map();
         s_gpuSpotLightBuffers.Map();
@@ -953,16 +959,9 @@ namespace RenderSystem
 
     void Shutdown()
     {
-        auto freeDescriptorSetLayouts = []( auto& layoutVector )
-        {
-            for ( auto& layout : layoutVector )
-            {
-                layout.Free();
-            }
-        };
-
         g_renderState.device.WaitForIdle();
-
+        
+        UIOverlay::Shutdown();
         Profile::Shutdown();
 
         s_gpuSceneConstantBuffers.UnMap();
@@ -974,7 +973,7 @@ namespace RenderSystem
         shadowPassData.rigidPipeline.Free();
         shadowPassData.animatedPipeline.Free();
         shadowPassData.frameBuffer.Free();
-        freeDescriptorSetLayouts( shadowPassData.animatedDescriptorSetLayouts );
+        FreeDescriptorSetLayouts( shadowPassData.animatedDescriptorSetLayouts );
 
         s_descriptorPool.Free();
 
@@ -988,7 +987,7 @@ namespace RenderSystem
         gBufferPassData.renderPass.Free();
         gBufferPassData.frameBuffer.Free();
         gBufferPassData.pipeline.Free();
-        freeDescriptorSetLayouts( gBufferPassData.descriptorSetLayouts );
+        FreeDescriptorSetLayouts( gBufferPassData.descriptorSetLayouts );
 
         ssaoPassData.renderPass.Free();
         ssaoPassData.texture.Free();
@@ -996,31 +995,31 @@ namespace RenderSystem
         ssaoPassData.pipeline.Free();
         ssaoPassData.kernel.Free();
         ssaoPassData.noise.Free();
-        freeDescriptorSetLayouts( ssaoPassData.descriptorSetLayouts );
+        FreeDescriptorSetLayouts( ssaoPassData.descriptorSetLayouts );
 
         ssaoBlurPassData.pipeline.Free();
         ssaoBlurPassData.renderPass.Free();
         ssaoBlurPassData.outputTex.Free();
         ssaoBlurPassData.framebuffer.Free();
-        freeDescriptorSetLayouts( ssaoBlurPassData.descriptorSetLayouts );
+        FreeDescriptorSetLayouts( ssaoBlurPassData.descriptorSetLayouts );
 
         lightingPassData.renderPass.Free();
         lightingPassData.outputTexture.Free();
         lightingPassData.frameBuffer.Free();
         lightingPassData.pipeline.Free();
-        freeDescriptorSetLayouts( lightingPassData.descriptorSetLayouts );
+        FreeDescriptorSetLayouts( lightingPassData.descriptorSetLayouts );
 
         backgroundPassData.renderPass.Free();
         backgroundPassData.cubeBuffer.Free();
         backgroundPassData.solidColorPipeline.Free();
         backgroundPassData.skyboxPipeline.Free();
-        freeDescriptorSetLayouts( backgroundPassData.skyboxDescriptorSetLayouts );
+        FreeDescriptorSetLayouts( backgroundPassData.skyboxDescriptorSetLayouts );
         // transparencyPassData.renderPass.Free();
         // transparencyPassData.pipeline.Free();
-        // freeDescriptorSetLayouts( transparencyPassData.descriptorSetLayouts );
+        // FreeDescriptorSetLayouts( transparencyPassData.descriptorSetLayouts );
 
         postProcessPassData.pipeline.Free();
-        freeDescriptorSetLayouts( postProcessPassData.descriptorSetLayouts );
+        FreeDescriptorSetLayouts( postProcessPassData.descriptorSetLayouts );
         postProcessPassData.quadBuffer.Free();
     }
     
@@ -1387,6 +1386,19 @@ namespace RenderSystem
         PG_PROFILE_TIMESTAMP( cmdBuf, "PostProcess_End" );
     }
 
+    void UIPass( Scene* scene, CommandBuffer& cmdBuf, uint32_t swapChainImageIndex )
+    {
+        PG_PROFILE_TIMESTAMP( cmdBuf, "UI_Start" );
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "UI Pass", glm::vec4( .4, .7, 9, 1 ) );
+        cmdBuf.BeginRenderPass( g_renderState.renderPass, g_renderState.swapChainFramebuffers[swapChainImageIndex], g_renderState.swapChain.extent );
+        
+        UIOverlay::Draw( cmdBuf );
+        
+        cmdBuf.EndRenderPass();
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
+        PG_PROFILE_TIMESTAMP( cmdBuf, "UI_End" );
+    }
+
     void Render( Scene* scene )
     {
         PG_ASSERT( scene != nullptr );
@@ -1408,6 +1420,7 @@ namespace RenderSystem
         DeferredLightingPass( scene, cmdBuf );
         BackgroundPass( scene, cmdBuf );
         PostProcessPass( scene, cmdBuf, swapChainImageIndex );
+        UIPass( scene, cmdBuf, swapChainImageIndex );
 
         PG_PROFILE_TIMESTAMP( cmdBuf, "Frame_End" );
 
@@ -1450,13 +1463,14 @@ namespace RenderSystem
         samplerDesc.borderColor = BorderColor::OPAQUE_WHITE_FLOAT;
         AddSampler( samplerDesc );
 
-        samplerDesc.name      = "linear_clamped_linear";
-        samplerDesc.minFilter = FilterMode::LINEAR;
-        samplerDesc.magFilter = FilterMode::LINEAR;
-        samplerDesc.mipFilter = MipFilterMode::LINEAR;
-        samplerDesc.wrapModeU = WrapMode::CLAMP_TO_EDGE;
-        samplerDesc.wrapModeV = WrapMode::CLAMP_TO_EDGE;
-        samplerDesc.wrapModeW = WrapMode::CLAMP_TO_EDGE;
+        samplerDesc.name        = "linear_clamped_linear";
+        samplerDesc.minFilter   = FilterMode::LINEAR;
+        samplerDesc.magFilter   = FilterMode::LINEAR;
+        samplerDesc.mipFilter   = MipFilterMode::LINEAR;
+        samplerDesc.wrapModeU   = WrapMode::CLAMP_TO_EDGE;
+        samplerDesc.wrapModeV   = WrapMode::CLAMP_TO_EDGE;
+        samplerDesc.wrapModeW   = WrapMode::CLAMP_TO_EDGE;
+        samplerDesc.borderColor = BorderColor::OPAQUE_WHITE_FLOAT;
         AddSampler( samplerDesc );
 
         samplerDesc.name      = "linear_repeat_linear";
