@@ -67,14 +67,15 @@ function Update()
     end
     
     if Input.GetKeyUp( Key.L ) then
-        print( camera.position )
+        --print( camera.position )
+        GetMainWindow().SetRelativeMouse( not GetMainWindow().IsRelativeMouse() )
     end
     
     local dMouse    = -Input:GetMouseChange()
     local dRotation = vec3.new( dMouse.y, dMouse.x, 0 )
 
     camera.rotation   = camera.rotation + vec3.scale( turnSpeed, dRotation )
-    camera.rotation.x = math.max( -maxAngle, math.min( maxAngle, camera.rotation.x ) );
+    camera.rotation.x = math.max( -maxAngle, math.min( maxAngle, camera.rotation.x ) )
     
     camera:UpdateOrientationVectors()
     

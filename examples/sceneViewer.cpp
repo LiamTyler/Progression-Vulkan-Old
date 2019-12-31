@@ -72,6 +72,11 @@ int main( int argc, char* argv[] )
             {
                 g_debugLayer = 5;
             }
+
+            if ( Input::GetKeyUp( Key::F1 ) )
+            {
+                Gfx::UIOverlay::SetVisible( !Gfx::UIOverlay::Visible() );
+            }
             
             
             if ( PG::Input::GetKeyUp( PG::Key::P ) )

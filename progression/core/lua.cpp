@@ -1,13 +1,14 @@
 #include "core/lua.hpp"
+#include "core/camera.hpp"
+#include "core/ecs.hpp"
 #include "core/input.hpp"
 #include "core/math.hpp"
-#include "core/ecs.hpp"
-
-#include "core/camera.hpp"
 #include "core/scene.hpp"
+#include "core/window.hpp"
 #include "components/entity_metadata.hpp"
 #include "components/script_component.hpp"
 #include "components/transform.hpp"
+#include "graphics/graphics_api/ui.hpp"
 
 namespace Progression
 {
@@ -19,9 +20,15 @@ namespace Progression
         lua.open_libraries( sol::lib::base, sol::lib::math );
         RegisterLuaFunctions_Math( lua );
         RegisterLuaFunctions_Input( lua );
+        RegisterLuaFunctions_Window( lua );
         RegisterLuaFunctions_ECS( lua ); // This must come before registering any components with the ECS
         auto luaTimeNamespace = lua["Time"].get_or_create< sol::table >();
         luaTimeNamespace["dt"] = 0;
+
+        auto luaUINamespace = lua["UI"].get_or_create< sol::table >();
+        luaUINamespace["CapturingMouse"] = &Gfx::UIOverlay::CapturingMouse;
+        luaUINamespace["Visible"]        = &Gfx::UIOverlay::Visible;
+        luaUINamespace["SetVisible"]     = &Gfx::UIOverlay::SetVisible;
 
         sol::usertype< ScriptComponent > scriptComponent_type = lua.new_usertype< ScriptComponent >( "ScriptComponent" );
         scriptComponent_type["GetFunction"] = &ScriptComponent::GetFunction;

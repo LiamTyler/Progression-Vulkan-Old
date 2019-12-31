@@ -33,6 +33,7 @@ public:
     int Width() const { return m_width; }
     int Height() const { return m_height; }
     void SetRelativeMouse( bool b );
+    bool IsRelativeMouse() const { return m_relativeMouse; }
     void SetTitle( const std::string& title );
 
 protected:
@@ -41,6 +42,7 @@ protected:
     int m_width          = 0;
     int m_height         = 0;
     bool m_visible       = false;
+    bool m_relativeMouse = false;
 };
 
 void InitWindowSystem( const WindowCreateInfo& info );
@@ -48,3 +50,6 @@ void ShutdownWindowSystem();
 Window* GetMainWindow();
 
 } // namespace Progression
+
+struct lua_State;
+void RegisterLuaFunctions_Window( lua_State* L );

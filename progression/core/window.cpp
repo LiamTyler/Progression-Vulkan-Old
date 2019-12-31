@@ -1,4 +1,5 @@
 #include "core/window.hpp"
+#include "core/lua.hpp"
 #include "core/time.hpp"
 #include "utils/logger.hpp"
 #include <unordered_set>
@@ -103,14 +104,8 @@ void Window::EndFrame()
 
 void Window::SetRelativeMouse( bool b )
 {
-    if ( b )
-    {
-        glfwSetInputMode( m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED );
-    }
-    else
-    {
-        glfwSetInputMode( m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL );
-    }
+    glfwSetInputMode( m_window, GLFW_CURSOR, b ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL );
+    m_relativeMouse = b;
 }
 
 void Window::SetTitle( const std::string& title )
@@ -121,3 +116,16 @@ void Window::SetTitle( const std::string& title )
 
 
 } // namespace Progression
+
+void RegisterLuaFunctions_Window( lua_State* state )
+{
+    sol::state_view lua( state );
+
+    lua["GetMainWindow"] = &Progression::GetMainWindow;
+    sol::usertype< Progression::Window > window_type = lua.new_usertype< Progression::Window >( "Window" );
+    window_type.set_function( "Width",            &Progression::Window::Width );
+    window_type.set_function( "Height",           &Progression::Window::Height );
+    window_type.set_function( "SetRelativeMouse", &Progression::Window::SetRelativeMouse );
+    window_type.set_function( "IsRelativeMouse",  &Progression::Window::IsRelativeMouse );
+    window_type.set_function( "SetTitle",         &Progression::Window::SetTitle );
+}

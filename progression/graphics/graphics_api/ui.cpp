@@ -12,6 +12,14 @@
 #include "resource/shader.hpp"
 #include "utils/logger.hpp"
 
+/**
+    Note: Largely taken from Sasha Willem's vulkan imgui code:
+    https://github.com/SaschaWillems/Vulkan/blob/master/base/VulkanUIOverlay.cpp
+*/
+
+static bool s_visible;
+static bool s_updated;
+
 namespace Progression
 {
 namespace Gfx
@@ -25,11 +33,20 @@ static Pipeline s_pipeline;
 static Buffer s_VBO, s_IBO;
 static int s_vertexCount = 0, s_indexCount = 0;
 
-struct UISettings
+enum class RenderDebugLayer
 {
-    bool check1;
-    float slider1;
-} uiSettings;
+    REGULAR  = 0,
+    AMBIENT  = 1,
+    DIFFUSE  = 2,
+    SPECULAR = 3,
+    SSAO     = 4,
+    NORMALS  = 5,
+};
+
+struct RenderDebugSettings
+{
+    int layer = 0;
+} renderDebugSettings;
 
 struct PushConstBlock
 {
@@ -42,6 +59,8 @@ namespace UIOverlay
 
     bool Init()
     {
+        s_visible = false;
+        s_updated = false;
         ImGui::CreateContext();
         ImGuiIO& io                = ImGui::GetIO();
 		io.DisplaySize             = ImVec2( (float) GetMainWindow()->Width(), (float) GetMainWindow()->Height() );
@@ -128,8 +147,14 @@ namespace UIOverlay
     void Shutdown()
     {
         ImGui::DestroyContext();
-        s_VBO.Free();
-        s_IBO.Free();
+        if ( s_VBO )
+        {
+            s_VBO.Free();
+        }
+        if ( s_IBO )
+        {
+            s_IBO.Free();
+        }
         s_fontTexture.Free();
         s_pipeline.Free();
         FreeDescriptorSetLayouts( s_descriptorSetLayouts );
@@ -200,6 +225,11 @@ namespace UIOverlay
     
     void Draw( CommandBuffer& cmdBuf )
     {
+        if ( !s_visible )
+        {
+            return;
+        }
+
         // update imgui
         ImGuiIO& io     = ImGui::GetIO();
 		io.DeltaTime    = Time::DeltaTime();
@@ -211,14 +241,12 @@ namespace UIOverlay
         // draw
         ImGui::NewFrame();
 
-        ImGui::SetNextWindowSize(ImVec2(200, 200), ImGuiCond_FirstUseEver );
-		ImGui::Begin("Example settings");
-		ImGui::Checkbox("Render models", &uiSettings.check1 );
-		ImGui::SliderFloat("Light speed", &uiSettings.slider1, 0.1f, 1.0f);
+        //ImGui::SetNextWindowSize(ImVec2(200, 200), ImGuiCond_FirstUseEver );
+        ImGui::SetNextWindowPos( ImVec2( 5, 5 ), ImGuiCond_FirstUseEver );
+		ImGui::Begin( "Renderer Debug Settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize );
+        ComboBox( "View", &renderDebugSettings.layer, { "Regular", "Ambient", "Diffuse", "Specular", "SSAO", "Normals" } );
 		ImGui::End();
         
-		ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver );
-		ImGui::ShowDemoWindow();
         // ImGui::ShowDemoWindow();
 
         // Render to generate draw buffers
@@ -264,6 +292,101 @@ namespace UIOverlay
 			}
 			vertexOffset += cmd_list->VtxBuffer.Size;
 		}
+    }
+
+    bool CapturingMouse()
+    {
+        return s_visible && ImGui::GetIO().WantCaptureMouse;	
+    }
+
+    bool Header( const char* caption )
+    {
+        return ImGui::CollapsingHeader( caption, ImGuiTreeNodeFlags_DefaultOpen );
+    }
+
+	bool CheckBox( const char *caption, bool *value )
+	{
+		bool res = ImGui::Checkbox( caption, value );
+		if ( res ) { s_updated = true; };
+		return res;
+	}
+
+	bool CheckBox( const char *caption, int *value )
+	{
+		bool val = ( *value == 1 );
+		bool res = ImGui::Checkbox( caption, &val );
+		*value = val;
+		if ( res ) { s_updated = true; };
+		return res;
+	}
+
+	bool InputFloat( const char *caption, float *value, float step, uint32_t precision )
+	{
+		bool res = ImGui::InputFloat( caption, value, step, step * 10.0f, precision );
+		if ( res ) { s_updated = true; };
+		return res;
+	}
+
+	bool SliderFloat( const char* caption, float* value, float min, float max )
+	{
+		bool res = ImGui::SliderFloat( caption, value, min, max );
+		if ( res ) { s_updated = true; };
+		return res;
+	}
+
+	bool SliderInt(const char* caption, int* value, int min, int max )
+	{
+		bool res = ImGui::SliderInt( caption, value, min, max );
+		if ( res ) { s_updated = true; };
+		return res;
+	}
+
+	bool ComboBox( const char *caption, int *itemindex, const std::vector< std::string >& items )
+	{
+		if ( items.empty() )
+        {
+			return false;
+		}
+		std::vector< const char* > charitems;
+		charitems.reserve( items.size() );
+		for ( size_t i = 0; i < items.size(); i++)
+        {
+			charitems.push_back( items[i].c_str() );
+		}
+		uint32_t itemCount = static_cast< uint32_t >( charitems.size() );
+		bool res = ImGui::Combo( caption, itemindex, &charitems[0], itemCount, itemCount );
+		if ( res ) { s_updated = true; };
+		return res;
+	}
+
+	bool Button( const char *caption )
+	{
+		bool res = ImGui::Button( caption );
+		if ( res ) { s_updated = true; };
+		return res;
+	}
+
+	void Text( const char *formatstr, ... )
+	{
+		va_list args;
+		va_start( args, formatstr );
+		ImGui::TextV( formatstr, args );
+		va_end( args );
+	}
+
+    bool Visible()
+    {
+        return s_visible;
+    }
+
+    void SetVisible( bool b )
+    {
+        s_visible = b;
+    }
+
+    bool Updated()
+    {
+        return s_updated;
     }
 
 } // namespace UIOverlay
