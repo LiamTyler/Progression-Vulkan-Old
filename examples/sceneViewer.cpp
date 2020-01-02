@@ -72,6 +72,18 @@ int main( int argc, char* argv[] )
             {
                 g_debugLayer = 5;
             }
+            if ( PG::Input::GetKeyUp( PG::Key::K_6 ) )
+            {
+                g_debugLayer = 6;
+            }
+            if ( PG::Input::GetKeyUp( PG::Key::K_7 ) )
+            {
+                g_debugLayer = 7;
+            }
+            if ( PG::Input::GetKeyUp( PG::Key::K_8 ) )
+            {
+                g_debugLayer = 8;
+            }
 
             if ( Input::GetKeyUp( Key::F1 ) )
             {

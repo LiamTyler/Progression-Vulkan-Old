@@ -113,7 +113,7 @@ AssetStatus ImageConverter::CheckDependencies()
     {
         if ( force )
         {
-            LOG( "UP TO DATE: Image with name '", createInfo.name, "', but --force used, so converting anyways\n" );
+            LOG( "UP TO DATE: Image with name '", createInfo.name, "', but --force used, so converting anyways" );
             status = ASSET_OUT_OF_DATE;
         }
         else

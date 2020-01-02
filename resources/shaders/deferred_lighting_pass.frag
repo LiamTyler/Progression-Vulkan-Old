@@ -42,26 +42,19 @@ void main()
 {
     vec3 posInWorldSpace = texture( positionTex, UV ).xyz;
     vec3 n               = DecodeOctVec( texture( normalTex, UV ).xyz );
-    uvec4 packed = texture( diffuseAndSpecularTex,  UV );
+    uvec4 packed         = texture( diffuseAndSpecularTex,  UV );
     vec3 Kd;
     vec4 Ks;
     UnpackDiffuseAndSpecular( packed, Kd, Ks );
 
     vec3 e     = normalize( sceneConstantBuffer.cameraPos.xyz - posInWorldSpace );
-    vec3 color = vec3( 0, 0, 0 );
     
-    // ambient
-    if ( debugLayer == 5 )
-    {
-        outColor = vec4( vec3( texture( ssaoTex, UV ).r ), 1 );
-        return;
-    }
-    float ambientOcclusion = 1;
-    if ( debugLayer == 1 )
-    {
-        ambientOcclusion = texture( ssaoTex, UV ).r;
-    }
-    color += ambientOcclusion * Kd * sceneConstantBuffer.ambientColor.xyz;
+    vec3 ambientColor  = vec3( 0, 0, 0 );
+    vec3 diffuseColor  = vec3( 0, 0, 0 );
+    vec3 specularColor = vec3( 0, 0, 0 );
+
+    float ambientOcclusion = texture( ssaoTex, UV ).r;
+    ambientColor = ambientOcclusion * Kd * sceneConstantBuffer.ambientColor.xyz;
 
     // directional light
     vec3 lightColor = sceneConstantBuffer.dirLight.colorAndIntensity.w * sceneConstantBuffer.dirLight.colorAndIntensity.xyz;
@@ -69,10 +62,10 @@ void main()
     vec3 h = normalize( l + e );
     
     float S = 1 - ShadowAmount( sceneConstantBuffer.DLSM * vec4( posInWorldSpace, 1 ), textures[sceneConstantBuffer.shadowTextureIndex] );
-    color += S * lightColor * Kd * max( 0.0, dot( l, n ) );
+    diffuseColor += S * lightColor * Kd * max( 0.0, dot( l, n ) );
     if ( dot( l, n ) > PG_SHADER_EPSILON )
     {
-        color += S * lightColor * Ks.xyz * pow( max( dot( h, n ), 0.0 ), 4 * Ks.w );
+        specularColor += S * lightColor * Ks.xyz * pow( max( dot( h, n ), 0.0 ), 4 * Ks.w );
     }
 
     // pointlights
@@ -84,10 +77,10 @@ void main()
         vec3 h = normalize( l + e );
         float attenuation = Attenuate( dot( d, d ), pointLights[i].positionAndRadius.w * pointLights[i].positionAndRadius.w );
 
-        color += attenuation * lightColor * Kd * max( 0.0, dot( l, n ) );
+        diffuseColor += attenuation * lightColor * Kd * max( 0.0, dot( l, n ) );
         if ( dot( l, n ) > PG_SHADER_EPSILON )
         {
-            color += attenuation * lightColor * Ks.xyz * pow( max( dot( h, n ), 0.0 ), 4 * Ks.w );
+            specularColor += attenuation * lightColor * Ks.xyz * pow( max( dot( h, n ), 0.0 ), 4 * Ks.w );
         }
     }
     
@@ -104,12 +97,51 @@ void main()
             vec3 h = normalize( l + e );
             float attenuation = Attenuate( dot( d, d ), spotLights[i].positionAndRadius.w * spotLights[i].positionAndRadius.w );
 
-            color += attenuation * lightColor * Kd * max( 0.0, dot( l, n ) );
+            diffuseColor += attenuation * lightColor * Kd * max( 0.0, dot( l, n ) );
             if ( dot( l, n ) > PG_SHADER_EPSILON )
             {
-                color += attenuation * lightColor * Ks.xyz * pow( max( dot( h, n ), 0.0 ), 4 * Ks.w );
+                specularColor += attenuation * lightColor * Ks.xyz * pow( max( dot( h, n ), 0.0 ), 4 * Ks.w );
             }
         }
+    }
+    
+    vec3 color;
+    if ( debugLayer == PG_SHADER_DEBUG_LAYER_REGULAR )
+    {
+        color = ambientColor + diffuseColor + specularColor;
+    }
+    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_AMBIENT )
+    {
+        color = ambientColor;
+    }
+    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_DIFFUSE )
+    {
+        color = diffuseColor;
+    }
+    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_SPECULAR )
+    {
+        color = specularColor;
+    }
+    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_NO_SSAO )
+    {
+        ambientColor = Kd * sceneConstantBuffer.ambientColor.xyz;
+        color = ambientColor + diffuseColor + specularColor;
+    }
+    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_SSAO_ONLY )
+    {
+        color = vec3( texture( ssaoTex, UV ).r );    
+    }
+    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_POSITIONS )
+    {
+        color = posInWorldSpace;
+    }
+    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_NORMALS )
+    {
+        color = n;
+    }
+    else
+    {
+        color = vec3( UV, 1 );
     }
     
     outColor = vec4( color, 1.0 );

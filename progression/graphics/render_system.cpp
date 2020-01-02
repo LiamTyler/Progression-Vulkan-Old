@@ -28,7 +28,7 @@ using namespace Gfx;
 
 static std::unordered_map< std::string, Gfx::Sampler > s_samplers;
 
-int g_debugLayer = 1;
+int g_debugLayer = 0;
 
 namespace Progression
 {

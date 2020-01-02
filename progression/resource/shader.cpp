@@ -262,17 +262,17 @@ namespace Progression
         result = spvReflectEnumerateOutputVariables( &module, &count, outputVars.data() );
         PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
 
-        LOG( "inputs = ", inputVars.size() );
+        // LOG( "inputs = ", inputVars.size() );
         for ( size_t i = 0; i < inputVars.size(); ++i )
         {
-            LOG( "inputVars[", i, "] = ", inputVars[i]->name, ", loc = ", inputVars[i]->location );
+            // LOG( "inputVars[", i, "] = ", inputVars[i]->name, ", loc = ", inputVars[i]->location );
             info.inputLocations[inputVars[i]->name] = inputVars[i]->location;
         }
 
-        LOG( "outputs = ", outputVars.size() );
+        //LOG( "outputs = ", outputVars.size() );
         for ( size_t i = 0; i < outputVars.size(); ++i )
         {
-            LOG( "outputVars[", i, "] = ", outputVars[i]->name, ", loc = ", outputVars[i]->location );
+            //LOG( "outputVars[", i, "] = ", outputVars[i]->name, ", loc = ", outputVars[i]->location );
             info.outputLocations[outputVars[i]->name] = outputVars[i]->location;
         }
 
@@ -288,11 +288,11 @@ namespace Progression
             { Gfx::ShaderStage::COMPUTE, "COMPUTE" },
         };
 
-        LOG( "Entry point       = ", module.entry_point_name );
-        LOG( "Stage             = ", shaderStageNames[info.stage] );
-        LOG( "Source lang       = ", spvReflectSourceLanguage( module.source_language ) );
-        LOG( "Source lang ver   = ", module.source_language_version );
-        LOG( "Spirv size        = ", spirvSizeInBytes );
+        // LOG( "Entry point       = ", module.entry_point_name );
+        // LOG( "Stage             = ", shaderStageNames[info.stage] );
+        // LOG( "Source lang       = ", spvReflectSourceLanguage( module.source_language ) );
+        // LOG( "Source lang ver   = ", module.source_language_version );
+        // LOG( "Spirv size        = ", spirvSizeInBytes );
 
         result = spvReflectEnumeratePushConstantBlocks( &module, &count, NULL );
         PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
@@ -300,11 +300,11 @@ namespace Progression
         std::vector< SpvReflectBlockVariable* > pushConstants( count );
         result = spvReflectEnumeratePushConstantBlocks( &module, &count, pushConstants.data() );
         PG_ASSERT( result == SPV_REFLECT_RESULT_SUCCESS );
-        for ( size_t i = 0; i < pushConstants.size(); ++i )
-        {
-            LOG( "Push constant[", i, "]: " );
-            PrintSpvBlockVariable( pushConstants[i], "\t" );
-        }
+        // for ( size_t i = 0; i < pushConstants.size(); ++i )
+        // {
+        //     LOG( "Push constant[", i, "]: " );
+        //     PrintSpvBlockVariable( pushConstants[i], "\t" );
+        // }
 
         for ( size_t i = 0; i < pushConstants.size(); ++i )
         {
@@ -333,7 +333,7 @@ namespace Progression
         uint32_t maxPushConstantSize = Gfx::g_renderState.physicalDeviceInfo.deviceProperties.limits.maxPushConstantsSize;
         for ( size_t i = 0; i < info.pushConstants.size(); ++i )
         {
-            LOG( "Range[", i, "] offset = ", info.pushConstants[i].offset, ", size = ", info.pushConstants[i].size );
+            //LOG( "Range[", i, "] offset = ", info.pushConstants[i].offset, ", size = ", info.pushConstants[i].size );
             PG_ASSERT( info.pushConstants[i].offset + info.pushConstants[i].size <= maxPushConstantSize,
                 "The push constants specified in this shader exceed the size limit for this gpu: " + std::to_string( maxPushConstantSize ) );
         }
@@ -379,7 +379,8 @@ namespace Progression
             info.descriptorSetLayouts[i_set].createInfo.pBindings = info.descriptorSetLayouts[i_set].bindings.data();
         }
 
-#if USING( DEBUG_BUILD )
+// #if USING( DEBUG_BUILD )
+#if USING( NOT_IN_USE )
         const char* t  = "  ";
         const char* tt = "    ";
         LOG( "Descriptor sets:" );

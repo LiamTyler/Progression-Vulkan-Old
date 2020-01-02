@@ -19,6 +19,7 @@
 
 static bool s_visible;
 static bool s_updated;
+extern int g_debugLayer;
 
 namespace Progression
 {
@@ -35,12 +36,14 @@ static int s_vertexCount = 0, s_indexCount = 0;
 
 enum class RenderDebugLayer
 {
-    REGULAR  = 0,
-    AMBIENT  = 1,
-    DIFFUSE  = 2,
-    SPECULAR = 3,
-    SSAO     = 4,
-    NORMALS  = 5,
+    REGULAR   = 0,
+    AMBIENT   = 1,
+    DIFFUSE   = 2,
+    SPECULAR  = 3,
+    NO_SSAO   = 4,
+    SSAO_ONLY = 5,
+    POSITIONS = 6,
+    NORMALS   = 7,
 };
 
 struct RenderDebugSettings
@@ -63,6 +66,7 @@ namespace UIOverlay
         s_updated = false;
         ImGui::CreateContext();
         ImGuiIO& io                = ImGui::GetIO();
+        io.IniFilename             = NULL;
 		io.DisplaySize             = ImVec2( (float) GetMainWindow()->Width(), (float) GetMainWindow()->Height() );
 		io.DisplayFramebufferScale = ImVec2( 1.0f, 1.0f );
 
@@ -244,11 +248,9 @@ namespace UIOverlay
         //ImGui::SetNextWindowSize(ImVec2(200, 200), ImGuiCond_FirstUseEver );
         ImGui::SetNextWindowPos( ImVec2( 5, 5 ), ImGuiCond_FirstUseEver );
 		ImGui::Begin( "Renderer Debug Settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize );
-        ComboBox( "View", &renderDebugSettings.layer, { "Regular", "Ambient", "Diffuse", "Specular", "SSAO", "Normals" } );
+        ComboBox( "View", &g_debugLayer, { "Regular", "Ambient", "Diffuse", "Specular", "No SSAO", "SSAO Only", "Positions", "Normals" } );
 		ImGui::End();
         
-        // ImGui::ShowDemoWindow();
-
         // Render to generate draw buffers
 		ImGui::Render();
 
