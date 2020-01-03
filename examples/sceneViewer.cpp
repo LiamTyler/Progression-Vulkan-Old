@@ -3,7 +3,6 @@
 
 using namespace Progression;
 
-extern int g_debugLayer;
 bool g_paused = false;
 
 int main( int argc, char* argv[] )
@@ -22,7 +21,7 @@ int main( int argc, char* argv[] )
 
     {
         Window* window = GetMainWindow();
-        // window->SetRelativeMouse( true );
+        window->SetRelativeMouse( true );
     
         Scene* scene = Scene::Load( argv[1] );
         if ( !scene )
@@ -47,54 +46,15 @@ int main( int argc, char* argv[] )
             {
                 PG::g_engineShutdown = true;
             }
-
-            if ( PG::Input::GetKeyUp( PG::Key::K_0 ) )
-            {
-                g_debugLayer = 0;
-            }
-            if ( PG::Input::GetKeyUp( PG::Key::K_1 ) )
-            {
-                g_debugLayer = 1;
-            }
-            if ( PG::Input::GetKeyUp( PG::Key::K_2 ) )
-            {
-                g_debugLayer = 2;
-            }
-            if ( PG::Input::GetKeyUp( PG::Key::K_3 ) )
-            {
-                g_debugLayer = 3;
-            }
-            if ( PG::Input::GetKeyUp( PG::Key::K_4 ) )
-            {
-                g_debugLayer = 4;
-            }
-            if ( PG::Input::GetKeyUp( PG::Key::K_5 ) )
-            {
-                g_debugLayer = 5;
-            }
-            if ( PG::Input::GetKeyUp( PG::Key::K_6 ) )
-            {
-                g_debugLayer = 6;
-            }
-            if ( PG::Input::GetKeyUp( PG::Key::K_7 ) )
-            {
-                g_debugLayer = 7;
-            }
-            if ( PG::Input::GetKeyUp( PG::Key::K_8 ) )
-            {
-                g_debugLayer = 8;
-            }
-
             if ( Input::GetKeyUp( Key::F1 ) )
             {
                 Gfx::UIOverlay::SetVisible( !Gfx::UIOverlay::Visible() );
             }
-            
-            
             if ( PG::Input::GetKeyUp( PG::Key::P ) )
             {
                 g_paused = !g_paused;
             }
+
 
             if ( !g_paused )
             {

@@ -17,15 +17,13 @@
     https://github.com/SaschaWillems/Vulkan/blob/master/base/VulkanUIOverlay.cpp
 */
 
-static bool s_visible;
-static bool s_updated;
-extern int g_debugLayer;
-
 namespace Progression
 {
 namespace Gfx
 {
 
+static bool s_visible;
+static bool s_updated;
 static Texture s_fontTexture;
 static DescriptorPool s_descriptorPool;
 static std::vector< DescriptorSetLayout > s_descriptorSetLayouts;
@@ -33,23 +31,7 @@ static DescriptorSet s_descriptorSet;
 static Pipeline s_pipeline;
 static Buffer s_VBO, s_IBO;
 static int s_vertexCount = 0, s_indexCount = 0;
-
-enum class RenderDebugLayer
-{
-    REGULAR   = 0,
-    AMBIENT   = 1,
-    DIFFUSE   = 2,
-    SPECULAR  = 3,
-    NO_SSAO   = 4,
-    SSAO_ONLY = 5,
-    POSITIONS = 6,
-    NORMALS   = 7,
-};
-
-struct RenderDebugSettings
-{
-    int layer = 0;
-} renderDebugSettings;
+static std::unordered_map< std::string, std::function< void() > > s_drawFunctions;
 
 struct PushConstBlock
 {
@@ -165,7 +147,7 @@ namespace UIOverlay
         s_descriptorPool.Free();
     }
 
-    void UpdateBuffers()
+    static void UpdateBuffers()
     {
         ImDrawData* imDrawData = ImGui::GetDrawData();
 
@@ -226,6 +208,16 @@ namespace UIOverlay
         s_VBO.Flush();
         s_IBO.Flush();
     }
+
+    void AddDrawFunction( const std::string& name, const std::function< void() >& func )
+    {
+        s_drawFunctions[name] = func;
+    }
+
+    void RemoveDrawFunction( const std::string& name )
+    {
+        s_drawFunctions.erase( name );
+    }
     
     void Draw( CommandBuffer& cmdBuf )
     {
@@ -245,11 +237,10 @@ namespace UIOverlay
         // draw
         ImGui::NewFrame();
 
-        //ImGui::SetNextWindowSize(ImVec2(200, 200), ImGuiCond_FirstUseEver );
-        ImGui::SetNextWindowPos( ImVec2( 5, 5 ), ImGuiCond_FirstUseEver );
-		ImGui::Begin( "Renderer Debug Settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize );
-        ComboBox( "View", &g_debugLayer, { "Regular", "Ambient", "Diffuse", "Specular", "No SSAO", "SSAO Only", "Positions", "Normals" } );
-		ImGui::End();
+        for ( const auto& [ name, func ] : s_drawFunctions )
+        {
+            func();
+        }
         
         // Render to generate draw buffers
 		ImGui::Render();

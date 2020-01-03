@@ -954,6 +954,14 @@ namespace RenderSystem
         s_gpuPointLightBuffers.Map();
         s_gpuSpotLightBuffers.Map();
 
+        UIOverlay::AddDrawFunction( "Render Debugger", [&]()
+        {
+            ImGui::SetNextWindowPos( ImVec2( 5, 5 ), ImGuiCond_FirstUseEver );
+		    ImGui::Begin( "Renderer Debug Settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize );
+            UIOverlay::ComboBox( "View", &g_debugLayer, { "Regular", "Ambient", "Diffuse", "Specular", "No SSAO", "SSAO Only", "Positions", "Normals" } );
+		    ImGui::End();
+        });
+
         return true;
     }
 
