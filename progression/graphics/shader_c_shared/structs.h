@@ -4,19 +4,19 @@
 #include "graphics/shader_c_shared/lights.h"
 
 PG_NAMESPACE_BEGIN
+PG_GPU_NAMESPACE_BEGIN
 
 struct SceneConstantBufferData
 {
     MAT4 V;
     MAT4 P;
     MAT4 VP;
-    MAT4 DLSM;
+    MAT4 LSM;
     VEC4 cameraPos;
     VEC4 ambientColor;
     DirectionalLight dirLight;
     UINT numPointLights;
     UINT numSpotLights;
-    UINT shadowTextureIndex;
 };
 
 struct ObjectConstantBufferData
@@ -52,4 +52,5 @@ struct SSAOShaderData
     MAT4 P;
 };
 
+PG_GPU_NAMESPACE_END
 PG_NAMESPACE_END

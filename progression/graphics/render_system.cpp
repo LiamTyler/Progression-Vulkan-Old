@@ -82,18 +82,9 @@ struct
     DescriptorSet postProcessInputColorTex;
 } descriptorSets;
 
-struct
-{
-    RenderPass renderPass;
-    Texture depthAttachment;
-    Framebuffer frameBuffer;
-    Pipeline rigidPipeline;
-    Pipeline animatedPipeline;
-    glm::mat4 LSM;
-    std::vector< DescriptorSetLayout > animatedDescriptorSetLayouts;
-} shadowPassData;
+RenderSystem::ShadowPassData shadowPassData;
 
-struct RenderSystem::GBufferPassData gBufferPassData;
+RenderSystem::GBufferPassData gBufferPassData;
 
 struct
 {
@@ -149,7 +140,6 @@ struct
 
 #define MAX_NUM_POINT_LIGHTS 1024
 #define MAX_NUM_SPOT_LIGHTS 256
-#define DIRECTIONAL_SHADOW_MAP_RESOLUTION 4096
 
 static bool InitShadowPassData()
 {
@@ -186,11 +176,11 @@ static bool InitShadowPassData()
     shadowPassDataPipelineDesc.renderPass             = &shadowPassData.renderPass;
     shadowPassDataPipelineDesc.vertexDescriptor       = VertexInputDescriptor::Create( 1, bindingDescs, 1, attribDescs );
     shadowPassDataPipelineDesc.rasterizerInfo.winding = WindingOrder::COUNTER_CLOCKWISE;
-    shadowPassDataPipelineDesc.rasterizerInfo.cullFace = CullFace::NONE;
-    shadowPassDataPipelineDesc.viewport               = Viewport( DIRECTIONAL_SHADOW_MAP_RESOLUTION, -DIRECTIONAL_SHADOW_MAP_RESOLUTION );
-    shadowPassDataPipelineDesc.viewport.y             = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
-    shadowPassDataPipelineDesc.scissor                = Scissor( DIRECTIONAL_SHADOW_MAP_RESOLUTION, DIRECTIONAL_SHADOW_MAP_RESOLUTION );
+    // shadowPassDataPipelineDesc.viewport               = Viewport( DIRECTIONAL_SHADOW_MAP_RESOLUTION, -DIRECTIONAL_SHADOW_MAP_RESOLUTION );
+    // shadowPassDataPipelineDesc.viewport.y             = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
+    // shadowPassDataPipelineDesc.scissor                = Scissor( DIRECTIONAL_SHADOW_MAP_RESOLUTION, DIRECTIONAL_SHADOW_MAP_RESOLUTION );
     shadowPassDataPipelineDesc.shaders[0]             = vertShader.get();
+    shadowPassDataPipelineDesc.dynamicStates          = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 
     shadowPassData.rigidPipeline = g_renderState.device.NewPipeline( shadowPassDataPipelineDesc, "directional shadow pass rigid" );
     if ( !shadowPassData.rigidPipeline )
@@ -212,21 +202,6 @@ static bool InitShadowPassData()
     if ( !shadowPassData.animatedPipeline )
     {
         LOG_ERR( "Could not create directional shadow animated pipeline" );
-        return false;
-    }
- 
-    ImageDescriptor info;
-    info.type    = ImageType::TYPE_2D;
-    info.format  = PixelFormat::DEPTH_32_FLOAT;
-    info.width   = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
-    info.height  = DIRECTIONAL_SHADOW_MAP_RESOLUTION;
-    info.sampler = "shadow_map";
-    info.usage   = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    shadowPassData.depthAttachment = g_renderState.device.NewTexture( info, true, "directional shadowmap" );
-
-    shadowPassData.frameBuffer = g_renderState.device.NewFramebuffer( { &shadowPassData.depthAttachment }, shadowPassData.renderPass, "directional shadow pass" );
-    if ( !shadowPassData.frameBuffer )
-    {
         return false;
     }
 
@@ -883,7 +858,7 @@ namespace RenderSystem
         s_window = GetMainWindow();
 
         uint32_t numImages = static_cast< uint32_t >( g_renderState.swapChain.images.size() );
-        s_gpuSceneConstantBuffers = g_renderState.device.NewBuffer( sizeof( SceneConstantBufferData ),
+        s_gpuSceneConstantBuffers = g_renderState.device.NewBuffer( sizeof( Gpu::SceneConstantBufferData ),
                 BUFFER_TYPE_UNIFORM, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT, "Scene Constants" );
         s_gpuPointLightBuffers = g_renderState.device.NewBuffer( sizeof( PointLight ) * MAX_NUM_POINT_LIGHTS,
                 BUFFER_TYPE_STORAGE, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT, "Point Lights " );
@@ -976,11 +951,9 @@ namespace RenderSystem
         s_gpuPointLightBuffers.UnMap();
         s_gpuSpotLightBuffers.UnMap();
 
-        shadowPassData.depthAttachment.Free();
         shadowPassData.renderPass.Free();
         shadowPassData.rigidPipeline.Free();
         shadowPassData.animatedPipeline.Free();
-        shadowPassData.frameBuffer.Free();
         FreeDescriptorSetLayouts( shadowPassData.animatedDescriptorSetLayouts );
 
         s_descriptorPool.Free();
@@ -1042,47 +1015,62 @@ namespace RenderSystem
             VkWriteDescriptorSet writeSet = WriteDescriptorSet( descriptorSets.background, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageDesc );
             g_renderState.device.UpdateDescriptorSets( 1, &writeSet );
         }
+        
+        Gpu::SceneConstantBufferData scbuf;
 
-        // TODO: Remove hardcoded directional shadow map
         glm::vec3 pos( 0, 20, 10 );
         //auto entity = GetEntityByName( scene->registry, "camera" );
         //auto scriptData = scene->registry.get< ScriptComponent >( entity ).GetScriptData( "lightController" );
         //const glm::vec3& pos = scriptData->env["position"];
         auto V = glm::lookAt( pos, pos + glm::vec3( scene->directionalLight.direction ), glm::vec3( 0, 1, 0 ) );
         auto P = glm::ortho< float >( -30, 30, -30, 30, 0.0f, 100.0f );
-        shadowPassData.LSM = P * V;
+        if ( scene->directionalLight.shadowMap )
+        {
+            scene->directionalLight.shadowMap->LSM = P * V;
+            scbuf.LSM = scene->directionalLight.shadowMap->LSM;
+        }
 
-        SceneConstantBufferData scbuf;
         scbuf.V              = scene->camera.GetV();
         scbuf.P              = scene->camera.GetP();
         scbuf.VP             = scene->camera.GetVP();
-        scbuf.DLSM           = shadowPassData.LSM;
         scbuf.cameraPos      = glm::vec4( scene->camera.position, 0 );        
         scbuf.ambientColor   = glm::vec4( scene->ambientColor, 0 );
-        scbuf.dirLight       = scene->directionalLight;
+        scbuf.dirLight.colorAndIntensity = scene->directionalLight.colorAndIntensity;
+        scbuf.dirLight.direction         = scene->directionalLight.direction;
+        uint32_t shadowMapIndex          = PG_INVALID_TEXTURE_INDEX;
+        if ( scene->directionalLight.shadowMap )
+        {
+            shadowMapIndex = scene->directionalLight.shadowMap->texture.GetShaderSlot();
+        }
+        scbuf.dirLight.shadowMapIndex.x = shadowMapIndex;
         scbuf.numPointLights = static_cast< uint32_t >( scene->pointLights.size() );
         scbuf.numSpotLights  = static_cast< uint32_t >( scene->spotLights.size() );
-        scbuf.shadowTextureIndex = shadowPassData.depthAttachment.GetShaderSlot();
-        memcpy( s_gpuSceneConstantBuffers.MappedPtr(), &scbuf, sizeof( SceneConstantBufferData ) );
-        memcpy( s_gpuPointLightBuffers.MappedPtr(), scene->pointLights.data(), scene->pointLights.size() * sizeof( PointLight ) );
-        memcpy( s_gpuSpotLightBuffers.MappedPtr(), scene->spotLights.data(), scene->spotLights.size() * sizeof( SpotLight ) );
+        memcpy( s_gpuSceneConstantBuffers.MappedPtr(), &scbuf, sizeof( Gpu::SceneConstantBufferData ) );
+        //memcpy( s_gpuPointLightBuffers.MappedPtr(), scene->pointLights.data(), scene->pointLights.size() * sizeof( PointLight ) );
+        //memcpy( s_gpuSpotLightBuffers.MappedPtr(), scene->spotLights.data(), scene->spotLights.size() * sizeof( SpotLight ) );
 
         AnimationSystem::UploadToGpu( scene );
     }
 
-    void ShadowPass( Scene* scene, CommandBuffer& cmdBuf )
+    static void RenderSingleShadow( Scene* scene, CommandBuffer& cmdBuf, const ShadowMap& shadowMap )
     {
-        PG_PROFILE_TIMESTAMP( cmdBuf, "Shadow_Start" );
-        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Shadow Pass", glm::vec4( .2, .2, .4, 1 ) );
-        cmdBuf.BeginRenderPass( shadowPassData.renderPass, shadowPassData.frameBuffer, { DIRECTIONAL_SHADOW_MAP_RESOLUTION, DIRECTIONAL_SHADOW_MAP_RESOLUTION } );
+        float width  = static_cast< float >( shadowMap.texture.GetWidth() );
+        float height = static_cast< float >( shadowMap.texture.GetHeight() );
+        Viewport viewport( width, -height );
+        viewport.y = height;
+        Scissor scissor( (int) width, (int) height );
+
+        cmdBuf.BeginRenderPass( shadowPassData.renderPass, shadowMap.framebuffer, { shadowMap.texture.GetWidth(), shadowMap.texture.GetHeight() } );
 
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Shadow rigid models", glm::vec4( .2, .6, .4, 1 ) );
         cmdBuf.BindRenderPipeline( shadowPassData.rigidPipeline );
-        cmdBuf.SetDepthBias( 2, 0, 9 ); // Values that 'worked' (removed many artifacts) epirically for sponza.json
+        cmdBuf.SetViewport( viewport );
+        cmdBuf.SetScissor( scissor );
+        cmdBuf.SetDepthBias( shadowMap.constantBias, 0, shadowMap.slopeBias );
         scene->registry.view< ModelRenderer, Transform >().each( [&]( ModelRenderer& renderer, Transform& transform )
         {
             const auto& model = renderer.model;
-            auto MVP = shadowPassData.LSM * transform.GetModelMatrix();
+            auto MVP = shadowMap.LSM * transform.GetModelMatrix();
             cmdBuf.PushConstants( shadowPassData.rigidPipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( glm::mat4 ), &MVP[0][0] );
         
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetVertexOffset(), 0 );
@@ -1099,13 +1087,15 @@ namespace RenderSystem
 
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Shadow animated models", glm::vec4( .6, .2, .4, 1 ) );
         cmdBuf.BindRenderPipeline( shadowPassData.animatedPipeline );
-        cmdBuf.SetDepthBias( 2, 0, 9 ); // Values that 'worked' (removed many artifacts) epirically for sponza.json
+        cmdBuf.SetViewport( viewport );
+        cmdBuf.SetScissor( scissor );
+        cmdBuf.SetDepthBias( shadowMap.constantBias, 0, shadowMap.slopeBias );
         cmdBuf.BindDescriptorSets( 1, &AnimationSystem::renderData.animationBonesDescriptorSet, shadowPassData.animatedPipeline, PG_BONE_TRANSFORMS_SET );
         scene->registry.view< Animator, SkinnedRenderer, Transform >().each( [&]( Animator& animator, SkinnedRenderer& renderer, Transform& transform )
         {
             const auto& model = renderer.model;
-            AnimatedShadowPerObjectData pushData{ shadowPassData.LSM * transform.GetModelMatrix(), animator.GetTransformSlot() };
-            cmdBuf.PushConstants( shadowPassData.animatedPipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( AnimatedShadowPerObjectData ), &pushData );
+            Gpu::AnimatedShadowPerObjectData pushData{ shadowMap.LSM * transform.GetModelMatrix(), animator.GetTransformSlot() };
+            cmdBuf.PushConstants( shadowPassData.animatedPipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( Gpu::AnimatedShadowPerObjectData ), &pushData );
         
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetVertexOffset(), 0 );
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetBlendWeightOffset(), 1 );
@@ -1121,6 +1111,18 @@ namespace RenderSystem
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
 
         cmdBuf.EndRenderPass();
+    }
+
+    void ShadowPass( Scene* scene, CommandBuffer& cmdBuf )
+    {
+        PG_PROFILE_TIMESTAMP( cmdBuf, "Shadow_Start" );
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "Shadow Pass", glm::vec4( .2, .2, .4, 1 ) );
+        
+        if ( scene->directionalLight.shadowMap )
+        {
+            RenderSingleShadow( scene, cmdBuf, *scene->directionalLight.shadowMap );
+        }
+
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
         PG_PROFILE_TIMESTAMP( cmdBuf, "Shadow_End" );
     }
@@ -1146,8 +1148,8 @@ namespace RenderSystem
             
             auto M = transform.GetModelMatrix();
             auto N = glm::transpose( glm::inverse( M ) );
-            ObjectConstantBufferData b{ M, N };
-            cmdBuf.PushConstants( gBufferPassData.pipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( ObjectConstantBufferData ), &b );
+            Gpu::ObjectConstantBufferData b{ M, N };
+            cmdBuf.PushConstants( gBufferPassData.pipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( Gpu::ObjectConstantBufferData ), &b );
 
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetVertexOffset(), 0 );
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
@@ -1164,12 +1166,12 @@ namespace RenderSystem
                 //     continue;
                 // }
 
-                MaterialConstantBufferData mcbuf{};
+                Gpu::MaterialConstantBufferData mcbuf{};
                 mcbuf.Kd = glm::vec4( mat->Kd, 0 );
                 mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
                 mcbuf.diffuseTexIndex = mat->map_Kd   ? mat->map_Kd->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
                 mcbuf.normalMapIndex  = mat->map_Norm ? mat->map_Norm->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
-                cmdBuf.PushConstants( gBufferPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
+                cmdBuf.PushConstants( gBufferPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( Gpu::MaterialConstantBufferData ), &mcbuf );
 
                 PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
                 cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
@@ -1194,8 +1196,8 @@ namespace RenderSystem
             
             auto M = transform.GetModelMatrix();
             auto N = glm::transpose( glm::inverse( M ) );
-            AnimatedObjectConstantBufferData b{ M, N, animator.GetTransformSlot() };
-            cmdBuf.PushConstants( animPipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( AnimatedObjectConstantBufferData ), &b );
+            Gpu::AnimatedObjectConstantBufferData b{ M, N, animator.GetTransformSlot() };
+            cmdBuf.PushConstants( animPipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( Gpu::AnimatedObjectConstantBufferData ), &b );
 
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetVertexOffset(), 0 );
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
@@ -1213,12 +1215,12 @@ namespace RenderSystem
                 //     continue;
                 // }
 
-                MaterialConstantBufferData mcbuf{};
+                Gpu::MaterialConstantBufferData mcbuf{};
                 mcbuf.Kd = glm::vec4( mat->Kd, 0 );
                 mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
                 mcbuf.diffuseTexIndex = mat->map_Kd   ? mat->map_Kd->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
                 mcbuf.normalMapIndex  = mat->map_Norm ? mat->map_Norm->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
-                cmdBuf.PushConstants( animPipeline, VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
+                cmdBuf.PushConstants( animPipeline, VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( Gpu::MaterialConstantBufferData ), &mcbuf );
 
                 PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
                 cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );
@@ -1240,8 +1242,8 @@ namespace RenderSystem
         
         cmdBuf.BindRenderPipeline( ssaoPassData.pipeline );
         cmdBuf.BindDescriptorSets( 1, &descriptorSets.ssao, ssaoPassData.pipeline, 0 );
-        SSAOShaderData pushData{ scene->camera.GetV(), scene->camera.GetP() };
-        cmdBuf.PushConstants( ssaoPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( SSAOShaderData ), &pushData );
+        Gpu::SSAOShaderData pushData{ scene->camera.GetV(), scene->camera.GetP() };
+        cmdBuf.PushConstants( ssaoPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( Gpu::SSAOShaderData ), &pushData );
         PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
         cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
         cmdBuf.Draw( 0, 6 );
@@ -1338,8 +1340,8 @@ namespace RenderSystem
             
             auto M = transform.GetModelMatrix();
             auto N = glm::transpose( glm::inverse( M ) );
-            ObjectConstantBufferData b{ M, N };
-            cmdBuf.PushConstants( transparencyPassData.pipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( ObjectConstantBufferData ), &b );
+            Gpu::ObjectConstantBufferData b{ M, N };
+            cmdBuf.PushConstants( transparencyPassData.pipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( Gpu::ObjectConstantBufferData ), &b );
 
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetVertexOffset(), 0 );
             cmdBuf.BindVertexBuffer( model->vertexBuffer, model->GetNormalOffset(), 1 );
@@ -1356,12 +1358,12 @@ namespace RenderSystem
                     continue;
                 }
 
-                MaterialConstantBufferData mcbuf{};
+                Gpu::MaterialConstantBufferData mcbuf{};
                 mcbuf.Kd = glm::vec4( mat->Kd, 0 );
                 mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
                 mcbuf.diffuseTexIndex = mat->map_Kd   ? mat->map_Kd->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
                 mcbuf.normalMapIndex  = mat->map_Norm ? mat->map_Norm->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
-                cmdBuf.PushConstants( transparencyPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( MaterialConstantBufferData ), &mcbuf );
+                cmdBuf.PushConstants( transparencyPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( Gpu::MaterialConstantBufferData ), &mcbuf );
 
                 PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
                 cmdBuf.DrawIndexed( mesh.startIndex, mesh.numIndices, mesh.startVertex );

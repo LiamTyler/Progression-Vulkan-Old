@@ -6,7 +6,6 @@
 #include "components/factory.hpp"
 #include "components/animation_component.hpp"
 #include "components/script_component.hpp"
-#include "graphics/shader_c_shared/lights.h"
 #include "resource/image.hpp"
 #include "resource/resource_manager.hpp"
 #include "utils/json_parsing.hpp"
@@ -54,15 +53,29 @@ static void ParseCamera( rapidjson::Value& v, Scene* scene )
 
 static void ParseDirectionalLight( rapidjson::Value& value, Scene* scene )
 {
+    static FunctionMapper< void, ShadowMap& > shadowMapping(
+    {
+        { "constantBias", []( rapidjson::Value& v, ShadowMap& m ) { m.constantBias = ParseNumber< float >( v ); } },
+        { "slopeBias",    []( rapidjson::Value& v, ShadowMap& m ) { m.slopeBias    = ParseNumber< float >( v ); } },
+        { "width",        []( rapidjson::Value& v, ShadowMap& m ) { m.width        = ParseNumber< uint32_t >( v ); } },
+        { "height",       []( rapidjson::Value& v, ShadowMap& m ) { m.height       = ParseNumber< uint32_t >( v ); } },
+    });
+
     static FunctionMapper< void, DirectionalLight& > mapping(
     {
         { "colorAndIntensity", []( rapidjson::Value& v, DirectionalLight& l ) { l.colorAndIntensity = ParseVec4( v ); } },
         { "direction",         []( rapidjson::Value& v, DirectionalLight& l )
             { l.direction = glm::vec4( glm::normalize( ParseVec3( v ) ), 0 ); }
+        },
+        { "shadowMap", []( rapidjson::Value& v, DirectionalLight& l )
+            {
+                l.shadowMap = std::make_shared< ShadowMap >();
+                shadowMapping.ForEachMember( v, *l.shadowMap );
+                bool ret = l.shadowMap->Init();
+                PG_ASSERT( ret, "Could not create directional light shadow map" );
+            }
         }
     });
-    scene->directionalLight.colorAndIntensity = glm::vec4( 1 );
-    scene->directionalLight.direction         = glm::vec4( 0, 0, -1, 0 );
     mapping.ForEachMember( value, scene->directionalLight );
 }
 
@@ -74,8 +87,6 @@ static void ParsePointLight( rapidjson::Value& value, Scene* scene )
         { "positionAndRadius", []( rapidjson::Value& v, PointLight& l ) { l.positionAndRadius = ParseVec4( v ); } },
     });
     PointLight p;
-    p.colorAndIntensity = glm::vec4( 1 );
-    p.positionAndRadius = glm::vec4( 0, 0, 0, 10 );
     scene->pointLights.emplace_back( p );
     mapping.ForEachMember( value, scene->pointLights[scene->pointLights.size() - 1] );
 }
@@ -95,9 +106,6 @@ static void ParseSpotLight( rapidjson::Value& value, Scene* scene )
         },
     });
     SpotLight p;
-    p.colorAndIntensity  = glm::vec4( 1 );
-    p.positionAndRadius  = glm::vec4( 0, 0, 0, 10 );
-    p.directionAndCutoff = glm::vec4( 0, 0, -1, glm::radians( 20.0f ) );
     scene->spotLights.emplace_back( p );
     mapping.ForEachMember( value, scene->spotLights[scene->spotLights.size() - 1] );
 }
@@ -142,6 +150,26 @@ Scene::~Scene()
     for ( auto entity : view )
     {
         registry.remove< Animator >( entity );
+    }
+
+    if ( directionalLight.shadowMap )
+    {
+        directionalLight.shadowMap->Free();
+    }
+
+    for ( auto& l : pointLights )
+    {
+        if ( l.shadowMap )
+        {
+            l.shadowMap->Free();
+        }
+    }
+    for ( auto& l : spotLights )
+    {
+        if ( l.shadowMap )
+        {
+            l.shadowMap->Free();
+        }
     }
 }
 

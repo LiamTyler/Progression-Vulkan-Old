@@ -37,6 +37,14 @@ namespace RenderSystem
         std::vector< Gfx::DescriptorSetLayout > descriptorSetLayouts;
     };
 
+    struct ShadowPassData
+    {
+        Gfx::RenderPass renderPass;
+        Gfx::Pipeline rigidPipeline;
+        Gfx::Pipeline animatedPipeline;
+        std::vector< Gfx::DescriptorSetLayout > animatedDescriptorSetLayouts;
+    };
+
     bool Init();
 
     void Shutdown();

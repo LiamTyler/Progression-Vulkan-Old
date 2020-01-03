@@ -11,13 +11,16 @@ set(
     #graphics/graphics_api.cpp
     graphics/debug_marker.cpp
     graphics/render_system.cpp
+    graphics/shadow_map.cpp
     graphics/texture_manager.cpp
     graphics/vulkan.cpp
 
     graphics/debug_marker.hpp
     graphics/graphics_api.hpp
+    graphics/lights.hpp
     graphics/pg_to_vulkan_types.hpp
     graphics/render_system.hpp
+    graphics/shadow_map.hpp
     graphics/texture_manager.hpp
     graphics/vulkan.hpp
     

@@ -61,7 +61,11 @@ void main()
     vec3 l = normalize( -sceneConstantBuffer.dirLight.direction.xyz );
     vec3 h = normalize( l + e );
     
-    float S = 1 - ShadowAmount( sceneConstantBuffer.DLSM * vec4( posInWorldSpace, 1 ), textures[sceneConstantBuffer.shadowTextureIndex] );
+    float S = 1;
+    if ( sceneConstantBuffer.dirLight.shadowMapIndex.x != PG_INVALID_TEXTURE_INDEX )
+    {
+        S = 1 - ShadowAmount( sceneConstantBuffer.LSM * vec4( posInWorldSpace, 1 ), textures[sceneConstantBuffer.dirLight.shadowMapIndex.x] );
+    }
     diffuseColor += S * lightColor * Kd * max( 0.0, dot( l, n ) );
     if ( dot( l, n ) > PG_SHADER_EPSILON )
     {

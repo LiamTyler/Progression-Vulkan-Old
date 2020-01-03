@@ -19,7 +19,11 @@
     "Skybox": "waterSkybox",
     "DirectionalLight": {
         "colorAndIntensity": [ 1, 1, 1, 1 ],
-        "direction": [ 0.5, -1.5, -1 ]
+        "direction": [ 0.5, -1.5, -1 ],
+        "shadowMap": {
+            "width": 4096,
+            "height": 4096
+        }
     },
     "Entity": {
         "NameComponent": "floor",

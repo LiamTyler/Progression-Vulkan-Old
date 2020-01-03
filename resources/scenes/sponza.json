@@ -18,7 +18,11 @@
     },
     "DirectionalLight": {
         "colorAndIntensity": [ 1, 1, 1, 1 ],
-        "direction": [ 0, -1, -0.15 ]
+        "direction": [ 0, -1, -0.15 ],
+        "shadowMap": {
+            "width": 4096,
+            "height": 4096
+        }
     },
     "PointLight": {
         "colorAndIntensity": [ 1, 0.9, 0.8, 5 ],

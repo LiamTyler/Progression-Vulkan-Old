@@ -26,6 +26,8 @@
 
 #define PG_NAMESPACE_BEGIN namespace Progression {
 #define PG_NAMESPACE_END } // namespace Progression
+#define PG_GPU_NAMESPACE_BEGIN namespace Gpu {
+#define PG_GPU_NAMESPACE_END } // namespace Gpu
 
 #define VEC2 glm::vec2
 #define VEC3 glm::vec3
@@ -44,6 +46,8 @@
 
 #define PG_NAMESPACE_BEGIN
 #define PG_NAMESPACE_END
+#define PG_GPU_NAMESPACE_BEGIN
+#define PG_GPU_NAMESPACE_END
 
 #define VEC2 vec2
 #define VEC3 vec3

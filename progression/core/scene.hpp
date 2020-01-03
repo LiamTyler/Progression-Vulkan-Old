@@ -2,7 +2,7 @@
 
 #include "core/camera.hpp"
 #include "core/ecs.hpp"
-#include "graphics/shader_c_shared/lights.h"
+#include "graphics/lights.hpp"
 #include <vector>
 
 namespace Progression
