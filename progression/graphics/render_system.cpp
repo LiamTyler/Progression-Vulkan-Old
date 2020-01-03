@@ -1012,7 +1012,7 @@ namespace RenderSystem
         if ( scene->skybox )
         {
             VkDescriptorImageInfo imageDesc = DescriptorImageInfo( *scene->skybox->GetTexture(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-            VkWriteDescriptorSet writeSet = WriteDescriptorSet( descriptorSets.background, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageDesc );
+            VkWriteDescriptorSet writeSet   = WriteDescriptorSet( descriptorSets.background, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageDesc );
             g_renderState.device.UpdateDescriptorSets( 1, &writeSet );
         }
         
@@ -1030,24 +1030,35 @@ namespace RenderSystem
             scbuf.LSM = scene->directionalLight.shadowMap->LSM;
         }
 
-        scbuf.V              = scene->camera.GetV();
-        scbuf.P              = scene->camera.GetP();
-        scbuf.VP             = scene->camera.GetVP();
-        scbuf.cameraPos      = glm::vec4( scene->camera.position, 0 );        
-        scbuf.ambientColor   = glm::vec4( scene->ambientColor, 0 );
+        scbuf.V                          = scene->camera.GetV();
+        scbuf.P                          = scene->camera.GetP();
+        scbuf.VP                         = scene->camera.GetVP();
+        scbuf.cameraPos                  = glm::vec4( scene->camera.position, 0 );        
+        scbuf.ambientColor               = glm::vec4( scene->ambientColor, 0 );
         scbuf.dirLight.colorAndIntensity = scene->directionalLight.colorAndIntensity;
         scbuf.dirLight.direction         = scene->directionalLight.direction;
-        uint32_t shadowMapIndex          = PG_INVALID_TEXTURE_INDEX;
+        scbuf.dirLight.shadowMapIndex.x  = PG_INVALID_TEXTURE_INDEX;
         if ( scene->directionalLight.shadowMap )
         {
-            shadowMapIndex = scene->directionalLight.shadowMap->texture.GetShaderSlot();
+            scbuf.dirLight.shadowMapIndex.x = scene->directionalLight.shadowMap->texture.GetShaderSlot();
         }
-        scbuf.dirLight.shadowMapIndex.x = shadowMapIndex;
         scbuf.numPointLights = static_cast< uint32_t >( scene->pointLights.size() );
         scbuf.numSpotLights  = static_cast< uint32_t >( scene->spotLights.size() );
         memcpy( s_gpuSceneConstantBuffers.MappedPtr(), &scbuf, sizeof( Gpu::SceneConstantBufferData ) );
-        //memcpy( s_gpuPointLightBuffers.MappedPtr(), scene->pointLights.data(), scene->pointLights.size() * sizeof( PointLight ) );
-        //memcpy( s_gpuSpotLightBuffers.MappedPtr(), scene->spotLights.data(), scene->spotLights.size() * sizeof( SpotLight ) );
+
+        Gpu::PointLight* gpuPointLights = (Gpu::PointLight*) s_gpuPointLightBuffers.MappedPtr();
+        for ( size_t i = 0; i < scene->pointLights.size(); ++i )
+        {
+            gpuPointLights[i].colorAndIntensity = scene->pointLights[i].colorAndIntensity;
+            gpuPointLights[i].positionAndRadius = scene->pointLights[i].positionAndRadius;
+        }
+        Gpu::SpotLight* gpuSpotLights = (Gpu::SpotLight*) s_gpuSpotLightBuffers.MappedPtr();
+        for ( size_t i = 0; i < scene->spotLights.size(); ++i )
+        {
+            gpuSpotLights[i].colorAndIntensity  = scene->spotLights[i].colorAndIntensity;
+            gpuSpotLights[i].positionAndRadius  = scene->spotLights[i].positionAndRadius;
+            gpuSpotLights[i].directionAndCutoff = scene->spotLights[i].directionAndCutoff;
+        }
 
         AnimationSystem::UploadToGpu( scene );
     }
