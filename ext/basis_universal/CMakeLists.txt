@@ -15,7 +15,6 @@ set(BASISU_SRC_LIST ${COMMON_SRC_LIST}
 	basisu_resampler.cpp
 	basisu_resample_filters.cpp
 	basisu_ssim.cpp
-	basisu_tool.cpp
 	basisu_astc_decomp.cpp
 	lodepng.cpp
 	transcoder/basisu_transcoder.cpp
@@ -38,8 +37,7 @@ set(BASISU_SRC_LIST ${COMMON_SRC_LIST}
 	transcoder/basisu.h
 	transcoder/basisu_global_selector_cb.h
 	transcoder/basisu_global_selector_palette.h
-    
 )
 
-#add_executable(basisu ${BASISU_SRC_LIST})
+add_executable(basisu ${BASISU_SRC_LIST} basisu_tool.cpp)
 add_library(basisu_lib ${BASISU_SRC_LIST})

@@ -36,7 +36,7 @@
             "material": "floor"
         }
     },
-    "Entity": {
+    "_Entity": {
         "NameComponent": "dragon",
         "Transform": {
             "position": [ 0, -1, 1 ],

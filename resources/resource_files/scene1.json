@@ -14,11 +14,11 @@
         "name": "cube",
         "filename": "models/cube.obj"
     },
-    "Model": {
+    "_Model": {
         "name": "dragon",
         "filename": "dragon/Dragon_Baked_Actions_fbx_7.4_binary.fbx"
     },
-    "Model": {
+    "_Model": {
         "name": "arm",
         "filename": "models/primitive.fbx"
     },

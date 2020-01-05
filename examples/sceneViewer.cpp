@@ -1,9 +1,157 @@
 #include "progression.hpp"
 #include <thread>
+#include "basis_universal/transcoder/basisu_transcoder.h"
+#include "memory_map/MemoryMapped.h"
 
 using namespace Progression;
 
 bool g_paused = false;
+
+basist::transcoder_texture_format PGToBasisBCPixelFormat( Gfx::PixelFormat pgFormat )
+{
+    PG_ASSERT( Gfx::PixelFormatIsCompressed( pgFormat ) );
+    basist::transcoder_texture_format convert[] =
+    {
+        basist::transcoder_texture_format::cTFBC1_RGB, // BC1_RGB_UNORM
+        basist::transcoder_texture_format::cTFBC1_RGB, // BC1_RGB_SRGB
+        basist::transcoder_texture_format::cTFTotalTextureFormats, // BC1_RGBA_UNORM
+        basist::transcoder_texture_format::cTFTotalTextureFormats, // BC1_RGBA_SRGB
+        basist::transcoder_texture_format::cTFTotalTextureFormats, // BC2_UNORM
+        basist::transcoder_texture_format::cTFTotalTextureFormats, // BC2_SRGB
+        basist::transcoder_texture_format::cTFBC3_RGBA, // BC3_UNORM
+        basist::transcoder_texture_format::cTFBC3_RGBA, // BC3_SRGB
+        basist::transcoder_texture_format::cTFBC4_R, // BC4_UNORM
+        basist::transcoder_texture_format::cTFBC4_R, // BC4_SNORM
+        basist::transcoder_texture_format::cTFBC5_RG, // BC5_UNORM (note: X = R and Y = Alpha)
+        basist::transcoder_texture_format::cTFBC5_RG, // BC5_SNORM (note: X = R and Y = Alpha)
+        basist::transcoder_texture_format::cTFTotalTextureFormats, // BC6H_UFLOAT
+        basist::transcoder_texture_format::cTFTotalTextureFormats, // BC6H_SFLOAT
+        basist::transcoder_texture_format::cTFBC7_M6_RGB, // BC7_UNORM
+        basist::transcoder_texture_format::cTFBC7_M6_RGB, // BC7_SRGB
+    };
+
+    return convert[static_cast< int >( pgFormat ) - static_cast< int >( Gfx::PixelFormat::BC1_RGB_UNORM )]; 
+}
+
+bool TranscodeBasisFile( const std::string& filename, Gfx::PixelFormat dstFormat, Gfx::Texture& tex )
+{
+    MemoryMapped memMappedFile;
+    if ( !memMappedFile.open( filename, MemoryMapped::WholeFile, MemoryMapped::SequentialScan ) )
+    {
+        LOG_ERR( "Could not open basis file: '", filename, "'" );
+        return false;
+    }
+
+    auto start = Time::GetTimePoint();
+
+    void* data               = (void*) memMappedFile.getData();
+    uint32_t dataSizeInBytes = (uint32_t) memMappedFile.size();
+
+    basist::etc1_global_selector_codebook sel_codebook( basist::g_global_selector_cb_size, basist::g_global_selector_cb );
+    basist::basisu_transcoder transcoder( &sel_codebook );
+    if ( !transcoder.start_transcoding( data, dataSizeInBytes ) )
+    {
+        LOG_ERR( "Could not start transcoding" );
+        return false;
+    }
+
+    basist::transcoder_texture_format dstBasisTexFormat = PGToBasisBCPixelFormat( dstFormat );
+    uint32_t dstTexFormatSize                           = Gfx::SizeOfPixelFromat( dstFormat );
+
+    basist::basis_texture_type basisTextureType = transcoder.get_texture_type( data, dataSizeInBytes );
+    LOG( "Texture type: ", basisTextureType );
+    uint32_t imageCount = transcoder.get_total_images( data, dataSizeInBytes );
+    basist::basisu_image_info firstImageInfo;
+    transcoder.get_image_info( data, dataSizeInBytes, firstImageInfo, 0 );
+    size_t totalImageSize = 0;
+    Gfx::ImageDescriptor imageDesc;
+    if ( basisTextureType == basist::cBASISTexType2D )
+    {
+        imageDesc.type = Gfx::ImageType::TYPE_2D;
+    }
+    else if ( basisTextureType == basist::cBASISTexType2DArray )
+    {
+        imageDesc.type = Gfx::ImageType::TYPE_2D_ARRAY;
+    }
+    else if ( basisTextureType == basist::cBASISTexTypeCubemapArray )
+    {
+        if ( imageCount == 6 )
+        {
+            imageDesc.type = Gfx::ImageType::TYPE_CUBEMAP;
+        }
+        else
+        {
+            imageDesc.type = Gfx::ImageType::TYPE_CUBEMAP_ARRAY;
+        }
+    }
+    else
+    {
+        PG_ASSERT( false, "Invalid texture type" );
+    }
+
+    for ( uint32_t imageIndex = 0; imageIndex < imageCount; ++imageIndex )
+    {
+        basist::basisu_image_info imageInfo;
+        transcoder.get_image_info( data, dataSizeInBytes, imageInfo, imageIndex );
+        PG_ASSERT( imageInfo.m_width == firstImageInfo.m_width );
+        PG_ASSERT( imageInfo.m_height == firstImageInfo.m_height );
+        PG_ASSERT( imageInfo.m_total_levels == firstImageInfo.m_total_levels );
+
+        uint32_t width  = imageInfo.m_width;
+        uint32_t height = imageInfo.m_height;
+
+        for ( uint32_t mipLevel = 0; mipLevel < imageInfo.m_total_levels; ++mipLevel )
+        {
+            basist::basisu_image_level_info levelInfo;
+            transcoder.get_image_level_info( data, dataSizeInBytes, levelInfo, imageIndex, mipLevel );
+            PG_ASSERT( width == levelInfo.m_width && height == levelInfo.m_height );
+            width  = ( width / 2 + 1 ) & ~1;
+            width  = ( width + 3 ) & ~3;
+            height = ( height / 2 + 1 ) & ~1;
+            height = ( height + 3 ) & ~3;
+            totalImageSize += levelInfo.m_total_blocks * dstTexFormatSize;
+        }
+    }
+    char* allTranscodedData = static_cast< char* >( malloc( totalImageSize ) );
+    char* currentSlice      = allTranscodedData;
+    for ( uint32_t imageIndex = 0; imageIndex < imageCount; ++imageIndex )
+    {
+        basist::basisu_image_info imageInfo;
+        transcoder.get_image_info( data, dataSizeInBytes, imageInfo, imageIndex );
+
+        LOG( "Image index: ", imageIndex );
+        LOG( "\tm_orig_width: ", imageInfo.m_orig_width );
+        LOG( "\tm_orig_height: ", imageInfo.m_orig_height );
+        LOG( "\tm_width: ", imageInfo.m_width );
+        LOG( "\tm_height: ", imageInfo.m_height );
+        LOG( "\tm_total_levels: ", imageInfo.m_total_levels );
+
+        for ( uint32_t mipLevel = 0; mipLevel < imageInfo.m_total_levels; ++mipLevel )
+        {
+            basist::basisu_image_level_info levelInfo;
+            transcoder.get_image_level_info( data, dataSizeInBytes, levelInfo, imageIndex, mipLevel );
+            LOG( "\tMipLevel: ", mipLevel );
+            LOG( "\t\tm_orig_width: ", levelInfo.m_orig_width );
+            LOG( "\t\tm_orig_height: ", levelInfo.m_orig_height );
+            LOG( "\t\tm_width: ", levelInfo.m_width );
+            LOG( "\t\tm_height: ", levelInfo.m_height );
+            LOG( "\t\tm_num_blocks_x: ", levelInfo.m_num_blocks_x );
+            LOG( "\t\tm_num_blocks_y: ", levelInfo.m_num_blocks_y );
+            LOG( "\t\tm_total_blocks: ", levelInfo.m_total_blocks );
+            uint32_t levelSize = levelInfo.m_total_blocks * dstTexFormatSize;
+
+            bool didTranscode = transcoder.transcode_image_level( data, dataSizeInBytes, imageIndex, mipLevel, currentSlice, levelSize, dstBasisTexFormat );
+            if( !didTranscode )
+            {
+                LOG_ERR( "Could not transcode image: ", imageIndex, ", mip: ", mipLevel );
+                return false;
+            }
+            currentSlice += levelSize;
+        }
+    }
+
+    return true;
+}
 
 int main( int argc, char* argv[] )
 {
@@ -32,6 +180,16 @@ int main( int argc, char* argv[] )
         }
 
         scene->Start();
+
+        Gfx::Texture tex;
+        if ( !TranscodeBasisFile( PG_ROOT_DIR "blank.basis", Gfx::PixelFormat::BC7_SRGB, tex ) )
+        {
+            LOG_ERR( "Could not transcode basis file" );
+            delete scene;
+            PG::EngineQuit();
+            return 0;
+        }
+
 
         PG::Input::PollEvents();
         Time::Reset();

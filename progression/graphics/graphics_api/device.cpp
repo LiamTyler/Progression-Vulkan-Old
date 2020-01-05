@@ -347,6 +347,67 @@ namespace Gfx
         return tex;
     }
 
+    Texture Device::NewTextureCompressed( ImageDescriptor& desc, void* data, bool managed, const std::string& name ) const
+    {
+        desc.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        Texture tex          = NewTexture( desc, managed, name );
+        size_t imSize        = desc.width * desc.height * desc.depth * desc.arrayLayers * SizeOfPixelFromat( desc.format );
+        Buffer stagingBuffer = NewBuffer( imSize, BUFFER_TYPE_TRANSFER_SRC, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
+        stagingBuffer.Map();
+        memcpy( stagingBuffer.MappedPtr(), data, imSize );
+        stagingBuffer.UnMap();
+
+        VkFormat vkFormat = PGToVulkanPixelFormat( desc.format );
+        PG_ASSERT( FormatSupported( vkFormat, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT ) );
+        
+        TransitionImageLayout( tex.GetHandle(), vkFormat, VK_IMAGE_LAYOUT_UNDEFINED,
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, tex.m_desc.mipLevels );
+        
+        // CopyBufferToImage( stagingBuffer, tex );
+        CommandBuffer cmdBuf = g_renderState.transientCommandPool.NewCommandBuffer();
+        cmdBuf.BeginRecording( COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT );
+
+        std::vector< VkBufferImageCopy > bufferCopyRegions;
+		uint32_t offset = 0;
+
+        for ( uint32_t face = 0; face < tex.GetArrayLayers(); ++face )
+        {
+            size_t sizeOfFace = tex.GetWidth() * tex.GetHeight() * tex.GetDepth() * SizeOfPixelFromat( tex.GetPixelFormat() );
+            VkBufferImageCopy region               = {};
+            region.bufferOffset                    = face * sizeOfFace;
+            region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.mipLevel       = 0;
+            region.imageSubresource.baseArrayLayer = face;
+            region.imageSubresource.layerCount     = 1;
+            region.imageExtent.width               = tex.GetWidth();
+            region.imageExtent.height              = tex.GetHeight();
+            region.imageExtent.depth               = tex.GetDepth();
+
+            bufferCopyRegions.push_back( region );
+        }
+
+        vkCmdCopyBufferToImage(
+            cmdBuf.GetHandle(),
+            stagingBuffer.GetHandle(),
+            tex.GetHandle(),
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            static_cast< uint32_t >( bufferCopyRegions.size() ),
+            bufferCopyRegions.data()
+        );
+
+        cmdBuf.EndRecording();
+        g_renderState.device.Submit( cmdBuf );
+        g_renderState.device.WaitForIdle();
+        cmdBuf.Free();
+
+        TransitionImageLayout( tex.GetHandle(), vkFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, tex.m_desc.mipLevels );
+
+        stagingBuffer.Free();
+
+        return tex;
+    }
+
     Sampler Device::NewSampler( const SamplerDescriptor& desc ) const
     {
         Sampler sampler;
