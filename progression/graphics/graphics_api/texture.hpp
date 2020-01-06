@@ -155,6 +155,8 @@ namespace Gfx
         std::string sampler = "linear_repeat_linear";
     };
 
+    uint32_t CalculateTotalTextureSize( ImageDescriptor& desc );
+
     class Texture
     {
         friend class ::Progression::Image;

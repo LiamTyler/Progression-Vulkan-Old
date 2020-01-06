@@ -241,6 +241,36 @@ namespace Gfx
                f <= static_cast< int >( PixelFormat::STENCIL_8_UINT );
     }
 
+    uint32_t CalculateTotalTextureSize( ImageDescriptor& desc )
+    {
+        PG_ASSERT( desc.depth == 1, "haven't added support for depth > 1 yet" );
+        uint32_t totalSize = 0;
+        for ( uint32_t face = 0; face < desc.arrayLayers; ++face );
+        {
+            uint32_t w = desc.width;
+            uint32_t h = desc.height;
+            for ( uint32_t mip = 0; mip < desc.mipLevels; ++mip )
+            {
+                if ( PixelFormatIsCompressed( desc.format ) )
+                {
+                    uint32_t numBlocksX = w / 4;
+                    uint32_t numBlocksY = h / 4;
+                    totalSize += numBlocksX * numBlocksY * SizeOfPixelFromat( desc.format );
+                    w = ( w / 2 + 3 ) & ~3;
+                    h = ( h / 2 + 3 ) & ~3;
+                }
+                else
+                {
+                    totalSize += w * h * SizeOfPixelFromat( desc.format );
+                    w >>= 1;
+                    h >>= 1;
+                }
+            }
+        }
+        
+        return totalSize;
+    }
+
     void Texture::GenerateMipMaps()
     {
         PG_ASSERT( m_image != VK_NULL_HANDLE );

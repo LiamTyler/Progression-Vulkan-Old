@@ -33,12 +33,5 @@ Ka 0 0 0
 Kd 1 1 1
 Ks 0.1 0.1 0.1
 Ns 50
-map_Kd textures/metal2.jpg
-
-newmtl brickwall 
-Ka .1 .1 .1
-Kd 1 1 1
-Ks 0.2 0.2 0.2
-Ns 32
-map_Kd textures/brickwall.jpg
-map_bump textures/brickwall_normal.jpg
+#map_Kd textures/metal2.jpg
+map_Kd floor

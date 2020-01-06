@@ -63,7 +63,7 @@ bool TranscodeBasisFile( const std::string& filename, Gfx::PixelFormat dstFormat
     uint32_t imageCount = transcoder.get_total_images( data, dataSizeInBytes );
     basist::basisu_image_info firstImageInfo;
     transcoder.get_image_info( data, dataSizeInBytes, firstImageInfo, 0 );
-    size_t totalImageSize = 0;
+
     Gfx::ImageDescriptor imageDesc;
     if ( basisTextureType == basist::cBASISTexType2D )
     {
@@ -88,7 +88,14 @@ bool TranscodeBasisFile( const std::string& filename, Gfx::PixelFormat dstFormat
     {
         PG_ASSERT( false, "Invalid texture type" );
     }
+    imageDesc.arrayLayers = imageCount;
+    imageDesc.width       = firstImageInfo.m_width;
+    imageDesc.height      = firstImageInfo.m_height;
+    imageDesc.mipLevels   = firstImageInfo.m_total_levels;
+    imageDesc.format      = dstFormat;
+    imageDesc.usage       = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
+    size_t totalImageSize = 0;
     for ( uint32_t imageIndex = 0; imageIndex < imageCount; ++imageIndex )
     {
         basist::basisu_image_info imageInfo;
@@ -105,10 +112,8 @@ bool TranscodeBasisFile( const std::string& filename, Gfx::PixelFormat dstFormat
             basist::basisu_image_level_info levelInfo;
             transcoder.get_image_level_info( data, dataSizeInBytes, levelInfo, imageIndex, mipLevel );
             PG_ASSERT( width == levelInfo.m_width && height == levelInfo.m_height );
-            width  = ( width / 2 + 1 ) & ~1;
-            width  = ( width + 3 ) & ~3;
-            height = ( height / 2 + 1 ) & ~1;
-            height = ( height + 3 ) & ~3;
+            width  = ( width  / 2 + 3 ) & ~3;
+            height = ( height / 2 + 3 ) & ~3;
             totalImageSize += levelInfo.m_total_blocks * dstTexFormatSize;
         }
     }
@@ -150,6 +155,9 @@ bool TranscodeBasisFile( const std::string& filename, Gfx::PixelFormat dstFormat
         }
     }
 
+    tex = Gfx::g_renderState.device.NewTextureCompressed( imageDesc, allTranscodedData );
+    free( allTranscodedData );
+
     return true;
 }
 
@@ -181,8 +189,16 @@ int main( int argc, char* argv[] )
 
         scene->Start();
 
-        Gfx::Texture tex;
-        if ( !TranscodeBasisFile( PG_ROOT_DIR "blank.basis", Gfx::PixelFormat::BC7_SRGB, tex ) )
+        //ImageCreateInfo imageCreateInfo;
+        //imageCreateInfo.flags = IMAGE_CREATE_TEXTURE_ON_LOAD | IMAGE_GENERATE_MIPMAPS | IMAGE_FLIP_VERTICALLY | IMAGE_FREE_CPU_COPY_ON_LOAD;
+        //imageCreateInfo.filename = PG_RESOURCE_DIR "textures/wood.png";
+        //auto replacementImage = Image::Load2DImageWithDefaultSettings( PG_RESOURCE_DIR "textures/wood.png" );
+        auto floorImage = ResourceManager::Get< Image >( "floor" );
+        PG_ASSERT( floorImage );
+        //*floorImage->GetTexture() = *replacementImage->GetTexture();
+
+
+        if ( !TranscodeBasisFile( PG_ROOT_DIR "wood.basis", Gfx::PixelFormat::BC7_UNORM, *floorImage->GetTexture() ) )
         {
             LOG_ERR( "Could not transcode basis file" );
             delete scene;
