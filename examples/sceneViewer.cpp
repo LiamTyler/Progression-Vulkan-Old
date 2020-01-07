@@ -7,7 +7,7 @@ using namespace Progression;
 
 bool g_paused = false;
 
-basist::transcoder_texture_format PGToBasisBCPixelFormat( Gfx::PixelFormat pgFormat )
+basist::transcoder_texture_format PGToBasisBCPixelFormat( Gfx::PixelFormat pgFormat, bool hasAlpha )
 {
     PG_ASSERT( Gfx::PixelFormatIsCompressed( pgFormat ) );
     basist::transcoder_texture_format convert[] =
@@ -26,11 +26,17 @@ basist::transcoder_texture_format PGToBasisBCPixelFormat( Gfx::PixelFormat pgFor
         basist::transcoder_texture_format::cTFBC5_RG, // BC5_SNORM (note: X = R and Y = Alpha)
         basist::transcoder_texture_format::cTFTotalTextureFormats, // BC6H_UFLOAT
         basist::transcoder_texture_format::cTFTotalTextureFormats, // BC6H_SFLOAT
-        basist::transcoder_texture_format::cTFBC7_M6_RGB, // BC7_UNORM
-        basist::transcoder_texture_format::cTFBC7_M6_RGB, // BC7_SRGB
+        basist::transcoder_texture_format::cTFBC7_M6_OPAQUE_ONLY, // BC7_UNORM cTFBC7_M6_OPAQUE_ONLY cDecodeFlagsTranscodeAlphaDataToOpaqueFormats
+        basist::transcoder_texture_format::cTFBC7_M6_OPAQUE_ONLY, // BC7_SRGB cTFBC7_M5_RGBA
     };
 
-    return convert[static_cast< int >( pgFormat ) - static_cast< int >( Gfx::PixelFormat::BC1_RGB_UNORM )]; 
+    auto basisFormat = convert[static_cast< int >( pgFormat ) - static_cast< int >( Gfx::PixelFormat::BC1_RGB_UNORM )];
+    if ( hasAlpha && ( pgFormat == Gfx::PixelFormat::BC7_UNORM || pgFormat == Gfx::PixelFormat::BC7_SRGB ) )
+    {
+        basisFormat = basist::transcoder_texture_format::cTFBC7_M5_RGBA;
+    }
+
+    return basisFormat;
 }
 
 bool TranscodeBasisFile( const std::string& filename, Gfx::PixelFormat dstFormat, Gfx::Texture& tex )
@@ -47,6 +53,7 @@ bool TranscodeBasisFile( const std::string& filename, Gfx::PixelFormat dstFormat
     void* data               = (void*) memMappedFile.getData();
     uint32_t dataSizeInBytes = (uint32_t) memMappedFile.size();
 
+    basist::basisu_transcoder_init();
     basist::etc1_global_selector_codebook sel_codebook( basist::g_global_selector_cb_size, basist::g_global_selector_cb );
     basist::basisu_transcoder transcoder( &sel_codebook );
     if ( !transcoder.start_transcoding( data, dataSizeInBytes ) )
@@ -54,8 +61,10 @@ bool TranscodeBasisFile( const std::string& filename, Gfx::PixelFormat dstFormat
         LOG_ERR( "Could not start transcoding" );
         return false;
     }
-
-    basist::transcoder_texture_format dstBasisTexFormat = PGToBasisBCPixelFormat( dstFormat );
+    basist::basisu_file_info fileInfo;
+    transcoder.get_file_info( data, dataSizeInBytes, fileInfo );
+    LOG( "File has alpha = ", fileInfo.m_has_alpha_slices );
+    basist::transcoder_texture_format dstBasisTexFormat = PGToBasisBCPixelFormat( dstFormat, fileInfo.m_has_alpha_slices );
     uint32_t dstTexFormatSize                           = Gfx::SizeOfPixelFromat( dstFormat );
 
     basist::basis_texture_type basisTextureType = transcoder.get_texture_type( data, dataSizeInBytes );
@@ -130,6 +139,7 @@ bool TranscodeBasisFile( const std::string& filename, Gfx::PixelFormat dstFormat
         LOG( "\tm_width: ", imageInfo.m_width );
         LOG( "\tm_height: ", imageInfo.m_height );
         LOG( "\tm_total_levels: ", imageInfo.m_total_levels );
+        LOG( "\tm_alpha_flag: ", imageInfo.m_alpha_flag );
 
         for ( uint32_t mipLevel = 0; mipLevel < imageInfo.m_total_levels; ++mipLevel )
         {
@@ -143,6 +153,7 @@ bool TranscodeBasisFile( const std::string& filename, Gfx::PixelFormat dstFormat
             LOG( "\t\tm_num_blocks_x: ", levelInfo.m_num_blocks_x );
             LOG( "\t\tm_num_blocks_y: ", levelInfo.m_num_blocks_y );
             LOG( "\t\tm_total_blocks: ", levelInfo.m_total_blocks );
+            LOG( "\t\tm_alpha_flag: ", levelInfo.m_alpha_flag );
             uint32_t levelSize = levelInfo.m_total_blocks * dstTexFormatSize;
 
             bool didTranscode = transcoder.transcode_image_level( data, dataSizeInBytes, imageIndex, mipLevel, currentSlice, levelSize, dstBasisTexFormat );
@@ -189,16 +200,18 @@ int main( int argc, char* argv[] )
 
         scene->Start();
 
-        //ImageCreateInfo imageCreateInfo;
-        //imageCreateInfo.flags = IMAGE_CREATE_TEXTURE_ON_LOAD | IMAGE_GENERATE_MIPMAPS | IMAGE_FLIP_VERTICALLY | IMAGE_FREE_CPU_COPY_ON_LOAD;
-        //imageCreateInfo.filename = PG_RESOURCE_DIR "textures/wood.png";
-        //auto replacementImage = Image::Load2DImageWithDefaultSettings( PG_RESOURCE_DIR "textures/wood.png" );
         auto floorImage = ResourceManager::Get< Image >( "floor" );
         PG_ASSERT( floorImage );
-        //*floorImage->GetTexture() = *replacementImage->GetTexture();
+        // ImageCreateInfo imageCreateInfo;
+        // imageCreateInfo.flags = IMAGE_CREATE_TEXTURE_ON_LOAD | IMAGE_GENERATE_MIPMAPS | IMAGE_FLIP_VERTICALLY | IMAGE_FREE_CPU_COPY_ON_LOAD;
+        // imageCreateInfo.filename = PG_RESOURCE_DIR "textures/wood.png";
+        // auto replacementImage = Image::Load2DImageWithDefaultSettings( PG_RESOURCE_DIR "textures/wood.png" );
+        // *floorImage->GetTexture() = *replacementImage->GetTexture();
 
 
-        if ( !TranscodeBasisFile( PG_ROOT_DIR "wood.basis", Gfx::PixelFormat::BC7_UNORM, *floorImage->GetTexture() ) )
+        if ( !TranscodeBasisFile( PG_ROOT_DIR "max_wood_mipped_alpha.basis", Gfx::PixelFormat::BC7_SRGB, *floorImage->GetTexture() ) )
+        // if ( !TranscodeBasisFile( PG_ROOT_DIR "default_wood_mipped_no_alpha.basis", Gfx::PixelFormat::BC7_SRGB, *floorImage->GetTexture() ) )
+        //if ( !TranscodeBasisFile( PG_ROOT_DIR "default_wood_mipped_alpha.basis", Gfx::PixelFormat::BC7_SRGB, *floorImage->GetTexture() ) )
         {
             LOG_ERR( "Could not transcode basis file" );
             delete scene;

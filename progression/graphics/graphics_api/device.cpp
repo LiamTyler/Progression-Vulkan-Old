@@ -393,8 +393,10 @@ namespace Gfx
                 bufferCopyRegions.push_back( region );
                 offset += size;
 
-                width  = ( width  / 2 + 3 ) & ~3;
-                height = ( height / 2 + 3 ) & ~3;
+                // width  = ( width  / 2 + 3 ) & ~3;
+                // height = ( height / 2 + 3 ) & ~3;
+                width  >>= 1;
+                height >>= 1;
             }
         }
 
