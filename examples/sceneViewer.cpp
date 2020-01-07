@@ -1,9 +1,11 @@
 #include "progression.hpp"
 #include <thread>
 #include "basis_universal/transcoder/basisu_transcoder.h"
+#include "basis_universal/basisu_comp.h"
 #include "memory_map/MemoryMapped.h"
 
 using namespace Progression;
+using namespace basisu;
 
 bool g_paused = false;
 
@@ -166,8 +168,70 @@ bool TranscodeBasisFile( const std::string& filename, Gfx::PixelFormat dstFormat
         }
     }
 
-    tex = Gfx::g_renderState.device.NewTextureCompressed( imageDesc, allTranscodedData );
+    tex = Gfx::g_renderState.device.NewTextureFromBuffer( imageDesc, allTranscodedData );
     free( allTranscodedData );
+
+    return true;
+}
+
+bool CompressImage( ImageCreateInfo createInfo )
+{
+    basisu_encoder_init();
+    basist::etc1_global_selector_codebook sel_codebook( basist::g_global_selector_cb_size, basist::g_global_selector_cb );
+
+    uint32_t num_threads = 1;
+    num_threads = std::thread::hardware_concurrency();
+    if (num_threads < 1)
+	    num_threads = 1;
+
+    basis_compressor_params params = {};
+    job_pool jpool(num_threads);
+    params.m_pJob_pool = &jpool;
+    params.m_read_source_images       = false;
+    params.m_write_output_basis_files = true;
+    params.m_out_filename             = createInfo.filename + ".basis";
+    params.m_pSel_codebook            = &sel_codebook;
+    params.m_quality_level            = 128;
+
+    params.m_y_flip            = createInfo.flags & IMAGE_FLIP_VERTICALLY;
+    params.m_compression_level = 1;
+    params.m_mip_gen           = createInfo.flags & IMAGE_GENERATE_MIPMAPS;
+
+    Image img;
+    if ( !img.Load( &createInfo ) )
+    {
+        LOG_ERR( "Could not load image '", createInfo.filename, "'" );
+        return false;
+    }
+    params.m_source_images.resize( 1 );
+    params.m_source_images[0].resize( img.GetWidth(), img.GetHeight() );
+    params.m_source_images[0];
+    memcpy( params.m_source_images[0].get_ptr(), img.GetPixels(), img.GetTotalImageBytes() );
+
+    basis_compressor c;
+
+    if ( !c.init( params ) )
+    {
+	    LOG_ERR( "basis_compressor::init() failed!" );
+	    return false;
+    }
+
+    interval_timer tm;
+	tm.start();
+
+	basis_compressor::error_code ec = c.process();
+
+	tm.stop();
+
+	if ( ec == basis_compressor::cECSuccess )
+	{
+		LOG( "Compression succeeded to file \"%s\" in %3.3f secs\n", params.m_out_filename.c_str(), tm.get_elapsed_secs() );
+	}
+	else
+	{
+		LOG_ERR( "Compression failed with error code: ", ec );
+        return false;
+	}
 
     return true;
 }
@@ -208,10 +272,18 @@ int main( int argc, char* argv[] )
         // auto replacementImage = Image::Load2DImageWithDefaultSettings( PG_RESOURCE_DIR "textures/wood.png" );
         // *floorImage->GetTexture() = *replacementImage->GetTexture();
 
+        ImageCreateInfo imageCreateInfo;
+        imageCreateInfo.filename = PG_ROOT_DIR "wood_512.png";
+        imageCreateInfo.flags    = IMAGE_GENERATE_MIPMAPS | IMAGE_FLIP_VERTICALLY;
+        if ( !CompressImage( imageCreateInfo ) )
+        {
+            LOG_ERR( "Could not compress image '", imageCreateInfo.filename, "'" );
+            delete scene;
+            PG::EngineQuit();
+            return 0;
+        }
 
-        if ( !TranscodeBasisFile( PG_ROOT_DIR "max_wood_mipped_alpha.basis", Gfx::PixelFormat::BC7_SRGB, *floorImage->GetTexture() ) )
-        // if ( !TranscodeBasisFile( PG_ROOT_DIR "default_wood_mipped_no_alpha.basis", Gfx::PixelFormat::BC7_SRGB, *floorImage->GetTexture() ) )
-        //if ( !TranscodeBasisFile( PG_ROOT_DIR "default_wood_mipped_alpha.basis", Gfx::PixelFormat::BC7_SRGB, *floorImage->GetTexture() ) )
+        if ( !TranscodeBasisFile( imageCreateInfo.filename + ".basis", Gfx::PixelFormat::BC7_SRGB, *floorImage->GetTexture() ) )
         {
             LOG_ERR( "Could not transcode basis file" );
             delete scene;

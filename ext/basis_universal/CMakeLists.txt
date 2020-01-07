@@ -39,5 +39,6 @@ set(BASISU_SRC_LIST ${COMMON_SRC_LIST}
 	transcoder/basisu_global_selector_palette.h
 )
 
-add_executable(basisu ${BASISU_SRC_LIST} basisu_tool.cpp)
 add_library(basisu_lib ${BASISU_SRC_LIST})
+add_executable(basisu basisu_tool.cpp)
+target_link_libraries(basisu basisu_lib)

@@ -335,8 +335,7 @@ bool Image::Save( const std::string& fname, bool flipVertically ) const
 void Image::UploadToGpu()
 {
     auto& device  = g_renderState.device;
-    size_t imSize = m_texture.m_desc.width * m_texture.m_desc.height * m_texture.m_desc.depth *
-                    m_texture.m_desc.arrayLayers * SizeOfPixelFromat( m_texture.m_desc.format );
+    size_t imSize = CalculateTotalTextureSize( m_texture.m_desc );
     Buffer stagingBuffer = device.NewBuffer( imSize, BUFFER_TYPE_TRANSFER_SRC, MEMORY_TYPE_HOST_VISIBLE | MEMORY_TYPE_HOST_COHERENT );
     stagingBuffer.Map();
     memcpy( stagingBuffer.MappedPtr(), m_pixels, imSize );
@@ -356,7 +355,7 @@ void Image::UploadToGpu()
     TransitionImageLayout( m_texture.GetHandle(), vkFormat, VK_IMAGE_LAYOUT_UNDEFINED,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_texture.m_desc.mipLevels, m_texture.m_desc.arrayLayers );
     
-    device.CopyBufferToImage( stagingBuffer, m_texture );
+    device.CopyBufferToImage( stagingBuffer, m_texture, !generateMips );
 
     if ( generateMips )
     {
@@ -449,20 +448,7 @@ unsigned char* Image::GetPixels() const
 
 size_t Image::GetTotalImageBytes() const
 {
-    PG_ASSERT( m_texture.m_desc.mipLevels == 1 || m_texture.m_desc.depth == 1, "No mipmapping with depth > 1" );
-    int texelSize = SizeOfPixelFromat( m_texture.m_desc.format );
-    uint32_t w    = m_texture.m_desc.width;
-    uint32_t h    = m_texture.m_desc.height;
-    uint32_t d    = m_texture.m_desc.depth;
-    size_t size   = w * h * d * m_texture.m_desc.arrayLayers * texelSize;
-    for ( uint32_t mip = 1; mip < m_texture.GetMipLevels(); ++ mip )
-    {
-        if ( w > 1 ) w /= 2;
-        if ( h > 1 ) h /= 2;
-        size += w * h * d * m_texture.m_desc.arrayLayers * texelSize;
-    }
-
-    return size;
+    return CalculateTotalTextureSize( m_texture.m_desc );
 }
 
 ImageFlags Image::GetImageFlags() const

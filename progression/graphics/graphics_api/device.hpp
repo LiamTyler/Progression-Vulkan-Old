@@ -45,7 +45,7 @@ namespace Gfx
         void SubmitFrame( uint32_t imageIndex ) const;
 
         void Copy( Buffer dst, Buffer src ) const;
-        void CopyBufferToImage( const Buffer& buffer, const Texture& tex ) const;
+        void CopyBufferToImage( const Buffer& buffer, const Texture& tex, bool copyAllMips = true ) const;
 
         VkDevice GetHandle() const;
         VkQueue GraphicsQueue() const;

@@ -146,8 +146,8 @@ namespace Gfx
     public:
         ImageType type          = ImageType::TYPE_2D;
         PixelFormat format      = PixelFormat::NUM_PIXEL_FORMATS;
-        uint8_t mipLevels       = 1;
-        uint8_t arrayLayers     = 1;
+        uint32_t mipLevels      = 1;
+        uint32_t arrayLayers    = 1;
         uint32_t width          = 0;
         uint32_t height         = 0;
         uint32_t depth          = 1;
@@ -155,7 +155,7 @@ namespace Gfx
         std::string sampler = "linear_repeat_linear";
     };
 
-    uint32_t CalculateTotalTextureSize( ImageDescriptor& desc );
+    uint32_t CalculateTotalTextureSize( const ImageDescriptor& desc );
 
     class Texture
     {
