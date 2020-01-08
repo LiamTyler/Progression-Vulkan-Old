@@ -482,12 +482,12 @@ namespace Gfx
         return m_desc.format;
     }
 
-    uint8_t Texture::GetMipLevels() const
+    uint32_t Texture::GetMipLevels() const
     {
         return m_desc.mipLevels;
     }
 
-    uint8_t Texture::GetArrayLayers() const
+    uint32_t Texture::GetArrayLayers() const
     {
         return m_desc.arrayLayers;
     }

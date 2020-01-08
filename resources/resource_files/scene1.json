@@ -6,7 +6,8 @@
     "Image": {
         "name": "floor",
         "generateMipmaps": true,
-        "dstFormat": "BC7_SRGB",
+        "_dstFormat": "BC7_SRGB",
+        "compressionQuality": "MAX",
         "filename": "textures/metal2.jpg",
         "flipVertically": true,
         "freeCpuCopy": true,
@@ -15,6 +16,8 @@
     "Image": {
         "name": "waterSkybox",
         "generateMipmaps": false,
+        "_dstFormat": "BC7_SRGB",
+        "compressionQuality": "MEDIUM",
         "cubeMapFilenames": {
             "right": "textures/skybox/water/right.jpg",
             "left": "textures/skybox/water/left.jpg",

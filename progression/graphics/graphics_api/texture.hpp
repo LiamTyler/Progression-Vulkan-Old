@@ -171,8 +171,8 @@ namespace Gfx
         unsigned char* GetPixelData() const;
         ImageType GetType() const;
         PixelFormat GetPixelFormat() const;
-        uint8_t GetMipLevels() const;
-        uint8_t GetArrayLayers() const;
+        uint32_t GetMipLevels() const;
+        uint32_t GetArrayLayers() const;
         uint32_t GetWidth() const;
         uint32_t GetHeight() const;
         uint32_t GetDepth() const;

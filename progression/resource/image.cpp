@@ -415,12 +415,12 @@ PixelFormat Image::GetPixelFormat() const
     return m_texture.m_desc.format;
 }
 
-uint8_t Image::GetMipLevels() const
+uint32_t Image::GetMipLevels() const
 {
     return m_texture.m_desc.mipLevels;
 }
 
-uint8_t Image::GetArrayLayers() const
+uint32_t Image::GetArrayLayers() const
 {
     return m_texture.m_desc.arrayLayers;
 }

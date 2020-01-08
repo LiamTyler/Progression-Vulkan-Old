@@ -102,7 +102,15 @@ static std::unordered_map< std::string, Gfx::PixelFormat > pixelFormatMap =
 static std::unordered_map< std::string, ImageSemantic > imageSemanticMap =
 {
     { "DIFFUSE", ImageSemantic::DIFFUSE },
-    { "NORMAL", ImageSemantic::NORMAL }
+    { "NORMAL",  ImageSemantic::NORMAL }
+};
+
+static std::unordered_map< std::string, ImageCompressionQuality > imageCompressionQualityMap =
+{
+    { "LOW",    ImageCompressionQuality::LOW },
+    { "MEDIUM", ImageCompressionQuality::MEDIUM },
+    { "HIGH",   ImageCompressionQuality::HIGH },
+    { "MAX",    ImageCompressionQuality::MAX },
 };
 
 static void ParseImage( rapidjson::Value& value, FastfileConverter* conv )
@@ -164,6 +172,20 @@ static void ParseImage( rapidjson::Value& value, FastfileConverter* conv )
                 else
                 {
                     i.dstFormat = it->second;
+                }
+            }
+        },
+        { "compressionQuality", []( rapidjson::Value& v, ImageCreateInfo& i )
+            {
+                std::string s = v.GetString();
+                auto it = imageCompressionQualityMap.find( s );
+                if ( it == imageCompressionQualityMap.end() )
+                {
+                    LOG_WARN( "No image compression quality found matching '", s, "'" );
+                }
+                else
+                {
+                    i.compressionQuality = it->second;
                 }
             }
         },

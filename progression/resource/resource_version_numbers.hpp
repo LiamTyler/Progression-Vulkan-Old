@@ -1,6 +1,6 @@
 #pragma once
 
-#define PG_RESOURCE_IMAGE_VERSION       6  // Added compressed formats to fastfile
+#define PG_RESOURCE_IMAGE_VERSION       7  // Added compression quality settings
 
 #define PG_RESOURCE_MATERIAL_VERSION    4  // Adding transparency flag
 

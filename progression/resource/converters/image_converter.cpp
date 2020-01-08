@@ -17,7 +17,20 @@
 using namespace Progression;
 namespace fs = std::filesystem;
 
-static bool CompressAndTranscodeImage( const Image& uncompressedImage, Image& outputCompressedImage );
+static bool CompressAndTranscodeImage( const Image& uncompressedImage, Image& outputCompressedImage, const ImageCreateInfo& createInfo );
+
+static std::string ImageCompressionQualityToString( ImageCompressionQuality q )
+{
+    std::string names[] =
+    {
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "MAX",
+    };
+
+    return names[static_cast< int >( q )];
+}
 
 static std::string GetContentFastFileName( ImageCreateInfo& createInfo )
 {
@@ -38,7 +51,15 @@ static std::string GetContentFastFileName( ImageCreateInfo& createInfo )
     std::string version   = std::to_string( PG_RESOURCE_IMAGE_VERSION );
     std::string dstFormat = Gfx::PixelFormatName( createInfo.dstFormat );
 
-    return PG_RESOURCE_DIR "cache/images/" + baseName + "_" + dstFormat + "_" + flip + "_" + version + "_" + hash + ".ffi";
+    if ( Gfx::PixelFormatIsCompressed( createInfo.dstFormat ) )
+    {
+        std::string quality = ImageCompressionQualityToString( createInfo.compressionQuality );
+        return PG_RESOURCE_DIR "cache/images/" + baseName + "_" + dstFormat + "_" + quality + "_" + flip + "_" + version + "_" + hash + ".ffi";
+    }
+    else
+    {
+        return PG_RESOURCE_DIR "cache/images/" + baseName + "_" + dstFormat + "_" + flip + "_" + version + "_" + hash + ".ffi";
+    }
 }
 
 static std::string GetSettingsFastFileName( const ImageCreateInfo& createInfo )
@@ -153,7 +174,6 @@ ConverterStatus ImageConverter::Convert()
         ImageCreateInfo tmpCreateInfo = createInfo;
         tmpCreateInfo.flags &= ~IMAGE_FREE_CPU_COPY_ON_LOAD;
         tmpCreateInfo.flags &= ~IMAGE_CREATE_TEXTURE_ON_LOAD;
-        // tmpCreateInfo.flags &= ~IMAGE_GENERATE_MIPMAPS;
         if ( !image.Load( &tmpCreateInfo ) )
         {
             LOG_ERR( "Could not load image '", createInfo.name, "'" );
@@ -162,15 +182,8 @@ ConverterStatus ImageConverter::Convert()
 
         if ( Gfx::PixelFormatIsCompressed( createInfo.dstFormat ) )
         {
-            LOG( "Need to compress" );
-            Gfx::ImageDescriptor compressedDesc = image.GetDescriptor();
-            if ( createInfo.flags & IMAGE_GENERATE_MIPMAPS )
-            {
-                compressedDesc.mipLevels = static_cast< uint32_t >( 1 + std::floor( std::log2( std::max( compressedDesc.width, compressedDesc.height ) ) ) );
-            }
-            compressedDesc.format = createInfo.dstFormat;
-            Image compressedImage( compressedDesc );
-            if ( !CompressAndTranscodeImage( image, compressedImage ) )
+            Image compressedImage;
+            if ( !CompressAndTranscodeImage( image, compressedImage, createInfo ) )
             {
                 LOG_ERR( "Could not compress and transcode image" );
                 return CONVERT_ERROR;
@@ -225,8 +238,8 @@ static basist::transcoder_texture_format PGToBasisBCPixelFormat( Gfx::PixelForma
         basist::transcoder_texture_format::cTFBC5_RG,              // BC5_SNORM (note: X = R and Y = Alpha)
         basist::transcoder_texture_format::cTFTotalTextureFormats, // BC6H_UFLOAT
         basist::transcoder_texture_format::cTFTotalTextureFormats, // BC6H_SFLOAT
-        basist::transcoder_texture_format::cTFBC7_M6_OPAQUE_ONLY,  // BC7_UNORM cTFBC7_M6_OPAQUE_ONLY cDecodeFlagsTranscodeAlphaDataToOpaqueFormats
-        basist::transcoder_texture_format::cTFBC7_M6_OPAQUE_ONLY,  // BC7_SRGB cTFBC7_M5_RGBA
+        basist::transcoder_texture_format::cTFBC7_M5_RGBA,  // BC7_UNORM cTFBC7_M6_OPAQUE_ONLY cDecodeFlagsTranscodeAlphaDataToOpaqueFormats
+        basist::transcoder_texture_format::cTFBC7_M5_RGBA,  // BC7_SRGB cTFBC7_M5_RGBA
     };
 
     auto basisFormat = convert[static_cast< int >( pgFormat ) - static_cast< int >( Gfx::PixelFormat::BC1_RGB_UNORM )];
@@ -263,7 +276,14 @@ static bool TranscodeBasisImage( basisu::basis_compressor& compressor, Image& ou
     Gfx::ImageDescriptor imageDesc;
     if ( basisTextureType == basist::cBASISTexType2D )
     {
-        imageDesc.type = Gfx::ImageType::TYPE_2D;
+        if ( imageCount == 6 )
+        {
+            imageDesc.type = Gfx::ImageType::TYPE_CUBEMAP;
+        }
+        else
+        {
+            imageDesc.type = Gfx::ImageType::TYPE_2D;
+        }
     }
     else if ( basisTextureType == basist::cBASISTexType2DArray )
     {
@@ -291,29 +311,6 @@ static bool TranscodeBasisImage( basisu::basis_compressor& compressor, Image& ou
     imageDesc.format      = outputCompressedImage.GetPixelFormat();
     imageDesc.usage       = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
-    size_t totalImageSize = 0;
-    for ( uint32_t imageIndex = 0; imageIndex < imageCount; ++imageIndex )
-    {
-        basist::basisu_image_info imageInfo;
-        transcoder.get_image_info( data, dataSizeInBytes, imageInfo, imageIndex );
-        PG_ASSERT( imageInfo.m_width == firstImageInfo.m_width );
-        PG_ASSERT( imageInfo.m_height == firstImageInfo.m_height );
-        PG_ASSERT( imageInfo.m_total_levels == firstImageInfo.m_total_levels );
-
-        uint32_t width  = imageInfo.m_width;
-        uint32_t height = imageInfo.m_height;
-
-        for ( uint32_t mipLevel = 0; mipLevel < imageInfo.m_total_levels; ++mipLevel )
-        {
-            basist::basisu_image_level_info levelInfo;
-            transcoder.get_image_level_info( data, dataSizeInBytes, levelInfo, imageIndex, mipLevel );
-            PG_ASSERT( width == levelInfo.m_width && height == levelInfo.m_height );
-            width  = ( width  / 2 + 3 ) & ~3;
-            height = ( height / 2 + 3 ) & ~3;
-            totalImageSize += levelInfo.m_total_blocks * dstTexFormatSize;
-        }
-    }
-    // char* allTranscodedData = static_cast< char* >( malloc( totalImageSize ) );
     char* allTranscodedData = (char*) outputCompressedImage.GetPixels();
     char* currentSlice      = allTranscodedData;
     for ( uint32_t imageIndex = 0; imageIndex < imageCount; ++imageIndex )
@@ -337,12 +334,10 @@ static bool TranscodeBasisImage( basisu::basis_compressor& compressor, Image& ou
         }
     }
 
-    //free( allTranscodedData );
-
     return true;
 }
 
-static bool CompressImage( const Image& image, basisu::basis_compressor& compressor )
+static bool CompressImage( const Image& image, basisu::basis_compressor& compressor, const ImageCreateInfo& createInfo )
 {
     basist::etc1_global_selector_codebook sel_codebook( basist::g_global_selector_cb_size, basist::g_global_selector_cb );
 
@@ -359,14 +354,38 @@ static bool CompressImage( const Image& image, basisu::basis_compressor& compres
     params.m_read_source_images       = false;
     params.m_write_output_basis_files = false;
     params.m_pSel_codebook            = &sel_codebook;
-    params.m_quality_level            = 128;
-
+    if ( createInfo.compressionQuality == ImageCompressionQuality::LOW )
+    {
+        params.m_compression_level = 0;
+        params.m_quality_level     = 50;
+    }
+    else if ( createInfo.compressionQuality == ImageCompressionQuality::MEDIUM )
+    {
+        params.m_compression_level = 1;
+        params.m_quality_level     = 128;
+    }
+    else if ( createInfo.compressionQuality == ImageCompressionQuality::HIGH )
+    {
+        params.m_compression_level = 2;
+        params.m_quality_level     = 255;
+    }
+    else if ( createInfo.compressionQuality == ImageCompressionQuality::MAX )
+    {
+        params.m_compression_level     = 5;
+        params.m_quality_level         = 255;
+        params.m_max_endpoint_clusters = basisu::basisu_frontend::cMaxEndpointClusters;
+        params.m_max_selector_clusters = basisu::basisu_frontend::cMaxSelectorClusters;
+    }
+    params.m_perceptual        = false;
     params.m_y_flip            = false;
-    params.m_compression_level = 1;
     params.m_mip_gen           = image.GetImageFlags() & IMAGE_GENERATE_MIPMAPS;
-    params.m_source_images.resize( 1 );
-    params.m_source_images[0].resize( image.GetWidth(), image.GetHeight() );
-    memcpy( params.m_source_images[0].get_ptr(), image.GetPixels(), image.GetTotalImageBytes() );
+    params.m_source_images.resize( image.GetArrayLayers() );
+    size_t faceSize = 4 * image.GetWidth() * image.GetHeight();
+    for ( uint32_t i = 0; i < image.GetArrayLayers(); ++i )
+    {
+        params.m_source_images[i].resize( image.GetWidth(), image.GetHeight() );
+        memcpy( params.m_source_images[i].get_ptr(), image.GetPixels() + i * faceSize, faceSize );
+    }
 
     if ( !compressor.init( params ) )
     {
@@ -376,9 +395,7 @@ static bool CompressImage( const Image& image, basisu::basis_compressor& compres
 
     basisu::interval_timer tm;
 	tm.start();
-
 	basisu::basis_compressor::error_code ec = compressor.process();
-
 	tm.stop();
 
 	if ( ec == basisu::basis_compressor::cECSuccess )
@@ -394,10 +411,18 @@ static bool CompressImage( const Image& image, basisu::basis_compressor& compres
     return true;
 }
 
-static bool CompressAndTranscodeImage( const Image& uncompressedImage, Image& outputCompressedImage )
+static bool CompressAndTranscodeImage( const Image& uncompressedImage, Image& outputCompressedImage, const ImageCreateInfo& createInfo  )
 {
+    Gfx::ImageDescriptor compressedDesc = uncompressedImage.GetDescriptor();
+    if ( createInfo.flags & IMAGE_GENERATE_MIPMAPS )
+    {
+        compressedDesc.mipLevels = static_cast< uint32_t >( 1 + std::floor( std::log2( std::max( compressedDesc.width, compressedDesc.height ) ) ) );
+    }
+    compressedDesc.format = createInfo.dstFormat;
+    outputCompressedImage = Image( compressedDesc );
+
     basisu::basis_compressor compressor;
-    if ( !CompressImage( uncompressedImage, compressor ) )
+    if ( !CompressImage( uncompressedImage, compressor, createInfo ) )
     {
         LOG_ERR( "Could not compress image to basis format" );
         return false;

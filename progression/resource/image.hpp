@@ -24,6 +24,14 @@ enum class ImageSemantic
     NORMAL
 };
 
+enum class ImageCompressionQuality
+{
+    LOW,
+    MEDIUM,
+    HIGH,
+    MAX,
+};
+
 struct ImageCreateInfo : public ResourceCreateInfo
 {
     std::string filename;
@@ -32,6 +40,7 @@ struct ImageCreateInfo : public ResourceCreateInfo
     ImageFlags flags           = 0;
     ImageSemantic semantic     = ImageSemantic::DIFFUSE;
     Gfx::PixelFormat dstFormat = Gfx::PixelFormat::INVALID;
+    ImageCompressionQuality compressionQuality = ImageCompressionQuality::MEDIUM;
 };
 
 class Image : public Resource 
@@ -59,8 +68,8 @@ public:
     Gfx::ImageDescriptor GetDescriptor() const;
     Gfx::ImageType GetType() const;
     Gfx::PixelFormat GetPixelFormat() const;
-    uint8_t GetMipLevels() const;
-    uint8_t GetArrayLayers() const;
+    uint32_t GetMipLevels() const;
+    uint32_t GetArrayLayers() const;
     uint32_t GetWidth() const;
     uint32_t GetHeight() const;
     uint32_t GetDepth() const;
