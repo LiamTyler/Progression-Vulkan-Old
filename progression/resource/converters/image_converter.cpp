@@ -238,8 +238,8 @@ static basist::transcoder_texture_format PGToBasisBCPixelFormat( Gfx::PixelForma
         basist::transcoder_texture_format::cTFBC5_RG,              // BC5_SNORM (note: X = R and Y = Alpha)
         basist::transcoder_texture_format::cTFTotalTextureFormats, // BC6H_UFLOAT
         basist::transcoder_texture_format::cTFTotalTextureFormats, // BC6H_SFLOAT
-        basist::transcoder_texture_format::cTFBC7_M5_RGBA,  // BC7_UNORM cTFBC7_M6_OPAQUE_ONLY cDecodeFlagsTranscodeAlphaDataToOpaqueFormats
-        basist::transcoder_texture_format::cTFBC7_M5_RGBA,  // BC7_SRGB cTFBC7_M5_RGBA
+        basist::transcoder_texture_format::cTFBC7_M6_OPAQUE_ONLY,  // BC7_UNORM cTFBC7_M6_OPAQUE_ONLY cDecodeFlagsTranscodeAlphaDataToOpaqueFormats
+        basist::transcoder_texture_format::cTFBC7_M6_OPAQUE_ONLY,  // BC7_SRGB cTFBC7_M5_RGBA
     };
 
     auto basisFormat = convert[static_cast< int >( pgFormat ) - static_cast< int >( Gfx::PixelFormat::BC1_RGB_UNORM )];
