@@ -32,7 +32,6 @@ namespace Gfx
         Buffer NewBuffer( size_t length, void* data, BufferType type, MemoryType memoryType, const std::string& name = "" ) const;
         Texture NewTexture( const ImageDescriptor& desc, bool managed = true, const std::string& name = "" ) const;
         Texture NewTextureFromBuffer( ImageDescriptor& desc, void* data, bool managed = true, const std::string& name = "" ) const;
-        Texture NewTextureCompressed( ImageDescriptor& desc, void* data, bool managed = true, const std::string& name = "" ) const;
         Sampler NewSampler( const SamplerDescriptor& desc ) const;
         Fence NewFence( bool signaled, const std::string& name = "" ) const;
         Semaphore NewSemaphore( const std::string& name = "" ) const;

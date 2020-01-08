@@ -1,6 +1,6 @@
 #pragma once
 
-#define PG_RESOURCE_IMAGE_VERSION       5  // Changed the ImageDescriptor to be all uint32_t variables
+#define PG_RESOURCE_IMAGE_VERSION       6  // Added compressed formats to fastfile
 
 #define PG_RESOURCE_MATERIAL_VERSION    4  // Adding transparency flag
 

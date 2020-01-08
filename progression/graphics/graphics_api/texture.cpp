@@ -241,6 +241,100 @@ namespace Gfx
                f <= static_cast< int >( PixelFormat::STENCIL_8_UINT );
     }
 
+    const char* PixelFormatName( const PixelFormat& format )
+    {
+        const char* names[] =
+        {
+            "SOURCE_FORMAT",         // INVALID
+            "R8_UNORM",              // R8_UNORM
+            "R8_SNORM",              // R8_SNORM
+            "R8_UINT",               // R8_UINT
+            "R8_SINT",               // R8_SINT
+            "R8_SRGB",               // R8_SRGB
+            "R8_G8_UNORM",           // R8_G8_UNORM
+            "R8_G8_SNORM",           // R8_G8_SNORM
+            "R8_G8_UINT",            // R8_G8_UINT
+            "R8_G8_SINT",            // R8_G8_SINT
+            "R8_G8_SRGB",            // R8_G8_SRGB
+            "R8_G8_B8_UNORM",        // R8_G8_B8_UNORM
+            "R8_G8_B8_SNORM",        // R8_G8_B8_SNORM
+            "R8_G8_B8_UINT",         // R8_G8_B8_UINT
+            "R8_G8_B8_SINT",         // R8_G8_B8_SINT
+            "R8_G8_B8_SRGB",         // R8_G8_B8_SRGB
+            "B8_G8_R8_UNORM",        // B8_G8_R8_UNORM
+            "B8_G8_R8_SNORM",        // B8_G8_R8_SNORM
+            "B8_G8_R8_UINT",         // B8_G8_R8_UINT
+            "B8_G8_R8_SINT",         // B8_G8_R8_SINT
+            "B8_G8_R8_SRGB",         // B8_G8_R8_SRGB
+            "R8_G8_B8_A8_UNORM",     // R8_G8_B8_A8_UNORM
+            "R8_G8_B8_A8_SNORM",     // R8_G8_B8_A8_SNORM
+            "R8_G8_B8_A8_UINT",      // R8_G8_B8_A8_UINT
+            "R8_G8_B8_A8_SINT",      // R8_G8_B8_A8_SINT
+            "R8_G8_B8_A8_SRGB",      // R8_G8_B8_A8_SRGB
+            "B8_G8_R8_A8_UNORM",     // B8_G8_R8_A8_UNORM
+            "B8_G8_R8_A8_SNORM",     // B8_G8_R8_A8_SNORM
+            "B8_G8_R8_A8_UINT",      // B8_G8_R8_A8_UINT
+            "B8_G8_R8_A8_SINT",      // B8_G8_R8_A8_SINT
+            "B8_G8_R8_A8_SRGB",      // B8_G8_R8_A8_SRGB
+            "R16_UNORM",             // R16_UNORM
+            "R16_SNORM",             // R16_SNORM
+            "R16_UINT",              // R16_UINT
+            "R16_SINT",              // R16_SINT
+            "R16_FLOAT",             // R16_FLOAT
+            "R16_G16_UNORM",         // R16_G16_UNORM
+            "R16_G16_SNORM",         // R16_G16_SNORM
+            "R16_G16_UINT",          // R16_G16_UINT
+            "R16_G16_SINT",          // R16_G16_SINT
+            "R16_G16_FLOAT",         // R16_G16_FLOAT
+            "R16_G16_B16_UNORM",     // R16_G16_B16_UNORM
+            "R16_G16_B16_SNORM",     // R16_G16_B16_SNORM
+            "R16_G16_B16_UINT",      // R16_G16_B16_UINT
+            "R16_G16_B16_SINT",      // R16_G16_B16_SINT
+            "R16_G16_B16_FLOAT",     // R16_G16_B16_FLOAT
+            "R16_G16_B16_A16_UNORM", // R16_G16_B16_A16_UNORM
+            "R16_G16_B16_A16_SNORM", // R16_G16_B16_A16_SNORM
+            "R16_G16_B16_A16_UINT",  // R16_G16_B16_A16_UINT
+            "R16_G16_B16_A16_SINT",  // R16_G16_B16_A16_SINT
+            "R16_G16_B16_A16_FLOAT", // R16_G16_B16_A16_FLOAT
+            "R32_UINT",              // R32_UINT
+            "R32_SINT",              // R32_SINT
+            "R32_FLOAT",             // R32_FLOAT
+            "R32_G32_UINT",          // R32_G32_UINT
+            "R32_G32_SINT",          // R32_G32_SINT
+            "R32_G32_FLOAT",         // R32_G32_FLOAT
+            "R32_G32_B32_UINT",      // R32_G32_B32_UINT
+            "R32_G32_B32_SINT",      // R32_G32_B32_SINT
+            "R32_G32_B32_FLOAT",     // R32_G32_B32_FLOAT
+            "R32_G32_B32_A32_UINT",  // R32_G32_B32_A32_UINT
+            "R32_G32_B32_A32_SINT",  // R32_G32_B32_A32_SINT
+            "R32_G32_B32_A32_FLOAT", // R32_G32_B32_A32_FLOAT
+            "DEPTH_16_UNORM",        // DEPTH_16_UNORM
+            "DEPTH_32_FLOAT",        // DEPTH_32_FLOAT
+            "DEPTH_16_UNORM_STENCIL_8_UINT", // DEPTH_16_UNORM_STENCIL_8_UINT
+            "DEPTH_24_UNORM_STENCIL_8_UINT", // DEPTH_24_UNORM_STENCIL_8_UINT
+            "DEPTH_32_FLOAT_STENCIL_8_UINT", // DEPTH_32_FLOAT_STENCIL_8_UINT
+            "STENCIL_8_UINT", // STENCIL_8_UINT
+            "BC1_RGB_UNORM",  // BC1_RGB_UNORM
+            "BC1_RGB_SRGB",   // BC1_RGB_SRGB
+            "BC1_RGBA_UNORM", // BC1_RGBA_UNORM
+            "BC1_RGBA_SRGB",  // BC1_RGBA_SRGB
+            "BC2_UNORM",      // BC2_UNORM
+            "BC2_SRGB",       // BC2_SRGB
+            "BC3_UNORM",      // BC3_UNORM
+            "BC3_SRGB",       // BC3_SRGB
+            "BC4_UNORM",      // BC4_UNORM
+            "BC4_SNORM",      // BC4_SNORM
+            "BC5_UNORM",      // BC5_UNORM
+            "BC5_SNORM",      // BC5_SNORM
+            "BC6H_UFLOAT",    // BC6H_UFLOAT
+            "BC6H_SFLOAT",    // BC6H_SFLOAT
+            "BC7_UNORM",      // BC7_UNORM
+            "BC7_SRGB",       // BC7_SRGB
+        };
+
+        return names[static_cast< int >( format )];
+    }
+
     uint32_t CalculateTotalTextureSize( const ImageDescriptor& desc )
     {
         PG_ASSERT( desc.depth == 1, "haven't added support for depth > 1 yet" );

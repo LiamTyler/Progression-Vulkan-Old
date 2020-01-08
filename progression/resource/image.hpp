@@ -15,14 +15,14 @@ enum ImageFlagBits
     IMAGE_FLIP_VERTICALLY        = 1 << 2,
     IMAGE_GENERATE_MIPMAPS       = 1 << 3,
 };
+typedef uint32_t ImageFlags;
+
 
 enum class ImageSemantic
 {
     DIFFUSE,
     NORMAL
 };
-
-typedef uint32_t ImageFlags;
 
 struct ImageCreateInfo : public ResourceCreateInfo
 {

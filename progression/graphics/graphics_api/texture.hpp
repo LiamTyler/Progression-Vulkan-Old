@@ -127,6 +127,7 @@ namespace Gfx
     bool PixelFormatIsCompressed( const PixelFormat& format );
     bool PixelFormatIsDepthFormat( const PixelFormat& format );
     bool PixelFormatIsStencil( const PixelFormat& format );
+    const char* PixelFormatName( const PixelFormat& format );
 
     enum class ImageType : uint8_t
     {

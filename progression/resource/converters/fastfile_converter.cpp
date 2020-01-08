@@ -1,4 +1,6 @@
 #include "core/feature_defines.hpp"
+#include "basis_universal/transcoder/basisu_transcoder.h"
+#include "basis_universal/basisu_comp.h"
 #include "core/time.hpp"
 #include "graphics/graphics_api.hpp"
 #include "lz4/lz4.h"
@@ -267,6 +269,8 @@ static void ParseShader( rapidjson::Value& value, FastfileConverter* conv )
 
 AssetStatus FastfileConverter::CheckDependencies()
 {
+    basisu::basisu_encoder_init();
+    basist::basisu_transcoder_init();
     IF_VERBOSE_MODE( LOG( "Checking dependencies for fastfile '", inputFile, "'" ) );
     status = ASSET_UP_TO_DATE;
 

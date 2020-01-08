@@ -6,6 +6,7 @@
     "Image": {
         "name": "floor",
         "generateMipmaps": true,
+        "dstFormat": "BC7_SRGB",
         "filename": "textures/metal2.jpg",
         "flipVertically": true,
         "freeCpuCopy": true,
