@@ -27,11 +27,3 @@ Ka 0 0 0
 Kd .7 .7 .7
 Ks 0 0 0
 Ns 50
-
-newmtl floor 
-Ka 0 0 0
-Kd 1 1 1
-Ks 0.1 0.1 0.1
-Ns 50
-#map_Kd textures/metal2.jpg
-map_Kd floor

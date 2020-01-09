@@ -91,7 +91,7 @@ static void AddImage( const aiMaterial* pMaterial, aiTextureType texType )
 
 static void OutputKeyStr( std::ostream& out, const std::string& key, const std::string& val, bool comma = true )
 {
-    out << "\t\"" << key << "\": " << "\"" << val << "\"";
+    out << "\t\t\"" << key << "\": " << "\"" << val << "\"";
     if ( comma )
     {
         out << ",";
@@ -102,7 +102,7 @@ static void OutputKeyStr( std::ostream& out, const std::string& key, const std::
 static void OutputKeyBool( std::ostream& out, const std::string& key, bool val, bool comma = true )
 {
     std::string s = val ? "true" : "false";
-    out << "\t\"" << key << "\": " << s;
+    out << "\t\t\"" << key << "\": " << s;
     if ( comma )
     {
         out << ",";
@@ -244,7 +244,7 @@ int main( int argc, char* argv[] )
     
         for ( const auto& [ name, entry ] : images )
         {
-            out << "\"Image\": {\n";
+            out << "\t\"Image\": {\n";
             OutputKeyStr( out, "name", name );
             OutputKeyStr( out, "filename", entry.relPath );
             OutputKeyStr( out, "semantic", entry.semantic );
@@ -258,7 +258,7 @@ int main( int argc, char* argv[] )
             OutputKeyBool( out, "flipVertically", flipY );
             OutputKeyBool( out, "freeCpuCopy",   true );
             OutputKeyBool( out, "createTexture", true, false );
-            out << "}," << std::endl;
+            out << "\t}," << std::endl;
         }
         out.close();
     }

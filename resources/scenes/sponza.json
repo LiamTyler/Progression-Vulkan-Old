@@ -1,6 +1,6 @@
 {
     "Fastfile": {
-        "filename": "sponza.ff"
+        "filename": "sponza_compressed.ff"
     },
     "Camera": {
         "position": [ -4, 2, 0 ],

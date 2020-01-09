@@ -393,11 +393,11 @@ static bool CompressImage( const Image& image, basisu::basis_compressor& compres
     params.m_source_images.resize( image.GetArrayLayers() );
     if ( createInfo.semantic == ImageSemantic::NORMAL )
     {
-        // params.m_seperate_rg_to_color_alpha = true;
-        // params.m_perceptual                 = false;
-		// params.m_mip_srgb                   = false;
-		// params.m_no_selector_rdo            = true;
-		// params.m_no_endpoint_rdo            = true;
+        params.m_seperate_rg_to_color_alpha = true;
+        params.m_perceptual                 = false;
+		params.m_mip_srgb                   = false;
+		params.m_no_selector_rdo            = true;
+		params.m_no_endpoint_rdo            = true;
     }
     PG_ASSERT( Gfx::SizeOfPixelFromat( image.GetPixelFormat() ) >= 3, "Not properly accounting for R or RG textures yet" );
     size_t faceSize = 4 * image.GetWidth() * image.GetHeight();
