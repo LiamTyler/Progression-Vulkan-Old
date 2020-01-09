@@ -156,6 +156,7 @@ set(
 	utils/json_parsing.cpp
 	utils/logger.cpp
     utils/random.cpp
+    utils/string.cpp
     utils/timestamp.cpp
 	
 	utils/fileIO.hpp
@@ -164,6 +165,7 @@ set(
     utils/noncopyable.hpp
     utils/random.hpp
     utils/serialize.hpp
+    utils/string.hpp
     utils/timestamp.hpp
     utils/type_name.hpp
 )

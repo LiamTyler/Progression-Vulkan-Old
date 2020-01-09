@@ -188,6 +188,11 @@ ConverterStatus ShaderConverter::Convert()
     if ( m_settingsNeedsConverting || force )
     {
         std::ofstream out( m_outputSettingsFile, std::ios::binary );
+        if ( !out )
+        {
+            LOG_ERR( "Failed to open settings file '", m_outputSettingsFile, "'" );
+            return CONVERT_ERROR;
+        }
         serialize::Write( out, createInfo.name );
     }
 

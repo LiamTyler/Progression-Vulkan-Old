@@ -2,7 +2,7 @@
 
 #define PG_RESOURCE_IMAGE_VERSION       7  // Added compression quality settings
 
-#define PG_RESOURCE_MATERIAL_VERSION    4  // Adding transparency flag
+#define PG_RESOURCE_MATERIAL_VERSION    5  // Removing embedded images
 
 #define PG_RESOURCE_MODEL_VERSION       2  // Adding tangents
 

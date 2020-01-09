@@ -9,6 +9,7 @@
 #include "utils/fileIO.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
+#include "utils/string.hpp"
 #include "utils/timestamp.hpp"
 #include <filesystem>
 #include <fstream>
@@ -47,6 +48,8 @@ static std::string GetContentFastFileName( ImageCreateInfo& createInfo )
         hash     = std::to_string( std::hash< std::string >{}( filePath.string() ) );
         baseName = "skybox_" + filePath.filename().string();
     }
+    baseName = SlashesToUnderscores( baseName );
+    
     std::string flip      = createInfo.flags & IMAGE_FLIP_VERTICALLY ? "1" : "0";
     std::string version   = std::to_string( PG_RESOURCE_IMAGE_VERSION );
     std::string dstFormat = Gfx::PixelFormatName( createInfo.dstFormat );
@@ -64,7 +67,8 @@ static std::string GetContentFastFileName( ImageCreateInfo& createInfo )
 
 static std::string GetSettingsFastFileName( const ImageCreateInfo& createInfo )
 {
-    return PG_RESOURCE_DIR "cache/images/settings_" + createInfo.name + "_" + createInfo.sampler + "_" +
+    std::string n = SlashesToUnderscores( createInfo.name );
+    return PG_RESOURCE_DIR "cache/images/settings_" + n + "_" + createInfo.sampler + "_" +
            std::to_string( static_cast< int >( createInfo.flags ) ) + ".ffi";
 }
 
@@ -163,6 +167,11 @@ ConverterStatus ImageConverter::Convert()
     if ( m_settingsNeedsConverting || force )
     {
         std::ofstream out( m_outputSettingsFile, std::ios::binary );
+        if ( !out )
+        {
+            LOG_ERR( "Failed to open settings file '", m_outputSettingsFile, "'" );
+            return CONVERT_ERROR;
+        }
         serialize::Write( out, createInfo.name );
         serialize::Write( out, createInfo.flags );
         serialize::Write( out, createInfo.sampler );
@@ -313,6 +322,7 @@ static bool TranscodeBasisImage( basisu::basis_compressor& compressor, Image& ou
 
     char* allTranscodedData = (char*) outputCompressedImage.GetPixels();
     char* currentSlice      = allTranscodedData;
+    size_t currentSize = 0;
     for ( uint32_t imageIndex = 0; imageIndex < imageCount; ++imageIndex )
     {
         basist::basisu_image_info imageInfo;
@@ -330,6 +340,7 @@ static bool TranscodeBasisImage( basisu::basis_compressor& compressor, Image& ou
                 LOG_ERR( "Could not transcode image: ", imageIndex, ", mip: ", mipLevel );
                 return false;
             }
+            currentSize += levelSize;
             currentSlice += levelSize;
         }
     }
@@ -376,10 +387,19 @@ static bool CompressImage( const Image& image, basisu::basis_compressor& compres
         params.m_max_endpoint_clusters = basisu::basisu_frontend::cMaxEndpointClusters;
         params.m_max_selector_clusters = basisu::basisu_frontend::cMaxSelectorClusters;
     }
-    params.m_perceptual        = false;
+    params.m_perceptual        = false; // seems to look better for sRGB images too??
     params.m_y_flip            = false;
     params.m_mip_gen           = image.GetImageFlags() & IMAGE_GENERATE_MIPMAPS;
     params.m_source_images.resize( image.GetArrayLayers() );
+    if ( createInfo.semantic == ImageSemantic::NORMAL )
+    {
+        // params.m_seperate_rg_to_color_alpha = true;
+        // params.m_perceptual                 = false;
+		// params.m_mip_srgb                   = false;
+		// params.m_no_selector_rdo            = true;
+		// params.m_no_endpoint_rdo            = true;
+    }
+    PG_ASSERT( Gfx::SizeOfPixelFromat( image.GetPixelFormat() ) >= 3, "Not properly accounting for R or RG textures yet" );
     size_t faceSize = 4 * image.GetWidth() * image.GetHeight();
     for ( uint32_t i = 0; i < image.GetArrayLayers(); ++i )
     {

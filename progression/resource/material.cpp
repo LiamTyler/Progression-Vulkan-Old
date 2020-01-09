@@ -44,42 +44,14 @@ bool Material::Serialize( std::ofstream& out ) const
     serialize::Write( out, hasDiffuseTexture );
     if ( hasDiffuseTexture )
     {
-        bool texManaged = ResourceManager::Get< Image >( map_Kd->name ) != nullptr;
-        serialize::Write( out, texManaged );
-        if ( texManaged )
-        {
-            serialize::Write( out, map_Kd->name );
-        }
-        else
-        {
-            serialize::Write( out, (uint32_t) PG_RESOURCE_IMAGE_VERSION );
-            serialize::Write( out, map_Kd->name );
-            serialize::Write( out, map_Kd->GetImageFlags() );
-            std::string samplerName = map_Kd->GetTexture()->GetSampler()->GetName();
-            serialize::Write( out, samplerName );
-            map_Kd->Serialize( out );
-        }
+        serialize::Write( out, map_Kd->name );
     }
 
     bool hasNormalMap = map_Norm != nullptr;
     serialize::Write( out, hasNormalMap );
     if ( hasNormalMap )
     {
-        bool texManaged = ResourceManager::Get< Image >( map_Norm->name ) != nullptr;
-        serialize::Write( out, texManaged );
-        if ( texManaged )
-        {
-            serialize::Write( out, map_Norm->name );
-        }
-        else
-        {
-            serialize::Write( out, (uint32_t) PG_RESOURCE_IMAGE_VERSION );
-            serialize::Write( out, map_Norm->name );
-            serialize::Write( out, map_Norm->GetImageFlags() );
-            std::string samplerName = map_Norm->GetTexture()->GetSampler()->GetName();
-            serialize::Write( out, samplerName );
-            map_Norm->Serialize( out );
-        }
+        serialize::Write( out, map_Norm->name );
     }
 
     return !out.fail();
@@ -96,48 +68,20 @@ bool Material::Deserialize( char*& buffer )
     serialize::Read( buffer, hasDiffuseTexture );
     if ( hasDiffuseTexture )
     {
-        bool texManaged;
-        serialize::Read( buffer, texManaged );
-        if ( texManaged )
-        {
-            std::string map_name;
-            serialize::Read( buffer, map_name );
-            map_Kd = ResourceManager::Get< Image >( map_name );
-            PG_ASSERT( map_Kd, "No diffuse texture with name '" + map_name + "' found" );
-        }
-        else
-        {
-            uint32_t imVersion;
-            serialize::Read( buffer, imVersion );
-            PG_ASSERT( imVersion == PG_RESOURCE_IMAGE_VERSION, "Expected image version: " +
-                std::to_string( PG_RESOURCE_IMAGE_VERSION ) + ", but got: " + std::to_string( imVersion ) );
-            map_Kd = std::make_shared< Image >();
-            map_Kd->Deserialize( buffer );
-        }
+        std::string map_name;
+        serialize::Read( buffer, map_name );
+        map_Kd = ResourceManager::Get< Image >( map_name );
+        PG_ASSERT( map_Kd, "No diffuse texture with name '" + map_name + "' found" );
     }
 
     bool hasNormalMap;
     serialize::Read( buffer, hasNormalMap );
     if ( hasNormalMap )
     {
-        bool texManaged;
-        serialize::Read( buffer, texManaged );
-        if ( texManaged )
-        {
-            std::string map_name;
-            serialize::Read( buffer, map_name );
-            map_Norm = ResourceManager::Get< Image >( map_name );
-            PG_ASSERT( map_Norm, "No normal map with name '" + map_name + "' found" );
-        }
-        else
-        {
-            uint32_t imVersion;
-            serialize::Read( buffer, imVersion );
-            PG_ASSERT( imVersion == PG_RESOURCE_IMAGE_VERSION, "Expected image version: " +
-                std::to_string( PG_RESOURCE_IMAGE_VERSION ) + ", but got: " + std::to_string( imVersion ) );
-            map_Norm = std::make_shared< Image >();
-            map_Norm->Deserialize( buffer );
-        }
+        std::string map_name;
+        serialize::Read( buffer, map_name );
+        map_Norm = ResourceManager::Get< Image >( map_name );
+        PG_ASSERT( map_Norm, "No normal map with name '" + map_name + "' found" );
     }
 
     return true;

@@ -21,84 +21,6 @@
 
 using namespace Progression;
 
-static std::unordered_map< std::string, Gfx::PixelFormat > pixelFormatMap =
-{
-    { "R8_UNORM", Gfx::PixelFormat::R8_UNORM },
-    { "R8_SNORM", Gfx::PixelFormat::R8_SNORM },
-    { "R8_UINT", Gfx::PixelFormat::R8_UINT },
-    { "R8_SINT", Gfx::PixelFormat::R8_SINT },
-    { "R8_SRGB", Gfx::PixelFormat::R8_SRGB },
-    { "R8_G8_UNORM", Gfx::PixelFormat::R8_G8_UNORM },
-    { "R8_G8_SNORM", Gfx::PixelFormat::R8_G8_SNORM },
-    { "R8_G8_UINT", Gfx::PixelFormat::R8_G8_UINT },
-    { "R8_G8_SINT", Gfx::PixelFormat::R8_G8_SINT },
-    { "R8_G8_SRGB", Gfx::PixelFormat::R8_G8_SRGB },
-    { "R8_G8_B8_UNORM", Gfx::PixelFormat::R8_G8_B8_UNORM },
-    { "R8_G8_B8_SNORM", Gfx::PixelFormat::R8_G8_B8_SNORM },
-    { "R8_G8_B8_UINT", Gfx::PixelFormat::R8_G8_B8_UINT },
-    { "R8_G8_B8_SINT", Gfx::PixelFormat::R8_G8_B8_SINT },
-    { "R8_G8_B8_SRGB", Gfx::PixelFormat::R8_G8_B8_SRGB },
-    { "R8_G8_B8_A8_UNORM", Gfx::PixelFormat::R8_G8_B8_A8_UNORM },
-    { "R8_G8_B8_A8_SNORM", Gfx::PixelFormat::R8_G8_B8_A8_SNORM },
-    { "R8_G8_B8_A8_UINT", Gfx::PixelFormat::R8_G8_B8_A8_UINT },
-    { "R8_G8_B8_A8_SINT", Gfx::PixelFormat::R8_G8_B8_A8_SINT },
-    { "R8_G8_B8_A8_SRGB", Gfx::PixelFormat::R8_G8_B8_A8_SRGB },
-    { "R16_UNORM", Gfx::PixelFormat::R16_UNORM },
-    { "R16_SNORM", Gfx::PixelFormat::R16_SNORM },
-    { "R16_UINT", Gfx::PixelFormat::R16_UINT },
-    { "R16_SINT", Gfx::PixelFormat::R16_SINT },
-    { "R16_FLOAT", Gfx::PixelFormat::R16_FLOAT },
-    { "R16_G16_UNORM", Gfx::PixelFormat::R16_G16_UNORM },
-    { "R16_G16_SNORM", Gfx::PixelFormat::R16_G16_SNORM },
-    { "R16_G16_UINT", Gfx::PixelFormat::R16_G16_UINT },
-    { "R16_G16_SINT", Gfx::PixelFormat::R16_G16_SINT },
-    { "R16_G16_FLOAT", Gfx::PixelFormat::R16_G16_FLOAT },
-    { "R16_G16_B16_UNORM", Gfx::PixelFormat::R16_G16_B16_UNORM },
-    { "R16_G16_B16_SNORM", Gfx::PixelFormat::R16_G16_B16_SNORM },
-    { "R16_G16_B16_UINT", Gfx::PixelFormat::R16_G16_B16_UINT },
-    { "R16_G16_B16_SINT", Gfx::PixelFormat::R16_G16_B16_SINT },
-    { "R16_G16_B16_FLOAT", Gfx::PixelFormat::R16_G16_B16_FLOAT },
-    { "R16_G16_B16_A16_UNORM", Gfx::PixelFormat::R16_G16_B16_A16_UNORM },
-    { "R16_G16_B16_A16_SNORM", Gfx::PixelFormat::R16_G16_B16_A16_SNORM },
-    { "R16_G16_B16_A16_UINT", Gfx::PixelFormat::R16_G16_B16_A16_UINT },
-    { "R16_G16_B16_A16_SINT", Gfx::PixelFormat::R16_G16_B16_A16_SINT },
-    { "R16_G16_B16_A16_FLOAT", Gfx::PixelFormat::R16_G16_B16_A16_FLOAT },
-    { "R32_UINT", Gfx::PixelFormat::R32_UINT },
-    { "R32_SINT", Gfx::PixelFormat::R32_SINT },
-    { "R32_FLOAT", Gfx::PixelFormat::R32_FLOAT },
-    { "R32_G32_UINT", Gfx::PixelFormat::R32_G32_UINT },
-    { "R32_G32_SINT", Gfx::PixelFormat::R32_G32_SINT },
-    { "R32_G32_FLOAT", Gfx::PixelFormat::R32_G32_FLOAT },
-    { "R32_G32_B32_UINT", Gfx::PixelFormat::R32_G32_B32_UINT },
-    { "R32_G32_B32_SINT", Gfx::PixelFormat::R32_G32_B32_SINT },
-    { "R32_G32_B32_FLOAT", Gfx::PixelFormat::R32_G32_B32_FLOAT },
-    { "R32_G32_B32_A32_UINT", Gfx::PixelFormat::R32_G32_B32_A32_UINT },
-    { "R32_G32_B32_A32_SINT", Gfx::PixelFormat::R32_G32_B32_A32_SINT },
-    { "R32_G32_B32_A32_FLOAT", Gfx::PixelFormat::R32_G32_B32_A32_FLOAT },
-    { "DEPTH_16_UNORM", Gfx::PixelFormat::DEPTH_16_UNORM },
-    { "DEPTH_32_FLOAT", Gfx::PixelFormat::DEPTH_32_FLOAT },
-    { "DEPTH_16_UNORM_STENCIL_8_UINT", Gfx::PixelFormat::DEPTH_16_UNORM_STENCIL_8_UINT },
-    { "DEPTH_24_UNORM_STENCIL_8_UINT", Gfx::PixelFormat::DEPTH_24_UNORM_STENCIL_8_UINT },
-    { "DEPTH_32_FLOAT_STENCIL_8_UINT", Gfx::PixelFormat::DEPTH_32_FLOAT_STENCIL_8_UINT },
-    { "STENCIL_8_UINT", Gfx::PixelFormat::STENCIL_8_UINT },
-    { "BC1_RGB_UNORM", Gfx::PixelFormat::BC1_RGB_UNORM },
-    { "BC1_RGB_SRGB", Gfx::PixelFormat::BC1_RGB_SRGB },
-    { "BC1_RGBA_UNORM", Gfx::PixelFormat::BC1_RGBA_UNORM },
-    { "BC1_RGBA_SRGB", Gfx::PixelFormat::BC1_RGBA_SRGB },
-    { "BC2_UNORM", Gfx::PixelFormat::BC2_UNORM },
-    { "BC2_SRGB", Gfx::PixelFormat::BC2_SRGB },
-    { "BC3_UNORM", Gfx::PixelFormat::BC3_UNORM },
-    { "BC3_SRGB", Gfx::PixelFormat::BC3_SRGB },
-    { "BC4_UNORM", Gfx::PixelFormat::BC4_UNORM },
-    { "BC4_SNORM", Gfx::PixelFormat::BC4_SNORM },
-    { "BC5_UNORM", Gfx::PixelFormat::BC5_UNORM },
-    { "BC5_SNORM", Gfx::PixelFormat::BC5_SNORM },
-    { "BC6H_UFLOAT", Gfx::PixelFormat::BC6H_UFLOAT },
-    { "BC6H_SFLOAT", Gfx::PixelFormat::BC6H_SFLOAT },
-    { "BC7_UNORM", Gfx::PixelFormat::BC7_UNORM },
-    { "BC7_SRGB", Gfx::PixelFormat::BC7_SRGB },
-};
-
 static std::unordered_map< std::string, ImageSemantic > imageSemanticMap =
 {
     { "DIFFUSE", ImageSemantic::DIFFUSE },
@@ -164,14 +86,10 @@ static void ParseImage( rapidjson::Value& value, FastfileConverter* conv )
         { "dstFormat",       []( rapidjson::Value& v, ImageCreateInfo& i )
             {
                 std::string format = v.GetString();
-                auto it = pixelFormatMap.find( format );
-                if ( it == pixelFormatMap.end() )
+                i.dstFormat = Gfx::PixelFormatFromString( format );
+                if ( i.dstFormat == Gfx::PixelFormat::INVALID && format != "INVALID" )
                 {
                     LOG_WARN( "No pixel format found matching '", format, "'" );
-                }
-                else
-                {
-                    i.dstFormat = it->second;
                 }
             }
         },
@@ -354,7 +272,10 @@ static ConverterStatus WriteResources( std::ofstream& out, std::vector< Converte
     {
         if ( converter.status == ASSET_UP_TO_DATE )
         {
-            converter.WriteToFastFile( out );
+            if ( !converter.WriteToFastFile( out ) )
+            {
+                return CONVERT_ERROR;
+            }
         }
         else
         {

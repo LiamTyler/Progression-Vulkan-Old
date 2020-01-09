@@ -11,6 +11,7 @@
 #include "resource/resource_manager.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
+#include "utils/string.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/quaternion.hpp"
 #include <filesystem>
@@ -59,13 +60,6 @@ static glm::vec3 AiToGLMVec3( const aiVector3D& v )
 static glm::quat AiToGLMQuat( const aiQuaternion& q )
 {
     return { q.w, q.x, q.y, q.z };
-}
-
-static std::string TrimWhiteSpace( const std::string& s )
-{
-    size_t start = s.find_first_not_of( " \t" );
-    size_t end   = s.find_last_not_of( " \t" );
-    return s.substr( start, end - start + 1 );
 }
 
 class Vertex
@@ -283,6 +277,8 @@ namespace Progression
                     LOG_ERR( "Failed to load texture '", name, "' with default settings" );
                     return nullptr;
                 }
+                ret->name = name;
+                ResourceManager::Add< Image >( ret );
                 return ret;
             }
             else
@@ -382,7 +378,7 @@ namespace Progression
         const aiScene* scene = importer.ReadFile( createInfo->filename.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices | aiProcess_CalcTangentSpace );
         if ( !scene )
         {
-            LOG_ERR( "Error parsing FBX file '", createInfo->filename.c_str(), "': ", importer.GetErrorString() );
+            LOG_ERR( "Error parsing model file '", createInfo->filename.c_str(), "': ", importer.GetErrorString() );
             return false;
         }
 
@@ -679,7 +675,7 @@ namespace Progression
         {
             if ( !materials[i]->Serialize( out ) )
             {
-                LOG( "Could not write material: ", i, ", of model: ", name, " to fastfile" );
+                LOG_ERR( "Could not write material: ", i, ", of model: ", name, " to fastfile" );
                 return false;
             }
         }
