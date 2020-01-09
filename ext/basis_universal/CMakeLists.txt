@@ -39,6 +39,11 @@ set(BASISU_SRC_LIST ${COMMON_SRC_LIST}
 	transcoder/basisu_global_selector_palette.h
 )
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 add_library(basisu_lib ${BASISU_SRC_LIST})
+target_link_libraries(basisu_lib Threads::Threads)
+
 add_executable(basisu basisu_tool.cpp)
 target_link_libraries(basisu basisu_lib)

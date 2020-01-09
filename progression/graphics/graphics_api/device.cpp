@@ -734,8 +734,8 @@ namespace Gfx
                 }
                 offset += size;
 
-                width  >>= 1;
-                height >>= 1;
+                width  = std::max( width  >> 1, 1u );
+                height = std::max( height >> 1, 1u );
             }
         }
 
