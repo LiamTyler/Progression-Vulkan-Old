@@ -1499,6 +1499,7 @@ namespace RenderSystem
         samplerDesc.wrapModeU = WrapMode::REPEAT;
         samplerDesc.wrapModeV = WrapMode::REPEAT;
         samplerDesc.wrapModeW = WrapMode::REPEAT;
+        samplerDesc.maxAnisotropy = 16.0f;
         AddSampler( samplerDesc );
 
     }

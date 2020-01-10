@@ -27,10 +27,6 @@ void main()
     vec3 n = normalize( TBN[2] );
     if ( material.normalMapIndex != PG_INVALID_TEXTURE_INDEX )
     {
-        // n = texture( textures[material.normalMapIndex], texCoord ).xyz;
-        // n = n * 2 - 1;
-        // n = normalize( TBN * n );
-        
         n.xy = texture( textures[material.normalMapIndex], texCoord ).xy;
         n.xy = 2 * n.xy - 1;
         n.z = sqrt( 1 - n.x * n.x + n.y * n.y );

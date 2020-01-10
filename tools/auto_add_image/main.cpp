@@ -30,8 +30,10 @@ static void DisplayHelp()
       "\nOptions\n"
       "  -d, --diffuseFormat [format]\tSet the format of diffuse textures (defaults to BC7_SRGB). Use 'INVALID' for src format\n"
       "  -h, --help\t\tPrint this message and exit\n"
+      "  -m, --mipsOff\tDon't generate mipmaps\n";
       "  -n, --normalFormat [format]\tSet the format of normal textures (defaults to BC5_UNORM). Use 'INVALID' for src format\n";
       "  -o, --output [filename]\tOutput filename when arguments are model files. Defaults to 'auto_add_image_output.json'\n";
+      "  -q, --quality [0-3]\tSet the quality level. Defaults to 1, the higher the better.\n";
       "  -y, --flipY\tTurn OFF flipping textures vertically. Defaults to on'\n";
 
     std::cout << msg << std::endl;
@@ -120,20 +122,24 @@ int main( int argc, char* argv[] )
 
     static struct option long_options[] =
     {
-        { "diffuseFormat",  required_argument,  0, 'd' },
-        { "help",           no_argument,        0, 'h' },
-        { "normalFormat",   required_argument,  0, 'n' },
-        { "output",         required_argument,  0, 'o' },
-        { "flipY",          required_argument,  0, 'y' },
+        { "diffuseFormat", required_argument,  0, 'd' },
+        { "help",          no_argument,        0, 'h' },
+        { "mipsOff",       no_argument,        0, 'm' },
+        { "normalFormat",  required_argument,  0, 'n' },
+        { "output",        required_argument,  0, 'o' },
+        { "quality",       required_argument,  0, 'q' },
+        { "flipY",         no_argument,        0, 'y' },
         { 0, 0, 0, 0 }
     };
 
     std::string outputFilename = "auto_add_image_output.json";
-    bool flipY       = true;
-    bool helpMessage = false;
-    int option_index = 0;
-    int c            = -1;
-    while ( ( c = getopt_long( argc, argv, "d:hn:o:", long_options, &option_index ) ) != -1 )
+    bool flipY        = true;
+    bool generateMips = true;
+    bool helpMessage  = false;
+    int qualityLevel  = 1;
+    int option_index  = 0;
+    int c             = -1;
+    while ( ( c = getopt_long( argc, argv, "d:hmn:o:q:y", long_options, &option_index ) ) != -1 )
     {
         switch ( c )
         {
@@ -157,6 +163,9 @@ int main( int argc, char* argv[] )
             case 'h':
                 helpMessage = true;
                 break;
+            case 'm':
+                generateMips = false;
+                break;
             case 'n':
             {
                 std::string format = optarg;
@@ -176,6 +185,9 @@ int main( int argc, char* argv[] )
             }
             case 'o':
                 outputFilename = optarg;
+                break;
+            case 'q':
+                qualityLevel = std::max( 0, std::min( 3, std::stoi( optarg ) ) );
                 break;
             case 'y':
                 flipY = false;
@@ -241,6 +253,14 @@ int main( int argc, char* argv[] )
             std::cout << "Could not open output file '" << outputFilename << "'" << std::endl;
             return 0;
         }
+
+        std::string qualityStrs[] =
+        {
+            "LOW",
+            "MEDIUM",
+            "HIGH",
+            "MAX"
+        };
     
         for ( const auto& [ name, entry ] : images )
         {
@@ -252,9 +272,9 @@ int main( int argc, char* argv[] )
             if ( dstFormat != "INVALID" )
             {
                 OutputKeyStr( out, "dstFormat", dstFormat );
-                OutputKeyStr( out, "compressionQuality", "MEDIUM" );
+                OutputKeyStr( out, "compressionQuality", qualityStrs[qualityLevel] );
             }
-            OutputKeyBool( out, "generateMipmaps", true );
+            OutputKeyBool( out, "generateMipmaps", generateMips );
             OutputKeyBool( out, "flipVertically", flipY );
             OutputKeyBool( out, "freeCpuCopy",   true );
             OutputKeyBool( out, "createTexture", true, false );
