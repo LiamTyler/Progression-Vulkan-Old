@@ -37,7 +37,7 @@ public:
     // returns 0 on success
     virtual ConverterStatus Convert() = 0;
 
-    virtual bool WriteToFastFile( std::ofstream& out ) const;
+    virtual bool WriteToFastFile( std::ofstream& out, bool debugMode ) const;
 
     virtual std::string GetName() const;
 

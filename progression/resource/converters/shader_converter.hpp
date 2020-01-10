@@ -11,5 +11,5 @@ public:
     ConverterStatus Convert() override;
     std::string GetName() const override;
 
-    struct Progression::ShaderCreateInfo createInfo;
+    Progression::ShaderCreateInfo createInfo;
 };

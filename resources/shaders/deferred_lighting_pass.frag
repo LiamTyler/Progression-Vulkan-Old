@@ -33,10 +33,12 @@ layout( set = 2, binding = 1 ) uniform sampler2D normalTex;
 layout( set = 2, binding = 2 ) uniform usampler2D diffuseAndSpecularTex;
 layout( set = 2, binding = 3 ) uniform sampler2D ssaoTex;
 
+#if PG_DEBUG_BUILD
 layout( std430, push_constant ) uniform DebugSwitch
 {
     layout( offset = 0 ) int debugLayer;
 };
+#endif // #if PG_DEBUG_BUILD
 
 void main()
 {
@@ -110,6 +112,7 @@ void main()
     }
     
     vec3 color;
+#if PG_DEBUG_BUILD
     if ( debugLayer == PG_SHADER_DEBUG_LAYER_REGULAR )
     {
         color = ambientColor + diffuseColor + specularColor;
@@ -147,6 +150,9 @@ void main()
     {
         color = vec3( UV, 1 );
     }
+#else // #if PG_DEBUG_BUILD
+    color = ambientColor + diffuseColor + specularColor;
+#endif // #else // #if PG_DEBUG_BUILD
     
     outColor = vec4( color, 1.0 );
 }

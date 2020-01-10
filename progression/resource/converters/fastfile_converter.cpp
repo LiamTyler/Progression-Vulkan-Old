@@ -262,84 +262,13 @@ AssetStatus FastfileConverter::CheckDependencies()
     return status;
 }
 
-template< typename ConverterType >
-static ConverterStatus WriteResources( std::ofstream& out, std::vector< ConverterType >& converters, uint32_t versionNumber )
+bool LZ4CompressFile( const std::string& filename )
 {
-    uint32_t numResource = static_cast< uint32_t >( converters.size() );
-    serialize::Write( out, numResource );
-    serialize::Write( out, versionNumber );
-    for ( auto& converter : converters )
-    {
-        if ( converter.status == ASSET_UP_TO_DATE )
-        {
-            if ( !converter.WriteToFastFile( out ) )
-            {
-                return CONVERT_ERROR;
-            }
-        }
-        else
-        {
-            auto time = Time::GetTimePoint();
-            LOG( "\nConverter: ", type_name< ConverterType >(), ", resource '", converter.GetName(), "'" );
-            if ( converter.Convert() != CONVERT_SUCCESS )
-            {
-                LOG_ERR( "Error while in ", type_name< ConverterType >() );
-                return CONVERT_ERROR;
-            }
-            PG_MAYBE_UNUSED( time );
-            LOG( "Convert finished in: ", Time::GetDuration( time ) / 1000, " seconds" );
-            converter.WriteToFastFile( out );
-        }
-    }
-    serialize::Write( out, PG_RESOURCE_MAGIC_NUMBER_GUARD );
-    return CONVERT_SUCCESS;
-}
-
-ConverterStatus FastfileConverter::Convert()
-{
-    if ( status == ASSET_UP_TO_DATE )
-    {
-        return CONVERT_SUCCESS;
-    }
-
-    auto fastFileStartTime = Time::GetTimePoint();
-
-    std::ofstream out( m_outputContentFile, std::ios::binary );
-
-    if ( !out )
-    {
-        LOG_ERR( "Failed to open fastfile '", m_outputContentFile, "' for write" );
-        return CONVERT_ERROR;
-    }
-
-    std::string absPath = std::filesystem::absolute( inputFile ).string();
-    serialize::Write( out, absPath );
-
-    ConverterStatus ret;
-    ret = WriteResources( out, shaderConverters, PG_RESOURCE_SHADER_VERSION );
-    if ( ret != CONVERT_SUCCESS ) return ret;
-
-    ret = WriteResources( out, imageConverters, PG_RESOURCE_IMAGE_VERSION );
-    if ( ret != CONVERT_SUCCESS ) return ret;
-
-    ret = WriteResources( out, materialFileConverters, PG_RESOURCE_MATERIAL_VERSION );
-    if ( ret != CONVERT_SUCCESS ) return ret;
-
-    ret = WriteResources( out, modelConverters, PG_RESOURCE_MODEL_VERSION );
-    if ( ret != CONVERT_SUCCESS ) return ret;
-
-    ret = WriteResources( out, scriptConverters, PG_RESOURCE_SCRIPT_VERSION );
-    if ( ret != CONVERT_SUCCESS ) return ret;
-
-    out.close();
-
-#if USING( LZ4_COMPRESSED_FASTFILES )
-    LOG( "Compressing with LZ4..." );
     MemoryMapped memMappedFile;
-    if ( !memMappedFile.open( outputContentFile, MemoryMapped::WholeFile, MemoryMapped::Normal ) )
+    if ( !memMappedFile.open( filename, MemoryMapped::WholeFile, MemoryMapped::Normal ) )
     {
-        LOG_ERR( "Could not open fastfile:", outputContentFile );
-        return CONVERT_ERROR;
+        LOG_ERR( "Could not open file:", filename );
+        return false;
     }
 
     char* src = (char*) memMappedFile.getData();
@@ -354,8 +283,8 @@ ConverterStatus FastfileConverter::Convert()
 
     if ( compressedDataSize <= 0 )
     {
-        LOG_ERR("Error while trying to compress the fastfile. LZ4 returned: ", compressedDataSize );
-        return CONVERT_ERROR;
+        LOG_ERR( "Error while trying to compress the file. LZ4 returned: ", compressedDataSize );
+        return false;
     }
 
     if ( compressedDataSize > 0 )
@@ -363,22 +292,127 @@ ConverterStatus FastfileConverter::Convert()
         LOG( "Compressed file size ratio: ", (float) compressedDataSize / srcSize );
     }
 
-    out.open( outputContentFile, std::ios::binary );
-
+    std::ofstream out( filename, std::ios::binary );
     if ( !out )
     {
-        LOG_ERR( "Failed to open fastfile '", outputContentFile, "' for writing compressed results" );
-        return CONVERT_ERROR;
+        LOG_ERR( "Failed to open file '", filename, "' for writing compressed results" );
+        return false;
     }
 
     serialize::Write( out, srcSize );
     serialize::Write( out, compressedData, compressedDataSize );
 
-    out.close();
+    return true;
+}
+
+template< typename ConverterType >
+static ConverterStatus WriteResources( std::ofstream& out, std::vector< ConverterType >& converters, uint32_t versionNumber, bool debugMode )
+{
+    uint32_t numResource = static_cast< uint32_t >( converters.size() );
+    serialize::Write( out, numResource );
+    serialize::Write( out, versionNumber );
+    for ( auto& converter : converters )
+    {
+        if ( !converter.WriteToFastFile( out, debugMode ) )
+        {
+            return CONVERT_ERROR;
+        }
+    }
+    serialize::Write( out, PG_RESOURCE_MAGIC_NUMBER_GUARD );
+    return CONVERT_SUCCESS;
+}
+
+template< typename ConverterType >
+static ConverterStatus RunConverts( std::vector< ConverterType >& converters )
+{
+    uint32_t numResource = static_cast< uint32_t >( converters.size() );
+    for ( auto& converter : converters )
+    {
+        if ( converter.status != ASSET_UP_TO_DATE )
+        {
+            auto time = Time::GetTimePoint();
+            LOG( "\nConverter: ", type_name< ConverterType >(), ", resource '", converter.GetName(), "'" );
+            if ( converter.Convert() != CONVERT_SUCCESS )
+            {
+                LOG_ERR( "Error while in ", type_name< ConverterType >() );
+                return CONVERT_ERROR;
+            }
+            PG_MAYBE_UNUSED( time );
+            LOG( "Convert finished in: ", Time::GetDuration( time ) / 1000, " seconds" );
+        }
+    }
+
+    return CONVERT_SUCCESS;
+}
+
+ConverterStatus FastfileConverter::Convert()
+{
+    if ( status == ASSET_UP_TO_DATE )
+    {
+        return CONVERT_SUCCESS;
+    }
+
+    auto fastFileStartTime = Time::GetTimePoint();
+
+    ConverterStatus ret;
+    ret = RunConverts( shaderConverters );
+    if ( ret != CONVERT_SUCCESS ) return ret;
+
+    ret = RunConverts( imageConverters );
+    if ( ret != CONVERT_SUCCESS ) return ret;
+
+    ret = RunConverts( materialFileConverters );
+    if ( ret != CONVERT_SUCCESS ) return ret;
+
+    ret = RunConverts( modelConverters );
+    if ( ret != CONVERT_SUCCESS ) return ret;
+
+    ret = RunConverts( scriptConverters );
+    if ( ret != CONVERT_SUCCESS ) return ret;
+
+    for ( int i = 0; i < 2; ++i )
+    {
+        std::string fname = i == 0 ? m_outputContentFile : m_outputContentFile + "d";
+        bool debugMode    = i;
+        std::ofstream out( fname, std::ios::binary );
+        if ( !out )
+        {
+            LOG_ERR( "Failed to open fastfile '", fname, "' for write" );
+            return CONVERT_ERROR;
+        }
+
+        std::string absPath = std::filesystem::absolute( inputFile ).string();
+        serialize::Write( out, absPath );
+
+        ConverterStatus ret;
+        ret = WriteResources( out, shaderConverters, PG_RESOURCE_SHADER_VERSION, debugMode );
+        if ( ret != CONVERT_SUCCESS ) return ret;
+
+        ret = WriteResources( out, imageConverters, PG_RESOURCE_IMAGE_VERSION, debugMode );
+        if ( ret != CONVERT_SUCCESS ) return ret;
+
+        ret = WriteResources( out, materialFileConverters, PG_RESOURCE_MATERIAL_VERSION, debugMode );
+        if ( ret != CONVERT_SUCCESS ) return ret;
+
+        ret = WriteResources( out, modelConverters, PG_RESOURCE_MODEL_VERSION, debugMode );
+        if ( ret != CONVERT_SUCCESS ) return ret;
+
+        ret = WriteResources( out, scriptConverters, PG_RESOURCE_SCRIPT_VERSION, debugMode );
+        if ( ret != CONVERT_SUCCESS ) return ret;
+
+        out.close();
+
+#if USING( LZ4_COMPRESSED_FASTFILES )
+        LOG( "Compressing with LZ4..." );
+        if ( !LZ4CompressFile( fname ) )
+        {
+            return CONVERT_ERROR;
+        }
 #endif // #if USING( LZ4_COMPRESSED_FASTFILES )
+    }
 
     PG_MAYBE_UNUSED( fastFileStartTime );
-    LOG( "\nFastfile built in: ", Time::GetDuration( fastFileStartTime ) / 1000, " seconds" );
+    LOG( "\nFastfiles built in: ", Time::GetDuration( fastFileStartTime ) / 1000, " seconds" );
 
     return CONVERT_SUCCESS;
 }

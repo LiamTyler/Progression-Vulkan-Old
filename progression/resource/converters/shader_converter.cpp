@@ -11,6 +11,8 @@
 
 using namespace Progression;
 
+extern bool g_converterDebugMode;
+
 static std::string GetContentFastFileName( struct ShaderCreateInfo& createInfo )
 {
     namespace fs = std::filesystem;
@@ -217,48 +219,56 @@ ConverterStatus ShaderConverter::Convert()
         preprocOut << preprocessedShaderText;
         preprocOut.close();
 
-        std::string command = "glslc \"" + preprocessFilename + "\" -o \"" + m_outputContentFile + "\"";
-        LOG( "Compiling shader '", createInfo.name );
-        LOG( command );
-        int ret = system( command.c_str() );
-        if ( ret != 0 )
-        {
-            LOG_ERR( "Error while compiling shader: ", createInfo.name );
-            return CONVERT_ERROR;
-        }
+        std::vector< std::string > extensions = { "d", "" };
+        std::vector< std::string > buildNames = { "debug", "release" };
 
-        std::ifstream file( m_outputContentFile, std::ios::ate | std::ios::binary );
-        size_t fileSize = static_cast< size_t >( file.tellg() );
-        std::vector< char > buffer( fileSize );
-        file.seekg( 0 );
-        file.read( buffer.data(), fileSize );
-        file.close();
+        for ( size_t i = 0; i < extensions.size(); ++i )
+        {
+            std::string contentFileName = m_outputContentFile + extensions[i];
+            std::string debugOn = extensions[i] == "d" ? "1" : "0";
+            std::string command = "glslc -DPG_DEBUG_BUILD=" + debugOn + " \"" + preprocessFilename + "\" -o \"" + contentFileName + "\"";
+            LOG( "Compiling ", buildNames[i], " shader '", createInfo.name );
+            LOG( command );
+            int ret = system( command.c_str() );
+            if ( ret != 0 )
+            {
+                LOG_ERR( "Error while compiling shader: ", createInfo.name );
+                return CONVERT_ERROR;
+            }
 
-        ShaderReflectInfo reflectInfo = Shader::Reflect( (const uint32_t* ) buffer.data(), fileSize );
-        std::ofstream out( m_outputContentFile, std::ios::binary );
-        serialize::Write( out, reflectInfo.entryPoint );
-        serialize::Write( out, reflectInfo.stage );
-        serialize::Write( out, reflectInfo.inputLocations.size() );
-        for ( const auto& [varName, varLoc] : reflectInfo.inputLocations )
-        {
-            serialize::Write( out, varName );
-            serialize::Write( out, varLoc );
+            std::ifstream file( contentFileName, std::ios::ate | std::ios::binary );
+            size_t fileSize = static_cast< size_t >( file.tellg() );
+            std::vector< char > buffer( fileSize );
+            file.seekg( 0 );
+            file.read( buffer.data(), fileSize );
+            file.close();
+
+            ShaderReflectInfo reflectInfo = Shader::Reflect( (const uint32_t* ) buffer.data(), fileSize );
+            std::ofstream out( contentFileName, std::ios::binary );
+            serialize::Write( out, reflectInfo.entryPoint );
+            serialize::Write( out, reflectInfo.stage );
+            serialize::Write( out, reflectInfo.inputLocations.size() );
+            for ( const auto& [varName, varLoc] : reflectInfo.inputLocations )
+            {
+                serialize::Write( out, varName );
+                serialize::Write( out, varLoc );
+            }
+            serialize::Write( out, reflectInfo.outputLocations.size() );
+            for ( const auto& [varName, varLoc] : reflectInfo.outputLocations )
+            {
+                serialize::Write( out, varName );
+                serialize::Write( out, varLoc );
+            }
+            serialize::Write( out, reflectInfo.descriptorSetLayouts.size() );
+            for ( const auto& set : reflectInfo.descriptorSetLayouts )
+            {
+                serialize::Write( out, set.setNumber );
+                serialize::Write( out, set.createInfo );
+                serialize::Write( out, set.bindings );
+            }
+            serialize::Write( out, reflectInfo.pushConstants );
+            serialize::Write( out, buffer );
         }
-        serialize::Write( out, reflectInfo.outputLocations.size() );
-        for ( const auto& [varName, varLoc] : reflectInfo.outputLocations )
-        {
-            serialize::Write( out, varName );
-            serialize::Write( out, varLoc );
-        }
-        serialize::Write( out, reflectInfo.descriptorSetLayouts.size() );
-        for ( const auto& set : reflectInfo.descriptorSetLayouts )
-        {
-            serialize::Write( out, set.setNumber );
-            serialize::Write( out, set.createInfo );
-            serialize::Write( out, set.bindings );
-        }
-        serialize::Write( out, reflectInfo.pushConstants );
-        serialize::Write( out, buffer );
     }
 
     return CONVERT_SUCCESS;

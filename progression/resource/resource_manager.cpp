@@ -101,8 +101,12 @@ namespace ResourceManager
         return uncompressedBuffer;
     }
 
-    bool LoadFastFile( const std::string& fname, bool runConverterIfEnabled )
+    bool LoadFastFile( std::string fname, bool runConverterIfEnabled )
     {
+#if USING( DEBUG_BUILD )
+        fname += "d";
+#endif // #if USING( DEBUG_BUILD )
+
         MemoryMapped memMappedFile;
         if ( !memMappedFile.open( fname, MemoryMapped::WholeFile, MemoryMapped::SequentialScan ) )
         {

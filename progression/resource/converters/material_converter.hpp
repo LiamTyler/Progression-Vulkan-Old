@@ -8,7 +8,7 @@ public:
 
     AssetStatus CheckDependencies() override;
     ConverterStatus Convert() override;
-    virtual bool WriteToFastFile( std::ofstream& out ) const override;
+    virtual bool WriteToFastFile( std::ofstream& out, bool debugMode ) const override;
     std::string GetName() const override;
 
     std::string inputFile;

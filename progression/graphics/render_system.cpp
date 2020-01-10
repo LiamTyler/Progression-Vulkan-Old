@@ -929,14 +929,6 @@ namespace RenderSystem
         s_gpuPointLightBuffers.Map();
         s_gpuSpotLightBuffers.Map();
 
-        UIOverlay::AddDrawFunction( "Render Debugger", [&]()
-        {
-            ImGui::SetNextWindowPos( ImVec2( 5, 5 ), ImGuiCond_FirstUseEver );
-		    ImGui::Begin( "Renderer Debug Settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize );
-            UIOverlay::ComboBox( "View", &g_debugLayer, { "Regular", "Ambient", "Diffuse", "Specular", "No SSAO", "SSAO Only", "Positions", "Normals" } );
-		    ImGui::End();
-        });
-
         return true;
     }
 
@@ -1290,7 +1282,9 @@ namespace RenderSystem
         cmdBuf.BindDescriptorSets( 1, &descriptorSets.lights, lightingPassData.pipeline, 3 );
         PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
 
+#if USING( DEBUG_BUILD )
         cmdBuf.PushConstants( lightingPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( int ), &g_debugLayer );
+#endif // #if USING( DEBUG_BUILD )
         cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
         cmdBuf.Draw( 0, 6 );
 

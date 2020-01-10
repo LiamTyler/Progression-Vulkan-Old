@@ -2,8 +2,9 @@
 #include "memory_map/MemoryMapped.h"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
+#include <filesystem>
 
-bool Converter::WriteToFastFile( std::ofstream& out ) const
+bool Converter::WriteToFastFile( std::ofstream& out, bool debugMode ) const
 {
     MemoryMapped memMappedFile;
     if ( !memMappedFile.open( m_outputSettingsFile, MemoryMapped::WholeFile, MemoryMapped::SequentialScan ) )
@@ -15,9 +16,17 @@ bool Converter::WriteToFastFile( std::ofstream& out ) const
 
     memMappedFile.close();
 
-    if ( !memMappedFile.open( m_outputContentFile, MemoryMapped::WholeFile, MemoryMapped::SequentialScan ) )
+    std::string fname = m_outputContentFile;
+    if ( debugMode )
     {
-        LOG_ERR( "Error opening intermediate file '", m_outputContentFile, "'" );
+        if ( std::filesystem::exists( fname + "d" ) )
+        {
+            fname += "d";
+        }
+    }
+    if ( !memMappedFile.open( fname, MemoryMapped::WholeFile, MemoryMapped::SequentialScan ) )
+    {
+        LOG_ERR( "Error opening intermediate file '", fname, "'" );
         return false;
     }
 

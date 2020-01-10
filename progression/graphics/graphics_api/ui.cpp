@@ -17,6 +17,8 @@
     https://github.com/SaschaWillems/Vulkan/blob/master/base/VulkanUIOverlay.cpp
 */
 
+extern int g_debugLayer;
+
 namespace Progression
 {
 namespace Gfx
@@ -126,6 +128,16 @@ namespace UIOverlay
             WriteDescriptorSet( s_descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageInfo ),
         };
         g_renderState.device.UpdateDescriptorSets( static_cast< uint32_t >( writeDescriptorSets.size() ), writeDescriptorSets.data() );
+
+#if USING( DEBUG_BUILD )
+        UIOverlay::AddDrawFunction( "Render Debugger", [&]()
+        {
+            ImGui::SetNextWindowPos( ImVec2( 5, 5 ), ImGuiCond_FirstUseEver );
+		    ImGui::Begin( "Renderer Debug Settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize );
+            UIOverlay::ComboBox( "View", &g_debugLayer, { "Regular", "Ambient", "Diffuse", "Specular", "No SSAO", "SSAO Only", "Positions", "Normals" } );
+		    ImGui::End();
+        });
+#endif // #if USING( DEBUG_BUILD )
 
         return true;
     }

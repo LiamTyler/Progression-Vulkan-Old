@@ -99,8 +99,9 @@ ConverterStatus MaterialConverter::Convert()
     return CONVERT_SUCCESS;
 }
 
-bool MaterialConverter::WriteToFastFile( std::ofstream& out ) const
+bool MaterialConverter::WriteToFastFile( std::ofstream& out, bool debugMode ) const
 {
+    PG_UNUSED( debugMode );
     MemoryMapped memMappedFile;
     if ( !memMappedFile.open( m_outputContentFile, MemoryMapped::WholeFile, MemoryMapped::SequentialScan ) )
     {
