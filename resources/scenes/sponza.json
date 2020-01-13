@@ -1,7 +1,9 @@
 {
     "Fastfile": {
-        "_filename": "sponza_compressed_diffuse.ff",
-        "filename": "sponza_uncompressed.ff"
+        "_filename": "sponza_compressed.ff",
+        "_filename": "sponza_compressed_diffuse_bc1.ff",
+        "filename": "sponza_compressed_bc1.ff",
+        "_filename": "sponza_uncompressed.ff"
     },
     "Camera": {
         "position": [ -4, 2, 0 ],
@@ -32,10 +34,6 @@
     "PointLight": {
         "colorAndIntensity": [ 1, 0.9, 0.8, 5 ],
         "positionAndRadius": [ 6.5, 6, -5, 10 ]
-    },
-    "_PointLight": {
-        "colorAndIntensity": [ 1, 0.9, 0.8, 10 ],
-        "positionAndRadius": [ -4, 8, 0, 10 ]
     },
     "PointLight": {
         "colorAndIntensity": [ 1, 0.9, 0.8, 5 ],

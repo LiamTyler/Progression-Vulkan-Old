@@ -19,20 +19,19 @@ static std::string GetContentFastFileName( struct ModelCreateInfo& createInfo )
 
     std::string hash     = std::to_string( std::hash< std::string >{}( filePath.string() ) );
     std::string baseName = filePath.filename().string();
+    std::string optimize = createInfo.optimize ? "1" : "0";
     std::string version  = std::to_string( PG_RESOURCE_MODEL_VERSION );
 
-    return PG_RESOURCE_DIR "cache/models/" + baseName + "_" + version + "_" + hash + ".ffi";
+    return PG_RESOURCE_DIR "cache/models/" + baseName + "_" + optimize + "_" + version + "_" + hash + ".ffi";
 }
 
 static std::string GetSettingsFastFileName( const ModelCreateInfo& createInfo )
 {
     PG_ASSERT( !createInfo.filename.empty() );
 
-    int optimize    = createInfo.optimize;
     int freeCpuCopy = createInfo.freeCpuCopy;
 
-    return PG_RESOURCE_DIR "cache/models/settings_" + createInfo.name +
-        std::to_string( optimize ) + std::to_string( freeCpuCopy ) + ".ffi";
+    return PG_RESOURCE_DIR "cache/models/settings_" + createInfo.name + "_" + std::to_string( freeCpuCopy ) + ".ffi";
 }
 
 ModelConverter::ModelConverter( bool force_, bool verbose_ )

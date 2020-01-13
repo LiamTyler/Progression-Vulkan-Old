@@ -134,7 +134,7 @@ namespace UIOverlay
         {
             ImGui::SetNextWindowPos( ImVec2( 5, 5 ), ImGuiCond_FirstUseEver );
 		    ImGui::Begin( "Renderer Debug Settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize );
-            UIOverlay::ComboBox( "View", &g_debugLayer, { "Regular", "Ambient", "Diffuse", "Specular", "No SSAO", "SSAO Only", "Positions", "Normals" } );
+            UIOverlay::ComboBox( "View", &g_debugLayer, { "Regular", "No SSAO", "SSAO Only", "Ambient", "Lit Diffuse", "Lit Specular", "Positions", "Normals", "GBuffer Diffuse", "GBuffer Specular" } );
 		    ImGui::End();
         });
 #endif // #if USING( DEBUG_BUILD )

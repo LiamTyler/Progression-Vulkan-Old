@@ -6,7 +6,7 @@
     "Image": {
         "name": "floor",
         "generateMipmaps": true,
-        "_dstFormat": "BC7_SRGB",
+        "dstFormat": "BC1_RGB_SRGB",
         "compressionQuality": "MAX",
         "filename": "textures/metal2.jpg",
         "flipVertically": true,
@@ -16,7 +16,7 @@
     "Image": {
         "name": "waterSkybox",
         "generateMipmaps": false,
-        "_dstFormat": "BC7_SRGB",
+        "dstFormat": "BC1_RGB_SRGB",
         "compressionQuality": "MEDIUM",
         "cubeMapFilenames": {
             "right": "textures/skybox/water/right.jpg",
@@ -38,19 +38,13 @@
         "name": "cube",
         "filename": "models/cube.obj"
     },
-    "Image": {
-        "name": "chaletTex",
-        "generateMipmaps": true,
-        "_dstFormat": "BC7_SRGB",
-        "compressionQuality": "MEDIUM",
-        "filename": "textures/chalet.jpg",
-        "flipVertically": true,
-        "freeCpuCopy": true,
-        "createTexture": true
-    },
     "_Model": {
         "name": "dragon",
         "filename": "dragon/Dragon_Baked_Actions_fbx_7.4_binary.fbx"
+    },
+    "_Model": {
+        "name": "arm",
+        "filename": "models/primitive.fbx"
     },
     "MTLFile": {
         "filename": "materials/miscellaneous.mtl"

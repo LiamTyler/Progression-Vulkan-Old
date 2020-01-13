@@ -17,7 +17,7 @@
 #include <filesystem>
 #include <set>
 
-#define PRINT_OPTIMIZATION_ANALYSIS NOT_IN_USE
+#define PRINT_OPTIMIZATION_ANALYSIS IN_USE
 
 static aiMatrix4x4 GLMMat4ToAi( const glm::mat4& mat )
 {
@@ -1006,16 +1006,11 @@ namespace Progression
             }
 
 #if USING( PRINT_OPTIMIZATION_ANALYSIS )
-            LOG( "Mesh: numIndices = ", mesh.numIndices, ", numVerts = ", mesh.numVertices );
-            const size_t kCacheSize = 16;
-            meshopt_VertexCacheStatistics vcs = meshopt_analyzeVertexCache( &indices[mesh.startIndex], mesh.numIndices, optVertices.size(), kCacheSize, 0, 0 );
-            meshopt_OverdrawStatistics os     = meshopt_analyzeOverdraw( &indices[mesh.startIndex], mesh.numIndices, &optVertices[0].vertex.x, optVertices.size(), sizeof( Vertex ) );
-            meshopt_VertexFetchStatistics vfs = meshopt_analyzeVertexFetch( &indices[mesh.startIndex], mesh.numIndices, optVertices.size(), sizeof( Vertex ) );
-            LOG( "Before:" );
-            LOG( "Average cache miss ratio (0.5 - 3.0): ", vcs.acmr );
-            LOG( "Average transformed vertex ratio (1.0+): ", vcs.atvr );
-            LOG( "Average overdraw (1.0+): ", os.overdraw );
-            LOG( "Average overfetch ratio (1.0+): ", vfs.overfetch );
+            LOG( "Mesh '", mesh.name, "', numIndices = ", mesh.numIndices, ", numVerts = ", mesh.numVertices );
+            const size_t kCacheSize = 32;
+            meshopt_VertexCacheStatistics old_vcs = meshopt_analyzeVertexCache( &indices[mesh.startIndex], mesh.numIndices, optVertices.size(), kCacheSize, 0, 0 );
+            meshopt_OverdrawStatistics old_os     = meshopt_analyzeOverdraw( &indices[mesh.startIndex], mesh.numIndices, &optVertices[0].vertex.x, optVertices.size(), sizeof( Vertex ) );
+            meshopt_VertexFetchStatistics old_vfs = meshopt_analyzeVertexFetch( &indices[mesh.startIndex], mesh.numIndices, optVertices.size(), sizeof( Vertex ) );
 #endif // #if USING( PRINT_OPTIMIZATION_ANALYSIS )
 
             // vertex cache optimization should go first as it provides starting order for overdraw
@@ -1031,14 +1026,14 @@ namespace Progression
                                          &optVertices[0].vertex.x, optVertices.size(), sizeof( Vertex ) );
 
 #if USING( PRINT_OPTIMIZATION_ANALYSIS )
-            vcs = meshopt_analyzeVertexCache( &indices[mesh.startIndex], mesh.numIndices, optVertices.size(), kCacheSize, 0, 0 );
-            os  = meshopt_analyzeOverdraw( &indices[mesh.startIndex], mesh.numIndices, &optVertices[0].vertex.x, optVertices.size(), sizeof( Vertex ) );
-            vfs = meshopt_analyzeVertexFetch( &indices[mesh.startIndex], mesh.numIndices, optVertices.size(), sizeof( Vertex ) );
-            LOG( "After:" );
-            LOG( "Average cache miss ratio (0.5 - 3.0): ", vcs.acmr );
-            LOG( "Average transformed vertex ratio (1.0+): ", vcs.atvr );
-            LOG( "Average overdraw (1.0+): ", os.overdraw );
-            LOG( "Average overfetch ratio (1.0+): ", vfs.overfetch );
+            auto new_vcs = meshopt_analyzeVertexCache( &indices[mesh.startIndex], mesh.numIndices, optVertices.size(), kCacheSize, 0, 0 );
+            auto new_os  = meshopt_analyzeOverdraw( &indices[mesh.startIndex], mesh.numIndices, &optVertices[0].vertex.x, optVertices.size(), sizeof( Vertex ) );
+            auto new_vfs = meshopt_analyzeVertexFetch( &indices[mesh.startIndex], mesh.numIndices, optVertices.size(), sizeof( Vertex ) );
+            LOG( "Mesh statistics (lower is better for all stats):" );
+            LOG( "Average cache miss ratio (0.5 - 3.0):    ", old_vcs.acmr, " -> ", new_vcs.acmr );
+            LOG( "Average transformed vertex ratio (1.0+): ", old_vcs.atvr, " -> ", new_vcs.atvr );
+            LOG( "Average overdraw (1.0+):                 ", old_os.overdraw, " -> ", new_os.overdraw );
+            LOG( "Average overfetch ratio (1.0+):          ", old_vfs.overfetch, " -> ", new_vfs.overfetch, "\n" );
 #endif // #if USING( PRINT_OPTIMIZATION_ANALYSIS )
 
             for ( size_t i = 0; i < optVertices.size(); ++i )

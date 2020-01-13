@@ -403,7 +403,7 @@ ConverterStatus FastfileConverter::Convert()
         out.close();
 
 #if USING( LZ4_COMPRESSED_FASTFILES )
-        LOG( "Compressing with LZ4..." );
+        LOG( "Compressing '", fname, "' with LZ4..." );
         if ( !LZ4CompressFile( fname ) )
         {
             return CONVERT_ERROR;

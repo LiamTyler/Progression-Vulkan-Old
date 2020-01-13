@@ -226,7 +226,7 @@ ConverterStatus ImageConverter::Convert()
 std::string ImageConverter::GetName() const
 {
     return createInfo.name;
-}
+}   
 
 static basist::transcoder_texture_format PGToBasisBCPixelFormat( Gfx::PixelFormat pgFormat, bool hasAlpha )
 {
@@ -387,7 +387,7 @@ static bool CompressImage( const Image& image, basisu::basis_compressor& compres
         params.m_max_endpoint_clusters = basisu::basisu_frontend::cMaxEndpointClusters;
         params.m_max_selector_clusters = basisu::basisu_frontend::cMaxSelectorClusters;
     }
-    params.m_perceptual        = true; // seems to look better for sRGB images too??
+    params.m_perceptual        = false; // seems to look better for sRGB images too??
     params.m_y_flip            = false;
     params.m_mip_gen           = image.GetImageFlags() & IMAGE_GENERATE_MIPMAPS;
     params.m_mip_filter        = "box";

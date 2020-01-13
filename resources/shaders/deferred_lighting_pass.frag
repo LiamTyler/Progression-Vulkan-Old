@@ -121,11 +121,11 @@ void main()
     {
         color = ambientColor;
     }
-    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_DIFFUSE )
+    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_LIT_DIFFUSE )
     {
         color = diffuseColor;
     }
-    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_SPECULAR )
+    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_LIT_SPECULAR )
     {
         color = specularColor;
     }
@@ -145,6 +145,14 @@ void main()
     else if ( debugLayer == PG_SHADER_DEBUG_LAYER_NORMALS )
     {
         color = n;
+    }
+    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_GBUFFER_DIFFUSE )
+    {
+        color = Kd;
+    }
+    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_GBUFFER_SPECULAR )
+    {
+        color = Ks.rgb;
     }
     else
     {

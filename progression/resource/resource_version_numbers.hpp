@@ -4,7 +4,7 @@
 
 #define PG_RESOURCE_MATERIAL_VERSION    5  // Removing embedded images
 
-#define PG_RESOURCE_MODEL_VERSION       2  // Adding tangents
+#define PG_RESOURCE_MODEL_VERSION       3  // Model optimization was a setting dependency, not a content file depend
 
 #define PG_RESOURCE_SCRIPT_VERSION      0  // Initial version
 
