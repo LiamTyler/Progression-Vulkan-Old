@@ -89,7 +89,8 @@ set(GLFW_BUILD_DOCS      OFF CACHE BOOL " " FORCE)
 
 add_subdirectory(ext/glfw)
 
-set(ASSIMP_BUILD_TESTS      OFF CACHE BOOL " " FORCE)
+set(ASSIMP_BUILD_TESTS        OFF CACHE BOOL " " FORCE)
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL " " FORCE)
 add_subdirectory(ext/assimp)
 
 

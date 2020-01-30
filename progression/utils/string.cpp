@@ -15,3 +15,16 @@ std::string SlashesToUnderscores( std::string s )
     std::replace( s.begin(), s.end(), '/', '_' );
     return s;
 }
+
+bool IsWhiteSpace( const std::string& str )
+{
+    for ( size_t i = 0; i < str.length(); ++i )
+    {
+        if ( !std::isspace( str[i] ) )
+        {
+            return false;
+        }
+    }
+
+    return true;
+}

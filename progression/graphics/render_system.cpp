@@ -213,10 +213,12 @@ static bool InitGBufferPassData()
     RenderPassDescriptor desc;
     desc.colorAttachmentDescriptors[0].format      = PixelFormat::R32_G32_B32_A32_FLOAT;
     desc.colorAttachmentDescriptors[0].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
-    desc.colorAttachmentDescriptors[1].format      = PixelFormat::R8_G8_B8_A8_UNORM; // R16_G16_B16_A16_FLOAT // R8_G8_B8_A8_UNORM
+    desc.colorAttachmentDescriptors[1].format      = PixelFormat::R8_G8_B8_A8_UNORM;
     desc.colorAttachmentDescriptors[1].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
-    desc.colorAttachmentDescriptors[2].format      = PixelFormat::R16_G16_B16_A16_UINT;
+    desc.colorAttachmentDescriptors[2].format      = PixelFormat::R8_G8_B8_A8_UNORM;
     desc.colorAttachmentDescriptors[2].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+    desc.colorAttachmentDescriptors[3].format      = PixelFormat::R8_G8_UNORM;
+    desc.colorAttachmentDescriptors[3].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
 
     desc.depthAttachmentDescriptor.format      = PixelFormat::DEPTH_32_FLOAT;
     desc.depthAttachmentDescriptor.loadAction  = LoadAction::CLEAR;
@@ -279,17 +281,20 @@ static bool InitGBufferPassData()
     info.height  = g_renderState.swapChain.extent.height;
     info.sampler = "nearest_clamped_nearest";
     info.usage   = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    info.format                                = PixelFormat::R32_G32_B32_A32_FLOAT;
-    gBufferPassData.gbuffer.positions          = g_renderState.device.NewTexture( info, false, "gbuffer position" );
-    info.format                                = PixelFormat::R8_G8_B8_A8_UNORM; // R16_G16_B16_A16_FLOAT // R8_G8_B8_A8_UNORM
-    gBufferPassData.gbuffer.normals            = g_renderState.device.NewTexture( info, false, "gbuffer normals" );
-    info.format                                = PixelFormat::R16_G16_B16_A16_UINT;
-    gBufferPassData.gbuffer.diffuseAndSpecular = g_renderState.device.NewTexture( info, false, "gbuffer diffuse + specular" );
+    info.format                                  = PixelFormat::R32_G32_B32_A32_FLOAT;
+    gBufferPassData.gbuffer.positions            = g_renderState.device.NewTexture( info, false, "gbuffer position" );
+    info.format                                  = PixelFormat::R8_G8_B8_A8_UNORM;
+    gBufferPassData.gbuffer.normals              = g_renderState.device.NewTexture( info, false, "gbuffer normals" );
+    info.format                                  = PixelFormat::R8_G8_B8_A8_UNORM;
+    gBufferPassData.gbuffer.diffuse              = g_renderState.device.NewTexture( info, false, "gbuffer diffuse" );
+    info.format                                  = PixelFormat::R8_G8_UNORM;
+    gBufferPassData.gbuffer.metallicAndRoughness = g_renderState.device.NewTexture( info, false, "gbuffer metallic and roughness" );
 
     gBufferPassData.frameBuffer = g_renderState.device.NewFramebuffer( {
         &gBufferPassData.gbuffer.positions,
         &gBufferPassData.gbuffer.normals,
-        &gBufferPassData.gbuffer.diffuseAndSpecular,
+        &gBufferPassData.gbuffer.diffuse,
+        &gBufferPassData.gbuffer.metallicAndRoughness,
         &g_renderState.depthTex
         }, gBufferPassData.renderPass, "gbuffer pass" );
 
@@ -823,10 +828,11 @@ bool InitDescriptorPoolAndPrimarySets()
     // Lighting Pass
     imageDescriptors =
     {
-        DescriptorImageInfo( gBufferPassData.gbuffer.positions,          VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
-        DescriptorImageInfo( gBufferPassData.gbuffer.normals,            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
-        DescriptorImageInfo( gBufferPassData.gbuffer.diffuseAndSpecular, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
-        DescriptorImageInfo( ssaoBlurPassData.outputTex,                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( gBufferPassData.gbuffer.positions,            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( gBufferPassData.gbuffer.normals,              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( gBufferPassData.gbuffer.diffuse,              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( gBufferPassData.gbuffer.metallicAndRoughness, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( ssaoBlurPassData.outputTex,                   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
     };
     writeDescriptorSets =
     {
@@ -834,6 +840,7 @@ bool InitDescriptorPoolAndPrimarySets()
         WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, &imageDescriptors[1] ),
         WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2, &imageDescriptors[2] ),
         WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3, &imageDescriptors[3] ),
+        WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4, &imageDescriptors[4] ),
     };
     g_renderState.device.UpdateDescriptorSets( static_cast< uint32_t >( writeDescriptorSets.size() ), writeDescriptorSets.data() );
 
@@ -956,7 +963,8 @@ namespace RenderSystem
 
         gBufferPassData.gbuffer.positions.Free();
         gBufferPassData.gbuffer.normals.Free();
-        gBufferPassData.gbuffer.diffuseAndSpecular.Free();
+        gBufferPassData.gbuffer.diffuse.Free();
+        gBufferPassData.gbuffer.metallicAndRoughness.Free();
         gBufferPassData.renderPass.Free();
         gBufferPassData.frameBuffer.Free();
         gBufferPassData.pipeline.Free();
@@ -1164,16 +1172,15 @@ namespace RenderSystem
             {
                 const auto& mesh = modelRenderer.model->meshes[i];
                 const auto& mat  = modelRenderer.materials[mesh.materialIndex];
-                // if ( mat->transparent )
-                // {
-                //     continue;
-                // }
 
                 Gpu::MaterialConstantBufferData mcbuf{};
-                mcbuf.Kd = glm::vec4( mat->Kd, 0 );
-                mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
-                mcbuf.diffuseTexIndex = mat->map_Kd   ? mat->map_Kd->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
-                mcbuf.normalMapIndex  = mat->map_Norm ? mat->map_Norm->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
+                mcbuf.Kd                 = glm::vec4( mat->Kd, 0 );
+                mcbuf.roughness          = mat->roughness;
+                mcbuf.metallic           = mat->metallic;
+                mcbuf.diffuseTexIndex    = mat->map_Kd   ? mat->map_Kd->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
+                mcbuf.normalTexIndex     = mat->map_Norm ? mat->map_Norm->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
+                mcbuf.metallicTexIndex   = mat->map_Pm   ? mat->map_Pm->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
+                mcbuf.roughnessTexIndex  = mat->map_Pr   ? mat->map_Pr->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
                 cmdBuf.PushConstants( gBufferPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( Gpu::MaterialConstantBufferData ), &mcbuf );
 
                 PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
@@ -1220,9 +1227,12 @@ namespace RenderSystem
 
                 Gpu::MaterialConstantBufferData mcbuf{};
                 mcbuf.Kd = glm::vec4( mat->Kd, 0 );
-                mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
-                mcbuf.diffuseTexIndex = mat->map_Kd   ? mat->map_Kd->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
-                mcbuf.normalMapIndex  = mat->map_Norm ? mat->map_Norm->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
+                mcbuf.metallic           = mat->metallic;
+                mcbuf.roughness          = mat->roughness;
+                mcbuf.diffuseTexIndex    = mat->map_Kd   ? mat->map_Kd->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
+                mcbuf.normalTexIndex     = mat->map_Norm ? mat->map_Norm->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
+                mcbuf.metallicTexIndex   = mat->map_Pm   ? mat->map_Pm->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
+                mcbuf.roughnessTexIndex  = mat->map_Pr   ? mat->map_Pr->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
                 cmdBuf.PushConstants( animPipeline, VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( Gpu::MaterialConstantBufferData ), &mcbuf );
 
                 PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );
@@ -1365,9 +1375,12 @@ namespace RenderSystem
 
                 Gpu::MaterialConstantBufferData mcbuf{};
                 mcbuf.Kd = glm::vec4( mat->Kd, 0 );
-                mcbuf.Ks = glm::vec4( mat->Ks, mat->Ns );
-                mcbuf.diffuseTexIndex = mat->map_Kd   ? mat->map_Kd->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
-                mcbuf.normalMapIndex  = mat->map_Norm ? mat->map_Norm->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
+                mcbuf.metallic           = mat->metallic;
+                mcbuf.roughness          = mat->roughness;
+                mcbuf.diffuseTexIndex    = mat->map_Kd   ? mat->map_Kd->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
+                mcbuf.normalTexIndex     = mat->map_Norm ? mat->map_Norm->GetTexture()->GetShaderSlot() : PG_INVALID_TEXTURE_INDEX;
+                mcbuf.metallicTexIndex   = mat->map_Pm   ? mat->map_Pm->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
+                mcbuf.roughnessTexIndex  = mat->map_Pr   ? mat->map_Pr->GetTexture()->GetShaderSlot()   : PG_INVALID_TEXTURE_INDEX;
                 cmdBuf.PushConstants( transparencyPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, PG_MATERIAL_PUSH_CONSTANT_OFFSET, sizeof( Gpu::MaterialConstantBufferData ), &mcbuf );
 
                 PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw \"" + model->name + "\" : \"" + mesh.name + "\"", glm::vec4( 0 ) );

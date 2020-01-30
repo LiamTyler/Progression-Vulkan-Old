@@ -23,8 +23,10 @@ using namespace Progression;
 
 static std::unordered_map< std::string, ImageSemantic > imageSemanticMap =
 {
-    { "DIFFUSE", ImageSemantic::DIFFUSE },
-    { "NORMAL",  ImageSemantic::NORMAL }
+    { "DIFFUSE",    ImageSemantic::DIFFUSE },
+    { "NORMAL",     ImageSemantic::NORMAL },
+    { "METALLIC",   ImageSemantic::METALLIC },
+    { "ROUGHNESS",  ImageSemantic::ROUGHNESS },
 };
 
 static std::unordered_map< std::string, ImageCompressionQuality > imageCompressionQualityMap =

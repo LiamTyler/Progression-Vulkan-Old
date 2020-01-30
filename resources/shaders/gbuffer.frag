@@ -7,7 +7,8 @@
 
 layout( location = 0 ) out vec4 outPosition;
 layout( location = 1 ) out vec4 outNormal;
-layout( location = 2 ) out uvec4 outDiffuseAndSpecular;
+layout( location = 2 ) out vec4 outDiffuse;
+layout( location = 3 ) out vec2 outMetallicAndRoughness;
 
 layout( location = 0 ) in vec3 posInWorldSpace;
 layout( location = 1 ) in vec2 texCoord;
@@ -22,17 +23,14 @@ layout( std430, push_constant ) uniform MaterialConstantBufferUniform
 
 void main()
 {
-    outPosition = vec4( posInWorldSpace, 1 );
-
     vec3 n = normalize( TBN[2] );
-    if ( material.normalMapIndex != PG_INVALID_TEXTURE_INDEX )
+    if ( material.normalTexIndex != PG_INVALID_TEXTURE_INDEX )
     {
-        n.xy = texture( textures[material.normalMapIndex], texCoord ).xy;
+        n.xy = texture( textures[material.normalTexIndex], texCoord ).xy;
         n.xy = 2 * n.xy - 1;
         n.z = sqrt( 1 - n.x * n.x + n.y * n.y );
         n = normalize( TBN * n );
     }
-    outNormal = vec4( EncodeOctVec( n ), 0 );
     
     vec3 Kd    = material.Kd.xyz;
     if ( material.diffuseTexIndex != PG_INVALID_TEXTURE_INDEX )
@@ -44,5 +42,21 @@ void main()
         }
         Kd *= diff.xyz;
     }
-    outDiffuseAndSpecular = PackDiffuseAndSpecular( Kd, material.Ks );
+    
+    float metallic = material.metallic;
+    if ( material.metallicTexIndex != PG_INVALID_TEXTURE_INDEX )
+    {
+        metallic *= texture( textures[material.metallicTexIndex], texCoord ).r;
+    }
+    float roughness = material.roughness;
+    if ( material.metallicTexIndex != PG_INVALID_TEXTURE_INDEX )
+    {
+        roughness *= texture( textures[material.roughnessTexIndex], texCoord ).r;
+    }
+    
+    
+    outPosition             = vec4( posInWorldSpace, 1 );
+    outNormal               = vec4( EncodeOctVec( n ), 0 );
+    outDiffuse              = vec4( Kd, 0 );
+    outMetallicAndRoughness = vec2( metallic, roughness );
 }

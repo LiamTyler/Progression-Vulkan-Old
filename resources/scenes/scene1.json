@@ -37,28 +37,24 @@
         }
     },
     "_Entity": {
-        "NameComponent": "dragon",
+        "NameComponent": "robot",
         "Transform": {
-            "position": [ 0, -1, 1 ],
-            "rotation": [ 0, 0, 0 ],
-            "scale": [ 0.001, 0.001, 0.001 ]
+            "position": [ -2, 0, 0 ],
+            "scale": [ 10, 10, 10 ]
         },
-        "SkinnedRenderer": {
-            "model": "dragon"
-        },
-        "Animator": {
-            "model": "dragon"
+        "ModelRenderer": {
+            "model": "robot"
         }
     },
     "Entity": {
-        "NameComponent": "cube",
+        "NameComponent": "metalSphere",
         "Transform": {
-            "position": [ -4, 0, 0 ],
-            "scale": [ 1, 1, 1 ]
+            "position": [ 2, 0, 0 ],
+            "scale": [ 2, 2, 2 ]
         },
         "ModelRenderer": {
-            "model": "cube",
-            "material": "green"
+            "model": "sphere",
+            "material": "rustedIron"
         }
     },
     "Entity": {

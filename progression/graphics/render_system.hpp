@@ -24,8 +24,8 @@ namespace RenderSystem
     {
         Gfx::Texture positions;
         Gfx::Texture normals;
-        Gfx::Texture diffuseAndSpecular;
-        Gfx::Texture specular;
+        Gfx::Texture diffuse;
+        Gfx::Texture metallicAndRoughness;
     };
 
     struct GBufferPassData

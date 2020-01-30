@@ -11,11 +11,13 @@ class MaterialCreateInfo : public ResourceCreateInfo
 {
 public:
     glm::vec3 Kd;
-    glm::vec3 Ks;
-    float Ns;
+    float roughness;
+    float metallic;
     bool transparent = false;
     std::string map_Kd_name;
     std::string map_Norm_name;
+    std::string map_Pm_name;
+    std::string map_Pr_name;
 };
 
 class Material : public Resource
@@ -30,11 +32,13 @@ public:
     static bool LoadMtlFile( std::vector< Material >& materials, const std::string& fname );
 
     glm::vec3 Kd;
-    glm::vec3 Ks;
-    float Ns;
+    float roughness;
+    float metallic;
     bool transparent = false;
     std::shared_ptr< Image > map_Kd   = nullptr;
     std::shared_ptr< Image > map_Norm = nullptr;
+    std::shared_ptr< Image > map_Pm   = nullptr; // metallic
+    std::shared_ptr< Image > map_Pr   = nullptr; // roughness
 };
 
 } // namespace Progression

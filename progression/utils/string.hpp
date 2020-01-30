@@ -5,3 +5,5 @@
 std::string TrimWhiteSpace( const std::string& s );
 
 std::string SlashesToUnderscores( std::string s );
+
+bool IsWhiteSpace( const std::string& s );

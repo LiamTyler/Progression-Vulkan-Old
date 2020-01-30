@@ -6,8 +6,6 @@
     "Image": {
         "name": "floor",
         "generateMipmaps": true,
-        "_dstFormat": "BC7_SRGB",
-        "compressionQuality": "MAX",
         "filename": "textures/metal2.jpg",
         "flipVertically": true,
         "freeCpuCopy": true,
@@ -16,8 +14,6 @@
     "Image": {
         "name": "waterSkybox",
         "generateMipmaps": false,
-        "_dstFormat": "BC7_SRGB",
-        "compressionQuality": "MEDIUM",
         "cubeMapFilenames": {
             "right": "textures/skybox/water/right.jpg",
             "left": "textures/skybox/water/left.jpg",
@@ -34,19 +30,48 @@
         "name": "floor",
         "filename": "models/plane.obj"
     },
-    "Model": {
-        "name": "cube",
-        "filename": "models/cube.obj"
-    },
-    "Image": {
-        "name": "chaletTex",
+    "_Image": {
+        "name": "textures/robot/baseColor.jpg",
         "generateMipmaps": true,
-        "_dstFormat": "BC7_SRGB",
-        "compressionQuality": "MEDIUM",
-        "filename": "textures/chalet.jpg",
+        "filename": "textures/robot/baseColor.jpg",
         "flipVertically": true,
         "freeCpuCopy": true,
         "createTexture": true
+    },
+    "_Model": {
+        "name": "robot",
+        "filename": "models/robot.obj"
+    },
+    "Image": {
+        "name": "textures/rusted_iron/albedo.png",
+        "generateMipmaps": true,
+        "semantic": "DIFFUSE",
+        "filename": "textures/rusted_iron/albedo.png",
+        "flipVertically": true,
+        "freeCpuCopy": true,
+        "createTexture": true
+    },
+    "Image": {
+        "name": "textures/rusted_iron/roughness.png",
+        "generateMipmaps": true,
+        "semantic": "ROUGHNESS",
+        "filename": "textures/rusted_iron/roughness.png",
+        "flipVertically": true,
+        "freeCpuCopy": true,
+        "createTexture": true
+    },
+    "Image": {
+        "name": "textures/rusted_iron/metallic.png",
+        "generateMipmaps": true,
+        "semantic": "METALLIC",
+        "filename": "textures/rusted_iron/metallic.png",
+        "flipVertically": true,
+        "freeCpuCopy": true,
+        "createTexture": true
+    },
+    "Model": {
+        "name": "sphere",
+        "filename": "models/sphereHigh.obj"
     },
     "_Model": {
         "name": "dragon",

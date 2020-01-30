@@ -37,10 +37,14 @@ layout( std430, push_constant ) uniform MaterialConstantBufferUniform
 
 void main()
 {
+    // TODO: Fix for PBR once that is working
+    outColor = vec4( .7, .2, .3, 1 );
+    return;
+    /*
     vec3 n = normalize( TBN[2] );
-    if ( material.normalMapIndex != PG_INVALID_TEXTURE_INDEX )
+    if ( material.normalTexIndex != PG_INVALID_TEXTURE_INDEX )
     {
-        n = texture( textures[material.normalMapIndex], texCoord ).xyz;
+        n = texture( textures[material.normalTexIndex], texCoord ).xyz;
         n = normalize( n * 2 - 1 );
         n = normalize( TBN * n );
     }
@@ -74,8 +78,6 @@ void main()
     {
         color += S * lightColor * material.Ks.xyz * pow( max( dot( h, n ), 0.0 ), 4 * material.Ks.w );
     }
-    
-    
 
     // pointlights
     for ( uint i = 0; i < sceneConstantBuffer.numPointLights; ++i )
@@ -115,4 +117,5 @@ void main()
     }
         
     outColor = vec4( color, 1.0 );
+    */
 }

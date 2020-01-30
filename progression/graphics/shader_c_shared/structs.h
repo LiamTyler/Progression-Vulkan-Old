@@ -41,9 +41,12 @@ struct AnimatedShadowPerObjectData
 struct MaterialConstantBufferData
 {
     VEC4 Kd;
-    VEC4 Ks;
+    float roughness;
+    float metallic;
     UINT diffuseTexIndex;
-    UINT normalMapIndex;
+    UINT normalTexIndex;
+    UINT metallicTexIndex;
+    UINT roughnessTexIndex;
 };
 
 struct SSAOShaderData

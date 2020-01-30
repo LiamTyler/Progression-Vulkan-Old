@@ -1,8 +1,6 @@
 {
     "Fastfile": {
-        "_filename": "sponza_compressed.ff",
-        "_filename": "sponza_compressed_diffuse_bc1.ff",
-        "filename": "sponza_compressed_bc1.ff",
+        "filename": "sponza_compressed.ff",
         "_filename": "sponza_uncompressed.ff"
     },
     "Camera": {

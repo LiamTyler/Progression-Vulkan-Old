@@ -310,16 +310,14 @@ namespace Progression
             color = aiColor3D( 0.f, 0.f, 0.f );
             pMaterial->Get( AI_MATKEY_COLOR_DIFFUSE, color );
             model->materials[mtlIdx]->Kd = { color.r, color.g, color.b };
-            color = aiColor3D( 0.f, 0.f, 0.f );
-            pMaterial->Get( AI_MATKEY_COLOR_SPECULAR, color );
-            model->materials[mtlIdx]->Ks = { color.r, color.g, color.b };
-            color = aiColor3D( 0.f, 0.f, 0.f );
-            float Ns;
-            pMaterial->Get( AI_MATKEY_SHININESS, Ns );
-            model->materials[mtlIdx]->Ns = Ns;;
             float d = 0;
             pMaterial->Get( AI_MATKEY_OPACITY, d );
             model->materials[mtlIdx]->transparent = d == 1.0f;
+            // NOTE: I had to manually add this to ASSIMP. Only added for OBJs so far
+            pMaterial->Get( AI_MATKEY_METALLIC, model->materials[mtlIdx]->metallic );
+            pMaterial->Get( AI_MATKEY_ROUGHNESS, model->materials[mtlIdx]->roughness );
+            LOG( "Material metallic float: ", model->materials[mtlIdx]->metallic );
+            LOG( "Material roughness float: ", model->materials[mtlIdx]->roughness );
 
             if ( pMaterial->GetTextureCount( aiTextureType_DIFFUSE ) > 0 )
             {
@@ -348,6 +346,31 @@ namespace Progression
                 PG_ASSERT( pMaterial->GetTextureCount( aiTextureType_HEIGHT ) == 1, "Can't have more than 1 normal map per material" );
                 model->materials[mtlIdx]->map_Norm = LoadAssimpTexture( pMaterial, aiTextureType_HEIGHT );
                 if ( !model->materials[mtlIdx]->map_Norm )
+                {
+                    return false;
+                }
+            }
+
+            if ( pMaterial->GetTextureCount( aiTextureType_METALNESS ) > 0 )
+            {
+                PG_ASSERT( pMaterial->GetTextureCount( aiTextureType_METALNESS ) == 1, "Can't have more than 1 metallic texture per material" );
+                // aiString path;
+                // if ( pMaterial->GetTexture( aiTextureType_METALNESS, 0, &path, NULL, NULL, NULL, NULL, NULL ) == AI_SUCCESS )
+                // {
+                //     LOG( "Material has metallic texture '", path.data, "'" );
+                // }
+                model->materials[mtlIdx]->map_Pm = LoadAssimpTexture( pMaterial, aiTextureType_METALNESS );
+                if ( !model->materials[mtlIdx]->map_Pm )
+                {
+                    return false;
+                }
+            }
+
+            if ( pMaterial->GetTextureCount( aiTextureType_DIFFUSE_ROUGHNESS ) > 0 )
+            {
+                PG_ASSERT( pMaterial->GetTextureCount( aiTextureType_DIFFUSE_ROUGHNESS ) == 1, "Can't have more than 1 roughness texture per material" );
+                model->materials[mtlIdx]->map_Pr = LoadAssimpTexture( pMaterial, aiTextureType_DIFFUSE_ROUGHNESS );
+                if ( !model->materials[mtlIdx]->map_Pr )
                 {
                     return false;
                 }

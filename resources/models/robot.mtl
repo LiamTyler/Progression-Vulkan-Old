@@ -10,4 +10,8 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 1
-map_Kd robot/baseColor.jpg
+Pm 0.8
+Pr 0.7
+map_Kd textures/robot/baseColor.jpg
+map_Pm textures/robot/metallic.jpg
+map_Pr textures/robot/roughness.jpg

@@ -6,6 +6,7 @@
 #include "utils/fileIO.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
+#include "utils/string.hpp"
 #include <cctype>
 
 namespace Progression
@@ -17,11 +18,13 @@ bool Material::Load( ResourceCreateInfo* createInfo )
     MaterialCreateInfo* info = static_cast< MaterialCreateInfo* >( createInfo );
     name        = info->name;
     Kd          = info->Kd;
-    Ks          = info->Ks;
-    Ns          = info->Ns;
+    roughness   = info->roughness;
+    metallic    = info->metallic;
     transparent = info->transparent;
     map_Kd      = ResourceManager::Get< Image >( info->map_Kd_name );
     map_Norm    = ResourceManager::Get< Image >( info->map_Norm_name );
+    map_Pm      = ResourceManager::Get< Image >( info->map_Pm_name );
+    map_Pr      = ResourceManager::Get< Image >( info->map_Pr_name );
 
     return true;
 }
@@ -37,8 +40,8 @@ bool Material::Serialize( std::ofstream& out ) const
 {
     serialize::Write( out, name );
     serialize::Write( out, Kd );
-    serialize::Write( out, Ks );
-    serialize::Write( out, Ns );
+    serialize::Write( out, roughness );
+    serialize::Write( out, metallic );
     serialize::Write( out, transparent );
     bool hasDiffuseTexture = map_Kd != nullptr;
     serialize::Write( out, hasDiffuseTexture );
@@ -54,6 +57,20 @@ bool Material::Serialize( std::ofstream& out ) const
         serialize::Write( out, map_Norm->name );
     }
 
+    bool hasMetatllicMap = map_Pm != nullptr;
+    serialize::Write( out, hasMetatllicMap );
+    if ( hasMetatllicMap )
+    {
+        serialize::Write( out, map_Pm->name );
+    }
+
+    bool hasRoughnessMap = map_Pr != nullptr;
+    serialize::Write( out, hasRoughnessMap );
+    if ( hasRoughnessMap )
+    {
+        serialize::Write( out, map_Pr->name );
+    }
+
     return !out.fail();
 }
 
@@ -61,8 +78,8 @@ bool Material::Deserialize( char*& buffer )
 {
     serialize::Read( buffer, name );
     serialize::Read( buffer, Kd );
-    serialize::Read( buffer, Ks );
-    serialize::Read( buffer, Ns );
+    serialize::Read( buffer, roughness );
+    serialize::Read( buffer, metallic );
     serialize::Read( buffer, transparent );
     bool hasDiffuseTexture;
     serialize::Read( buffer, hasDiffuseTexture );
@@ -84,17 +101,24 @@ bool Material::Deserialize( char*& buffer )
         PG_ASSERT( map_Norm, "No normal map with name '" + map_name + "' found" );
     }
 
-    return true;
-}
-
-static bool IsWhiteSpace( const std::string& str )
-{
-    for ( size_t i = 0; i < str.length(); ++i )
+    bool hasMetallicMap;
+    serialize::Read( buffer, hasMetallicMap );
+    if ( hasMetallicMap )
     {
-        if ( !std::isspace( str[i] ) )
-        {
-            return false;
-        }
+        std::string map_name;
+        serialize::Read( buffer, map_name );
+        map_Pm = ResourceManager::Get< Image >( map_name );
+        PG_ASSERT( map_Pm, "No metallic map with name '" + map_name + "' found" );
+    }
+
+    bool hasRoughnessMap;
+    serialize::Read( buffer, hasRoughnessMap );
+    if ( hasRoughnessMap )
+    {
+        std::string map_name;
+        serialize::Read( buffer, map_name );
+        map_Pr = ResourceManager::Get< Image >( map_name );
+        PG_ASSERT( map_Pr, "No roughness map with name '" + map_name + "' found" );
     }
 
     return true;
@@ -139,14 +163,6 @@ bool Material::LoadMtlFile( std::vector< Material >& materials, const std::strin
         {
             ss >> mat->Kd;
         }
-        else if ( first == "Ks" )
-        {
-            ss >> mat->Ks;
-        }
-        else if ( first == "Ns" )
-        {
-            ss >> mat->Ns;
-        }
         else if ( first == "d" )
         {
             float d;
@@ -155,6 +171,14 @@ bool Material::LoadMtlFile( std::vector< Material >& materials, const std::strin
             {
                 mat->transparent = true;
             }
+        }
+        else if ( first == "Pr" )
+        {
+            ss >> mat->roughness;
+        }
+        else if ( first == "Pm" )
+        {
+            ss >> mat->metallic;
         }
         else if ( first == "map_Kd" )
         {
@@ -180,12 +204,40 @@ bool Material::LoadMtlFile( std::vector< Material >& materials, const std::strin
             mat->map_Norm = ResourceManager::Get< Image >( texName );
             if ( !mat->map_Norm )
             {
-                // LOG_ERR("Failed to load map_Kd image '", texName, "' in mtl file '", fname, "'");
-                // return false;
                 mat->map_Norm = Image::Load2DImageWithDefaultSettings( PG_RESOURCE_DIR + texName, ImageSemantic::NORMAL );
                 if ( !mat->map_Norm )
                 {
                     LOG_ERR( "Failed to load normal map with default settings while parsing MTL file." );
+                    return false;
+                }
+            }
+        }
+        else if ( first == "map_Pm" )
+        {
+            std::string texName;
+            ss >> texName;
+            mat->map_Pm = ResourceManager::Get< Image >( texName );
+            if ( !mat->map_Pm )
+            {
+                mat->map_Pm = Image::Load2DImageWithDefaultSettings( PG_RESOURCE_DIR + texName, ImageSemantic::METALLIC );
+                if ( !mat->map_Pm )
+                {
+                    LOG_ERR( "Failed to load metallic map with default settings while parsing MTL file." );
+                    return false;
+                }
+            }
+        }
+        else if ( first == "map_Pr" )
+        {
+            std::string texName;
+            ss >> texName;
+            mat->map_Pr = ResourceManager::Get< Image >( texName );
+            if ( !mat->map_Pr )
+            {
+                mat->map_Pr = Image::Load2DImageWithDefaultSettings( PG_RESOURCE_DIR + texName, ImageSemantic::ROUGHNESS );
+                if ( !mat->map_Pr )
+                {
+                    LOG_ERR( "Failed to load roughness map with default settings while parsing MTL file." );
                     return false;
                 }
             }

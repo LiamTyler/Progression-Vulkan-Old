@@ -21,7 +21,9 @@ typedef uint32_t ImageFlags;
 enum class ImageSemantic
 {
     DIFFUSE,
-    NORMAL
+    NORMAL,
+    METALLIC,
+    ROUGHNESS
 };
 
 enum class ImageCompressionQuality

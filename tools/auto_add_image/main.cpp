@@ -18,15 +18,16 @@ struct ImageEntry
 };
 
 std::unordered_map< std::string, ImageEntry > images;
-std::string diffuseFormat = "BC7_SRGB";
-std::string normalFormat  = "BC5_UNORM";
+std::string diffuseFormat              = "BC7_SRGB";
+std::string normalFormat               = "BC5_UNORM";
+std::string roughnessAndMetallicFormat = "BC4_UNORM";
 
 static void DisplayHelp()
 {
     auto msg =
       "Usage: auto_add_image RESOURCE_FILE.json\n"
       " or\n"
-      "Usage: auto_add_image [--diffuseFormat|--normalFormat] modelFile1 modelFile2...\n"
+      "Usage: auto_add_image [options] modelFile1 modelFile2...\n"
       "\nOptions\n"
       "  -d, --diffuseFormat [format]\tSet the format of diffuse textures (defaults to BC7_SRGB). Use 'INVALID' for src format\n"
       "  -h, --help\t\tPrint this message and exit\n"
@@ -34,10 +35,20 @@ static void DisplayHelp()
       "  -n, --normalFormat [format]\tSet the format of normal textures (defaults to BC5_UNORM). Use 'INVALID' for src format\n";
       "  -o, --output [filename]\tOutput filename when arguments are model files. Defaults to 'auto_add_image_output.json'\n";
       "  -q, --quality [0-3]\tSet the quality level. Defaults to 1, the higher the better.\n";
+      "  -r, --roughnessAndMetallicFormat [format]\tSet the format of roughness and metallic textures (defaults to BC4_UNORM). Use 'INVALID' for src format\n";
       "  -y, --flipY\tTurn OFF flipping textures vertically. Defaults to on'\n";
 
     std::cout << msg << std::endl;
 }
+
+static std::unordered_map< aiTextureType, std::string > aiTextureTypeToSemanticMap =
+{
+    { aiTextureType_DIFFUSE,            "DIFFUSE"  },
+    { aiTextureType_NORMALS,            "NORMAL"   },
+    { aiTextureType_HEIGHT,             "NORMAL"   },
+    { aiTextureType_METALNESS,          "METALLIC" },
+    { aiTextureType_DIFFUSE_ROUGHNESS,  "ROUGHNESS" },
+};
 
 static void AddImage( const aiMaterial* pMaterial, aiTextureType texType )
 {
@@ -79,7 +90,9 @@ static void AddImage( const aiMaterial* pMaterial, aiTextureType texType )
     if ( fullPath != "" )
     {
         auto& entry    = images[name];
-        entry.semantic = texType == aiTextureType_DIFFUSE ? "DIFFUSE" : "NORMAL";
+        auto it = aiTextureTypeToSemanticMap.find( texType );
+        PG_ASSERT( it != aiTextureTypeToSemanticMap.end() );
+        entry.semantic = it->second;
         fs::path resDirPath( PG_RESOURCE_DIR );
         fs::path aiTexPath( fullPath );
         entry.relPath = fs::relative( aiTexPath, resDirPath ).string();
@@ -122,13 +135,14 @@ int main( int argc, char* argv[] )
 
     static struct option long_options[] =
     {
-        { "diffuseFormat", required_argument,  0, 'd' },
-        { "help",          no_argument,        0, 'h' },
-        { "mipsOff",       no_argument,        0, 'm' },
-        { "normalFormat",  required_argument,  0, 'n' },
-        { "output",        required_argument,  0, 'o' },
-        { "quality",       required_argument,  0, 'q' },
-        { "flipY",         no_argument,        0, 'y' },
+        { "diffuseFormat",              required_argument,  0, 'd' },
+        { "help",                       no_argument,        0, 'h' },
+        { "mipsOff",                    no_argument,        0, 'm' },
+        { "normalFormat",               required_argument,  0, 'n' },
+        { "output",                     required_argument,  0, 'o' },
+        { "quality",                    required_argument,  0, 'q' },
+        { "roughnessAndMetallicFormat", required_argument,  0, 'r' },
+        { "flipY",                      no_argument,        0, 'y' },
         { 0, 0, 0, 0 }
     };
 
@@ -139,7 +153,7 @@ int main( int argc, char* argv[] )
     int qualityLevel  = 1;
     int option_index  = 0;
     int c             = -1;
-    while ( ( c = getopt_long( argc, argv, "d:hmn:o:q:y", long_options, &option_index ) ) != -1 )
+    while ( ( c = getopt_long( argc, argv, "d:hmn:o:q:r:y", long_options, &option_index ) ) != -1 )
     {
         switch ( c )
         {
@@ -189,6 +203,23 @@ int main( int argc, char* argv[] )
             case 'q':
                 qualityLevel = std::max( 0, std::min( 3, std::stoi( optarg ) ) );
                 break;
+            case 'r':
+            {
+                std::string format         = optarg;
+                roughnessAndMetallicFormat = format;
+                auto gfxFormat     = PixelFormatFromString( format );
+                if ( gfxFormat != PixelFormat::INVALID && !PixelFormatIsCompressed( gfxFormat ) )
+                {
+                    std::cout << "Cannot currently convert to non-compressed formats" << std::endl;
+                    return 0;
+                }
+                if ( gfxFormat == PixelFormat::INVALID && format != "INVALID" )
+                {
+                    std::cout << "Invalid pixel format '" << format << "'" << std::endl;
+                    return 0;
+                }
+                break;
+            }
             case 'y':
                 flipY = false;
                 break;
@@ -243,8 +274,17 @@ int main( int argc, char* argv[] )
                     PG_ASSERT( pMaterial->GetTextureCount( aiTextureType_HEIGHT ) == 1, "Can't have more than 1 normal map per material" );
                     AddImage( pMaterial, aiTextureType_HEIGHT );
                 }
+                else if ( pMaterial->GetTextureCount( aiTextureType_METALNESS ) > 0 )
+                {
+                    PG_ASSERT( pMaterial->GetTextureCount( aiTextureType_METALNESS ) == 1, "Can't have more than 1 metallic map per material" );
+                    AddImage( pMaterial, aiTextureType_METALNESS );
+                }
+                else if ( pMaterial->GetTextureCount( aiTextureType_DIFFUSE_ROUGHNESS ) > 0 )
+                {
+                    PG_ASSERT( pMaterial->GetTextureCount( aiTextureType_DIFFUSE_ROUGHNESS ) == 1, "Can't have more than 1 roughness map per material" );
+                    AddImage( pMaterial, aiTextureType_DIFFUSE_ROUGHNESS );
+                }
             }
-
         }
 
         std::ofstream out( outputFilename );
@@ -268,7 +308,16 @@ int main( int argc, char* argv[] )
             OutputKeyStr( out, "name", name );
             OutputKeyStr( out, "filename", entry.relPath );
             OutputKeyStr( out, "semantic", entry.semantic );
-            auto dstFormat = entry.semantic == "DIFFUSE" ? diffuseFormat : normalFormat;
+            auto dstFormat = diffuseFormat;
+            if ( entry.semantic == "NORMAL" )
+            {
+                dstFormat = normalFormat;
+            }
+            else if ( entry.semantic == "METALLIC" || entry.semantic == "ROUGHNESS" )
+            {
+                dstFormat = roughnessAndMetallicFormat;
+            }
+
             if ( dstFormat != "INVALID" )
             {
                 OutputKeyStr( out, "dstFormat", dstFormat );
