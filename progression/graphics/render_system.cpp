@@ -1,6 +1,7 @@
 #include "graphics/render_system.hpp"
 #include "core/animation_system.hpp"
 #include "core/assert.hpp"
+#include "core/feature_defines.hpp"
 #include "core/scene.hpp"
 #include "core/time.hpp"
 #include "core/window.hpp"
@@ -308,6 +309,9 @@ static bool InitGBufferPassData()
 
 static bool InitSSAOPass()
 {
+#if !USING( PG_SSAO )
+    return true;
+#else // #if !USING( PG_SSAO )
     RenderPassDescriptor desc;
     desc.colorAttachmentDescriptors[0].format      = PixelFormat::R8_UNORM;
     desc.colorAttachmentDescriptors[0].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
@@ -398,6 +402,7 @@ static bool InitSSAOPass()
     ssaoPassData.noise = g_renderState.device.NewTextureFromBuffer( info, noise.data(), false, "ssao noise" );
 
     return true;
+#endif // #else // #if !USING( PG_SSAO )
 }
 
 static bool InitSSAOBlurPassData()
@@ -405,12 +410,36 @@ static bool InitSSAOBlurPassData()
     RenderPassDescriptor desc;
     desc.colorAttachmentDescriptors[0].format      = PixelFormat::R8_UNORM;
     desc.colorAttachmentDescriptors[0].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+    desc.colorAttachmentDescriptors[0].loadAction  = LoadAction::DONT_CARE;
+    #if !USING( PG_SSAO )
+    desc.colorAttachmentDescriptors[0].loadAction  = LoadAction::CLEAR;
+    desc.colorAttachmentDescriptors[0].clearColor  = glm::vec4( 1 );
+    #endif // #if !USING( PG_SSAO )
 
     ssaoBlurPassData.renderPass = g_renderState.device.NewRenderPass( desc, "ssao blur" );
     if ( !ssaoBlurPassData.renderPass )
     {
         return false;
     }
+
+    ImageDescriptor info;
+    info.type    = ImageType::TYPE_2D;
+    info.width   = g_renderState.swapChain.extent.width;
+    info.height  = g_renderState.swapChain.extent.height;
+    info.sampler = "nearest_clamped_nearest";
+    info.usage   = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    info.format  = PixelFormat::R8_UNORM;
+    ssaoBlurPassData.outputTex = g_renderState.device.NewTexture( info, false, "ssao blur" );
+
+    ssaoBlurPassData.framebuffer = g_renderState.device.NewFramebuffer( { &ssaoBlurPassData.outputTex }, ssaoBlurPassData.renderPass, "ssao blur pass" );
+    if ( !ssaoBlurPassData.framebuffer )
+    {
+        return false;
+    }
+
+#if !USING( PG_SSAO )
+    return true;
+#else // #if !USING( PG_SSAO )
 
     auto vertShader = ResourceManager::Get< Shader >( "fullScreenQuadVert" );
     auto fragShader = ResourceManager::Get< Shader >( "ssaoBlur" );
@@ -447,22 +476,8 @@ static bool InitSSAOBlurPassData()
         return false;
     }
 
-    ImageDescriptor info;
-    info.type    = ImageType::TYPE_2D;
-    info.width   = g_renderState.swapChain.extent.width;
-    info.height  = g_renderState.swapChain.extent.height;
-    info.sampler = "nearest_clamped_nearest";
-    info.usage   = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    info.format  = PixelFormat::R8_UNORM;
-    ssaoBlurPassData.outputTex = g_renderState.device.NewTexture( info, false, "ssao blur" );
-
-    ssaoBlurPassData.framebuffer = g_renderState.device.NewFramebuffer( { &ssaoBlurPassData.outputTex }, ssaoBlurPassData.renderPass, "ssao blur pass" );
-    if ( !ssaoBlurPassData.framebuffer )
-    {
-        return false;
-    }
-
     return true;
+#endif // #else // #if !USING( PG_SSAO )
 }
 
 static bool InitLightingPassData()
@@ -772,11 +787,13 @@ bool InitDescriptorPoolAndPrimarySets()
     descriptorSets.scene                    = s_descriptorPool.NewDescriptorSet( lightingPassData.descriptorSetLayouts[0],    "scene data" );
     descriptorSets.arrayOfTextures          = s_descriptorPool.NewDescriptorSet( lightingPassData.descriptorSetLayouts[1],    "array of textures" );
     descriptorSets.gBufferAttachments       = s_descriptorPool.NewDescriptorSet( lightingPassData.descriptorSetLayouts[2],    "gbuffer attachments" );
-    descriptorSets.ssao                     = s_descriptorPool.NewDescriptorSet( ssaoPassData.descriptorSetLayouts[0],        "ssao textures" );
-    descriptorSets.ssaoBlur                 = s_descriptorPool.NewDescriptorSet( ssaoBlurPassData.descriptorSetLayouts[0],    "ssao blur tex" );
     descriptorSets.lights                   = s_descriptorPool.NewDescriptorSet( lightingPassData.descriptorSetLayouts[3],    "scene lights" );
     descriptorSets.postProcessInputColorTex = s_descriptorPool.NewDescriptorSet( postProcessPassData.descriptorSetLayouts[0], "post process input tex" );
     descriptorSets.background               = s_descriptorPool.NewDescriptorSet( backgroundPassData.skyboxDescriptorSetLayouts[0], "background skybox tex" );
+#if USING( PG_SSAO )
+    descriptorSets.ssao                     = s_descriptorPool.NewDescriptorSet( ssaoPassData.descriptorSetLayouts[0],        "ssao textures" );
+    descriptorSets.ssaoBlur                 = s_descriptorPool.NewDescriptorSet( ssaoBlurPassData.descriptorSetLayouts[0],    "ssao blur tex" );
+#endif // #if USING( PG_SSAO )
     
     std::vector< VkWriteDescriptorSet > writeDescriptorSets;
 	std::vector< VkDescriptorImageInfo > imageDescriptors;
@@ -804,6 +821,7 @@ bool InitDescriptorPoolAndPrimarySets()
     g_renderState.device.UpdateDescriptorSets( static_cast< uint32_t >( writeDescriptorSets.size() ), writeDescriptorSets.data() );
 
     // SSAO Pass
+#if USING( PG_SSAO )
     bufferDescriptors =
     {
         DescriptorBufferInfo( ssaoPassData.kernel ),
@@ -824,6 +842,7 @@ bool InitDescriptorPoolAndPrimarySets()
         WriteDescriptorSet( descriptorSets.ssaoBlur, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageDescriptors[3] ),
     };
     g_renderState.device.UpdateDescriptorSets( static_cast< uint32_t >( writeDescriptorSets.size() ), writeDescriptorSets.data() );
+#endif // #if USING( PG_SSAO )
 
     // Lighting Pass
     imageDescriptors =
@@ -970,6 +989,7 @@ namespace RenderSystem
         gBufferPassData.pipeline.Free();
         FreeDescriptorSetLayouts( gBufferPassData.descriptorSetLayouts );
 
+#if USING( PG_SSAO )
         ssaoPassData.renderPass.Free();
         ssaoPassData.texture.Free();
         ssaoPassData.frameBuffer.Free();
@@ -979,10 +999,12 @@ namespace RenderSystem
         FreeDescriptorSetLayouts( ssaoPassData.descriptorSetLayouts );
 
         ssaoBlurPassData.pipeline.Free();
+        FreeDescriptorSetLayouts( ssaoBlurPassData.descriptorSetLayouts );
+#endif // #if USING( PG_SSAO )
+
         ssaoBlurPassData.renderPass.Free();
         ssaoBlurPassData.outputTex.Free();
         ssaoBlurPassData.framebuffer.Free();
-        FreeDescriptorSetLayouts( ssaoBlurPassData.descriptorSetLayouts );
 
         lightingPassData.renderPass.Free();
         lightingPassData.outputTexture.Free();
@@ -1248,6 +1270,7 @@ namespace RenderSystem
 
     void SSAOPass( Scene* scene, CommandBuffer& cmdBuf )
     {
+#if USING( PG_SSAO )
         PG_PROFILE_TIMESTAMP( cmdBuf, "SSAO_Start" );
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "SSAO", glm::vec4( .5, .5, .5, 1 ) );
         PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "SSAO Occlusion Pass", glm::vec4( .8, .5, .5, 1 ) );
@@ -1277,6 +1300,14 @@ namespace RenderSystem
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
         PG_PROFILE_TIMESTAMP( cmdBuf, "SSAO_End" );
+#else // #if USING( PG_SSAO )
+        PG_PROFILE_TIMESTAMP( cmdBuf, "SSAO_Clear_Start" );
+        PG_DEBUG_MARKER_BEGIN_REGION( cmdBuf, "SSAO (just clearing texture to white)", glm::vec4( .5, .5, .8, 1 ) );
+        cmdBuf.BeginRenderPass( ssaoBlurPassData.renderPass, ssaoBlurPassData.framebuffer, g_renderState.swapChain.extent );
+        cmdBuf.EndRenderPass();
+        PG_DEBUG_MARKER_END_REGION( cmdBuf );
+        PG_PROFILE_TIMESTAMP( cmdBuf, "SSAO_Clear_End" );
+#endif // #else // #if USING( PG_SSAO )
     }
 
     void DeferredLightingPass( Scene* scene, CommandBuffer& cmdBuf )

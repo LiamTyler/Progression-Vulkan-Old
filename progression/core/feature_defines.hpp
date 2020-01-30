@@ -4,3 +4,4 @@
 #include "core/platform_defines.hpp"
 
 #define LZ4_COMPRESSED_FASTFILES NOT_IN_USE
+#define PG_SSAO IN_USE
