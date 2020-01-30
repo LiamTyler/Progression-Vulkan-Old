@@ -14,7 +14,7 @@
         "color": [ 0.2, 0.2, 0.2, 1 ]
     },
     "AmbientColor": {
-        "color": [ 0.8, 0.8, 0.8 ]
+        "color": [ 0.2, 0.2, 0.2 ]
     },
     "Skybox": "waterSkybox",
     "DirectionalLight": {

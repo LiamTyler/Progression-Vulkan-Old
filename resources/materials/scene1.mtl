@@ -3,7 +3,7 @@ Ka 0 0 0
 Kd 1 1 1
 Ks 0.1 0.1 0.1
 Ns 50
-Pm 1
+Pm 0
 Pr 1
 map_Kd floor
 
@@ -21,5 +21,6 @@ Kd 1 1 1
 Pr 1
 Pm 1
 map_Kd textures/rusted_iron/albedo.png
+map_bump textures/rusted_iron/normal.png
 map_Pm textures/rusted_iron/metallic.png
 map_Pr textures/rusted_iron/roughness.png

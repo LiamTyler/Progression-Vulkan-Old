@@ -41,21 +41,14 @@ layout( std430, push_constant ) uniform DebugSwitch
 };
 #endif // #if PG_DEBUG_BUILD
 
-float D_GGX( float NdotH, float a )
+float D_GGX( float NdotH, float roughness )
 {
+    float a     = roughness * roughness;
     float a2    = a*a;
-    float denom = (NdotH * NdotH * (a2 - 1.0) + 1.0);
+    float denom = NdotH * NdotH * (a2 - 1.0) + 1.0;
     denom       = PI * denom * denom;
 	
     return a2 / denom;
-}
-
-float GeometrySchlickGGX( float NdotV, float k )
-{
-    float nom   = NdotV;
-    float denom = NdotV * (1.0 - k) + k;
-	
-    return nom / denom;
 }
   
 float G_SchlickSmithGGX( float NdotL, float NdotV, float roughness )
@@ -68,41 +61,35 @@ float G_SchlickSmithGGX( float NdotL, float NdotV, float roughness )
     return GL * GV;
 }
 
-// vec3 F0 = vec3(0.04);
-// F0      = mix(F0, surfaceColor.rgb, metalness);
-vec3 F_Schlick( float cosTheta, float metallic, vec3 albedo )
+vec3 F_Schlick( float cosTheta, vec3 F0 )
 {
-    vec3 F0 = mix( vec3( 0.04 ), albedo, metallic );
     return F0 + (1.0 - F0) * pow( 1.0 - cosTheta, 5 );
 }
 
-vec3 BRDF( vec3 lightDir, vec3 lightColor, vec3 V, vec3 N, float metallic, float roughness, vec3 albedo )
+void BRDF( vec3 L, vec3 lightColor, vec3 V, vec3 N, float metallic, float roughness,
+           float S, vec3 albedo, vec3 F0, inout vec3 diffuse, inout vec3 specular )
 {
-    vec3 H      = normalize( V + lightDir );
-	float NdotV = clamp( dot( N, V ), 0.0, 1.0 );
-	float NdotL = clamp( dot( N, lightDir ), 0.0, 1.0 );
-	float NdotH = clamp( dot( N, H ), 0.0, 1.0 );
+    vec3 H      = normalize( V + L );
+	float NdotV = max( dot( N, V ), 0.0 );
+	float NdotL = max( dot( N, L ), 0.0 );
+	float NdotH = max( dot( N, H ), 0.0 );
 
-	vec3 color = vec3( 0.0 );
-
-	if ( NdotL > 0.0 )
+	if ( NdotL > 0 )
 	{
 		// D = Normal distribution (Distribution of the microfacets)
         // G = Geometric shadowing term (Microfacets shadowing)
 		// F = Fresnel factor (Reflectance depending on angle of incidence)
 		float D = D_GGX( NdotH, roughness ); 
 		float G = G_SchlickSmithGGX( NdotL, NdotV, roughness );
-		vec3 F  = F_Schlick( NdotV, metallic, albedo );
+		vec3 F  = F_Schlick( max( dot( V, H ), 0.0 ), F0 );
 
-        vec3 diffuse = albedo / PI;
-		vec3 spec    = D * F * G / (4.0 * NdotL * NdotV);
+		vec3 spec    = D * F * G / (4.0 * NdotL * NdotV + 0.001 );
         vec3 kD      = (1.0 - metallic) * (vec3( 1.0 ) - F); // metallic objects dont have diffuse color
-
-        // no spec * kS since kS == F and F is already multiplied into spec
-		color += ( kD * diffuse + spec ) * NdotL * lightColor;
+        
+        vec3 lightEnergy = S * NdotL * lightColor;
+		diffuse  += lightEnergy * kD * albedo / PI;
+		specular += lightEnergy * spec; // kS since kS == F and F is already multiplied into spec
 	}
-
-	return color;
 }
 
 void main()
@@ -111,8 +98,9 @@ void main()
     vec3 N                    = DecodeOctVec( texture( normalTex, UV ).xyz );
     vec3 Kd                   = texture( diffuseTex, UV ).xyz;
     vec2 metallicAndRoughness = texture( metallicAndRoughnessTex, UV ).xy;
-    float Roughness           = metallicAndRoughness.x;
-    float Metallic            = metallicAndRoughness.y;
+    float Metallic            = metallicAndRoughness.x;
+    float Roughness           = metallicAndRoughness.y;
+    vec3 F0                   = mix( vec3( 0.04 ), Kd, Metallic );
 
     vec3 V = normalize( sceneConstantBuffer.cameraPos.xyz - posInWorldSpace );
     
@@ -124,32 +112,28 @@ void main()
     ambientColor = ambientOcclusion * Kd * sceneConstantBuffer.ambientColor.xyz;
 
     // directional light
-    vec3 lightColor = sceneConstantBuffer.dirLight.colorAndIntensity.w * sceneConstantBuffer.dirLight.colorAndIntensity.xyz;
-    vec3 L = normalize( -sceneConstantBuffer.dirLight.direction.xyz );
-    
-    float S = 1;
-    if ( sceneConstantBuffer.dirLight.shadowMapIndex.x != PG_INVALID_TEXTURE_INDEX )
     {
-        S = 1 - ShadowAmount( sceneConstantBuffer.LSM * vec4( posInWorldSpace, 1 ), textures[sceneConstantBuffer.dirLight.shadowMapIndex.x] );
+        vec3 lightColor = sceneConstantBuffer.dirLight.colorAndIntensity.w * sceneConstantBuffer.dirLight.colorAndIntensity.xyz;
+        vec3 L = normalize( -sceneConstantBuffer.dirLight.direction.xyz );
+        
+        float S = 1;
+        if ( sceneConstantBuffer.dirLight.shadowMapIndex.x != PG_INVALID_TEXTURE_INDEX )
+        {
+            S = 1 - ShadowAmount( sceneConstantBuffer.LSM * vec4( posInWorldSpace, 1 ), textures[sceneConstantBuffer.dirLight.shadowMapIndex.x] );
+        }
+        BRDF( L, lightColor, V, N, Metallic, Roughness, S, Kd, F0, diffuseColor, specularColor );
     }
-    diffuseColor += S * BRDF( L, lightColor, V, N, Metallic, Roughness, Kd );
-    
     
     // pointlights
-    // for ( uint i = 0; i < sceneConstantBuffer.numPointLights; ++i )
-    // {
-    //     vec3 lightColor = pointLights[i].colorAndIntensity.w * pointLights[i].colorAndIntensity.xyz;
-    //     vec3 d = pointLights[i].positionAndRadius.xyz - posInWorldSpace;
-    //     vec3 l = normalize( d );
-    //     vec3 h = normalize( l + V );
-    //     float attenuation = Attenuate( dot( d, d ), pointLights[i].positionAndRadius.w * pointLights[i].positionAndRadius.w );
-    // 
-    //     diffuseColor += attenuation * lightColor * Kd * max( 0.0, dot( l, N ) );
-    //     if ( dot( l, N ) > PG_SHADER_EPSILON )
-    //     {
-    //         specularColor += attenuation * lightColor * Ks.xyz * pow( max( dot( h, N ), 0.0 ), 4 * Ks.w );
-    //     }
-    // }
+    for ( uint i = 0; i < sceneConstantBuffer.numPointLights; ++i )
+    {
+        vec3 lightColor = pointLights[i].colorAndIntensity.w * pointLights[i].colorAndIntensity.xyz;
+        vec3 d  = pointLights[i].positionAndRadius.xyz - posInWorldSpace;
+        vec3 L  = normalize( d );
+        float a = Attenuate( dot( d, d ), pointLights[i].positionAndRadius.w * pointLights[i].positionAndRadius.w );
+    
+        BRDF( L, a * lightColor, V, N, Metallic, Roughness, 1, Kd, F0, diffuseColor, specularColor );
+    }
     // 
     // // spotlights
     // for ( uint i = 0; i < sceneConstantBuffer.numSpotLights; ++i )

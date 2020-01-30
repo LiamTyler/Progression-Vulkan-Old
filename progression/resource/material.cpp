@@ -197,7 +197,7 @@ bool Material::LoadMtlFile( std::vector< Material >& materials, const std::strin
                 }
             }
         }
-        else if ( first == "map_bump" )
+        else if ( first == "map_bump" || first == "norm" )
         {
             std::string texName;
             ss >> texName;

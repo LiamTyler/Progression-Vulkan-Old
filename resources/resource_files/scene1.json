@@ -52,6 +52,15 @@
         "createTexture": true
     },
     "Image": {
+        "name": "textures/rusted_iron/normal.png",
+        "generateMipmaps": true,
+        "semantic": "NORMAL",
+        "filename": "textures/rusted_iron/normal.png",
+        "flipVertically": true,
+        "freeCpuCopy": true,
+        "createTexture": true
+    },
+    "Image": {
         "name": "textures/rusted_iron/roughness.png",
         "generateMipmaps": true,
         "semantic": "ROUGHNESS",
