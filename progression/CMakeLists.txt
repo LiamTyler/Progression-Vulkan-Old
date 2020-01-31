@@ -155,6 +155,7 @@ set(
 	UTILS
 	utils/json_parsing.cpp
 	utils/logger.cpp
+	utils/lz4_compression.cpp
     utils/random.cpp
     utils/string.cpp
     utils/timestamp.cpp
@@ -162,6 +163,7 @@ set(
 	utils/fileIO.hpp
 	utils/json_parsing.hpp
     utils/logger.hpp
+	utils/lz4_compression.hpp
     utils/noncopyable.hpp
     utils/random.hpp
     utils/serialize.hpp

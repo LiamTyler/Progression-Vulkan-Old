@@ -3,7 +3,6 @@
 #include "basis_universal/basisu_comp.h"
 #include "core/time.hpp"
 #include "graphics/graphics_api.hpp"
-#include "lz4/lz4.h"
 #include "memory_map/MemoryMapped.h"
 #include "resource/converters/fastfile_converter.hpp"
 #include "resource/image.hpp"
@@ -13,6 +12,7 @@
 #include "utils/fileIO.hpp"
 #include "utils/json_parsing.hpp"
 #include "utils/logger.hpp"
+#include "utils/lz4_compression.hpp"
 #include "utils/serialize.hpp"
 #include "utils/timestamp.hpp"
 #include "utils/type_name.hpp"
@@ -217,6 +217,9 @@ AssetStatus FastfileConverter::CheckDependencies()
     status = ASSET_UP_TO_DATE;
 
     m_outputContentFile = PG_RESOURCE_DIR "cache/fastfiles/" + std::filesystem::path( inputFile ).stem().string() + ".ff";
+#if USING( LZ4_COMPRESSED_FASTFILES )
+    m_outputContentFile += "c";
+#endif // #if USING( LZ4_COMPRESSED_FASTFILES )
     IF_VERBOSE_MODE( LOG( "Resource file '", inputFile, "' outputs fastfile '", m_outputContentFile, "'" ) );
     if ( !std::filesystem::exists( m_outputContentFile ) )
     {
@@ -262,49 +265,6 @@ AssetStatus FastfileConverter::CheckDependencies()
     }
 
     return status;
-}
-
-bool LZ4CompressFile( const std::string& filename )
-{
-    MemoryMapped memMappedFile;
-    if ( !memMappedFile.open( filename, MemoryMapped::WholeFile, MemoryMapped::Normal ) )
-    {
-        LOG_ERR( "Could not open file:", filename );
-        return false;
-    }
-
-    char* src = (char*) memMappedFile.getData();
-    const int srcSize = (int) memMappedFile.size();
-
-    const int maxDstSize = LZ4_compressBound( srcSize );
-
-    char* compressedData = (char*) malloc( maxDstSize );
-    const int compressedDataSize = LZ4_compress_default( src, compressedData, srcSize, maxDstSize );
-
-    memMappedFile.close();
-
-    if ( compressedDataSize <= 0 )
-    {
-        LOG_ERR( "Error while trying to compress the file. LZ4 returned: ", compressedDataSize );
-        return false;
-    }
-
-    if ( compressedDataSize > 0 )
-    {
-        LOG( "Compressed file size ratio: ", (float) compressedDataSize / srcSize );
-    }
-
-    std::ofstream out( filename, std::ios::binary );
-    if ( !out )
-    {
-        LOG_ERR( "Failed to open file '", filename, "' for writing compressed results" );
-        return false;
-    }
-
-    serialize::Write( out, srcSize );
-    serialize::Write( out, compressedData, compressedDataSize );
-
-    return true;
 }
 
 template< typename ConverterType >
@@ -406,7 +366,7 @@ ConverterStatus FastfileConverter::Convert()
 
 #if USING( LZ4_COMPRESSED_FASTFILES )
         LOG( "Compressing '", fname, "' with LZ4..." );
-        if ( !LZ4CompressFile( fname ) )
+        if ( !LZ4CompressFile( fname, fname ) )
         {
             return CONVERT_ERROR;
         }

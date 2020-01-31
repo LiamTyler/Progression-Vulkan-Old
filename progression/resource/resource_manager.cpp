@@ -2,7 +2,6 @@
 #include "core/assert.hpp"
 #include "core/time.hpp"
 #include "core/window.hpp"
-#include "lz4/lz4.h"
 #include "memory_map/MemoryMapped.h"
 #include "resource/image.hpp"
 #include "resource/material.hpp"
@@ -11,6 +10,7 @@
 #include "resource/resource_version_numbers.hpp"
 #include "resource/script.hpp"
 #include "resource/shader.hpp"
+#include "utils/lz4_compression.hpp"
 #include "utils/logger.hpp"
 #include "utils/serialize.hpp"
 #include "utils/type_name.hpp"
@@ -87,22 +87,16 @@ namespace ResourceManager
     static char* DecompressFF( char* compressedData, int fileSize )
     {
         auto start = Time::GetTimePoint();
-        int uncompressedSize;
-        serialize::Read( compressedData, uncompressedSize );
-
-        const int compressedSize   = fileSize - 4;
-        char* uncompressedBuffer   = (char*) malloc( uncompressedSize );
-        const int decompressedSize = LZ4_decompress_safe( compressedData, uncompressedBuffer, compressedSize, uncompressedSize );
-
-        PG_ASSERT( decompressedSize >= 0, "Failed to decompress fastfile with return value: " + std::to_string( decompressedSize ) );
-        PG_ASSERT( decompressedSize == uncompressedSize, "Decompressed data size does not match the expected uncompressed size" );
-
+        char* uncompressedBuffer = LZ4DecompressMappedFile( compressedData, fileSize );
         LOG( "LZ4 decompress finished in: ", Time::GetDuration( start ), " ms." );
         return uncompressedBuffer;
     }
 
     bool LoadFastFile( std::string fname, bool runConverterIfEnabled )
     {
+#if USING( LZ4_COMPRESSED_FASTFILES )
+        fname += "c";
+#endif // #if USING( LZ4_COMPRESSED_FASTFILES )
 #if USING( DEBUG_BUILD )
         fname += "d";
 #endif // #if USING( DEBUG_BUILD )
@@ -118,7 +112,7 @@ namespace ResourceManager
 
         char* data = (char*) memMappedFile.getData();
 #if USING( LZ4_COMPRESSED_FASTFILES )
-        data = DecompressFF( (char*) memMappedFile.getData(), memMappedFile.size() - 4 );
+        data = DecompressFF( (char*) memMappedFile.getData(), memMappedFile.size() );
         char* uncompressedStartPtr = data;
         memMappedFile.close();
 #endif // #if USING( LZ4_COMPRESSED_FASTFILES )
