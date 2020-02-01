@@ -13,6 +13,7 @@ layout( location = 0 ) in vec2 UV;
 layout( set = 0, binding = 0 ) uniform sampler2D worldPositions;
 layout( set = 0, binding = 1 ) uniform sampler2D worldNormals;
 layout( set = 0, binding = 2 ) uniform sampler2D ssaoNoise;
+layout( set = 0, binding = 4 ) uniform sampler2D depthBuffer;
 
 layout( set = 0, binding = 3 ) uniform SSAOKernel
 {
@@ -30,6 +31,7 @@ layout( location = 0 ) out float occlusionFactor;
 void main()
 {
     vec3 fragPos = ( matrices.V * texture( worldPositions, UV ) ).xyz;
+    float fragDepth = texture( depthBuffer, UV ).r;
     vec3 N       = ( matrices.V * vec4( DecodeOctVec( texture( worldNormals, UV ).xyz ), 0 ) ).xyz;
     
     ivec2 texDim       = textureSize( worldPositions, 0 );
@@ -44,17 +46,19 @@ void main()
     float occlusion = 0;
     for ( int i = 0; i < PG_SSAO_KERNEL_SIZE; ++i )
     {
-        vec3 offsetPos = fragPos + TBN * uboSSAOKernel.samples[i].xyz * SCALE_RADIUS;
+        vec3 offsetPos = ( fragPos + vec3( 0, 0, BIAS ) ) + TBN * uboSSAOKernel.samples[i].xyz * SCALE_RADIUS;
         
         vec4 projCoords = matrices.P * vec4( offsetPos, 1 );
         projCoords.xyz /= projCoords.w;
-        projCoords.xy = 0.5 * projCoords.xy + vec2( 0.5 );
-        projCoords.y = 1 - projCoords.y; // since current Vulkan viewport is inverted
+        projCoords.xy   = 0.5 * projCoords.xy + vec2( 0.5 );
+        projCoords.y    = 1 - projCoords.y; // since current Vulkan viewport is inverted
         
-        float offsetDepth = ( matrices.V * texture( worldPositions, projCoords.xy ) ).z;
+        //float offsetDepth = ( matrices.V * texture( worldPositions, projCoords.xy ) ).z;
+        float offsetDepthBufferDepth = texture( depthBuffer, projCoords.xy ).r;
         
-        float rangeCheck = smoothstep(0.0f, 1.0f, SCALE_RADIUS / abs(fragPos.z - offsetDepth));
-		occlusion += (offsetDepth >= offsetPos.z + BIAS ? 1.0f : 0.0f) * rangeCheck;
+        float rangeCheck = smoothstep( 0.0f, 1.0f, SCALE_RADIUS / abs( fragPos.z - offsetDepth ) );
+		//occlusion += (offsetDepth >= offsetPos.z + BIAS ? 1.0f : 0.0f) * rangeCheck;
+		occlusion += (offsetDepthBufferDepth < projCoords.z ? 1.0f : 0.0f) * rangeCheck;
     }
     
     occlusionFactor = 1 - ( occlusion / float( PG_SSAO_KERNEL_SIZE ) );

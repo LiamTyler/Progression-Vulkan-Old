@@ -224,7 +224,8 @@ static bool InitGBufferPassData()
     desc.depthAttachmentDescriptor.format      = PixelFormat::DEPTH_32_FLOAT;
     desc.depthAttachmentDescriptor.loadAction  = LoadAction::CLEAR;
     desc.depthAttachmentDescriptor.storeAction = StoreAction::STORE;
-    desc.depthAttachmentDescriptor.finalLayout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    // desc.depthAttachmentDescriptor.finalLayout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    desc.depthAttachmentDescriptor.finalLayout = ImageLayout::DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
     gBufferPassData.renderPass = g_renderState.device.NewRenderPass( desc, "gBuffer" );
     if ( !gBufferPassData.renderPass )
@@ -832,12 +833,14 @@ bool InitDescriptorPoolAndPrimarySets()
         DescriptorImageInfo( gBufferPassData.gbuffer.normals,   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
         DescriptorImageInfo( ssaoPassData.noise,                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
         DescriptorImageInfo( ssaoPassData.texture,              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( g_renderState.depthTex,            VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL ), // DEPTH_STENCIL_ATTACHMENT_OPTIMAL
     };
     writeDescriptorSets =
     {
         WriteDescriptorSet( descriptorSets.ssao,     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageDescriptors[0] ),
         WriteDescriptorSet( descriptorSets.ssao,     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, &imageDescriptors[1] ),
         WriteDescriptorSet( descriptorSets.ssao,     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2, &imageDescriptors[2] ),
+        WriteDescriptorSet( descriptorSets.ssao,     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4, &imageDescriptors[4] ),
         WriteDescriptorSet( descriptorSets.ssao,     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         3, &bufferDescriptors[0] ),
         WriteDescriptorSet( descriptorSets.ssaoBlur, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageDescriptors[3] ),
     };
@@ -1308,6 +1311,27 @@ namespace RenderSystem
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
         PG_PROFILE_TIMESTAMP( cmdBuf, "SSAO_Clear_End" );
 #endif // #else // #if USING( PG_SSAO )
+
+        VkImageMemoryBarrier barrier = {};
+        barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.oldLayout                       = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+        barrier.newLayout                       = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL; // DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+        barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image                           = g_renderState.depthTex.GetHandle();
+        barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_DEPTH_BIT;
+        barrier.subresourceRange.baseMipLevel   = 0;
+        barrier.subresourceRange.levelCount     = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount     = 1;
+        barrier.srcAccessMask                   = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        barrier.dstAccessMask                   = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+        VkPipelineStageFlags srcStage, dstStage;
+        srcStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+
+        cmdBuf.PipelineBarrier( srcStage, dstStage, barrier );
     }
 
     void DeferredLightingPass( Scene* scene, CommandBuffer& cmdBuf )
