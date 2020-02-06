@@ -28,11 +28,11 @@ layout( std140, set = 3, binding = 2 ) buffer SpotLights
 
 layout( set = PG_2D_TEXTURES_SET, binding = 0 ) uniform sampler2D textures[PG_MAX_NUM_TEXTURES];
 
-layout( set = 2, binding = 0 ) uniform sampler2D positionTex;
-layout( set = 2, binding = 1 ) uniform sampler2D normalTex;
-layout( set = 2, binding = 2 ) uniform sampler2D diffuseTex;
-layout( set = 2, binding = 3 ) uniform sampler2D metallicAndRoughnessTex;
-layout( set = 2, binding = 4 ) uniform sampler2D ssaoTex;
+layout( set = 2, binding = 0 ) uniform sampler2D normalTex;
+layout( set = 2, binding = 1 ) uniform sampler2D diffuseTex;
+layout( set = 2, binding = 2 ) uniform sampler2D metallicAndRoughnessTex;
+layout( set = 2, binding = 3 ) uniform sampler2D ssaoTex;
+layout( set = 2, binding = 4 ) uniform sampler2D depthTex;
 
 #if PG_DEBUG_BUILD
 layout( std430, push_constant ) uniform DebugSwitch
@@ -94,7 +94,9 @@ void BRDF( vec3 L, vec3 lightColor, vec3 V, vec3 N, float metallic, float roughn
 
 void main()
 {
-    vec3 posInWorldSpace      = texture( positionTex, UV ).xyz;
+    //vec3 posInWorldSpace      = texture( positionTex, UV ).xyz;
+    vec3 posInWorldSpace      = ReconstructPosFromDepth( sceneConstantBuffer.invVP, UV, texture( depthTex, UV ).r );
+    // vec3 posInWorldSpace      = texture( positionTex, UV ).xyz;
     vec3 N                    = DecodeOctVec( texture( normalTex, UV ).xyz );
     vec3 Kd                   = texture( diffuseTex, UV ).xyz;
     vec2 metallicAndRoughness = texture( metallicAndRoughnessTex, UV ).xy;

@@ -212,19 +212,16 @@ static bool InitShadowPassData()
 static bool InitGBufferPassData()
 {
     RenderPassDescriptor desc;
-    desc.colorAttachmentDescriptors[0].format      = PixelFormat::R32_G32_B32_A32_FLOAT;
+    desc.colorAttachmentDescriptors[0].format      = PixelFormat::R8_G8_B8_A8_UNORM;
     desc.colorAttachmentDescriptors[0].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
     desc.colorAttachmentDescriptors[1].format      = PixelFormat::R8_G8_B8_A8_UNORM;
     desc.colorAttachmentDescriptors[1].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
-    desc.colorAttachmentDescriptors[2].format      = PixelFormat::R8_G8_B8_A8_UNORM;
+    desc.colorAttachmentDescriptors[2].format      = PixelFormat::R8_G8_UNORM;
     desc.colorAttachmentDescriptors[2].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
-    desc.colorAttachmentDescriptors[3].format      = PixelFormat::R8_G8_UNORM;
-    desc.colorAttachmentDescriptors[3].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
 
     desc.depthAttachmentDescriptor.format      = PixelFormat::DEPTH_32_FLOAT;
     desc.depthAttachmentDescriptor.loadAction  = LoadAction::CLEAR;
     desc.depthAttachmentDescriptor.storeAction = StoreAction::STORE;
-    // desc.depthAttachmentDescriptor.finalLayout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     desc.depthAttachmentDescriptor.finalLayout = ImageLayout::DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
     gBufferPassData.renderPass = g_renderState.device.NewRenderPass( desc, "gBuffer" );
@@ -283,8 +280,6 @@ static bool InitGBufferPassData()
     info.height  = g_renderState.swapChain.extent.height;
     info.sampler = "nearest_clamped_nearest";
     info.usage   = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    info.format                                  = PixelFormat::R32_G32_B32_A32_FLOAT;
-    gBufferPassData.gbuffer.positions            = g_renderState.device.NewTexture( info, false, "gbuffer position" );
     info.format                                  = PixelFormat::R8_G8_B8_A8_UNORM;
     gBufferPassData.gbuffer.normals              = g_renderState.device.NewTexture( info, false, "gbuffer normals" );
     info.format                                  = PixelFormat::R8_G8_B8_A8_UNORM;
@@ -293,7 +288,6 @@ static bool InitGBufferPassData()
     gBufferPassData.gbuffer.metallicAndRoughness = g_renderState.device.NewTexture( info, false, "gbuffer metallic and roughness" );
 
     gBufferPassData.frameBuffer = g_renderState.device.NewFramebuffer( {
-        &gBufferPassData.gbuffer.positions,
         &gBufferPassData.gbuffer.normals,
         &gBufferPassData.gbuffer.diffuse,
         &gBufferPassData.gbuffer.metallicAndRoughness,
@@ -486,12 +480,11 @@ static bool InitLightingPassData()
     RenderPassDescriptor desc;
     desc.colorAttachmentDescriptors[0].format      = PixelFormat::R8_G8_B8_A8_UNORM;
     desc.colorAttachmentDescriptors[0].finalLayout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
-    //desc.colorAttachmentDescriptors[0].finalLayout = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
 
     desc.depthAttachmentDescriptor.format        = PixelFormat::DEPTH_32_FLOAT;
     desc.depthAttachmentDescriptor.loadAction    = LoadAction::LOAD;
     desc.depthAttachmentDescriptor.storeAction   = StoreAction::STORE;
-    desc.depthAttachmentDescriptor.initialLayout = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    desc.depthAttachmentDescriptor.initialLayout = ImageLayout::DEPTH_STENCIL_READ_ONLY_OPTIMAL;
     desc.depthAttachmentDescriptor.finalLayout   = ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     lightingPassData.renderPass = g_renderState.device.NewRenderPass( desc, "lighting pass" );
@@ -829,20 +822,19 @@ bool InitDescriptorPoolAndPrimarySets()
     };
     imageDescriptors =
     {
-        DescriptorImageInfo( gBufferPassData.gbuffer.positions, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
         DescriptorImageInfo( gBufferPassData.gbuffer.normals,   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
         DescriptorImageInfo( ssaoPassData.noise,                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( g_renderState.depthTex,            VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL ),
         DescriptorImageInfo( ssaoPassData.texture,              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
-        DescriptorImageInfo( g_renderState.depthTex,            VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL ), // DEPTH_STENCIL_ATTACHMENT_OPTIMAL
     };
     writeDescriptorSets =
     {
         WriteDescriptorSet( descriptorSets.ssao,     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageDescriptors[0] ),
         WriteDescriptorSet( descriptorSets.ssao,     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, &imageDescriptors[1] ),
         WriteDescriptorSet( descriptorSets.ssao,     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2, &imageDescriptors[2] ),
-        WriteDescriptorSet( descriptorSets.ssao,     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4, &imageDescriptors[4] ),
-        WriteDescriptorSet( descriptorSets.ssao,     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         3, &bufferDescriptors[0] ),
         WriteDescriptorSet( descriptorSets.ssaoBlur, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &imageDescriptors[3] ),
+        WriteDescriptorSet( descriptorSets.ssao,     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         3, &bufferDescriptors[0] ),
+        
     };
     g_renderState.device.UpdateDescriptorSets( static_cast< uint32_t >( writeDescriptorSets.size() ), writeDescriptorSets.data() );
 #endif // #if USING( PG_SSAO )
@@ -850,11 +842,11 @@ bool InitDescriptorPoolAndPrimarySets()
     // Lighting Pass
     imageDescriptors =
     {
-        DescriptorImageInfo( gBufferPassData.gbuffer.positions,            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
         DescriptorImageInfo( gBufferPassData.gbuffer.normals,              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
         DescriptorImageInfo( gBufferPassData.gbuffer.diffuse,              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
         DescriptorImageInfo( gBufferPassData.gbuffer.metallicAndRoughness, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
         DescriptorImageInfo( ssaoBlurPassData.outputTex,                   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+        DescriptorImageInfo( g_renderState.depthTex,                       VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL ),
     };
     writeDescriptorSets =
     {
@@ -983,7 +975,6 @@ namespace RenderSystem
         s_gpuPointLightBuffers.Free();
         s_gpuSpotLightBuffers.Free();
 
-        gBufferPassData.gbuffer.positions.Free();
         gBufferPassData.gbuffer.normals.Free();
         gBufferPassData.gbuffer.diffuse.Free();
         gBufferPassData.gbuffer.metallicAndRoughness.Free();
@@ -1058,6 +1049,7 @@ namespace RenderSystem
         scbuf.V                          = scene->camera.GetV();
         scbuf.P                          = scene->camera.GetP();
         scbuf.VP                         = scene->camera.GetVP();
+        scbuf.invVP                      = glm::inverse( scene->camera.GetVP() );
         scbuf.cameraPos                  = glm::vec4( scene->camera.position, 0 );        
         scbuf.ambientColor               = glm::vec4( scene->ambientColor, 0 );
         scbuf.dirLight.colorAndIntensity = scene->directionalLight.colorAndIntensity;
@@ -1281,7 +1273,7 @@ namespace RenderSystem
         
         cmdBuf.BindRenderPipeline( ssaoPassData.pipeline );
         cmdBuf.BindDescriptorSets( 1, &descriptorSets.ssao, ssaoPassData.pipeline, 0 );
-        Gpu::SSAOShaderData pushData{ scene->camera.GetV(), scene->camera.GetP() };
+        Gpu::SSAOShaderData pushData{ scene->camera.GetV(), scene->camera.GetP(), glm::inverse( scene->camera.GetP() ) };
         cmdBuf.PushConstants( ssaoPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( Gpu::SSAOShaderData ), &pushData );
         PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
         cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
@@ -1311,27 +1303,6 @@ namespace RenderSystem
         PG_DEBUG_MARKER_END_REGION( cmdBuf );
         PG_PROFILE_TIMESTAMP( cmdBuf, "SSAO_Clear_End" );
 #endif // #else // #if USING( PG_SSAO )
-
-        VkImageMemoryBarrier barrier = {};
-        barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barrier.oldLayout                       = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-        barrier.newLayout                       = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL; // DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-        barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image                           = g_renderState.depthTex.GetHandle();
-        barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_DEPTH_BIT;
-        barrier.subresourceRange.baseMipLevel   = 0;
-        barrier.subresourceRange.levelCount     = 1;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount     = 1;
-        barrier.srcAccessMask                   = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        barrier.dstAccessMask                   = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-        VkPipelineStageFlags srcStage, dstStage;
-        srcStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-
-        cmdBuf.PipelineBarrier( srcStage, dstStage, barrier );
     }
 
     void DeferredLightingPass( Scene* scene, CommandBuffer& cmdBuf )

@@ -5,10 +5,9 @@
 #include "graphics/shader_c_shared/structs.h"
 #include "packing.h"
 
-layout( location = 0 ) out vec4 outPosition;
-layout( location = 1 ) out vec4 outNormal;
-layout( location = 2 ) out vec4 outDiffuse;
-layout( location = 3 ) out vec2 outMetallicAndRoughness;
+layout( location = 0 ) out vec4 outNormal;
+layout( location = 1 ) out vec4 outDiffuse;
+layout( location = 2 ) out vec2 outMetallicAndRoughness;
 
 layout( location = 0 ) in vec3 posInWorldSpace;
 layout( location = 1 ) in vec2 texCoord;
@@ -55,7 +54,7 @@ void main()
     }
     
     
-    outPosition             = vec4( posInWorldSpace, 1 );
+    //outPosition             = vec4( posInWorldSpace, 1 );
     outNormal               = vec4( EncodeOctVec( n ), 0 );
     outDiffuse              = vec4( Kd, 0 );
     outMetallicAndRoughness = vec2( metallic, roughness );

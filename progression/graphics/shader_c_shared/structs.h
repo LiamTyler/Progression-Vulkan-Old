@@ -11,6 +11,7 @@ struct SceneConstantBufferData
     MAT4 V;
     MAT4 P;
     MAT4 VP;
+    MAT4 invVP;
     MAT4 LSM;
     VEC4 cameraPos;
     VEC4 ambientColor;
@@ -53,6 +54,7 @@ struct SSAOShaderData
 {
     MAT4 V;
     MAT4 P;
+    MAT4 invP;
 };
 
 PG_GPU_NAMESPACE_END

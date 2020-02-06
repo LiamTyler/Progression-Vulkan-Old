@@ -595,6 +595,10 @@ namespace Gfx
         VkAttachmentReference depthAttachmentRef = {};
         depthAttachmentRef.attachment = static_cast< uint32_t >( attachments.size() );
         depthAttachmentRef.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        if ( desc.depthAttachmentDescriptor.initialLayout != ImageLayout::UNDEFINED )
+        {
+            depthAttachmentRef.layout = PGToVulkanImageLayout( desc.depthAttachmentDescriptor.initialLayout );
+        }
 
         VkSubpassDescription subpass = {};
         subpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;

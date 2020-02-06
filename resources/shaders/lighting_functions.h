@@ -37,3 +37,11 @@ float ShadowAmount( in const vec4 posInLightSpace, in sampler2D shadowMap )
     
     return totalShadowStrength / ( PCF_FULL_WIDTH * PCF_FULL_WIDTH );
 }
+
+vec3 ReconstructPosFromDepth( mat4 invMat, vec2 UV, float depthBufferVal )
+{
+    UV.y = 1 - UV.y;
+    vec2 xy  = 2 * UV - 1;
+    vec4 ret = invMat * vec4( xy, depthBufferVal, 1 );
+    return ret.xyz / ret.w;
+}

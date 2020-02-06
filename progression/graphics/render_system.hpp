@@ -22,7 +22,6 @@ namespace RenderSystem
     // placed here for sharing between the animation system and render system
     struct GBuffer
     {
-        Gfx::Texture positions;
         Gfx::Texture normals;
         Gfx::Texture diffuse;
         Gfx::Texture metallicAndRoughness;
