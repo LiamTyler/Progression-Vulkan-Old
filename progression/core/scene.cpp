@@ -43,6 +43,8 @@ static void ParseCamera( rapidjson::Value& v, Scene* scene )
         { "aspectRatio", []( rapidjson::Value& v, Camera& camera ) { camera.aspectRatio = ParseNumber< float >( v ); } },
         { "nearPlane",   []( rapidjson::Value& v, Camera& camera ) { camera.nearPlane   = ParseNumber< float >( v ); } },
         { "farPlane",    []( rapidjson::Value& v, Camera& camera ) { camera.farPlane    = ParseNumber< float >( v ); } },
+        { "exposure",    []( rapidjson::Value& v, Camera& camera ) { camera.exposure    = ParseNumber< float >( v ); } },
+        { "gamma",       []( rapidjson::Value& v, Camera& camera ) { camera.gamma       = ParseNumber< float >( v ); } },
     });
 
     mapping.ForEachMember( v, camera );
@@ -145,9 +147,7 @@ namespace Progression
 
 Scene::~Scene()
 {
-    auto view = registry.view< Animator >();
-
-    for ( auto entity : view )
+    for ( auto entity : registry.view< Animator >() )
     {
         registry.remove< Animator >( entity );
     }
@@ -208,8 +208,8 @@ Scene* Scene::Load( const std::string& filename )
 
 void Scene::Start()
 {
-    g_LuaState["registry"] = &registry;
-    g_LuaState["scene"] = this;
+    (*g_LuaState)["registry"] = &registry;
+    (*g_LuaState)["scene"] = this;
     registry.view< ScriptComponent >().each([]( const entt::entity e, ScriptComponent& comp )
     {
         for ( int i = 0; i < comp.numScripts; ++i )
@@ -226,9 +226,9 @@ void Scene::Start()
 
 void Scene::Update()
 {
-    auto luaTimeNamespace = g_LuaState["Time"].get_or_create< sol::table >();
+    auto luaTimeNamespace = (*g_LuaState)["Time"].get_or_create< sol::table >();
     luaTimeNamespace["dt"] = Time::DeltaTime();
-    g_LuaState["registry"] = &registry;
+    (*g_LuaState)["registry"] = &registry;
     registry.view< ScriptComponent >().each([]( const entt::entity e, ScriptComponent& comp )
     {
         for ( int i = 0; i < comp.numScriptsWithUpdate; ++i )

@@ -29,7 +29,7 @@ using namespace Gfx;
 
 static std::unordered_map< std::string, Gfx::Sampler > s_samplers;
 
-int g_debugLayer = 0;
+Progression::Gpu::DebugRenderData g_renderDebugData = { 0, true, true };
 
 namespace Progression
 {
@@ -478,7 +478,7 @@ static bool InitSSAOBlurPassData()
 static bool InitLightingPassData()
 {
     RenderPassDescriptor desc;
-    desc.colorAttachmentDescriptors[0].format      = PixelFormat::R8_G8_B8_A8_UNORM;
+    desc.colorAttachmentDescriptors[0].format      = PixelFormat::R16_G16_B16_A16_FLOAT;
     desc.colorAttachmentDescriptors[0].finalLayout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
 
     desc.depthAttachmentDescriptor.format        = PixelFormat::DEPTH_32_FLOAT;
@@ -537,7 +537,7 @@ static bool InitLightingPassData()
     info.height  = g_renderState.swapChain.extent.height;
     info.sampler = "nearest_clamped_nearest";
     info.usage   = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    info.format  = PixelFormat::R8_G8_B8_A8_UNORM;
+    info.format  = PixelFormat::R16_G16_B16_A16_FLOAT;
     lightingPassData.outputTexture = g_renderState.device.NewTexture( info, false, "lit scene" );
 
     lightingPassData.frameBuffer = g_renderState.device.NewFramebuffer( { &lightingPassData.outputTexture, &g_renderState.depthTex }, lightingPassData.renderPass, "lighting pass" );
@@ -552,7 +552,7 @@ static bool InitLightingPassData()
 static bool InitBackgroundPassData()
 {
     RenderPassDescriptor desc;
-    desc.colorAttachmentDescriptors[0].format        = PixelFormat::R8_G8_B8_A8_UNORM;
+    desc.colorAttachmentDescriptors[0].format        = PixelFormat::R16_G16_B16_A16_FLOAT;
     desc.colorAttachmentDescriptors[0].loadAction    = LoadAction::LOAD;
     desc.colorAttachmentDescriptors[0].initialLayout = ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
     desc.colorAttachmentDescriptors[0].finalLayout   = ImageLayout::SHADER_READ_ONLY_OPTIMAL;
@@ -802,15 +802,11 @@ bool InitDescriptorPoolAndPrimarySets()
     bufferDescriptors =
     {
         DescriptorBufferInfo( s_gpuSceneConstantBuffers ),
-        DescriptorBufferInfo( s_gpuPointLightBuffers ),
-        DescriptorBufferInfo( s_gpuSpotLightBuffers ),
     };
     writeDescriptorSets =
     {
         WriteDescriptorSet( descriptorSets.scene,           VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,          0, &bufferDescriptors[0] ),
         WriteDescriptorSet( descriptorSets.arrayOfTextures, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  0, imageDescriptors.data(), static_cast< uint32_t >( imageDescriptors.size() ) ),
-        WriteDescriptorSet( descriptorSets.lights,          VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,          1, &bufferDescriptors[1] ),
-        WriteDescriptorSet( descriptorSets.lights,          VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,          2, &bufferDescriptors[2] ),
     };
     g_renderState.device.UpdateDescriptorSets( static_cast< uint32_t >( writeDescriptorSets.size() ), writeDescriptorSets.data() );
 
@@ -840,6 +836,10 @@ bool InitDescriptorPoolAndPrimarySets()
 #endif // #if USING( PG_SSAO )
 
     // Lighting Pass
+    bufferDescriptors =
+    {
+        DescriptorBufferInfo( s_gpuPointLightBuffers ),
+    };
     imageDescriptors =
     {
         DescriptorImageInfo( gBufferPassData.gbuffer.normals,              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
@@ -855,6 +855,7 @@ bool InitDescriptorPoolAndPrimarySets()
         WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2, &imageDescriptors[2] ),
         WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3, &imageDescriptors[3] ),
         WriteDescriptorSet( descriptorSets.gBufferAttachments, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4, &imageDescriptors[4] ),
+        WriteDescriptorSet( descriptorSets.lights,             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         1, &bufferDescriptors[0] ),
     };
     g_renderState.device.UpdateDescriptorSets( static_cast< uint32_t >( writeDescriptorSets.size() ), writeDescriptorSets.data() );
 
@@ -1319,7 +1320,7 @@ namespace RenderSystem
         PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
 
 #if USING( DEBUG_BUILD )
-        cmdBuf.PushConstants( lightingPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( int ), &g_debugLayer );
+        cmdBuf.PushConstants( lightingPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( Gpu::DebugRenderData ), &g_renderDebugData );
 #endif // #if USING( DEBUG_BUILD )
         cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
         cmdBuf.Draw( 0, 6 );
@@ -1430,8 +1431,13 @@ namespace RenderSystem
         
         cmdBuf.BindRenderPipeline( postProcessPassData.pipeline );
         cmdBuf.BindDescriptorSets( 1, &descriptorSets.postProcessInputColorTex, postProcessPassData.pipeline, 0 );
-        
+#if USING( DEBUG_BUILD )
+        cmdBuf.PushConstants( postProcessPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof( Gpu::PostProcessConstantBufferData ), sizeof( Gpu::DebugRenderData ), &g_renderDebugData );
+#endif // #if USING( DEBUG_BUILD )
+
         PG_DEBUG_MARKER_INSERT( cmdBuf, "Draw full-screen quad", glm::vec4( 0 ) );
+        Gpu::PostProcessConstantBufferData pushData{ scene->camera.exposure, scene->camera.gamma };
+        cmdBuf.PushConstants( postProcessPassData.pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( Gpu::PostProcessConstantBufferData ), &pushData );
         cmdBuf.BindVertexBuffer( postProcessPassData.quadBuffer, 0, 0 );
         cmdBuf.Draw( 0, 6 );
         

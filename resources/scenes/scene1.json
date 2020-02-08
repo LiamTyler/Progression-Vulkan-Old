@@ -1,23 +1,26 @@
 {
     "Fastfile": {
-        "filename": "scene1.ff"
+        "filename": "scene1.ff",
+        "filename": "mychanges.ff"
     },
     "Camera": {
-        "position": [ 0, 2, 10 ],
+        "position": [ 0, 0, 3 ],
         "rotation": [ 0, 0, 0 ],
         "fov": 60,
         "aspectRatio": 1.777777777,
         "nearPlane": 0.1,
-        "farPlane": 100
+        "farPlane": 100,
+        "gamma": 2.2,
+        "exposure": 1
     },
     "BackgroundColor": {
-        "color": [ 0.2, 0.2, 0.2, 1 ]
+        "color": [ 0.0063, 0.0063, 0.0063, 1 ]
     },
     "AmbientColor": {
         "color": [ 0.2, 0.2, 0.2 ]
     },
-    "Skybox": "waterSkybox",
-    "DirectionalLight": {
+    "_Skybox": "waterSkybox",
+    "_DirectionalLight": {
         "colorAndIntensity": [ 1, 1, 1, 1 ],
         "direction": [ 0.5, -1.5, -1 ],
         "shadowMap": {
@@ -25,14 +28,30 @@
             "height": 4096
         }
     },
-    "Entity": {
+    "PointLight": {
+        "colorAndIntensity": [ 1, 1, 1, 300 ],
+        "positionAndRadius": [ -10, 10, 10, 50 ]
+    },
+    "PointLight": {
+        "colorAndIntensity": [ 1, 1, 1, 300 ],
+        "positionAndRadius": [ 10, 10, 10, 50 ]
+    },
+    "PointLight": {
+        "colorAndIntensity": [ 1, 1, 1, 300 ],
+        "positionAndRadius": [ -10, -10, 10, 50 ]
+    },
+    "PointLight": {
+        "colorAndIntensity": [ 1, 1, 1, 300 ],
+        "positionAndRadius": [ 10, -10, 10, 50 ]
+    },
+    "_Entity": {
         "NameComponent": "floor",
         "Transform": {
             "position": [ 0, -1, 0 ],
             "scale": [ 10, 1, 10 ]
         },
         "ModelRenderer": {
-            "model": "floor",
+            "model": "plane",
             "material": "floor"
         }
     },
@@ -46,7 +65,7 @@
             "model": "robot"
         }
     },
-    "Entity": {
+    "_Entity": {
         "NameComponent": "metalSphere",
         "Transform": {
             "position": [ 2, 0, 0 ],
@@ -59,7 +78,8 @@
     },
     "Entity": {
         "ScriptComponent": {
-            "script": "cameraController"
+            "script": "cameraController",
+            "script": "pbr_spheres"
         }
     }
 }

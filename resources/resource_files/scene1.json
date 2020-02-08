@@ -26,21 +26,14 @@
     "MTLFile": {
         "filename": "materials/scene1.mtl"
     },
-    "Model": {
-        "name": "floor",
-        "filename": "models/plane.obj"
-    },
-    "_Image": {
-        "name": "textures/robot/baseColor.jpg",
+    "Image": {
+        "name": "textures/Alexs_Apt_2k.hdr",
         "generateMipmaps": true,
-        "filename": "textures/robot/baseColor.jpg",
+        "semantic": "DIFFUSE",
+        "filename": "textures/Alexs_Apt_2k.hdr",
         "flipVertically": true,
         "freeCpuCopy": true,
         "createTexture": true
-    },
-    "_Model": {
-        "name": "robot",
-        "filename": "models/robot.obj"
     },
     "Image": {
         "name": "textures/rusted_iron/albedo.png",
@@ -77,16 +70,5 @@
         "flipVertically": true,
         "freeCpuCopy": true,
         "createTexture": true
-    },
-    "Model": {
-        "name": "sphere",
-        "filename": "models/sphereHigh.obj"
-    },
-    "_Model": {
-        "name": "dragon",
-        "filename": "dragon/Dragon_Baked_Actions_fbx_7.4_binary.fbx"
-    },
-    "MTLFile": {
-        "filename": "materials/miscellaneous.mtl"
     }
 }

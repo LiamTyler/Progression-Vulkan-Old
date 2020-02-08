@@ -48,13 +48,11 @@ void main()
         metallic *= texture( textures[material.metallicTexIndex], texCoord ).r;
     }
     float roughness = material.roughness;
-    if ( material.metallicTexIndex != PG_INVALID_TEXTURE_INDEX )
+    if ( material.roughnessTexIndex != PG_INVALID_TEXTURE_INDEX )
     {
         roughness *= texture( textures[material.roughnessTexIndex], texCoord ).r;
     }
     
-    
-    //outPosition             = vec4( posInWorldSpace, 1 );
     outNormal               = vec4( EncodeOctVec( n ), 0 );
     outDiffuse              = vec4( Kd, 0 );
     outMetallicAndRoughness = vec2( metallic, roughness );

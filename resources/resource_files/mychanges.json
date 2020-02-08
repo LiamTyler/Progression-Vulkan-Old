@@ -1,0 +1,6 @@
+{
+    "Script": {
+        "name": "pbr_spheres",
+        "filename": "scripts/pbr_spheres.lua"
+    }
+}

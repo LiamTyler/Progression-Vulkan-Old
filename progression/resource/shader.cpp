@@ -266,14 +266,20 @@ namespace Progression
         for ( size_t i = 0; i < inputVars.size(); ++i )
         {
             // LOG( "inputVars[", i, "] = ", inputVars[i]->name, ", loc = ", inputVars[i]->location );
-            info.inputLocations[inputVars[i]->name] = inputVars[i]->location;
+            if ( inputVars[i]->name )
+            {
+                info.inputLocations[inputVars[i]->name] = inputVars[i]->location;
+            }
         }
 
         //LOG( "outputs = ", outputVars.size() );
         for ( size_t i = 0; i < outputVars.size(); ++i )
         {
             //LOG( "outputVars[", i, "] = ", outputVars[i]->name, ", loc = ", outputVars[i]->location );
-            info.outputLocations[outputVars[i]->name] = outputVars[i]->location;
+            if ( outputVars[i]->name )
+            {
+                info.outputLocations[outputVars[i]->name] = outputVars[i]->location;
+            }
         }
 
         info.entryPoint = module.entry_point_name;

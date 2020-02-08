@@ -57,5 +57,18 @@ struct SSAOShaderData
     MAT4 invP;
 };
 
+struct PostProcessConstantBufferData
+{
+    float exposure;
+    float gamma;
+};
+
+struct DebugRenderData
+{
+    int layer;
+    ALIGN( 4 ) bool gammaCorrect;
+    ALIGN( 4 ) bool tonemap;
+};
+
 PG_GPU_NAMESPACE_END
 PG_NAMESPACE_END

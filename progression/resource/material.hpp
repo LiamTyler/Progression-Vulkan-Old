@@ -29,7 +29,7 @@ public:
     void Move( std::shared_ptr< Resource > dst ) override;
     bool Serialize( std::ofstream& outFile ) const override;
     bool Deserialize( char*& buffer ) override;
-    static bool LoadMtlFile( std::vector< Material >& materials, const std::string& fname );
+    static bool LoadMtlFile( std::vector< Material >& materials, const std::string& fname, bool loadTextures = false );
 
     glm::vec3 Kd;
     float roughness;

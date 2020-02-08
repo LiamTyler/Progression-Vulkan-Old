@@ -68,6 +68,9 @@ static void ScrollCallback( GLFWwindow* window, double xoffset, double yoffset )
 
 namespace Progression
 {
+
+extern bool g_engineShutdown;
+
 namespace Input
 {
 
@@ -116,6 +119,7 @@ namespace Input
         s_lastCursorPos = s_currentCursorPos;
         s_scrollOffset  = glm::vec2( 0 );
         glfwPollEvents();
+        g_engineShutdown = g_engineShutdown || glfwWindowShouldClose( GetMainWindow()->GetGLFWHandle() );
     }
 
     bool GetKeyDown( Key k )

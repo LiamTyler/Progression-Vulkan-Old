@@ -1,0 +1,44 @@
+{
+    "Fastfile": {
+        "filename": "learnopenglPbrRedSpheres.ff"
+    },
+    "Camera": {
+        "position": [ 0, 0, 3 ],
+        "rotation": [ 0, 0, 0 ],
+        "fov": 60,
+        "aspectRatio": 1.777777777,
+        "nearPlane": 0.1,
+        "farPlane": 100,
+        "gamma": 2.2,
+        "exposure": 1
+    },
+    "_NOTE": "Need Reinhard tonemapping and 1/d^2 attenuation in shaders",
+    "BackgroundColor": {
+        "color": [ 0.0063, 0.0063, 0.0063, 1 ]
+    },
+    "AmbientColor": {
+        "color": [ 0.03, 0.03, 0.03 ]
+    },
+    "PointLight": {
+        "colorAndIntensity": [ 1, 1, 1, 300 ],
+        "positionAndRadius": [ -10, 10, 10, 50 ]
+    },
+    "PointLight": {
+        "colorAndIntensity": [ 1, 1, 1, 300 ],
+        "positionAndRadius": [ 10, 10, 10, 50 ]
+    },
+    "PointLight": {
+        "colorAndIntensity": [ 1, 1, 1, 300 ],
+        "positionAndRadius": [ -10, -10, 10, 50 ]
+    },
+    "PointLight": {
+        "colorAndIntensity": [ 1, 1, 1, 300 ],
+        "positionAndRadius": [ 10, -10, 10, 50 ]
+    },
+    "Entity": {
+        "ScriptComponent": {
+            "script": "cameraController",
+            "script": "learnopenglPbrRedSpheres"
+        }
+    }
+}

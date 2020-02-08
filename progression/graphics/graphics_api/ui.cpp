@@ -3,10 +3,12 @@
 #include "core/input.hpp"
 #include "core/time.hpp"
 #include "core/window.hpp"
+//#include "graphics/debug_data.hpp"
 #include "graphics/graphics_api/buffer.hpp"
 #include "graphics/graphics_api/descriptor.hpp"
 #include "graphics/graphics_api/pipeline.hpp"
 #include "graphics/graphics_api/texture.hpp"
+#include "graphics/shader_c_shared/structs.h"
 #include "graphics/vulkan.hpp"
 #include "resource/resource_manager.hpp"
 #include "resource/shader.hpp"
@@ -17,7 +19,7 @@
     https://github.com/SaschaWillems/Vulkan/blob/master/base/VulkanUIOverlay.cpp
 */
 
-extern int g_debugLayer;
+extern Progression::Gpu::DebugRenderData g_renderDebugData;
 
 namespace Progression
 {
@@ -134,7 +136,9 @@ namespace UIOverlay
         {
             ImGui::SetNextWindowPos( ImVec2( 5, 5 ), ImGuiCond_FirstUseEver );
 		    ImGui::Begin( "Renderer Debug Settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize );
-            UIOverlay::ComboBox( "View", &g_debugLayer, { "Regular", "No SSAO", "SSAO Only", "Ambient", "Lit Diffuse", "Lit Specular", "Positions", "Normals", "Diffuse", "Metallic", "Roughness" } );
+            UIOverlay::ComboBox( "View", &g_renderDebugData.layer, { "Regular", "No SSAO", "SSAO Only", "Ambient", "Lit Diffuse", "Lit Specular", "Positions", "Normals", "Albedo", "Metallic", "Roughness" } );
+            UIOverlay::CheckBox( "Gamma Correct", &g_renderDebugData.gammaCorrect );
+            UIOverlay::CheckBox( "Tonemap", &g_renderDebugData.tonemap );
 		    ImGui::End();
         });
 #endif // #if USING( DEBUG_BUILD )

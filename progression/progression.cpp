@@ -40,7 +40,8 @@ bool EngineInitialize( std::string config_name )
         g_Logger.Init( filename, colors );
     }
 
-    RegisterTypesAndFunctionsToLua( g_LuaState );
+    g_LuaState = new sol::state;
+    RegisterTypesAndFunctionsToLua( *g_LuaState );
 
     Random::SetSeed( time( NULL ) );
 
@@ -89,6 +90,7 @@ bool EngineInitialize( std::string config_name )
 
 void EngineQuit()
 {
+    delete g_LuaState;
     if ( !g_converterMode )
     {
         AnimationSystem::Shutdown();

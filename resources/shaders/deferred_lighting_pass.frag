@@ -21,10 +21,10 @@ layout( std140, set = 3, binding = 1 ) buffer PointLights
     PointLight pointLights[];
 };
 
-layout( std140, set = 3, binding = 2 ) buffer SpotLights
-{
-    SpotLight spotLights[];
-};
+// layout( std140, set = 3, binding = 2 ) buffer SpotLights
+// {
+//     SpotLight spotLights[];
+// };
 
 layout( set = PG_2D_TEXTURES_SET, binding = 0 ) uniform sampler2D textures[PG_MAX_NUM_TEXTURES];
 
@@ -37,7 +37,7 @@ layout( set = 2, binding = 4 ) uniform sampler2D depthTex;
 #if PG_DEBUG_BUILD
 layout( std430, push_constant ) uniform DebugSwitch
 {
-    layout( offset = 0 ) int debugLayer;
+    DebugRenderData debugData;
 };
 #endif // #if PG_DEBUG_BUILD
 
@@ -48,7 +48,7 @@ float D_GGX( float NdotH, float roughness )
     float denom = NdotH * NdotH * (a2 - 1.0) + 1.0;
     denom       = PI * denom * denom;
 	
-    return a2 / denom;
+    return a2 / max( denom, 0.001 );
 }
   
 float G_SchlickSmithGGX( float NdotL, float NdotV, float roughness )
@@ -66,8 +66,8 @@ vec3 F_Schlick( float cosTheta, vec3 F0 )
     return F0 + (1.0 - F0) * pow( 1.0 - cosTheta, 5 );
 }
 
-void BRDF( vec3 L, vec3 lightColor, vec3 V, vec3 N, float metallic, float roughness,
-           float S, vec3 albedo, vec3 F0, inout vec3 diffuse, inout vec3 specular )
+void BRDF( vec3 L, vec3 radiance, vec3 V, vec3 N, float metallic, float roughness,
+           float shadowed, vec3 albedo, vec3 F0, inout vec3 diffuse, inout vec3 specular )
 {
     vec3 H      = normalize( V + L );
 	float NdotV = max( dot( N, V ), 0.0 );
@@ -83,10 +83,11 @@ void BRDF( vec3 L, vec3 lightColor, vec3 V, vec3 N, float metallic, float roughn
 		float G = G_SchlickSmithGGX( NdotL, NdotV, roughness );
 		vec3 F  = F_Schlick( max( dot( V, H ), 0.0 ), F0 );
 
-		vec3 spec    = D * F * G / (4.0 * NdotL * NdotV + 0.001 );
-        vec3 kD      = (1.0 - metallic) * (vec3( 1.0 ) - F); // metallic objects dont have diffuse color
+		vec3 spec = D * F * G / max( 4.0 * NdotL * NdotV, 0.001 );
+        vec3 kS   = F;
+        vec3 kD   = (vec3( 1.0 ) - kS) * (1.0 - metallic); // metallic objects dont have diffuse color
         
-        vec3 lightEnergy = S * NdotL * lightColor;
+        vec3 lightEnergy = shadowed * NdotL * radiance;
 		diffuse  += lightEnergy * kD * albedo / PI;
 		specular += lightEnergy * spec; // kS since kS == F and F is already multiplied into spec
 	}
@@ -94,24 +95,20 @@ void BRDF( vec3 L, vec3 lightColor, vec3 V, vec3 N, float metallic, float roughn
 
 void main()
 {
-    //vec3 posInWorldSpace      = texture( positionTex, UV ).xyz;
     vec3 posInWorldSpace      = ReconstructPosFromDepth( sceneConstantBuffer.invVP, UV, texture( depthTex, UV ).r );
-    // vec3 posInWorldSpace      = texture( positionTex, UV ).xyz;
     vec3 N                    = DecodeOctVec( texture( normalTex, UV ).xyz );
-    vec3 Kd                   = texture( diffuseTex, UV ).xyz;
-    vec2 metallicAndRoughness = texture( metallicAndRoughnessTex, UV ).xy;
-    float Metallic            = metallicAndRoughness.x;
-    float Roughness           = metallicAndRoughness.y;
-    vec3 F0                   = mix( vec3( 0.04 ), Kd, Metallic );
-
-    vec3 V = normalize( sceneConstantBuffer.cameraPos.xyz - posInWorldSpace );
+    vec3 albedo               = texture( diffuseTex, UV ).xyz;
+    float metallic            = texture( metallicAndRoughnessTex, UV ).x;
+    float roughness           = texture( metallicAndRoughnessTex, UV ).y;
+    vec3 F0                   = mix( vec3( 0.04 ), albedo, metallic );
+    vec3 V                    = normalize( sceneConstantBuffer.cameraPos.xyz - posInWorldSpace );
     
     vec3 ambientColor  = vec3( 0, 0, 0 );
     vec3 diffuseColor  = vec3( 0, 0, 0 );
     vec3 specularColor = vec3( 0, 0, 0 );
 
     float ambientOcclusion = texture( ssaoTex, UV ).r;
-    ambientColor = ambientOcclusion * Kd * sceneConstantBuffer.ambientColor.xyz;
+    ambientColor = ambientOcclusion * albedo * sceneConstantBuffer.ambientColor.xyz;
 
     // directional light
     {
@@ -123,7 +120,7 @@ void main()
         {
             S = 1 - ShadowAmount( sceneConstantBuffer.LSM * vec4( posInWorldSpace, 1 ), textures[sceneConstantBuffer.dirLight.shadowMapIndex.x] );
         }
-        BRDF( L, lightColor, V, N, Metallic, Roughness, S, Kd, F0, diffuseColor, specularColor );
+        BRDF( L, lightColor, V, N, metallic, roughness, S, albedo, F0, diffuseColor, specularColor );
     }
     
     // pointlights
@@ -133,10 +130,9 @@ void main()
         vec3 d  = pointLights[i].positionAndRadius.xyz - posInWorldSpace;
         vec3 L  = normalize( d );
         float a = Attenuate( dot( d, d ), pointLights[i].positionAndRadius.w * pointLights[i].positionAndRadius.w );
-    
-        BRDF( L, a * lightColor, V, N, Metallic, Roughness, 1, Kd, F0, diffuseColor, specularColor );
+        BRDF( L, a * lightColor, V, N, metallic, roughness, 1, albedo, F0, diffuseColor, specularColor );
     }
-    // 
+
     // // spotlights
     // for ( uint i = 0; i < sceneConstantBuffer.numSpotLights; ++i )
     // {
@@ -160,50 +156,50 @@ void main()
     
     vec3 color;
 #if PG_DEBUG_BUILD
-    if ( debugLayer == PG_SHADER_DEBUG_LAYER_REGULAR )
+    if ( debugData.layer == PG_SHADER_DEBUG_LAYER_REGULAR )
     {
         color = ambientColor + diffuseColor + specularColor;
     }
-    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_AMBIENT )
+    else if ( debugData.layer == PG_SHADER_DEBUG_LAYER_AMBIENT )
     {
         color = ambientColor;
     }
-    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_LIT_DIFFUSE )
+    else if ( debugData.layer == PG_SHADER_DEBUG_LAYER_LIT_DIFFUSE )
     {
         color = diffuseColor;
     }
-    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_LIT_SPECULAR )
+    else if ( debugData.layer == PG_SHADER_DEBUG_LAYER_LIT_SPECULAR )
     {
         color = specularColor;
     }
-    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_NO_SSAO )
+    else if ( debugData.layer == PG_SHADER_DEBUG_LAYER_NO_SSAO )
     {
-        ambientColor = Kd * sceneConstantBuffer.ambientColor.xyz;
+        ambientColor = albedo * sceneConstantBuffer.ambientColor.xyz;
         color = ambientColor + diffuseColor + specularColor;
     }
-    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_SSAO_ONLY )
+    else if ( debugData.layer == PG_SHADER_DEBUG_LAYER_SSAO_ONLY )
     {
         color = vec3( texture( ssaoTex, UV ).r );    
     }
-    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_POSITIONS )
+    else if ( debugData.layer == PG_SHADER_DEBUG_LAYER_POSITIONS )
     {
         color = posInWorldSpace;
     }
-    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_NORMALS )
+    else if ( debugData.layer == PG_SHADER_DEBUG_LAYER_NORMALS )
     {
         color = N;
     }
-    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_DIFFUSE )
+    else if ( debugData.layer == PG_SHADER_DEBUG_LAYER_ALBEDO )
     {
-        color = Kd;
+        color = albedo;
     }
-    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_METALLIC )
+    else if ( debugData.layer == PG_SHADER_DEBUG_LAYER_METALLIC )
     {
-        color = vec3( Metallic );
+        color = vec3( metallic );
     }
-    else if ( debugLayer == PG_SHADER_DEBUG_LAYER_ROUGHNESS )
+    else if ( debugData.layer == PG_SHADER_DEBUG_LAYER_ROUGHNESS )
     {
-        color = vec3( Roughness );
+        color = vec3( roughness );
     }
     else
     {

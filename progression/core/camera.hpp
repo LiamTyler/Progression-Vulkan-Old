@@ -29,6 +29,8 @@ public:
     float aspectRatio  = 16.0f / 9.0f;
     float nearPlane    = 0.1f;
     float farPlane     = 100.0f;
+    float gamma        = 2.2f;
+    float exposure     = 1.0f;
 
 protected:
     glm::mat4 m_viewMatrix;

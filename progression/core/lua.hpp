@@ -27,7 +27,7 @@
 namespace Progression
 {
 
-    extern sol::state g_LuaState;
+    extern sol::state* g_LuaState;
 
     void RegisterTypesAndFunctionsToLua( sol::state& lua );
 

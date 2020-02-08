@@ -71,5 +71,24 @@
         "name": "RENDER_SYSTEM_DUMMY_TEXTURE",
         "filename": "textures/render_system_dummy_texture.png",
         "sampler": "nearest_clamped_nearest"
+    },
+    "Model": {
+        "name": "plane",
+        "filename": "models/plane.obj"
+    },
+    "Model": {
+        "name": "sphere",
+        "filename": "models/sphereHigh.obj"
+    },
+    "Model": {
+        "name": "cube",
+        "filename": "models/cube.obj"
+    },
+    "Model": {
+        "name": "cylinder",
+        "filename": "models/cylinder.obj"
+    },
+    "MTLFile": {
+        "filename": "materials/standard.mtl"
     }
 }

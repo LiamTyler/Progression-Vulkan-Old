@@ -75,6 +75,86 @@ std::shared_ptr< Image > Image::Load2DImageWithDefaultSettings( const std::strin
     return image;
 }
 
+static bool LoadSingleImage( const std::string& filename, ImageCreateInfo const * info, ImageDescriptor& desc, unsigned char*& data )
+{
+    // Force RGB textures to be RGBA since most GPUs don't support RGB optimial
+    // texture formats: https://vulkan.gpuinfo.org/
+    int width, height, numComponents, forceNumComponents;
+    auto ret = stbi_info( filename.c_str(), &width, &height, &numComponents );
+    if ( !ret )
+    {
+        LOG_ERR( "Error opening image '", filename, "'" );
+        return false;
+    }
+    if ( numComponents == 3 )
+    {
+        forceNumComponents = 4;
+    }
+    else
+    {
+        forceNumComponents = numComponents;
+    }
+
+    stbi_set_flip_vertically_on_load( info->flags & IMAGE_FLIP_VERTICALLY );
+    unsigned char* pixels;
+    bool hdrImageFile = stbi_is_hdr( filename.c_str() );
+    if ( hdrImageFile )
+    {
+        pixels = (unsigned char*) stbi_loadf( filename.c_str(), &width, &height, &numComponents, forceNumComponents );
+    }
+    else
+    {
+        pixels = stbi_load( filename.c_str(), &width, &height, &numComponents, forceNumComponents );
+    }
+
+    if ( !pixels )
+    {
+        LOG_ERR( "Failed to load image '", filename, "'" );
+        return false;
+    }
+
+    data             = pixels;
+    desc.width       = width;
+    desc.height      = height;
+    desc.depth       = 1;
+    desc.arrayLayers = 1;
+    desc.mipLevels   = 1;
+    desc.type        = ImageType::TYPE_2D;
+    desc.sampler     = info->sampler;
+            
+    // TODO: how to detect sRGB?
+    PixelFormat componentsToFormat[] =
+    {
+        PixelFormat::R8_UNORM,
+        PixelFormat::R8_G8_UNORM,
+        PixelFormat::R8_G8_B8_UNORM,
+        PixelFormat::R8_G8_B8_A8_UNORM,
+
+        PixelFormat::R8_SRGB,
+        PixelFormat::R8_G8_SRGB,
+        PixelFormat::R8_G8_B8_SRGB,
+        PixelFormat::R8_G8_B8_A8_SRGB,
+
+        PixelFormat::R32_FLOAT,
+        PixelFormat::R32_G32_FLOAT,
+        PixelFormat::R32_G32_B32_FLOAT,
+        PixelFormat::R32_G32_B32_A32_FLOAT,
+    };
+    int formatIndex = forceNumComponents - 1;
+    if ( info->semantic == ImageSemantic::DIFFUSE )
+    {
+        formatIndex += 4;
+    }
+    if ( hdrImageFile )
+    {
+        formatIndex = forceNumComponents - 1 + 8;
+    }
+
+    desc.format = componentsToFormat[formatIndex];
+
+    return true;
+}
+
 bool Image::Load( ResourceCreateInfo* createInfo )
 {
     PG_ASSERT( createInfo );
@@ -100,64 +180,8 @@ bool Image::Load( ResourceCreateInfo* createInfo )
 
     for ( int i = 0; i < numImages; ++i )
     {
-        std::string file = filenames[i];
-        std::string ext = std::filesystem::path( file ).extension().string();
-        if ( ext == ".jpg" || ext == ".png" || ext == ".tga" || ext == ".bmp" )
+        if ( !LoadSingleImage( filenames[i], info, imageDescs[i], imageData[i] ) )
         {
-            // Force RGB textures to be RGBA since most GPUs don't support RGB optimial
-            // texture formats: https://vulkan.gpuinfo.org/
-            int width, height, numComponents, forceNumComponents;
-            auto ret = stbi_info( file.c_str(), &width, &height, &numComponents );
-            if ( numComponents == 3 )
-            {
-                forceNumComponents = 4;
-            }
-            else
-            {
-                forceNumComponents = numComponents;
-            }
-
-            stbi_set_flip_vertically_on_load( info->flags & IMAGE_FLIP_VERTICALLY );
-            unsigned char* pixels = stbi_load( file.c_str(), &width, &height, &numComponents, forceNumComponents );
-
-            if ( !pixels )
-            {
-                LOG_ERR( "Failed to load image '", file, "'" );
-                return false;
-            }
-
-            imageData[i]              = pixels;
-            imageDescs[i].width       = width;
-            imageDescs[i].height      = height;
-            imageDescs[i].depth       = 1;
-            imageDescs[i].arrayLayers = 1;
-            imageDescs[i].mipLevels   = 1;
-            imageDescs[i].type        = ImageType::TYPE_2D;
-            imageDescs[i].sampler     = info->sampler;
-            
-            // TODO: how to detect sRGB?
-            PixelFormat componentsToFormat[] =
-            {
-                PixelFormat::R8_UNORM,
-                PixelFormat::R8_G8_UNORM,
-                PixelFormat::R8_G8_B8_A8_UNORM,
-                PixelFormat::R8_G8_B8_A8_UNORM,
-                PixelFormat::R8_SRGB,
-                PixelFormat::R8_G8_SRGB,
-                PixelFormat::R8_G8_B8_A8_SRGB,
-                PixelFormat::R8_G8_B8_A8_SRGB,
-
-            };
-            int formatIndex = forceNumComponents - 1;
-            if ( info->semantic == ImageSemantic::DIFFUSE )
-            {
-                formatIndex += 4;
-            }
-            imageDescs[i].format = componentsToFormat[formatIndex];
-        }
-        else
-        {
-            LOG_ERR( "Image filetype '", ext, "' is not supported" );
             return false;
         }
     }

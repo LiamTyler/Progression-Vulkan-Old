@@ -13,8 +13,8 @@ bool ScriptComponent::AddScript( const std::shared_ptr< Script >& script )
     {
         ScriptData& s = scripts[numScripts];
         s.script = script;
-        s.env    = sol::environment( g_LuaState, sol::create, g_LuaState.globals() );
-        g_LuaState.script( script->scriptText, s.env );
+        s.env    = sol::environment( *g_LuaState, sol::create, g_LuaState->globals() );
+        g_LuaState->script( script->scriptText, s.env );
         s.updateFunc.second = s.env["Update"];
         s.updateFunc.first  = s.updateFunc.second.valid();
         if ( s.updateFunc.first )

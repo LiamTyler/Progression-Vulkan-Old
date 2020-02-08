@@ -1,0 +1,10 @@
+{
+    "Script": {
+        "name": "cameraController",
+        "filename": "scripts/cameraController.lua"
+    },
+    "Script": {
+        "name": "learnopenglPbrRedSpheres",
+        "filename": "scripts/learnopenglPbrRedSpheres.lua"
+    }
+}

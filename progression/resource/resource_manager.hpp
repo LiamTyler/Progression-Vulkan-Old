@@ -25,6 +25,8 @@ uint32_t GetResourceTypeID()
     return DerivedFamily< Resource >::typeCounter();
 }
 
+struct lua_State;
+
 namespace Progression
 {
 
@@ -126,4 +128,7 @@ namespace ResourceManager
     }
 
 } // namespace ResourceManager
+
+void RegisterLuaFunctions_Resource( lua_State* L );
+
 } // namespace Progression

@@ -1,0 +1,32 @@
+{
+    "_NOTE": "Need to bring up the debug menu and switch to the Albedo Layer, turn tonemapping off too"
+    "Fastfile": {
+        "filename": "gammaTest.ff"
+    },
+    "Camera": {
+        "position": [ 0, 0, 3 ],
+        "rotation": [ 0, 0, 0 ],
+        "fov": 60,
+        "aspectRatio": 1.777777777,
+        "nearPlane": 0.1,
+        "farPlane": 100,
+        "gamma": 2.2,
+        "exposure": 1
+    },
+    "BackgroundColor": {
+        "color": [ 0.15, 0.15, 0.15, 1 ]
+    },
+    "AmbientColor": {
+        "color": [ 0.2, 0.2, 0.2 ]
+    },
+    "DirectionalLight": {
+        "colorAndIntensity": [ 1, 1, 1, 1 ],
+        "direction": [ 0.5, -1.5, -1 ]
+    },
+    "Entity": {
+        "ScriptComponent": {
+            "script": "cameraController",
+            "script": "gammaTest"
+        }
+    }
+}

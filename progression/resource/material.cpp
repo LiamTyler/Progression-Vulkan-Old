@@ -124,7 +124,7 @@ bool Material::Deserialize( char*& buffer )
     return true;
 }
 
-bool Material::LoadMtlFile( std::vector< Material >& materials, const std::string& fname )
+bool Material::LoadMtlFile( std::vector< Material >& materials, const std::string& fname, bool loadTextures )
 {
     std::ifstream file( fname );
     if ( !file )
@@ -185,10 +185,8 @@ bool Material::LoadMtlFile( std::vector< Material >& materials, const std::strin
             std::string texName;
             ss >> texName;
             mat->map_Kd = ResourceManager::Get< Image >( texName );
-            if ( !mat->map_Kd )
+            if ( !mat->map_Kd && loadTextures )
             {
-                // LOG_ERR("Failed to load map_Kd image '", texName, "' in mtl file '", fname, "'");
-                // return false;
                 mat->map_Kd = Image::Load2DImageWithDefaultSettings( PG_RESOURCE_DIR + texName );
                 if ( !mat->map_Kd )
                 {
@@ -196,13 +194,18 @@ bool Material::LoadMtlFile( std::vector< Material >& materials, const std::strin
                     return false;
                 }
             }
+            else if ( !mat->map_Kd && !loadTextures )
+            {
+                LOG_ERR( "No texture with name '", texName, "' found in resource manager" );
+                return false;
+            }
         }
         else if ( first == "map_bump" || first == "norm" )
         {
             std::string texName;
             ss >> texName;
             mat->map_Norm = ResourceManager::Get< Image >( texName );
-            if ( !mat->map_Norm )
+            if ( !mat->map_Norm && loadTextures )
             {
                 mat->map_Norm = Image::Load2DImageWithDefaultSettings( PG_RESOURCE_DIR + texName, ImageSemantic::NORMAL );
                 if ( !mat->map_Norm )
@@ -211,13 +214,18 @@ bool Material::LoadMtlFile( std::vector< Material >& materials, const std::strin
                     return false;
                 }
             }
+            else if ( !mat->map_Norm && !loadTextures )
+            {
+                LOG_ERR( "No texture with name '", texName, "' found in resource manager" );
+                return false;
+            }
         }
         else if ( first == "map_Pm" )
         {
             std::string texName;
             ss >> texName;
             mat->map_Pm = ResourceManager::Get< Image >( texName );
-            if ( !mat->map_Pm )
+            if ( !mat->map_Pm && loadTextures )
             {
                 mat->map_Pm = Image::Load2DImageWithDefaultSettings( PG_RESOURCE_DIR + texName, ImageSemantic::METALLIC );
                 if ( !mat->map_Pm )
@@ -226,13 +234,18 @@ bool Material::LoadMtlFile( std::vector< Material >& materials, const std::strin
                     return false;
                 }
             }
+            else if ( !mat->map_Pm && !loadTextures )
+            {
+                LOG_ERR( "No texture with name '", texName, "' found in resource manager" );
+                return false;
+            }
         }
         else if ( first == "map_Pr" )
         {
             std::string texName;
             ss >> texName;
             mat->map_Pr = ResourceManager::Get< Image >( texName );
-            if ( !mat->map_Pr )
+            if ( !mat->map_Pr && loadTextures )
             {
                 mat->map_Pr = Image::Load2DImageWithDefaultSettings( PG_RESOURCE_DIR + texName, ImageSemantic::ROUGHNESS );
                 if ( !mat->map_Pr )
@@ -240,6 +253,11 @@ bool Material::LoadMtlFile( std::vector< Material >& materials, const std::strin
                     LOG_ERR( "Failed to load roughness map with default settings while parsing MTL file." );
                     return false;
                 }
+            }
+            else if ( !mat->map_Pr && !loadTextures )
+            {
+                LOG_ERR( "No texture with name '", texName, "' found in resource manager" );
+                return false;
             }
         }
     }

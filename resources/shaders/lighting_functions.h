@@ -3,9 +3,10 @@
 
 float Attenuate( in const float distSquared, in const float radiusSquared )
 {
-    float frac = distSquared / radiusSquared;
-    float atten = max( 0, 1 - frac * frac );
-    return (atten * atten) / ( 1.0 + distSquared );
+    //float frac = distSquared / radiusSquared;
+    //float atten = max( 0, 1 - frac * frac );
+    //return (atten * atten) / ( 1.0 + distSquared );
+    return 1.0 / distSquared;
 }
 
 float ShadowAmount( in const vec4 posInLightSpace, in sampler2D shadowMap )

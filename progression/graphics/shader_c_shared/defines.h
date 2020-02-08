@@ -22,7 +22,7 @@
 #define PG_SHADER_DEBUG_LAYER_LIT_SPECULAR 5
 #define PG_SHADER_DEBUG_LAYER_POSITIONS 6
 #define PG_SHADER_DEBUG_LAYER_NORMALS 7
-#define PG_SHADER_DEBUG_LAYER_DIFFUSE 8
+#define PG_SHADER_DEBUG_LAYER_ALBEDO 8
 #define PG_SHADER_DEBUG_LAYER_METALLIC 9
 #define PG_SHADER_DEBUG_LAYER_ROUGHNESS 10
 
@@ -32,6 +32,8 @@
 #define PG_NAMESPACE_END } // namespace Progression
 #define PG_GPU_NAMESPACE_BEGIN namespace Gpu {
 #define PG_GPU_NAMESPACE_END } // namespace Gpu
+
+#define ALIGN( x ) alignas( x )
 
 #define VEC2 glm::vec2
 #define VEC3 glm::vec3
@@ -47,6 +49,8 @@
 #define UINT uint32_t
 
 #else // #ifdef PG_CPP_VERSION
+
+#define ALIGN( x )
 
 #define PG_NAMESPACE_BEGIN
 #define PG_NAMESPACE_END

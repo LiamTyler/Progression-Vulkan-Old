@@ -5,15 +5,13 @@
 #include "core/math.hpp"
 #include "core/scene.hpp"
 #include "core/window.hpp"
-#include "components/entity_metadata.hpp"
-#include "components/script_component.hpp"
-#include "components/transform.hpp"
 #include "graphics/graphics_api/ui.hpp"
+#include "resource/resource_manager.hpp"
 
 namespace Progression
 {
 
-    sol::state g_LuaState;
+    sol::state* g_LuaState;
 
     void RegisterTypesAndFunctionsToLua( sol::state& lua )
     {
@@ -22,6 +20,8 @@ namespace Progression
         RegisterLuaFunctions_Input( lua );
         RegisterLuaFunctions_Window( lua );
         RegisterLuaFunctions_ECS( lua ); // This must come before registering any components with the ECS
+        RegisterLuaFunctions_Resource( lua );
+
         auto luaTimeNamespace = lua["Time"].get_or_create< sol::table >();
         luaTimeNamespace["dt"] = 0;
 
@@ -29,24 +29,6 @@ namespace Progression
         luaUINamespace["CapturingMouse"] = &Gfx::UIOverlay::CapturingMouse;
         luaUINamespace["Visible"]        = &Gfx::UIOverlay::Visible;
         luaUINamespace["SetVisible"]     = &Gfx::UIOverlay::SetVisible;
-
-        sol::usertype< ScriptComponent > scriptComponent_type = lua.new_usertype< ScriptComponent >( "ScriptComponent" );
-        scriptComponent_type["GetFunction"] = &ScriptComponent::GetFunction;
-        REGISTER_COMPONENT_WITH_ECS( lua, ScriptComponent,
-            static_cast< ScriptComponent&( entt::registry::* )( const entt::entity ) >( &entt::registry::assign< ScriptComponent > ) );
-
-        sol::usertype< NameComponent > nameComponent_type = lua.new_usertype< NameComponent >( "NameComponent" );
-        nameComponent_type["name"] = &NameComponent::name;
-        REGISTER_COMPONENT_WITH_ECS( lua, NameComponent,
-            static_cast< NameComponent&( entt::registry::* )( const entt::entity )> ( &entt::registry::assign< NameComponent > ) );
-
-        sol::usertype< Transform > transform_type = lua.new_usertype< Transform >( "Transform" );
-        transform_type["position"] = &Transform::position;
-        transform_type["rotation"] = &Transform::rotation;
-        transform_type["scale"] = &Transform::scale;
-        transform_type["GetModelMatrix"] = &Transform::GetModelMatrix;
-        REGISTER_COMPONENT_WITH_ECS( lua, Transform,
-            static_cast< Transform&( entt::registry::* )( const entt::entity )> ( &entt::registry::assign< Transform > ) );
 
         sol::usertype< Camera > camera_type = lua.new_usertype< Camera >( "Camera", sol::constructors< Camera() >() );
         camera_type["position"]                 = &Camera::position;
@@ -71,10 +53,8 @@ namespace Progression
         directional_light_type["direction"] = &DirectionalLight::direction;
 
         sol::usertype< Scene > scene_type = lua.new_usertype< Scene >( "Scene" );
-        scene_type["camera"] = &Scene::camera;
+        scene_type["camera"]           = &Scene::camera;
         scene_type["directionalLight"] = &Scene::directionalLight;
-
-
     }
 
 } // namespace Progression
