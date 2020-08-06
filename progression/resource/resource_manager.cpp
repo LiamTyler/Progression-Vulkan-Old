@@ -118,7 +118,7 @@ namespace ResourceManager
 
         char* data = (char*) memMappedFile.getData();
 #if USING( LZ4_COMPRESSED_FASTFILES )
-        data = DecompressFF( (char*) memMappedFile.getData(), memMappedFile.size() - 4 );
+        data = DecompressFF( (char*) memMappedFile.getData(), memMappedFile.size() );
         char* uncompressedStartPtr = data;
         memMappedFile.close();
 #endif // #if USING( LZ4_COMPRESSED_FASTFILES )
